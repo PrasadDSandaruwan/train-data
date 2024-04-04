@@ -1,0 +1,1241 @@
+[
+  {
+    "id": 845,
+    "file_path": "src/com/google/javascript/jscomp/type/SemanticReverseAbstractInterpreter.java",
+    "start-bug-line": 301,
+    "end-bug-line": 302,
+    "bug": "left, leftIsRefineable, merged.typeA, right, rightIsRefineable, merged.typeB);",
+    "fix": "left, leftType, leftIsRefineable ? merged.typeA : null, right, rightType, rightIsRefineable ? merged.typeB : null);",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.google.javascript.jscomp.type; import static com.google.javascript.rhino.jstype.JSTypeNative.UNKNOWN_TYPE; import com.google.common.base.Function; import com.google.javascript.jscomp.CodingConvention; import com.google.javascript.rhino.Node; import com.google.javascript.rhino.Token; import com.google.javascript.rhino.jstype.FunctionType; import com.google.javascript.rhino.jstype.JSType; import com.google.javascript.rhino.jstype.JSType.TypePair; import com.google.javascript.rhino.jstype.JSTypeNative;"
+      },
+      {
+        "txt": "import com.google.javascript.rhino.jstype.JSTypeRegistry; import com.google.javascript.rhino.jstype.ObjectType; import com.google.javascript.rhino.jstype.StaticSlot; import com.google.javascript.rhino.jstype.UnionType; import com.google.javascript.rhino.jstype.Visitor; public class SemanticReverseAbstractInterpreter extends ChainableReverseAbstractInterpreter { private static final Function<TypePair, TypePair> EQ = new Function<TypePair, TypePair>() { @Override"
+      },
+      {
+        "txt": "public TypePair apply(TypePair p) { if (p.typeA == null || p.typeB == null) { return null; } return p.typeA.getTypesUnderEquality(p.typeB); } }; private static final Function<TypePair, TypePair> NE = new Function<TypePair, TypePair>() { @Override"
+      },
+      {
+        "txt": "public TypePair apply(TypePair p) { if (p.typeA == null || p.typeB == null) { return null; } return p.typeA.getTypesUnderInequality(p.typeB); } }; private static final Function<TypePair, TypePair> SHEQ = new Function<TypePair, TypePair>() {"
+      },
+      {
+        "txt": "@Override public TypePair apply(TypePair p) { if (p.typeA == null || p.typeB == null) { return null; } return p.typeA.getTypesUnderShallowEquality(p.typeB); } }; private static final Function<TypePair, TypePair> SHNE ="
+      },
+      {
+        "txt": "new Function<TypePair, TypePair>() { @Override public TypePair apply(TypePair p) { if (p.typeA == null || p.typeB == null) { return null; } return p.typeA.getTypesUnderShallowInequality(p.typeB); } }; private final"
+      },
+      {
+        "txt": "Function<TypePair, TypePair> INEQ = new Function<TypePair, TypePair>() { @Override public TypePair apply(TypePair p) { return new TypePair( getRestrictedWithoutUndefined(p.typeA), getRestrictedWithoutUndefined(p.typeB)); } }; public SemanticReverseAbstractInterpreter(CodingConvention convention,"
+      },
+      {
+        "txt": "JSTypeRegistry typeRegistry) { super(convention, typeRegistry); } @Override public FlowScope getPreciserScopeKnowingConditionOutcome(Node condition, FlowScope blindScope, boolean outcome) { int operatorToken = condition.getType(); switch (operatorToken) { case Token.EQ: case Token.NE:"
+      },
+      {
+        "txt": "case Token.SHEQ: case Token.SHNE: case Token.CASE: Node left; Node right; if (operatorToken == Token.CASE) { left = condition.getParent().getFirstChild(); // the switch condition right = condition.getFirstChild(); } else { left = condition.getFirstChild();"
+      },
+      {
+        "txt": "right = condition.getLastChild(); } Node typeOfNode = null; Node stringNode = null; if (left.isTypeOf() && right.isString()) { typeOfNode = left; stringNode = right; } else if (right.isTypeOf() && left.isString()) { typeOfNode = right;"
+      },
+      {
+        "txt": "stringNode = left; } if (typeOfNode != null && stringNode != null) { Node operandNode = typeOfNode.getFirstChild(); JSType operandType = getTypeIfRefinable(operandNode, blindScope); if (operandType != null) { boolean resultEqualsValue = operatorToken == Token.EQ || operatorToken == Token.SHEQ || operatorToken == Token.CASE; if (!outcome) { resultEqualsValue = !resultEqualsValue;"
+      },
+      {
+        "txt": "} return caseTypeOf(operandNode, operandType, stringNode.getString(), resultEqualsValue, blindScope); } } } switch (operatorToken) { case Token.AND: if (outcome) { return caseAndOrNotShortCircuiting(condition.getFirstChild(),"
+      },
+      {
+        "txt": "condition.getLastChild(), blindScope, true); } else { return caseAndOrMaybeShortCircuiting(condition.getFirstChild(), condition.getLastChild(), blindScope, true); } case Token.OR: if (!outcome) { return caseAndOrNotShortCircuiting(condition.getFirstChild(), condition.getLastChild(), blindScope, false); } else {"
+      },
+      {
+        "txt": "return caseAndOrMaybeShortCircuiting(condition.getFirstChild(), condition.getLastChild(), blindScope, false); } case Token.EQ: if (outcome) { return caseEquality(condition, blindScope, EQ); } else { return caseEquality(condition, blindScope, NE); } case Token.NE:"
+      },
+      {
+        "txt": "if (outcome) { return caseEquality(condition, blindScope, NE); } else { return caseEquality(condition, blindScope, EQ); } case Token.SHEQ: if (outcome) { return caseEquality(condition, blindScope, SHEQ); } else { return caseEquality(condition, blindScope, SHNE);"
+      },
+      {
+        "txt": "} case Token.SHNE: if (outcome) { return caseEquality(condition, blindScope, SHNE); } else { return caseEquality(condition, blindScope, SHEQ); } case Token.NAME: case Token.GETPROP: return caseNameOrGetProp(condition, blindScope, outcome);"
+      },
+      {
+        "txt": "case Token.ASSIGN: return firstPreciserScopeKnowingConditionOutcome( condition.getFirstChild(), firstPreciserScopeKnowingConditionOutcome( condition.getFirstChild().getNext(), blindScope, outcome), outcome); case Token.NOT: return firstPreciserScopeKnowingConditionOutcome( condition.getFirstChild(), blindScope, !outcome); case Token.LE:"
+      },
+      {
+        "txt": "case Token.LT: case Token.GE: case Token.GT: if (outcome) { return caseEquality(condition, blindScope, INEQ); } break; case Token.INSTANCEOF: return caseInstanceOf( condition.getFirstChild(), condition.getLastChild(), blindScope,"
+      },
+      {
+        "txt": "outcome); case Token.IN: if (outcome && condition.getFirstChild().isString()) { return caseIn(condition.getLastChild(), condition.getFirstChild().getString(), blindScope); } break; case Token.CASE: Node left = condition.getParent().getFirstChild(); // the switch condition"
+      },
+      {
+        "txt": "Node right = condition.getFirstChild(); if (outcome) { return caseEquality(left, right, blindScope, SHEQ); } else { return caseEquality(left, right, blindScope, SHNE); } } return nextPreciserScopeKnowingConditionOutcome( condition, blindScope, outcome); }"
+      },
+      {
+        "txt": "private FlowScope caseEquality(Node condition, FlowScope blindScope, Function<TypePair, TypePair> merging) { return caseEquality(condition.getFirstChild(), condition.getLastChild(), blindScope, merging); } private FlowScope caseEquality(Node left, Node right, FlowScope blindScope, Function<TypePair, TypePair> merging) { JSType leftType = getTypeIfRefinable(left, blindScope); boolean leftIsRefineable; if (leftType != null) {"
+      },
+      {
+        "txt": "leftIsRefineable = true; } else { leftIsRefineable = false; leftType = left.getJSType(); } JSType rightType = getTypeIfRefinable(right, blindScope); boolean rightIsRefineable; if (rightType != null) { rightIsRefineable = true; } else {"
+      },
+      {
+        "txt": "rightType = right.getJSType(); } TypePair merged = merging.apply(new TypePair(leftType, rightType)); if (merged != null) { return maybeRestrictTwoNames( blindScope, <extra_id_0> } return blindScope; } private FlowScope caseAndOrNotShortCircuiting(Node left, Node right, FlowScope blindScope, boolean condition) { JSType leftType = getTypeIfRefinable(left, blindScope);"
+      },
+      {
+        "txt": "FlowScope blindScope, boolean condition) { JSType leftType = getTypeIfRefinable(left, blindScope); boolean leftIsRefineable; if (leftType != null) { leftIsRefineable = true; } else { leftIsRefineable = false; leftType = left.getJSType(); blindScope = firstPreciserScopeKnowingConditionOutcome( left, blindScope, condition);"
+      },
+      {
+        "txt": "} JSType restrictedLeftType = (leftType == null) ? null : leftType.getRestrictedTypeGivenToBooleanOutcome(condition); if (restrictedLeftType == null) { return firstPreciserScopeKnowingConditionOutcome( right, blindScope, condition); } JSType rightType = getTypeIfRefinable(right, blindScope); boolean rightIsRefineable; if (rightType != null) {"
+      },
+      {
+        "txt": "rightIsRefineable = true; } else { rightIsRefineable = false; rightType = right.getJSType(); blindScope = firstPreciserScopeKnowingConditionOutcome( right, blindScope, condition); } if (condition) { JSType restrictedRightType = (rightType == null) ? null : rightType.getRestrictedTypeGivenToBooleanOutcome(condition);"
+      },
+      {
+        "txt": "return maybeRestrictTwoNames( blindScope, left, leftIsRefineable, restrictedLeftType, right, rightIsRefineable, restrictedRightType); } return blindScope; } private FlowScope caseAndOrMaybeShortCircuiting(Node left, Node right, FlowScope blindScope, boolean condition) { FlowScope leftScope = firstPreciserScopeKnowingConditionOutcome("
+      },
+      {
+        "txt": "left, blindScope, !condition); StaticSlot<JSType> leftVar = leftScope.findUniqueRefinedSlot(blindScope); if (leftVar == null) { return blindScope; } FlowScope rightScope = firstPreciserScopeKnowingConditionOutcome( left, blindScope, condition); rightScope = firstPreciserScopeKnowingConditionOutcome( right, rightScope, !condition); StaticSlot<JSType> rightVar = rightScope.findUniqueRefinedSlot(blindScope);"
+      },
+      {
+        "txt": "if (rightVar == null || !leftVar.getName().equals(rightVar.getName())) { return blindScope; } JSType type = leftVar.getType().getLeastSupertype(rightVar.getType()); FlowScope informed = blindScope.createChildFlowScope(); informed.inferSlotType(leftVar.getName(), type); return informed; } private FlowScope maybeRestrictName( FlowScope blindScope, Node node, JSType originalType, JSType restrictedType) {"
+      },
+      {
+        "txt": "if (restrictedType != null && !restrictedType.equals(originalType)) { FlowScope informed = blindScope.createChildFlowScope(); declareNameInScope(informed, node, restrictedType); return informed; } return blindScope; } private FlowScope maybeRestrictTwoNames( FlowScope blindScope, Node left, boolean leftIsRefineable, JSType restrictedLeftType,"
+      },
+      {
+        "txt": "Node right, boolean rightIsRefineable, JSType restrictedRightType) { boolean shouldRefineLeft = leftIsRefineable && restrictedLeftType != null; boolean shouldRefineRight = rightIsRefineable && restrictedRightType != null; if (shouldRefineLeft || shouldRefineRight) { FlowScope informed = blindScope.createChildFlowScope(); if (shouldRefineLeft) { declareNameInScope(informed, left, restrictedLeftType); }"
+      },
+      {
+        "txt": "if (shouldRefineRight) { declareNameInScope(informed, right, restrictedRightType); } return informed; } return blindScope; } private FlowScope caseNameOrGetProp(Node name, FlowScope blindScope, boolean outcome) { JSType type = getTypeIfRefinable(name, blindScope);"
+      },
+      {
+        "txt": "if (type != null) { JSType restrictedType = type.getRestrictedTypeGivenToBooleanOutcome(outcome); FlowScope informed = blindScope.createChildFlowScope(); declareNameInScope(informed, name, restrictedType); return informed; } return blindScope; } private FlowScope caseTypeOf(Node node, JSType type, String value,"
+      },
+      {
+        "txt": "boolean resultEqualsValue, FlowScope blindScope) { return maybeRestrictName( blindScope, node, type, getRestrictedByTypeOfResult(type, value, resultEqualsValue)); } private FlowScope caseInstanceOf(Node left, Node right, FlowScope blindScope, boolean outcome) { JSType leftType = getTypeIfRefinable(left, blindScope); if (leftType == null) { return blindScope;"
+      },
+      {
+        "txt": "} JSType rightType = right.getJSType(); ObjectType targetType = typeRegistry.getNativeObjectType(JSTypeNative.UNKNOWN_TYPE); if (rightType != null && rightType.isFunctionType()) { targetType = rightType.toMaybeFunctionType(); } Visitor<JSType> visitor; if (outcome) { visitor = new RestrictByTrueInstanceOfResultVisitor(targetType);"
+      },
+      {
+        "txt": "} else { visitor = new RestrictByFalseInstanceOfResultVisitor(targetType); } return maybeRestrictName( blindScope, left, leftType, leftType.visit(visitor)); } private FlowScope caseIn(Node object, String propertyName, FlowScope blindScope) { JSType jsType = object.getJSType(); jsType = this.getRestrictedWithoutNull(jsType); jsType = this.getRestrictedWithoutUndefined(jsType);"
+      },
+      {
+        "txt": "boolean hasProperty = false; ObjectType objectType = ObjectType.cast(jsType); if (objectType != null) { hasProperty = objectType.hasProperty(propertyName); } if (!hasProperty) { String qualifiedName = object.getQualifiedName(); if (qualifiedName != null) { String propertyQualifiedName = qualifiedName + \".\" + propertyName; if (blindScope.getSlot(propertyQualifiedName) == null) {"
+      },
+      {
+        "txt": "FlowScope informed = blindScope.createChildFlowScope(); JSType unknownType = typeRegistry.getNativeType( JSTypeNative.UNKNOWN_TYPE); informed.inferQualifiedSlot( object, propertyQualifiedName, unknownType, unknownType); return informed; } } } return blindScope;"
+      },
+      {
+        "txt": "} private class RestrictByTrueInstanceOfResultVisitor extends RestrictByTrueTypeOfResultVisitor { private final ObjectType target; RestrictByTrueInstanceOfResultVisitor(ObjectType target) { this.target = target; } @Override protected JSType caseTopType(JSType type) { return applyCommonRestriction(type);"
+      },
+      {
+        "txt": "} @Override public JSType caseUnknownType() { FunctionType funcTarget = JSType.toMaybeFunctionType(target); if (funcTarget != null && funcTarget.hasInstanceType()) { return funcTarget.getInstanceType(); } return getNativeType(UNKNOWN_TYPE); } @Override"
+      },
+      {
+        "txt": "public JSType caseObjectType(ObjectType type) { return applyCommonRestriction(type); } @Override public JSType caseUnionType(UnionType type) { return applyCommonRestriction(type); } @Override public JSType caseFunctionType(FunctionType type) { return caseObjectType(type);"
+      },
+      {
+        "txt": "} private JSType applyCommonRestriction(JSType type) { if (target.isUnknownType()) { return type; } FunctionType funcTarget = target.toMaybeFunctionType(); if (funcTarget.hasInstanceType()) { return type.getGreatestSubtype(funcTarget.getInstanceType()); } return null;"
+      },
+      {
+        "txt": "} } private class RestrictByFalseInstanceOfResultVisitor extends RestrictByFalseTypeOfResultVisitor { private final ObjectType target; RestrictByFalseInstanceOfResultVisitor(ObjectType target) { this.target = target; } @Override public JSType caseObjectType(ObjectType type) {"
+      },
+      {
+        "txt": "if (target.isUnknownType()) { return type; } FunctionType funcTarget = target.toMaybeFunctionType(); if (funcTarget.hasInstanceType()) { if (type.isSubtype(funcTarget.getInstanceType())) { return null; } return type; }"
+      },
+      {
+        "txt": "return null; } @Override public JSType caseUnionType(UnionType type) { if (target.isUnknownType()) { return type; } FunctionType funcTarget = target.toMaybeFunctionType(); if (funcTarget.hasInstanceType()) { return type.getRestrictedUnion(funcTarget.getInstanceType());"
+      },
+      {
+        "txt": "} return null; } @Override public JSType caseFunctionType(FunctionType type) { return caseObjectType(type); } }"
+      }
+    ]
+  },
+  {
+    "id": 846,
+    "file_path": "src/com/google/javascript/jscomp/type/SemanticReverseAbstractInterpreter.java",
+    "start-bug-line": 348,
+    "end-bug-line": 349,
+    "bug": "left, leftIsRefineable, restrictedLeftType, right, rightIsRefineable, restrictedRightType);",
+    "fix": "left, leftType, leftIsRefineable ? restrictedLeftType : null, right, rightType, rightIsRefineable ? restrictedRightType : null);",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.google.javascript.jscomp.type; import static com.google.javascript.rhino.jstype.JSTypeNative.UNKNOWN_TYPE; import com.google.common.base.Function; import com.google.javascript.jscomp.CodingConvention; import com.google.javascript.rhino.Node; import com.google.javascript.rhino.Token; import com.google.javascript.rhino.jstype.FunctionType; import com.google.javascript.rhino.jstype.JSType;"
+      },
+      {
+        "txt": "import com.google.javascript.rhino.jstype.JSType.TypePair; import com.google.javascript.rhino.jstype.JSTypeNative; import com.google.javascript.rhino.jstype.JSTypeRegistry; import com.google.javascript.rhino.jstype.ObjectType; import com.google.javascript.rhino.jstype.StaticSlot; import com.google.javascript.rhino.jstype.UnionType; import com.google.javascript.rhino.jstype.Visitor; public class SemanticReverseAbstractInterpreter extends ChainableReverseAbstractInterpreter { private static final Function<TypePair, TypePair> EQ ="
+      },
+      {
+        "txt": "new Function<TypePair, TypePair>() { @Override public TypePair apply(TypePair p) { if (p.typeA == null || p.typeB == null) { return null; } return p.typeA.getTypesUnderEquality(p.typeB); } }; private static final Function<TypePair, TypePair> NE ="
+      },
+      {
+        "txt": "new Function<TypePair, TypePair>() { @Override public TypePair apply(TypePair p) { if (p.typeA == null || p.typeB == null) { return null; } return p.typeA.getTypesUnderInequality(p.typeB); } }; private static final"
+      },
+      {
+        "txt": "Function<TypePair, TypePair> SHEQ = new Function<TypePair, TypePair>() { @Override public TypePair apply(TypePair p) { if (p.typeA == null || p.typeB == null) { return null; } return p.typeA.getTypesUnderShallowEquality(p.typeB); } };"
+      },
+      {
+        "txt": "private static final Function<TypePair, TypePair> SHNE = new Function<TypePair, TypePair>() { @Override public TypePair apply(TypePair p) { if (p.typeA == null || p.typeB == null) { return null; } return p.typeA.getTypesUnderShallowInequality(p.typeB); }"
+      },
+      {
+        "txt": "}; private final Function<TypePair, TypePair> INEQ = new Function<TypePair, TypePair>() { @Override public TypePair apply(TypePair p) { return new TypePair( getRestrictedWithoutUndefined(p.typeA), getRestrictedWithoutUndefined(p.typeB)); }"
+      },
+      {
+        "txt": "}; public SemanticReverseAbstractInterpreter(CodingConvention convention, JSTypeRegistry typeRegistry) { super(convention, typeRegistry); } @Override public FlowScope getPreciserScopeKnowingConditionOutcome(Node condition, FlowScope blindScope, boolean outcome) { int operatorToken = condition.getType(); switch (operatorToken) {"
+      },
+      {
+        "txt": "case Token.EQ: case Token.NE: case Token.SHEQ: case Token.SHNE: case Token.CASE: Node left; Node right; if (operatorToken == Token.CASE) { left = condition.getParent().getFirstChild(); // the switch condition right = condition.getFirstChild();"
+      },
+      {
+        "txt": "} else { left = condition.getFirstChild(); right = condition.getLastChild(); } Node typeOfNode = null; Node stringNode = null; if (left.isTypeOf() && right.isString()) { typeOfNode = left; stringNode = right; } else if (right.isTypeOf() &&"
+      },
+      {
+        "txt": "left.isString()) { typeOfNode = right; stringNode = left; } if (typeOfNode != null && stringNode != null) { Node operandNode = typeOfNode.getFirstChild(); JSType operandType = getTypeIfRefinable(operandNode, blindScope); if (operandType != null) { boolean resultEqualsValue = operatorToken == Token.EQ || operatorToken == Token.SHEQ || operatorToken == Token.CASE;"
+      },
+      {
+        "txt": "if (!outcome) { resultEqualsValue = !resultEqualsValue; } return caseTypeOf(operandNode, operandType, stringNode.getString(), resultEqualsValue, blindScope); } } } switch (operatorToken) { case Token.AND:"
+      },
+      {
+        "txt": "if (outcome) { return caseAndOrNotShortCircuiting(condition.getFirstChild(), condition.getLastChild(), blindScope, true); } else { return caseAndOrMaybeShortCircuiting(condition.getFirstChild(), condition.getLastChild(), blindScope, true); } case Token.OR: if (!outcome) { return caseAndOrNotShortCircuiting(condition.getFirstChild(),"
+      },
+      {
+        "txt": "condition.getLastChild(), blindScope, false); } else { return caseAndOrMaybeShortCircuiting(condition.getFirstChild(), condition.getLastChild(), blindScope, false); } case Token.EQ: if (outcome) { return caseEquality(condition, blindScope, EQ); } else { return caseEquality(condition, blindScope, NE);"
+      },
+      {
+        "txt": "} case Token.NE: if (outcome) { return caseEquality(condition, blindScope, NE); } else { return caseEquality(condition, blindScope, EQ); } case Token.SHEQ: if (outcome) { return caseEquality(condition, blindScope, SHEQ);"
+      },
+      {
+        "txt": "} else { return caseEquality(condition, blindScope, SHNE); } case Token.SHNE: if (outcome) { return caseEquality(condition, blindScope, SHNE); } else { return caseEquality(condition, blindScope, SHEQ); } case Token.NAME:"
+      },
+      {
+        "txt": "case Token.GETPROP: return caseNameOrGetProp(condition, blindScope, outcome); case Token.ASSIGN: return firstPreciserScopeKnowingConditionOutcome( condition.getFirstChild(), firstPreciserScopeKnowingConditionOutcome( condition.getFirstChild().getNext(), blindScope, outcome), outcome); case Token.NOT: return firstPreciserScopeKnowingConditionOutcome("
+      },
+      {
+        "txt": "condition.getFirstChild(), blindScope, !outcome); case Token.LE: case Token.LT: case Token.GE: case Token.GT: if (outcome) { return caseEquality(condition, blindScope, INEQ); } break; case Token.INSTANCEOF:"
+      },
+      {
+        "txt": "return caseInstanceOf( condition.getFirstChild(), condition.getLastChild(), blindScope, outcome); case Token.IN: if (outcome && condition.getFirstChild().isString()) { return caseIn(condition.getLastChild(), condition.getFirstChild().getString(), blindScope); } break; case Token.CASE:"
+      },
+      {
+        "txt": "Node left = condition.getParent().getFirstChild(); // the switch condition Node right = condition.getFirstChild(); if (outcome) { return caseEquality(left, right, blindScope, SHEQ); } else { return caseEquality(left, right, blindScope, SHNE); } } return nextPreciserScopeKnowingConditionOutcome("
+      },
+      {
+        "txt": "condition, blindScope, outcome); } private FlowScope caseEquality(Node condition, FlowScope blindScope, Function<TypePair, TypePair> merging) { return caseEquality(condition.getFirstChild(), condition.getLastChild(), blindScope, merging); } private FlowScope caseEquality(Node left, Node right, FlowScope blindScope, Function<TypePair, TypePair> merging) { JSType leftType = getTypeIfRefinable(left, blindScope);"
+      },
+      {
+        "txt": "boolean leftIsRefineable; if (leftType != null) { leftIsRefineable = true; } else { leftIsRefineable = false; leftType = left.getJSType(); } JSType rightType = getTypeIfRefinable(right, blindScope); boolean rightIsRefineable; if (rightType != null) {"
+      },
+      {
+        "txt": "rightIsRefineable = true; } else { rightIsRefineable = false; rightType = right.getJSType(); } TypePair merged = merging.apply(new TypePair(leftType, rightType)); if (merged != null) { return maybeRestrictTwoNames( blindScope, left, leftIsRefineable, merged.typeA,"
+      },
+      {
+        "txt": "right, rightIsRefineable, merged.typeB); } return blindScope; } private FlowScope caseAndOrNotShortCircuiting(Node left, Node right, FlowScope blindScope, boolean condition) { JSType leftType = getTypeIfRefinable(left, blindScope); boolean leftIsRefineable; if (leftType != null) { leftIsRefineable = true;"
+      },
+      {
+        "txt": "} else { leftIsRefineable = false; leftType = left.getJSType(); blindScope = firstPreciserScopeKnowingConditionOutcome( left, blindScope, condition); } JSType restrictedLeftType = (leftType == null) ? null : leftType.getRestrictedTypeGivenToBooleanOutcome(condition); if (restrictedLeftType == null) { return firstPreciserScopeKnowingConditionOutcome("
+      },
+      {
+        "txt": "right, blindScope, condition); } JSType rightType = getTypeIfRefinable(right, blindScope); boolean rightIsRefineable; if (rightType != null) { rightIsRefineable = true; } else { rightIsRefineable = false; rightType = right.getJSType(); blindScope = firstPreciserScopeKnowingConditionOutcome("
+      },
+      {
+        "txt": "} if (condition) { JSType restrictedRightType = (rightType == null) ? null : rightType.getRestrictedTypeGivenToBooleanOutcome(condition); return maybeRestrictTwoNames( blindScope, <extra_id_0> } return blindScope; } private FlowScope caseAndOrMaybeShortCircuiting(Node left, Node right, FlowScope blindScope, boolean condition) { FlowScope leftScope = firstPreciserScopeKnowingConditionOutcome("
+      },
+      {
+        "txt": "FlowScope blindScope, boolean condition) { FlowScope leftScope = firstPreciserScopeKnowingConditionOutcome( left, blindScope, !condition); StaticSlot<JSType> leftVar = leftScope.findUniqueRefinedSlot(blindScope); if (leftVar == null) { return blindScope; } FlowScope rightScope = firstPreciserScopeKnowingConditionOutcome( left, blindScope, condition); rightScope = firstPreciserScopeKnowingConditionOutcome("
+      },
+      {
+        "txt": "right, rightScope, !condition); StaticSlot<JSType> rightVar = rightScope.findUniqueRefinedSlot(blindScope); if (rightVar == null || !leftVar.getName().equals(rightVar.getName())) { return blindScope; } JSType type = leftVar.getType().getLeastSupertype(rightVar.getType()); FlowScope informed = blindScope.createChildFlowScope(); informed.inferSlotType(leftVar.getName(), type); return informed; }"
+      },
+      {
+        "txt": "private FlowScope maybeRestrictName( FlowScope blindScope, Node node, JSType originalType, JSType restrictedType) { if (restrictedType != null && !restrictedType.equals(originalType)) { FlowScope informed = blindScope.createChildFlowScope(); declareNameInScope(informed, node, restrictedType); return informed; } return blindScope; } private FlowScope maybeRestrictTwoNames("
+      },
+      {
+        "txt": "FlowScope blindScope, Node left, boolean leftIsRefineable, JSType restrictedLeftType, Node right, boolean rightIsRefineable, JSType restrictedRightType) { boolean shouldRefineLeft = leftIsRefineable && restrictedLeftType != null; boolean shouldRefineRight = rightIsRefineable && restrictedRightType != null; if (shouldRefineLeft || shouldRefineRight) { FlowScope informed = blindScope.createChildFlowScope(); if (shouldRefineLeft) {"
+      },
+      {
+        "txt": "declareNameInScope(informed, left, restrictedLeftType); } if (shouldRefineRight) { declareNameInScope(informed, right, restrictedRightType); } return informed; } return blindScope; } private FlowScope caseNameOrGetProp(Node name, FlowScope blindScope,"
+      },
+      {
+        "txt": "boolean outcome) { JSType type = getTypeIfRefinable(name, blindScope); if (type != null) { JSType restrictedType = type.getRestrictedTypeGivenToBooleanOutcome(outcome); FlowScope informed = blindScope.createChildFlowScope(); declareNameInScope(informed, name, restrictedType); return informed; } return blindScope;"
+      },
+      {
+        "txt": "} private FlowScope caseTypeOf(Node node, JSType type, String value, boolean resultEqualsValue, FlowScope blindScope) { return maybeRestrictName( blindScope, node, type, getRestrictedByTypeOfResult(type, value, resultEqualsValue)); } private FlowScope caseInstanceOf(Node left, Node right, FlowScope blindScope, boolean outcome) { JSType leftType = getTypeIfRefinable(left, blindScope);"
+      },
+      {
+        "txt": "if (leftType == null) { return blindScope; } JSType rightType = right.getJSType(); ObjectType targetType = typeRegistry.getNativeObjectType(JSTypeNative.UNKNOWN_TYPE); if (rightType != null && rightType.isFunctionType()) { targetType = rightType.toMaybeFunctionType(); } Visitor<JSType> visitor;"
+      },
+      {
+        "txt": "if (outcome) { visitor = new RestrictByTrueInstanceOfResultVisitor(targetType); } else { visitor = new RestrictByFalseInstanceOfResultVisitor(targetType); } return maybeRestrictName( blindScope, left, leftType, leftType.visit(visitor)); } private FlowScope caseIn(Node object, String propertyName, FlowScope blindScope) { JSType jsType = object.getJSType();"
+      },
+      {
+        "txt": "jsType = this.getRestrictedWithoutNull(jsType); jsType = this.getRestrictedWithoutUndefined(jsType); boolean hasProperty = false; ObjectType objectType = ObjectType.cast(jsType); if (objectType != null) { hasProperty = objectType.hasProperty(propertyName); } if (!hasProperty) { String qualifiedName = object.getQualifiedName(); if (qualifiedName != null) {"
+      },
+      {
+        "txt": "String propertyQualifiedName = qualifiedName + \".\" + propertyName; if (blindScope.getSlot(propertyQualifiedName) == null) { FlowScope informed = blindScope.createChildFlowScope(); JSType unknownType = typeRegistry.getNativeType( JSTypeNative.UNKNOWN_TYPE); informed.inferQualifiedSlot( object, propertyQualifiedName, unknownType, unknownType); return informed; } }"
+      },
+      {
+        "txt": "} return blindScope; } private class RestrictByTrueInstanceOfResultVisitor extends RestrictByTrueTypeOfResultVisitor { private final ObjectType target; RestrictByTrueInstanceOfResultVisitor(ObjectType target) { this.target = target; } @Override"
+      },
+      {
+        "txt": "protected JSType caseTopType(JSType type) { return applyCommonRestriction(type); } @Override public JSType caseUnknownType() { FunctionType funcTarget = JSType.toMaybeFunctionType(target); if (funcTarget != null && funcTarget.hasInstanceType()) { return funcTarget.getInstanceType(); } return getNativeType(UNKNOWN_TYPE);"
+      },
+      {
+        "txt": "} @Override public JSType caseObjectType(ObjectType type) { return applyCommonRestriction(type); } @Override public JSType caseUnionType(UnionType type) { return applyCommonRestriction(type); } @Override"
+      },
+      {
+        "txt": "public JSType caseFunctionType(FunctionType type) { return caseObjectType(type); } private JSType applyCommonRestriction(JSType type) { if (target.isUnknownType()) { return type; } FunctionType funcTarget = target.toMaybeFunctionType(); if (funcTarget.hasInstanceType()) { return type.getGreatestSubtype(funcTarget.getInstanceType());"
+      },
+      {
+        "txt": "} return null; } } private class RestrictByFalseInstanceOfResultVisitor extends RestrictByFalseTypeOfResultVisitor { private final ObjectType target; RestrictByFalseInstanceOfResultVisitor(ObjectType target) { this.target = target; }"
+      },
+      {
+        "txt": "@Override public JSType caseObjectType(ObjectType type) { if (target.isUnknownType()) { return type; } FunctionType funcTarget = target.toMaybeFunctionType(); if (funcTarget.hasInstanceType()) { if (type.isSubtype(funcTarget.getInstanceType())) { return null; }"
+      },
+      {
+        "txt": "return type; } return null; } @Override public JSType caseUnionType(UnionType type) { if (target.isUnknownType()) { return type; } FunctionType funcTarget = target.toMaybeFunctionType();"
+      },
+      {
+        "txt": "if (funcTarget.hasInstanceType()) { return type.getRestrictedUnion(funcTarget.getInstanceType()); } return null; } @Override public JSType caseFunctionType(FunctionType type) { return caseObjectType(type); } }"
+      }
+    ]
+  },
+  {
+    "id": 847,
+    "file_path": "src/com/google/javascript/jscomp/type/SemanticReverseAbstractInterpreter.java",
+    "start-bug-line": 394,
+    "end-bug-line": 394,
+    "bug": "if (restrictedType != null && !restrictedType.equals(originalType)) {",
+    "fix": "if (restrictedType != null && restrictedType != originalType) {",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.google.javascript.jscomp.type; import static com.google.javascript.rhino.jstype.JSTypeNative.UNKNOWN_TYPE; import com.google.common.base.Function; import com.google.javascript.jscomp.CodingConvention; import com.google.javascript.rhino.Node; import com.google.javascript.rhino.Token;"
+      },
+      {
+        "txt": "import com.google.javascript.rhino.jstype.FunctionType; import com.google.javascript.rhino.jstype.JSType; import com.google.javascript.rhino.jstype.JSType.TypePair; import com.google.javascript.rhino.jstype.JSTypeNative; import com.google.javascript.rhino.jstype.JSTypeRegistry; import com.google.javascript.rhino.jstype.ObjectType; import com.google.javascript.rhino.jstype.StaticSlot; import com.google.javascript.rhino.jstype.UnionType; import com.google.javascript.rhino.jstype.Visitor; public class SemanticReverseAbstractInterpreter"
+      },
+      {
+        "txt": "extends ChainableReverseAbstractInterpreter { private static final Function<TypePair, TypePair> EQ = new Function<TypePair, TypePair>() { @Override public TypePair apply(TypePair p) { if (p.typeA == null || p.typeB == null) { return null; } return p.typeA.getTypesUnderEquality(p.typeB); }"
+      },
+      {
+        "txt": "}; private static final Function<TypePair, TypePair> NE = new Function<TypePair, TypePair>() { @Override public TypePair apply(TypePair p) { if (p.typeA == null || p.typeB == null) { return null; } return p.typeA.getTypesUnderInequality(p.typeB); }"
+      },
+      {
+        "txt": "}; private static final Function<TypePair, TypePair> SHEQ = new Function<TypePair, TypePair>() { @Override public TypePair apply(TypePair p) { if (p.typeA == null || p.typeB == null) { return null; } return p.typeA.getTypesUnderShallowEquality(p.typeB);"
+      },
+      {
+        "txt": "} }; private static final Function<TypePair, TypePair> SHNE = new Function<TypePair, TypePair>() { @Override public TypePair apply(TypePair p) { if (p.typeA == null || p.typeB == null) { return null; }"
+      },
+      {
+        "txt": "return p.typeA.getTypesUnderShallowInequality(p.typeB); } }; private final Function<TypePair, TypePair> INEQ = new Function<TypePair, TypePair>() { @Override public TypePair apply(TypePair p) { return new TypePair( getRestrictedWithoutUndefined(p.typeA),"
+      },
+      {
+        "txt": "getRestrictedWithoutUndefined(p.typeB)); } }; public SemanticReverseAbstractInterpreter(CodingConvention convention, JSTypeRegistry typeRegistry) { super(convention, typeRegistry); } @Override public FlowScope getPreciserScopeKnowingConditionOutcome(Node condition, FlowScope blindScope, boolean outcome) {"
+      },
+      {
+        "txt": "int operatorToken = condition.getType(); switch (operatorToken) { case Token.EQ: case Token.NE: case Token.SHEQ: case Token.SHNE: case Token.CASE: Node left; Node right; if (operatorToken == Token.CASE) {"
+      },
+      {
+        "txt": "left = condition.getParent().getFirstChild(); // the switch condition right = condition.getFirstChild(); } else { left = condition.getFirstChild(); right = condition.getLastChild(); } Node typeOfNode = null; Node stringNode = null; if (left.isTypeOf() && right.isString()) { typeOfNode = left;"
+      },
+      {
+        "txt": "stringNode = right; } else if (right.isTypeOf() && left.isString()) { typeOfNode = right; stringNode = left; } if (typeOfNode != null && stringNode != null) { Node operandNode = typeOfNode.getFirstChild(); JSType operandType = getTypeIfRefinable(operandNode, blindScope); if (operandType != null) {"
+      },
+      {
+        "txt": "boolean resultEqualsValue = operatorToken == Token.EQ || operatorToken == Token.SHEQ || operatorToken == Token.CASE; if (!outcome) { resultEqualsValue = !resultEqualsValue; } return caseTypeOf(operandNode, operandType, stringNode.getString(), resultEqualsValue, blindScope); } } }"
+      },
+      {
+        "txt": "switch (operatorToken) { case Token.AND: if (outcome) { return caseAndOrNotShortCircuiting(condition.getFirstChild(), condition.getLastChild(), blindScope, true); } else { return caseAndOrMaybeShortCircuiting(condition.getFirstChild(), condition.getLastChild(), blindScope, true); } case Token.OR:"
+      },
+      {
+        "txt": "if (!outcome) { return caseAndOrNotShortCircuiting(condition.getFirstChild(), condition.getLastChild(), blindScope, false); } else { return caseAndOrMaybeShortCircuiting(condition.getFirstChild(), condition.getLastChild(), blindScope, false); } case Token.EQ: if (outcome) { return caseEquality(condition, blindScope, EQ);"
+      },
+      {
+        "txt": "} else { return caseEquality(condition, blindScope, NE); } case Token.NE: if (outcome) { return caseEquality(condition, blindScope, NE); } else { return caseEquality(condition, blindScope, EQ); } case Token.SHEQ:"
+      },
+      {
+        "txt": "if (outcome) { return caseEquality(condition, blindScope, SHEQ); } else { return caseEquality(condition, blindScope, SHNE); } case Token.SHNE: if (outcome) { return caseEquality(condition, blindScope, SHNE); } else { return caseEquality(condition, blindScope, SHEQ);"
+      },
+      {
+        "txt": "} case Token.NAME: case Token.GETPROP: return caseNameOrGetProp(condition, blindScope, outcome); case Token.ASSIGN: return firstPreciserScopeKnowingConditionOutcome( condition.getFirstChild(), firstPreciserScopeKnowingConditionOutcome( condition.getFirstChild().getNext(), blindScope, outcome), outcome);"
+      },
+      {
+        "txt": "case Token.NOT: return firstPreciserScopeKnowingConditionOutcome( condition.getFirstChild(), blindScope, !outcome); case Token.LE: case Token.LT: case Token.GE: case Token.GT: if (outcome) { return caseEquality(condition, blindScope, INEQ); }"
+      },
+      {
+        "txt": "break; case Token.INSTANCEOF: return caseInstanceOf( condition.getFirstChild(), condition.getLastChild(), blindScope, outcome); case Token.IN: if (outcome && condition.getFirstChild().isString()) { return caseIn(condition.getLastChild(), condition.getFirstChild().getString(), blindScope); }"
+      },
+      {
+        "txt": "break; case Token.CASE: Node left = condition.getParent().getFirstChild(); // the switch condition Node right = condition.getFirstChild(); if (outcome) { return caseEquality(left, right, blindScope, SHEQ); } else { return caseEquality(left, right, blindScope, SHNE); }"
+      },
+      {
+        "txt": "} return nextPreciserScopeKnowingConditionOutcome( condition, blindScope, outcome); } private FlowScope caseEquality(Node condition, FlowScope blindScope, Function<TypePair, TypePair> merging) { return caseEquality(condition.getFirstChild(), condition.getLastChild(), blindScope, merging); } private FlowScope caseEquality(Node left, Node right, FlowScope blindScope,"
+      },
+      {
+        "txt": "Function<TypePair, TypePair> merging) { JSType leftType = getTypeIfRefinable(left, blindScope); boolean leftIsRefineable; if (leftType != null) { leftIsRefineable = true; } else { leftIsRefineable = false; leftType = left.getJSType(); } JSType rightType = getTypeIfRefinable(right, blindScope);"
+      },
+      {
+        "txt": "boolean rightIsRefineable; if (rightType != null) { rightIsRefineable = true; } else { rightIsRefineable = false; rightType = right.getJSType(); } TypePair merged = merging.apply(new TypePair(leftType, rightType)); if (merged != null) { return maybeRestrictTwoNames("
+      },
+      {
+        "txt": "blindScope, left, leftIsRefineable, merged.typeA, right, rightIsRefineable, merged.typeB); } return blindScope; } private FlowScope caseAndOrNotShortCircuiting(Node left, Node right, FlowScope blindScope, boolean condition) { JSType leftType = getTypeIfRefinable(left, blindScope); boolean leftIsRefineable;"
+      },
+      {
+        "txt": "if (leftType != null) { leftIsRefineable = true; } else { leftIsRefineable = false; leftType = left.getJSType(); blindScope = firstPreciserScopeKnowingConditionOutcome( left, blindScope, condition); } JSType restrictedLeftType = (leftType == null) ? null : leftType.getRestrictedTypeGivenToBooleanOutcome(condition);"
+      },
+      {
+        "txt": "if (restrictedLeftType == null) { return firstPreciserScopeKnowingConditionOutcome( right, blindScope, condition); } JSType rightType = getTypeIfRefinable(right, blindScope); boolean rightIsRefineable; if (rightType != null) { rightIsRefineable = true; } else { rightIsRefineable = false;"
+      },
+      {
+        "txt": "rightType = right.getJSType(); blindScope = firstPreciserScopeKnowingConditionOutcome( right, blindScope, condition); } if (condition) { JSType restrictedRightType = (rightType == null) ? null : rightType.getRestrictedTypeGivenToBooleanOutcome(condition); return maybeRestrictTwoNames( blindScope, left, leftIsRefineable, restrictedLeftType,"
+      },
+      {
+        "txt": "right, rightIsRefineable, restrictedRightType); } return blindScope; } private FlowScope caseAndOrMaybeShortCircuiting(Node left, Node right, FlowScope blindScope, boolean condition) { FlowScope leftScope = firstPreciserScopeKnowingConditionOutcome( left, blindScope, !condition); StaticSlot<JSType> leftVar = leftScope.findUniqueRefinedSlot(blindScope); if (leftVar == null) {"
+      },
+      {
+        "txt": "return blindScope; } FlowScope rightScope = firstPreciserScopeKnowingConditionOutcome( left, blindScope, condition); rightScope = firstPreciserScopeKnowingConditionOutcome( right, rightScope, !condition); StaticSlot<JSType> rightVar = rightScope.findUniqueRefinedSlot(blindScope); if (rightVar == null || !leftVar.getName().equals(rightVar.getName())) { return blindScope; }"
+      },
+      {
+        "txt": "FlowScope informed = blindScope.createChildFlowScope(); informed.inferSlotType(leftVar.getName(), type); return informed; } private FlowScope maybeRestrictName( FlowScope blindScope, Node node, JSType originalType, JSType restrictedType) { <extra_id_0> FlowScope informed = blindScope.createChildFlowScope(); declareNameInScope(informed, node, restrictedType); return informed; } return blindScope; }"
+      },
+      {
+        "txt": "return blindScope; } private FlowScope maybeRestrictTwoNames( FlowScope blindScope, Node left, boolean leftIsRefineable, JSType restrictedLeftType, Node right, boolean rightIsRefineable, JSType restrictedRightType) { boolean shouldRefineLeft = leftIsRefineable && restrictedLeftType != null; boolean shouldRefineRight = rightIsRefineable && restrictedRightType != null;"
+      },
+      {
+        "txt": "if (shouldRefineLeft || shouldRefineRight) { FlowScope informed = blindScope.createChildFlowScope(); if (shouldRefineLeft) { declareNameInScope(informed, left, restrictedLeftType); } if (shouldRefineRight) { declareNameInScope(informed, right, restrictedRightType); } return informed; }"
+      },
+      {
+        "txt": "return blindScope; } private FlowScope caseNameOrGetProp(Node name, FlowScope blindScope, boolean outcome) { JSType type = getTypeIfRefinable(name, blindScope); if (type != null) { JSType restrictedType = type.getRestrictedTypeGivenToBooleanOutcome(outcome); FlowScope informed = blindScope.createChildFlowScope(); declareNameInScope(informed, name, restrictedType);"
+      },
+      {
+        "txt": "return informed; } return blindScope; } private FlowScope caseTypeOf(Node node, JSType type, String value, boolean resultEqualsValue, FlowScope blindScope) { return maybeRestrictName( blindScope, node, type, getRestrictedByTypeOfResult(type, value, resultEqualsValue)); }"
+      },
+      {
+        "txt": "private FlowScope caseInstanceOf(Node left, Node right, FlowScope blindScope, boolean outcome) { JSType leftType = getTypeIfRefinable(left, blindScope); if (leftType == null) { return blindScope; } JSType rightType = right.getJSType(); ObjectType targetType = typeRegistry.getNativeObjectType(JSTypeNative.UNKNOWN_TYPE); if (rightType != null && rightType.isFunctionType()) {"
+      },
+      {
+        "txt": "targetType = rightType.toMaybeFunctionType(); } Visitor<JSType> visitor; if (outcome) { visitor = new RestrictByTrueInstanceOfResultVisitor(targetType); } else { visitor = new RestrictByFalseInstanceOfResultVisitor(targetType); } return maybeRestrictName( blindScope, left, leftType, leftType.visit(visitor));"
+      },
+      {
+        "txt": "} private FlowScope caseIn(Node object, String propertyName, FlowScope blindScope) { JSType jsType = object.getJSType(); jsType = this.getRestrictedWithoutNull(jsType); jsType = this.getRestrictedWithoutUndefined(jsType); boolean hasProperty = false; ObjectType objectType = ObjectType.cast(jsType); if (objectType != null) { hasProperty = objectType.hasProperty(propertyName); }"
+      },
+      {
+        "txt": "if (!hasProperty) { String qualifiedName = object.getQualifiedName(); if (qualifiedName != null) { String propertyQualifiedName = qualifiedName + \".\" + propertyName; if (blindScope.getSlot(propertyQualifiedName) == null) { FlowScope informed = blindScope.createChildFlowScope(); JSType unknownType = typeRegistry.getNativeType( JSTypeNative.UNKNOWN_TYPE); informed.inferQualifiedSlot( object, propertyQualifiedName, unknownType, unknownType);"
+      },
+      {
+        "txt": "return informed; } } } return blindScope; } private class RestrictByTrueInstanceOfResultVisitor extends RestrictByTrueTypeOfResultVisitor { private final ObjectType target; RestrictByTrueInstanceOfResultVisitor(ObjectType target) {"
+      },
+      {
+        "txt": "this.target = target; } @Override protected JSType caseTopType(JSType type) { return applyCommonRestriction(type); } @Override public JSType caseUnknownType() { FunctionType funcTarget = JSType.toMaybeFunctionType(target); if (funcTarget != null && funcTarget.hasInstanceType()) {"
+      },
+      {
+        "txt": "return funcTarget.getInstanceType(); } return getNativeType(UNKNOWN_TYPE); } @Override public JSType caseObjectType(ObjectType type) { return applyCommonRestriction(type); } @Override public JSType caseUnionType(UnionType type) {"
+      },
+      {
+        "txt": "return applyCommonRestriction(type); } @Override public JSType caseFunctionType(FunctionType type) { return caseObjectType(type); } private JSType applyCommonRestriction(JSType type) { if (target.isUnknownType()) { return type; }"
+      },
+      {
+        "txt": "FunctionType funcTarget = target.toMaybeFunctionType(); if (funcTarget.hasInstanceType()) { return type.getGreatestSubtype(funcTarget.getInstanceType()); } return null; } } private class RestrictByFalseInstanceOfResultVisitor extends RestrictByFalseTypeOfResultVisitor { private final ObjectType target;"
+      },
+      {
+        "txt": "RestrictByFalseInstanceOfResultVisitor(ObjectType target) { this.target = target; } @Override public JSType caseObjectType(ObjectType type) { if (target.isUnknownType()) { return type; } FunctionType funcTarget = target.toMaybeFunctionType(); if (funcTarget.hasInstanceType()) {"
+      },
+      {
+        "txt": "if (type.isSubtype(funcTarget.getInstanceType())) { return null; } return type; } return null; } @Override public JSType caseUnionType(UnionType type) { if (target.isUnknownType()) {"
+      },
+      {
+        "txt": "return type; } FunctionType funcTarget = target.toMaybeFunctionType(); if (funcTarget.hasInstanceType()) { return type.getRestrictedUnion(funcTarget.getInstanceType()); } return null; } @Override public JSType caseFunctionType(FunctionType type) {"
+      },
+      {
+        "txt": "return caseObjectType(type); } }"
+      }
+    ]
+  },
+  {
+    "id": 848,
+    "file_path": "src/com/google/javascript/jscomp/type/SemanticReverseAbstractInterpreter.java",
+    "start-bug-line": 407,
+    "end-bug-line": 408,
+    "bug": "Node left, boolean leftIsRefineable, JSType restrictedLeftType, Node right, boolean rightIsRefineable, JSType restrictedRightType) {",
+    "fix": "Node left, JSType originalLeftType, JSType restrictedLeftType, Node right, JSType originalRightType, JSType restrictedRightType) {",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.google.javascript.jscomp.type; import static com.google.javascript.rhino.jstype.JSTypeNative.UNKNOWN_TYPE; import com.google.common.base.Function; import com.google.javascript.jscomp.CodingConvention; import com.google.javascript.rhino.Node;"
+      },
+      {
+        "txt": "import com.google.javascript.rhino.Token; import com.google.javascript.rhino.jstype.FunctionType; import com.google.javascript.rhino.jstype.JSType; import com.google.javascript.rhino.jstype.JSType.TypePair; import com.google.javascript.rhino.jstype.JSTypeNative; import com.google.javascript.rhino.jstype.JSTypeRegistry; import com.google.javascript.rhino.jstype.ObjectType; import com.google.javascript.rhino.jstype.StaticSlot; import com.google.javascript.rhino.jstype.UnionType; import com.google.javascript.rhino.jstype.Visitor;"
+      },
+      {
+        "txt": "public class SemanticReverseAbstractInterpreter extends ChainableReverseAbstractInterpreter { private static final Function<TypePair, TypePair> EQ = new Function<TypePair, TypePair>() { @Override public TypePair apply(TypePair p) { if (p.typeA == null || p.typeB == null) { return null; } return p.typeA.getTypesUnderEquality(p.typeB);"
+      },
+      {
+        "txt": "} }; private static final Function<TypePair, TypePair> NE = new Function<TypePair, TypePair>() { @Override public TypePair apply(TypePair p) { if (p.typeA == null || p.typeB == null) { return null; } return p.typeA.getTypesUnderInequality(p.typeB);"
+      },
+      {
+        "txt": "} }; private static final Function<TypePair, TypePair> SHEQ = new Function<TypePair, TypePair>() { @Override public TypePair apply(TypePair p) { if (p.typeA == null || p.typeB == null) { return null; }"
+      },
+      {
+        "txt": "return p.typeA.getTypesUnderShallowEquality(p.typeB); } }; private static final Function<TypePair, TypePair> SHNE = new Function<TypePair, TypePair>() { @Override public TypePair apply(TypePair p) { if (p.typeA == null || p.typeB == null) { return null;"
+      },
+      {
+        "txt": "} return p.typeA.getTypesUnderShallowInequality(p.typeB); } }; private final Function<TypePair, TypePair> INEQ = new Function<TypePair, TypePair>() { @Override public TypePair apply(TypePair p) { return new TypePair("
+      },
+      {
+        "txt": "getRestrictedWithoutUndefined(p.typeA), getRestrictedWithoutUndefined(p.typeB)); } }; public SemanticReverseAbstractInterpreter(CodingConvention convention, JSTypeRegistry typeRegistry) { super(convention, typeRegistry); } @Override public FlowScope getPreciserScopeKnowingConditionOutcome(Node condition,"
+      },
+      {
+        "txt": "FlowScope blindScope, boolean outcome) { int operatorToken = condition.getType(); switch (operatorToken) { case Token.EQ: case Token.NE: case Token.SHEQ: case Token.SHNE: case Token.CASE: Node left; Node right;"
+      },
+      {
+        "txt": "if (operatorToken == Token.CASE) { left = condition.getParent().getFirstChild(); // the switch condition right = condition.getFirstChild(); } else { left = condition.getFirstChild(); right = condition.getLastChild(); } Node typeOfNode = null; Node stringNode = null; if (left.isTypeOf() && right.isString()) {"
+      },
+      {
+        "txt": "typeOfNode = left; stringNode = right; } else if (right.isTypeOf() && left.isString()) { typeOfNode = right; stringNode = left; } if (typeOfNode != null && stringNode != null) { Node operandNode = typeOfNode.getFirstChild(); JSType operandType = getTypeIfRefinable(operandNode, blindScope);"
+      },
+      {
+        "txt": "if (operandType != null) { boolean resultEqualsValue = operatorToken == Token.EQ || operatorToken == Token.SHEQ || operatorToken == Token.CASE; if (!outcome) { resultEqualsValue = !resultEqualsValue; } return caseTypeOf(operandNode, operandType, stringNode.getString(), resultEqualsValue, blindScope); } }"
+      },
+      {
+        "txt": "} switch (operatorToken) { case Token.AND: if (outcome) { return caseAndOrNotShortCircuiting(condition.getFirstChild(), condition.getLastChild(), blindScope, true); } else { return caseAndOrMaybeShortCircuiting(condition.getFirstChild(), condition.getLastChild(), blindScope, true); }"
+      },
+      {
+        "txt": "case Token.OR: if (!outcome) { return caseAndOrNotShortCircuiting(condition.getFirstChild(), condition.getLastChild(), blindScope, false); } else { return caseAndOrMaybeShortCircuiting(condition.getFirstChild(), condition.getLastChild(), blindScope, false); } case Token.EQ: if (outcome) {"
+      },
+      {
+        "txt": "return caseEquality(condition, blindScope, EQ); } else { return caseEquality(condition, blindScope, NE); } case Token.NE: if (outcome) { return caseEquality(condition, blindScope, NE); } else { return caseEquality(condition, blindScope, EQ); }"
+      },
+      {
+        "txt": "case Token.SHEQ: if (outcome) { return caseEquality(condition, blindScope, SHEQ); } else { return caseEquality(condition, blindScope, SHNE); } case Token.SHNE: if (outcome) { return caseEquality(condition, blindScope, SHNE); } else {"
+      },
+      {
+        "txt": "return caseEquality(condition, blindScope, SHEQ); } case Token.NAME: case Token.GETPROP: return caseNameOrGetProp(condition, blindScope, outcome); case Token.ASSIGN: return firstPreciserScopeKnowingConditionOutcome( condition.getFirstChild(), firstPreciserScopeKnowingConditionOutcome( condition.getFirstChild().getNext(), blindScope, outcome),"
+      },
+      {
+        "txt": "outcome); case Token.NOT: return firstPreciserScopeKnowingConditionOutcome( condition.getFirstChild(), blindScope, !outcome); case Token.LE: case Token.LT: case Token.GE: case Token.GT: if (outcome) { return caseEquality(condition, blindScope, INEQ);"
+      },
+      {
+        "txt": "} break; case Token.INSTANCEOF: return caseInstanceOf( condition.getFirstChild(), condition.getLastChild(), blindScope, outcome); case Token.IN: if (outcome && condition.getFirstChild().isString()) { return caseIn(condition.getLastChild(), condition.getFirstChild().getString(), blindScope);"
+      },
+      {
+        "txt": "} break; case Token.CASE: Node left = condition.getParent().getFirstChild(); // the switch condition Node right = condition.getFirstChild(); if (outcome) { return caseEquality(left, right, blindScope, SHEQ); } else { return caseEquality(left, right, blindScope, SHNE);"
+      },
+      {
+        "txt": "} } return nextPreciserScopeKnowingConditionOutcome( condition, blindScope, outcome); } private FlowScope caseEquality(Node condition, FlowScope blindScope, Function<TypePair, TypePair> merging) { return caseEquality(condition.getFirstChild(), condition.getLastChild(), blindScope, merging); }"
+      },
+      {
+        "txt": "private FlowScope caseEquality(Node left, Node right, FlowScope blindScope, Function<TypePair, TypePair> merging) { JSType leftType = getTypeIfRefinable(left, blindScope); boolean leftIsRefineable; if (leftType != null) { leftIsRefineable = true; } else { leftIsRefineable = false; leftType = left.getJSType(); }"
+      },
+      {
+        "txt": "JSType rightType = getTypeIfRefinable(right, blindScope); boolean rightIsRefineable; if (rightType != null) { rightIsRefineable = true; } else { rightIsRefineable = false; rightType = right.getJSType(); } TypePair merged = merging.apply(new TypePair(leftType, rightType)); if (merged != null) {"
+      },
+      {
+        "txt": "return maybeRestrictTwoNames( blindScope, left, leftIsRefineable, merged.typeA, right, rightIsRefineable, merged.typeB); } return blindScope; } private FlowScope caseAndOrNotShortCircuiting(Node left, Node right, FlowScope blindScope, boolean condition) { JSType leftType = getTypeIfRefinable(left, blindScope);"
+      },
+      {
+        "txt": "boolean leftIsRefineable; if (leftType != null) { leftIsRefineable = true; } else { leftIsRefineable = false; leftType = left.getJSType(); blindScope = firstPreciserScopeKnowingConditionOutcome( left, blindScope, condition); } JSType restrictedLeftType = (leftType == null) ? null :"
+      },
+      {
+        "txt": "leftType.getRestrictedTypeGivenToBooleanOutcome(condition); if (restrictedLeftType == null) { return firstPreciserScopeKnowingConditionOutcome( right, blindScope, condition); } JSType rightType = getTypeIfRefinable(right, blindScope); boolean rightIsRefineable; if (rightType != null) { rightIsRefineable = true; } else {"
+      },
+      {
+        "txt": "rightIsRefineable = false; rightType = right.getJSType(); blindScope = firstPreciserScopeKnowingConditionOutcome( right, blindScope, condition); } if (condition) { JSType restrictedRightType = (rightType == null) ? null : rightType.getRestrictedTypeGivenToBooleanOutcome(condition); return maybeRestrictTwoNames( blindScope,"
+      },
+      {
+        "txt": "left, leftIsRefineable, restrictedLeftType, right, rightIsRefineable, restrictedRightType); } return blindScope; } private FlowScope caseAndOrMaybeShortCircuiting(Node left, Node right, FlowScope blindScope, boolean condition) { FlowScope leftScope = firstPreciserScopeKnowingConditionOutcome( left, blindScope, !condition); StaticSlot<JSType> leftVar = leftScope.findUniqueRefinedSlot(blindScope);"
+      },
+      {
+        "txt": "if (leftVar == null) { return blindScope; } FlowScope rightScope = firstPreciserScopeKnowingConditionOutcome( left, blindScope, condition); rightScope = firstPreciserScopeKnowingConditionOutcome( right, rightScope, !condition); StaticSlot<JSType> rightVar = rightScope.findUniqueRefinedSlot(blindScope); if (rightVar == null || !leftVar.getName().equals(rightVar.getName())) { return blindScope;"
+      },
+      {
+        "txt": "} JSType type = leftVar.getType().getLeastSupertype(rightVar.getType()); FlowScope informed = blindScope.createChildFlowScope(); informed.inferSlotType(leftVar.getName(), type); return informed; } private FlowScope maybeRestrictName( FlowScope blindScope, Node node, JSType originalType, JSType restrictedType) { if (restrictedType != null && !restrictedType.equals(originalType)) { FlowScope informed = blindScope.createChildFlowScope();"
+      },
+      {
+        "txt": "return informed; } return blindScope; } private FlowScope maybeRestrictTwoNames( FlowScope blindScope, <extra_id_0> boolean shouldRefineLeft = leftIsRefineable && restrictedLeftType != null; boolean shouldRefineRight = rightIsRefineable && restrictedRightType != null; if (shouldRefineLeft || shouldRefineRight) { FlowScope informed = blindScope.createChildFlowScope();"
+      },
+      {
+        "txt": "if (shouldRefineLeft || shouldRefineRight) { FlowScope informed = blindScope.createChildFlowScope(); if (shouldRefineLeft) { declareNameInScope(informed, left, restrictedLeftType); } if (shouldRefineRight) { declareNameInScope(informed, right, restrictedRightType); } return informed; }"
+      },
+      {
+        "txt": "return blindScope; } private FlowScope caseNameOrGetProp(Node name, FlowScope blindScope, boolean outcome) { JSType type = getTypeIfRefinable(name, blindScope); if (type != null) { JSType restrictedType = type.getRestrictedTypeGivenToBooleanOutcome(outcome); FlowScope informed = blindScope.createChildFlowScope(); declareNameInScope(informed, name, restrictedType);"
+      },
+      {
+        "txt": "return informed; } return blindScope; } private FlowScope caseTypeOf(Node node, JSType type, String value, boolean resultEqualsValue, FlowScope blindScope) { return maybeRestrictName( blindScope, node, type, getRestrictedByTypeOfResult(type, value, resultEqualsValue)); }"
+      },
+      {
+        "txt": "private FlowScope caseInstanceOf(Node left, Node right, FlowScope blindScope, boolean outcome) { JSType leftType = getTypeIfRefinable(left, blindScope); if (leftType == null) { return blindScope; } JSType rightType = right.getJSType(); ObjectType targetType = typeRegistry.getNativeObjectType(JSTypeNative.UNKNOWN_TYPE); if (rightType != null && rightType.isFunctionType()) {"
+      },
+      {
+        "txt": "targetType = rightType.toMaybeFunctionType(); } Visitor<JSType> visitor; if (outcome) { visitor = new RestrictByTrueInstanceOfResultVisitor(targetType); } else { visitor = new RestrictByFalseInstanceOfResultVisitor(targetType); } return maybeRestrictName( blindScope, left, leftType, leftType.visit(visitor));"
+      },
+      {
+        "txt": "} private FlowScope caseIn(Node object, String propertyName, FlowScope blindScope) { JSType jsType = object.getJSType(); jsType = this.getRestrictedWithoutNull(jsType); jsType = this.getRestrictedWithoutUndefined(jsType); boolean hasProperty = false; ObjectType objectType = ObjectType.cast(jsType); if (objectType != null) { hasProperty = objectType.hasProperty(propertyName); }"
+      },
+      {
+        "txt": "if (!hasProperty) { String qualifiedName = object.getQualifiedName(); if (qualifiedName != null) { String propertyQualifiedName = qualifiedName + \".\" + propertyName; if (blindScope.getSlot(propertyQualifiedName) == null) { FlowScope informed = blindScope.createChildFlowScope(); JSType unknownType = typeRegistry.getNativeType( JSTypeNative.UNKNOWN_TYPE); informed.inferQualifiedSlot( object, propertyQualifiedName, unknownType, unknownType);"
+      },
+      {
+        "txt": "return informed; } } } return blindScope; } private class RestrictByTrueInstanceOfResultVisitor extends RestrictByTrueTypeOfResultVisitor { private final ObjectType target; RestrictByTrueInstanceOfResultVisitor(ObjectType target) {"
+      },
+      {
+        "txt": "this.target = target; } @Override protected JSType caseTopType(JSType type) { return applyCommonRestriction(type); } @Override public JSType caseUnknownType() { FunctionType funcTarget = JSType.toMaybeFunctionType(target); if (funcTarget != null && funcTarget.hasInstanceType()) {"
+      },
+      {
+        "txt": "return funcTarget.getInstanceType(); } return getNativeType(UNKNOWN_TYPE); } @Override public JSType caseObjectType(ObjectType type) { return applyCommonRestriction(type); } @Override public JSType caseUnionType(UnionType type) {"
+      },
+      {
+        "txt": "return applyCommonRestriction(type); } @Override public JSType caseFunctionType(FunctionType type) { return caseObjectType(type); } private JSType applyCommonRestriction(JSType type) { if (target.isUnknownType()) { return type; }"
+      },
+      {
+        "txt": "FunctionType funcTarget = target.toMaybeFunctionType(); if (funcTarget.hasInstanceType()) { return type.getGreatestSubtype(funcTarget.getInstanceType()); } return null; } } private class RestrictByFalseInstanceOfResultVisitor extends RestrictByFalseTypeOfResultVisitor { private final ObjectType target;"
+      },
+      {
+        "txt": "RestrictByFalseInstanceOfResultVisitor(ObjectType target) { this.target = target; } @Override public JSType caseObjectType(ObjectType type) { if (target.isUnknownType()) { return type; } FunctionType funcTarget = target.toMaybeFunctionType(); if (funcTarget.hasInstanceType()) {"
+      },
+      {
+        "txt": "if (type.isSubtype(funcTarget.getInstanceType())) { return null; } return type; } return null; } @Override public JSType caseUnionType(UnionType type) { if (target.isUnknownType()) {"
+      },
+      {
+        "txt": "return type; } FunctionType funcTarget = target.toMaybeFunctionType(); if (funcTarget.hasInstanceType()) { return type.getRestrictedUnion(funcTarget.getInstanceType()); } return null; } @Override public JSType caseFunctionType(FunctionType type) {"
+      },
+      {
+        "txt": "return caseObjectType(type); } }"
+      }
+    ]
+  },
+  {
+    "id": 849,
+    "file_path": "src/com/google/javascript/jscomp/type/SemanticReverseAbstractInterpreter.java",
+    "start-bug-line": 410,
+    "end-bug-line": 410,
+    "bug": "leftIsRefineable && restrictedLeftType != null;",
+    "fix": "restrictedLeftType != null && restrictedLeftType != originalLeftType;",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.google.javascript.jscomp.type; import static com.google.javascript.rhino.jstype.JSTypeNative.UNKNOWN_TYPE; import com.google.common.base.Function; import com.google.javascript.jscomp.CodingConvention; import com.google.javascript.rhino.Node; import com.google.javascript.rhino.Token; import com.google.javascript.rhino.jstype.FunctionType; import com.google.javascript.rhino.jstype.JSType;"
+      },
+      {
+        "txt": "import com.google.javascript.rhino.jstype.JSType.TypePair; import com.google.javascript.rhino.jstype.JSTypeNative; import com.google.javascript.rhino.jstype.JSTypeRegistry; import com.google.javascript.rhino.jstype.ObjectType; import com.google.javascript.rhino.jstype.StaticSlot; import com.google.javascript.rhino.jstype.UnionType; import com.google.javascript.rhino.jstype.Visitor; public class SemanticReverseAbstractInterpreter extends ChainableReverseAbstractInterpreter { private static final Function<TypePair, TypePair> EQ ="
+      },
+      {
+        "txt": "new Function<TypePair, TypePair>() { @Override public TypePair apply(TypePair p) { if (p.typeA == null || p.typeB == null) { return null; } return p.typeA.getTypesUnderEquality(p.typeB); } }; private static final Function<TypePair, TypePair> NE ="
+      },
+      {
+        "txt": "new Function<TypePair, TypePair>() { @Override public TypePair apply(TypePair p) { if (p.typeA == null || p.typeB == null) { return null; } return p.typeA.getTypesUnderInequality(p.typeB); } }; private static final"
+      },
+      {
+        "txt": "Function<TypePair, TypePair> SHEQ = new Function<TypePair, TypePair>() { @Override public TypePair apply(TypePair p) { if (p.typeA == null || p.typeB == null) { return null; } return p.typeA.getTypesUnderShallowEquality(p.typeB); } };"
+      },
+      {
+        "txt": "private static final Function<TypePair, TypePair> SHNE = new Function<TypePair, TypePair>() { @Override public TypePair apply(TypePair p) { if (p.typeA == null || p.typeB == null) { return null; } return p.typeA.getTypesUnderShallowInequality(p.typeB); }"
+      },
+      {
+        "txt": "}; private final Function<TypePair, TypePair> INEQ = new Function<TypePair, TypePair>() { @Override public TypePair apply(TypePair p) { return new TypePair( getRestrictedWithoutUndefined(p.typeA), getRestrictedWithoutUndefined(p.typeB)); }"
+      },
+      {
+        "txt": "}; public SemanticReverseAbstractInterpreter(CodingConvention convention, JSTypeRegistry typeRegistry) { super(convention, typeRegistry); } @Override public FlowScope getPreciserScopeKnowingConditionOutcome(Node condition, FlowScope blindScope, boolean outcome) { int operatorToken = condition.getType(); switch (operatorToken) {"
+      },
+      {
+        "txt": "case Token.EQ: case Token.NE: case Token.SHEQ: case Token.SHNE: case Token.CASE: Node left; Node right; if (operatorToken == Token.CASE) { left = condition.getParent().getFirstChild(); // the switch condition right = condition.getFirstChild();"
+      },
+      {
+        "txt": "} else { left = condition.getFirstChild(); right = condition.getLastChild(); } Node typeOfNode = null; Node stringNode = null; if (left.isTypeOf() && right.isString()) { typeOfNode = left; stringNode = right; } else if (right.isTypeOf() &&"
+      },
+      {
+        "txt": "left.isString()) { typeOfNode = right; stringNode = left; } if (typeOfNode != null && stringNode != null) { Node operandNode = typeOfNode.getFirstChild(); JSType operandType = getTypeIfRefinable(operandNode, blindScope); if (operandType != null) { boolean resultEqualsValue = operatorToken == Token.EQ || operatorToken == Token.SHEQ || operatorToken == Token.CASE;"
+      },
+      {
+        "txt": "if (!outcome) { resultEqualsValue = !resultEqualsValue; } return caseTypeOf(operandNode, operandType, stringNode.getString(), resultEqualsValue, blindScope); } } } switch (operatorToken) { case Token.AND:"
+      },
+      {
+        "txt": "if (outcome) { return caseAndOrNotShortCircuiting(condition.getFirstChild(), condition.getLastChild(), blindScope, true); } else { return caseAndOrMaybeShortCircuiting(condition.getFirstChild(), condition.getLastChild(), blindScope, true); } case Token.OR: if (!outcome) { return caseAndOrNotShortCircuiting(condition.getFirstChild(),"
+      },
+      {
+        "txt": "condition.getLastChild(), blindScope, false); } else { return caseAndOrMaybeShortCircuiting(condition.getFirstChild(), condition.getLastChild(), blindScope, false); } case Token.EQ: if (outcome) { return caseEquality(condition, blindScope, EQ); } else { return caseEquality(condition, blindScope, NE);"
+      },
+      {
+        "txt": "} case Token.NE: if (outcome) { return caseEquality(condition, blindScope, NE); } else { return caseEquality(condition, blindScope, EQ); } case Token.SHEQ: if (outcome) { return caseEquality(condition, blindScope, SHEQ);"
+      },
+      {
+        "txt": "} else { return caseEquality(condition, blindScope, SHNE); } case Token.SHNE: if (outcome) { return caseEquality(condition, blindScope, SHNE); } else { return caseEquality(condition, blindScope, SHEQ); } case Token.NAME:"
+      },
+      {
+        "txt": "case Token.GETPROP: return caseNameOrGetProp(condition, blindScope, outcome); case Token.ASSIGN: return firstPreciserScopeKnowingConditionOutcome( condition.getFirstChild(), firstPreciserScopeKnowingConditionOutcome( condition.getFirstChild().getNext(), blindScope, outcome), outcome); case Token.NOT: return firstPreciserScopeKnowingConditionOutcome("
+      },
+      {
+        "txt": "condition.getFirstChild(), blindScope, !outcome); case Token.LE: case Token.LT: case Token.GE: case Token.GT: if (outcome) { return caseEquality(condition, blindScope, INEQ); } break; case Token.INSTANCEOF:"
+      },
+      {
+        "txt": "return caseInstanceOf( condition.getFirstChild(), condition.getLastChild(), blindScope, outcome); case Token.IN: if (outcome && condition.getFirstChild().isString()) { return caseIn(condition.getLastChild(), condition.getFirstChild().getString(), blindScope); } break; case Token.CASE:"
+      },
+      {
+        "txt": "Node left = condition.getParent().getFirstChild(); // the switch condition Node right = condition.getFirstChild(); if (outcome) { return caseEquality(left, right, blindScope, SHEQ); } else { return caseEquality(left, right, blindScope, SHNE); } } return nextPreciserScopeKnowingConditionOutcome("
+      },
+      {
+        "txt": "condition, blindScope, outcome); } private FlowScope caseEquality(Node condition, FlowScope blindScope, Function<TypePair, TypePair> merging) { return caseEquality(condition.getFirstChild(), condition.getLastChild(), blindScope, merging); } private FlowScope caseEquality(Node left, Node right, FlowScope blindScope, Function<TypePair, TypePair> merging) { JSType leftType = getTypeIfRefinable(left, blindScope);"
+      },
+      {
+        "txt": "boolean leftIsRefineable; if (leftType != null) { leftIsRefineable = true; } else { leftIsRefineable = false; leftType = left.getJSType(); } JSType rightType = getTypeIfRefinable(right, blindScope); boolean rightIsRefineable; if (rightType != null) {"
+      },
+      {
+        "txt": "rightIsRefineable = true; } else { rightIsRefineable = false; rightType = right.getJSType(); } TypePair merged = merging.apply(new TypePair(leftType, rightType)); if (merged != null) { return maybeRestrictTwoNames( blindScope, left, leftIsRefineable, merged.typeA,"
+      },
+      {
+        "txt": "right, rightIsRefineable, merged.typeB); } return blindScope; } private FlowScope caseAndOrNotShortCircuiting(Node left, Node right, FlowScope blindScope, boolean condition) { JSType leftType = getTypeIfRefinable(left, blindScope); boolean leftIsRefineable; if (leftType != null) { leftIsRefineable = true;"
+      },
+      {
+        "txt": "} else { leftIsRefineable = false; leftType = left.getJSType(); blindScope = firstPreciserScopeKnowingConditionOutcome( left, blindScope, condition); } JSType restrictedLeftType = (leftType == null) ? null : leftType.getRestrictedTypeGivenToBooleanOutcome(condition); if (restrictedLeftType == null) { return firstPreciserScopeKnowingConditionOutcome("
+      },
+      {
+        "txt": "right, blindScope, condition); } JSType rightType = getTypeIfRefinable(right, blindScope); boolean rightIsRefineable; if (rightType != null) { rightIsRefineable = true; } else { rightIsRefineable = false; rightType = right.getJSType(); blindScope = firstPreciserScopeKnowingConditionOutcome("
+      },
+      {
+        "txt": "right, blindScope, condition); } if (condition) { JSType restrictedRightType = (rightType == null) ? null : rightType.getRestrictedTypeGivenToBooleanOutcome(condition); return maybeRestrictTwoNames( blindScope, left, leftIsRefineable, restrictedLeftType, right, rightIsRefineable, restrictedRightType); }"
+      },
+      {
+        "txt": "return blindScope; } private FlowScope caseAndOrMaybeShortCircuiting(Node left, Node right, FlowScope blindScope, boolean condition) { FlowScope leftScope = firstPreciserScopeKnowingConditionOutcome( left, blindScope, !condition); StaticSlot<JSType> leftVar = leftScope.findUniqueRefinedSlot(blindScope); if (leftVar == null) { return blindScope; }"
+      },
+      {
+        "txt": "FlowScope rightScope = firstPreciserScopeKnowingConditionOutcome( left, blindScope, condition); rightScope = firstPreciserScopeKnowingConditionOutcome( right, rightScope, !condition); StaticSlot<JSType> rightVar = rightScope.findUniqueRefinedSlot(blindScope); if (rightVar == null || !leftVar.getName().equals(rightVar.getName())) { return blindScope; } JSType type = leftVar.getType().getLeastSupertype(rightVar.getType()); FlowScope informed = blindScope.createChildFlowScope();"
+      },
+      {
+        "txt": "informed.inferSlotType(leftVar.getName(), type); return informed; } private FlowScope maybeRestrictName( FlowScope blindScope, Node node, JSType originalType, JSType restrictedType) { if (restrictedType != null && !restrictedType.equals(originalType)) { FlowScope informed = blindScope.createChildFlowScope(); declareNameInScope(informed, node, restrictedType); return informed; }"
+      },
+      {
+        "txt": "} private FlowScope maybeRestrictTwoNames( FlowScope blindScope, Node left, boolean leftIsRefineable, JSType restrictedLeftType, Node right, boolean rightIsRefineable, JSType restrictedRightType) { boolean shouldRefineLeft = <extra_id_0> boolean shouldRefineRight = rightIsRefineable && restrictedRightType != null; if (shouldRefineLeft || shouldRefineRight) { FlowScope informed = blindScope.createChildFlowScope(); if (shouldRefineLeft) { declareNameInScope(informed, left, restrictedLeftType);"
+      },
+      {
+        "txt": "if (shouldRefineLeft) { declareNameInScope(informed, left, restrictedLeftType); } if (shouldRefineRight) { declareNameInScope(informed, right, restrictedRightType); } return informed; } return blindScope; }"
+      },
+      {
+        "txt": "private FlowScope caseNameOrGetProp(Node name, FlowScope blindScope, boolean outcome) { JSType type = getTypeIfRefinable(name, blindScope); if (type != null) { JSType restrictedType = type.getRestrictedTypeGivenToBooleanOutcome(outcome); FlowScope informed = blindScope.createChildFlowScope(); declareNameInScope(informed, name, restrictedType); return informed; }"
+      },
+      {
+        "txt": "return blindScope; } private FlowScope caseTypeOf(Node node, JSType type, String value, boolean resultEqualsValue, FlowScope blindScope) { return maybeRestrictName( blindScope, node, type, getRestrictedByTypeOfResult(type, value, resultEqualsValue)); } private FlowScope caseInstanceOf(Node left, Node right, FlowScope blindScope, boolean outcome) {"
+      },
+      {
+        "txt": "JSType leftType = getTypeIfRefinable(left, blindScope); if (leftType == null) { return blindScope; } JSType rightType = right.getJSType(); ObjectType targetType = typeRegistry.getNativeObjectType(JSTypeNative.UNKNOWN_TYPE); if (rightType != null && rightType.isFunctionType()) { targetType = rightType.toMaybeFunctionType(); }"
+      },
+      {
+        "txt": "Visitor<JSType> visitor; if (outcome) { visitor = new RestrictByTrueInstanceOfResultVisitor(targetType); } else { visitor = new RestrictByFalseInstanceOfResultVisitor(targetType); } return maybeRestrictName( blindScope, left, leftType, leftType.visit(visitor)); } private FlowScope caseIn(Node object, String propertyName, FlowScope blindScope) {"
+      },
+      {
+        "txt": "JSType jsType = object.getJSType(); jsType = this.getRestrictedWithoutNull(jsType); jsType = this.getRestrictedWithoutUndefined(jsType); boolean hasProperty = false; ObjectType objectType = ObjectType.cast(jsType); if (objectType != null) { hasProperty = objectType.hasProperty(propertyName); } if (!hasProperty) { String qualifiedName = object.getQualifiedName();"
+      },
+      {
+        "txt": "if (qualifiedName != null) { String propertyQualifiedName = qualifiedName + \".\" + propertyName; if (blindScope.getSlot(propertyQualifiedName) == null) { FlowScope informed = blindScope.createChildFlowScope(); JSType unknownType = typeRegistry.getNativeType( JSTypeNative.UNKNOWN_TYPE); informed.inferQualifiedSlot( object, propertyQualifiedName, unknownType, unknownType); return informed; }"
+      },
+      {
+        "txt": "} } return blindScope; } private class RestrictByTrueInstanceOfResultVisitor extends RestrictByTrueTypeOfResultVisitor { private final ObjectType target; RestrictByTrueInstanceOfResultVisitor(ObjectType target) { this.target = target; }"
+      },
+      {
+        "txt": "@Override protected JSType caseTopType(JSType type) { return applyCommonRestriction(type); } @Override public JSType caseUnknownType() { FunctionType funcTarget = JSType.toMaybeFunctionType(target); if (funcTarget != null && funcTarget.hasInstanceType()) { return funcTarget.getInstanceType(); }"
+      },
+      {
+        "txt": "return getNativeType(UNKNOWN_TYPE); } @Override public JSType caseObjectType(ObjectType type) { return applyCommonRestriction(type); } @Override public JSType caseUnionType(UnionType type) { return applyCommonRestriction(type); }"
+      },
+      {
+        "txt": "@Override public JSType caseFunctionType(FunctionType type) { return caseObjectType(type); } private JSType applyCommonRestriction(JSType type) { if (target.isUnknownType()) { return type; } FunctionType funcTarget = target.toMaybeFunctionType(); if (funcTarget.hasInstanceType()) {"
+      },
+      {
+        "txt": "return type.getGreatestSubtype(funcTarget.getInstanceType()); } return null; } } private class RestrictByFalseInstanceOfResultVisitor extends RestrictByFalseTypeOfResultVisitor { private final ObjectType target; RestrictByFalseInstanceOfResultVisitor(ObjectType target) { this.target = target;"
+      },
+      {
+        "txt": "} @Override public JSType caseObjectType(ObjectType type) { if (target.isUnknownType()) { return type; } FunctionType funcTarget = target.toMaybeFunctionType(); if (funcTarget.hasInstanceType()) { if (type.isSubtype(funcTarget.getInstanceType())) { return null;"
+      },
+      {
+        "txt": "} return type; } return null; } @Override public JSType caseUnionType(UnionType type) { if (target.isUnknownType()) { return type; }"
+      },
+      {
+        "txt": "FunctionType funcTarget = target.toMaybeFunctionType(); if (funcTarget.hasInstanceType()) { return type.getRestrictedUnion(funcTarget.getInstanceType()); } return null; } @Override public JSType caseFunctionType(FunctionType type) { return caseObjectType(type); }"
+      }
+    ]
+  },
+  {
+    "id": 850,
+    "file_path": "src/com/google/javascript/jscomp/type/SemanticReverseAbstractInterpreter.java",
+    "start-bug-line": 412,
+    "end-bug-line": 412,
+    "bug": "rightIsRefineable && restrictedRightType != null;",
+    "fix": "restrictedRightType != null && restrictedRightType != originalRightType;",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.google.javascript.jscomp.type; import static com.google.javascript.rhino.jstype.JSTypeNative.UNKNOWN_TYPE; import com.google.common.base.Function; import com.google.javascript.jscomp.CodingConvention; import com.google.javascript.rhino.Node; import com.google.javascript.rhino.Token; import com.google.javascript.rhino.jstype.FunctionType; import com.google.javascript.rhino.jstype.JSType; import com.google.javascript.rhino.jstype.JSType.TypePair; import com.google.javascript.rhino.jstype.JSTypeNative;"
+      },
+      {
+        "txt": "import com.google.javascript.rhino.jstype.JSTypeRegistry; import com.google.javascript.rhino.jstype.ObjectType; import com.google.javascript.rhino.jstype.StaticSlot; import com.google.javascript.rhino.jstype.UnionType; import com.google.javascript.rhino.jstype.Visitor; public class SemanticReverseAbstractInterpreter extends ChainableReverseAbstractInterpreter { private static final Function<TypePair, TypePair> EQ = new Function<TypePair, TypePair>() { @Override"
+      },
+      {
+        "txt": "public TypePair apply(TypePair p) { if (p.typeA == null || p.typeB == null) { return null; } return p.typeA.getTypesUnderEquality(p.typeB); } }; private static final Function<TypePair, TypePair> NE = new Function<TypePair, TypePair>() { @Override"
+      },
+      {
+        "txt": "public TypePair apply(TypePair p) { if (p.typeA == null || p.typeB == null) { return null; } return p.typeA.getTypesUnderInequality(p.typeB); } }; private static final Function<TypePair, TypePair> SHEQ = new Function<TypePair, TypePair>() {"
+      },
+      {
+        "txt": "@Override public TypePair apply(TypePair p) { if (p.typeA == null || p.typeB == null) { return null; } return p.typeA.getTypesUnderShallowEquality(p.typeB); } }; private static final Function<TypePair, TypePair> SHNE ="
+      },
+      {
+        "txt": "new Function<TypePair, TypePair>() { @Override public TypePair apply(TypePair p) { if (p.typeA == null || p.typeB == null) { return null; } return p.typeA.getTypesUnderShallowInequality(p.typeB); } }; private final"
+      },
+      {
+        "txt": "Function<TypePair, TypePair> INEQ = new Function<TypePair, TypePair>() { @Override public TypePair apply(TypePair p) { return new TypePair( getRestrictedWithoutUndefined(p.typeA), getRestrictedWithoutUndefined(p.typeB)); } }; public SemanticReverseAbstractInterpreter(CodingConvention convention,"
+      },
+      {
+        "txt": "JSTypeRegistry typeRegistry) { super(convention, typeRegistry); } @Override public FlowScope getPreciserScopeKnowingConditionOutcome(Node condition, FlowScope blindScope, boolean outcome) { int operatorToken = condition.getType(); switch (operatorToken) { case Token.EQ: case Token.NE:"
+      },
+      {
+        "txt": "case Token.SHEQ: case Token.SHNE: case Token.CASE: Node left; Node right; if (operatorToken == Token.CASE) { left = condition.getParent().getFirstChild(); // the switch condition right = condition.getFirstChild(); } else { left = condition.getFirstChild();"
+      },
+      {
+        "txt": "right = condition.getLastChild(); } Node typeOfNode = null; Node stringNode = null; if (left.isTypeOf() && right.isString()) { typeOfNode = left; stringNode = right; } else if (right.isTypeOf() && left.isString()) { typeOfNode = right;"
+      },
+      {
+        "txt": "stringNode = left; } if (typeOfNode != null && stringNode != null) { Node operandNode = typeOfNode.getFirstChild(); JSType operandType = getTypeIfRefinable(operandNode, blindScope); if (operandType != null) { boolean resultEqualsValue = operatorToken == Token.EQ || operatorToken == Token.SHEQ || operatorToken == Token.CASE; if (!outcome) { resultEqualsValue = !resultEqualsValue;"
+      },
+      {
+        "txt": "} return caseTypeOf(operandNode, operandType, stringNode.getString(), resultEqualsValue, blindScope); } } } switch (operatorToken) { case Token.AND: if (outcome) { return caseAndOrNotShortCircuiting(condition.getFirstChild(),"
+      },
+      {
+        "txt": "condition.getLastChild(), blindScope, true); } else { return caseAndOrMaybeShortCircuiting(condition.getFirstChild(), condition.getLastChild(), blindScope, true); } case Token.OR: if (!outcome) { return caseAndOrNotShortCircuiting(condition.getFirstChild(), condition.getLastChild(), blindScope, false); } else {"
+      },
+      {
+        "txt": "return caseAndOrMaybeShortCircuiting(condition.getFirstChild(), condition.getLastChild(), blindScope, false); } case Token.EQ: if (outcome) { return caseEquality(condition, blindScope, EQ); } else { return caseEquality(condition, blindScope, NE); } case Token.NE:"
+      },
+      {
+        "txt": "if (outcome) { return caseEquality(condition, blindScope, NE); } else { return caseEquality(condition, blindScope, EQ); } case Token.SHEQ: if (outcome) { return caseEquality(condition, blindScope, SHEQ); } else { return caseEquality(condition, blindScope, SHNE);"
+      },
+      {
+        "txt": "} case Token.SHNE: if (outcome) { return caseEquality(condition, blindScope, SHNE); } else { return caseEquality(condition, blindScope, SHEQ); } case Token.NAME: case Token.GETPROP: return caseNameOrGetProp(condition, blindScope, outcome);"
+      },
+      {
+        "txt": "case Token.ASSIGN: return firstPreciserScopeKnowingConditionOutcome( condition.getFirstChild(), firstPreciserScopeKnowingConditionOutcome( condition.getFirstChild().getNext(), blindScope, outcome), outcome); case Token.NOT: return firstPreciserScopeKnowingConditionOutcome( condition.getFirstChild(), blindScope, !outcome); case Token.LE:"
+      },
+      {
+        "txt": "case Token.LT: case Token.GE: case Token.GT: if (outcome) { return caseEquality(condition, blindScope, INEQ); } break; case Token.INSTANCEOF: return caseInstanceOf( condition.getFirstChild(), condition.getLastChild(), blindScope,"
+      },
+      {
+        "txt": "outcome); case Token.IN: if (outcome && condition.getFirstChild().isString()) { return caseIn(condition.getLastChild(), condition.getFirstChild().getString(), blindScope); } break; case Token.CASE: Node left = condition.getParent().getFirstChild(); // the switch condition"
+      },
+      {
+        "txt": "Node right = condition.getFirstChild(); if (outcome) { return caseEquality(left, right, blindScope, SHEQ); } else { return caseEquality(left, right, blindScope, SHNE); } } return nextPreciserScopeKnowingConditionOutcome( condition, blindScope, outcome); }"
+      },
+      {
+        "txt": "private FlowScope caseEquality(Node condition, FlowScope blindScope, Function<TypePair, TypePair> merging) { return caseEquality(condition.getFirstChild(), condition.getLastChild(), blindScope, merging); } private FlowScope caseEquality(Node left, Node right, FlowScope blindScope, Function<TypePair, TypePair> merging) { JSType leftType = getTypeIfRefinable(left, blindScope); boolean leftIsRefineable; if (leftType != null) {"
+      },
+      {
+        "txt": "leftIsRefineable = true; } else { leftIsRefineable = false; leftType = left.getJSType(); } JSType rightType = getTypeIfRefinable(right, blindScope); boolean rightIsRefineable; if (rightType != null) { rightIsRefineable = true; } else {"
+      },
+      {
+        "txt": "rightIsRefineable = false; rightType = right.getJSType(); } TypePair merged = merging.apply(new TypePair(leftType, rightType)); if (merged != null) { return maybeRestrictTwoNames( blindScope, left, leftIsRefineable, merged.typeA, right, rightIsRefineable, merged.typeB); }"
+      },
+      {
+        "txt": "return blindScope; } private FlowScope caseAndOrNotShortCircuiting(Node left, Node right, FlowScope blindScope, boolean condition) { JSType leftType = getTypeIfRefinable(left, blindScope); boolean leftIsRefineable; if (leftType != null) { leftIsRefineable = true; } else { leftIsRefineable = false;"
+      },
+      {
+        "txt": "leftType = left.getJSType(); blindScope = firstPreciserScopeKnowingConditionOutcome( left, blindScope, condition); } JSType restrictedLeftType = (leftType == null) ? null : leftType.getRestrictedTypeGivenToBooleanOutcome(condition); if (restrictedLeftType == null) { return firstPreciserScopeKnowingConditionOutcome( right, blindScope, condition); }"
+      },
+      {
+        "txt": "JSType rightType = getTypeIfRefinable(right, blindScope); boolean rightIsRefineable; if (rightType != null) { rightIsRefineable = true; } else { rightIsRefineable = false; rightType = right.getJSType(); blindScope = firstPreciserScopeKnowingConditionOutcome( right, blindScope, condition); }"
+      },
+      {
+        "txt": "if (condition) { JSType restrictedRightType = (rightType == null) ? null : rightType.getRestrictedTypeGivenToBooleanOutcome(condition); return maybeRestrictTwoNames( blindScope, left, leftIsRefineable, restrictedLeftType, right, rightIsRefineable, restrictedRightType); } return blindScope; }"
+      },
+      {
+        "txt": "private FlowScope caseAndOrMaybeShortCircuiting(Node left, Node right, FlowScope blindScope, boolean condition) { FlowScope leftScope = firstPreciserScopeKnowingConditionOutcome( left, blindScope, !condition); StaticSlot<JSType> leftVar = leftScope.findUniqueRefinedSlot(blindScope); if (leftVar == null) { return blindScope; } FlowScope rightScope = firstPreciserScopeKnowingConditionOutcome( left, blindScope, condition);"
+      },
+      {
+        "txt": "rightScope = firstPreciserScopeKnowingConditionOutcome( right, rightScope, !condition); StaticSlot<JSType> rightVar = rightScope.findUniqueRefinedSlot(blindScope); if (rightVar == null || !leftVar.getName().equals(rightVar.getName())) { return blindScope; } JSType type = leftVar.getType().getLeastSupertype(rightVar.getType()); FlowScope informed = blindScope.createChildFlowScope(); informed.inferSlotType(leftVar.getName(), type); return informed;"
+      },
+      {
+        "txt": "} private FlowScope maybeRestrictName( FlowScope blindScope, Node node, JSType originalType, JSType restrictedType) { if (restrictedType != null && !restrictedType.equals(originalType)) { FlowScope informed = blindScope.createChildFlowScope(); declareNameInScope(informed, node, restrictedType); return informed; } return blindScope; }"
+      },
+      {
+        "txt": "FlowScope blindScope, Node left, boolean leftIsRefineable, JSType restrictedLeftType, Node right, boolean rightIsRefineable, JSType restrictedRightType) { boolean shouldRefineLeft = leftIsRefineable && restrictedLeftType != null; boolean shouldRefineRight = <extra_id_0> if (shouldRefineLeft || shouldRefineRight) { FlowScope informed = blindScope.createChildFlowScope(); if (shouldRefineLeft) { declareNameInScope(informed, left, restrictedLeftType); } if (shouldRefineRight) {"
+      },
+      {
+        "txt": "} if (shouldRefineRight) { declareNameInScope(informed, right, restrictedRightType); } return informed; } return blindScope; } private FlowScope caseNameOrGetProp(Node name, FlowScope blindScope, boolean outcome) {"
+      },
+      {
+        "txt": "JSType type = getTypeIfRefinable(name, blindScope); if (type != null) { JSType restrictedType = type.getRestrictedTypeGivenToBooleanOutcome(outcome); FlowScope informed = blindScope.createChildFlowScope(); declareNameInScope(informed, name, restrictedType); return informed; } return blindScope; }"
+      },
+      {
+        "txt": "private FlowScope caseTypeOf(Node node, JSType type, String value, boolean resultEqualsValue, FlowScope blindScope) { return maybeRestrictName( blindScope, node, type, getRestrictedByTypeOfResult(type, value, resultEqualsValue)); } private FlowScope caseInstanceOf(Node left, Node right, FlowScope blindScope, boolean outcome) { JSType leftType = getTypeIfRefinable(left, blindScope); if (leftType == null) {"
+      },
+      {
+        "txt": "return blindScope; } JSType rightType = right.getJSType(); ObjectType targetType = typeRegistry.getNativeObjectType(JSTypeNative.UNKNOWN_TYPE); if (rightType != null && rightType.isFunctionType()) { targetType = rightType.toMaybeFunctionType(); } Visitor<JSType> visitor; if (outcome) {"
+      },
+      {
+        "txt": "visitor = new RestrictByTrueInstanceOfResultVisitor(targetType); } else { visitor = new RestrictByFalseInstanceOfResultVisitor(targetType); } return maybeRestrictName( blindScope, left, leftType, leftType.visit(visitor)); } private FlowScope caseIn(Node object, String propertyName, FlowScope blindScope) { JSType jsType = object.getJSType(); jsType = this.getRestrictedWithoutNull(jsType);"
+      },
+      {
+        "txt": "jsType = this.getRestrictedWithoutUndefined(jsType); boolean hasProperty = false; ObjectType objectType = ObjectType.cast(jsType); if (objectType != null) { hasProperty = objectType.hasProperty(propertyName); } if (!hasProperty) { String qualifiedName = object.getQualifiedName(); if (qualifiedName != null) { String propertyQualifiedName = qualifiedName + \".\" + propertyName;"
+      },
+      {
+        "txt": "if (blindScope.getSlot(propertyQualifiedName) == null) { FlowScope informed = blindScope.createChildFlowScope(); JSType unknownType = typeRegistry.getNativeType( JSTypeNative.UNKNOWN_TYPE); informed.inferQualifiedSlot( object, propertyQualifiedName, unknownType, unknownType); return informed; } } }"
+      },
+      {
+        "txt": "return blindScope; } private class RestrictByTrueInstanceOfResultVisitor extends RestrictByTrueTypeOfResultVisitor { private final ObjectType target; RestrictByTrueInstanceOfResultVisitor(ObjectType target) { this.target = target; } @Override protected JSType caseTopType(JSType type) {"
+      },
+      {
+        "txt": "return applyCommonRestriction(type); } @Override public JSType caseUnknownType() { FunctionType funcTarget = JSType.toMaybeFunctionType(target); if (funcTarget != null && funcTarget.hasInstanceType()) { return funcTarget.getInstanceType(); } return getNativeType(UNKNOWN_TYPE); }"
+      },
+      {
+        "txt": "@Override public JSType caseObjectType(ObjectType type) { return applyCommonRestriction(type); } @Override public JSType caseUnionType(UnionType type) { return applyCommonRestriction(type); } @Override public JSType caseFunctionType(FunctionType type) {"
+      },
+      {
+        "txt": "return caseObjectType(type); } private JSType applyCommonRestriction(JSType type) { if (target.isUnknownType()) { return type; } FunctionType funcTarget = target.toMaybeFunctionType(); if (funcTarget.hasInstanceType()) { return type.getGreatestSubtype(funcTarget.getInstanceType()); }"
+      },
+      {
+        "txt": "return null; } } private class RestrictByFalseInstanceOfResultVisitor extends RestrictByFalseTypeOfResultVisitor { private final ObjectType target; RestrictByFalseInstanceOfResultVisitor(ObjectType target) { this.target = target; } @Override"
+      },
+      {
+        "txt": "public JSType caseObjectType(ObjectType type) { if (target.isUnknownType()) { return type; } FunctionType funcTarget = target.toMaybeFunctionType(); if (funcTarget.hasInstanceType()) { if (type.isSubtype(funcTarget.getInstanceType())) { return null; } return type;"
+      },
+      {
+        "txt": "} return null; } @Override public JSType caseUnionType(UnionType type) { if (target.isUnknownType()) { return type; } FunctionType funcTarget = target.toMaybeFunctionType(); if (funcTarget.hasInstanceType()) {"
+      },
+      {
+        "txt": "return type.getRestrictedUnion(funcTarget.getInstanceType()); } return null; } @Override public JSType caseFunctionType(FunctionType type) { return caseObjectType(type); } }"
+      }
+    ]
+  },
+  {
+    "id": 851,
+    "file_path": "src/com/google/javascript/jscomp/type/SemanticReverseAbstractInterpreter.java",
+    "start-bug-line": 430,
+    "end-bug-line": 434,
+    "bug": "JSType restrictedType = type.getRestrictedTypeGivenToBooleanOutcome(outcome); FlowScope informed = blindScope.createChildFlowScope(); declareNameInScope(informed, name, restrictedType); return informed;",
+    "fix": "return maybeRestrictName( blindScope, name, type, type.getRestrictedTypeGivenToBooleanOutcome(outcome));",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.google.javascript.jscomp.type; import static com.google.javascript.rhino.jstype.JSTypeNative.UNKNOWN_TYPE; import com.google.common.base.Function; import com.google.javascript.jscomp.CodingConvention; import com.google.javascript.rhino.Node; import com.google.javascript.rhino.Token; import com.google.javascript.rhino.jstype.FunctionType;"
+      },
+      {
+        "txt": "import com.google.javascript.rhino.jstype.JSType; import com.google.javascript.rhino.jstype.JSType.TypePair; import com.google.javascript.rhino.jstype.JSTypeNative; import com.google.javascript.rhino.jstype.JSTypeRegistry; import com.google.javascript.rhino.jstype.ObjectType; import com.google.javascript.rhino.jstype.StaticSlot; import com.google.javascript.rhino.jstype.UnionType; import com.google.javascript.rhino.jstype.Visitor; public class SemanticReverseAbstractInterpreter extends ChainableReverseAbstractInterpreter {"
+      },
+      {
+        "txt": "private static final Function<TypePair, TypePair> EQ = new Function<TypePair, TypePair>() { @Override public TypePair apply(TypePair p) { if (p.typeA == null || p.typeB == null) { return null; } return p.typeA.getTypesUnderEquality(p.typeB); } };"
+      },
+      {
+        "txt": "private static final Function<TypePair, TypePair> NE = new Function<TypePair, TypePair>() { @Override public TypePair apply(TypePair p) { if (p.typeA == null || p.typeB == null) { return null; } return p.typeA.getTypesUnderInequality(p.typeB); } };"
+      },
+      {
+        "txt": "private static final Function<TypePair, TypePair> SHEQ = new Function<TypePair, TypePair>() { @Override public TypePair apply(TypePair p) { if (p.typeA == null || p.typeB == null) { return null; } return p.typeA.getTypesUnderShallowEquality(p.typeB); }"
+      },
+      {
+        "txt": "}; private static final Function<TypePair, TypePair> SHNE = new Function<TypePair, TypePair>() { @Override public TypePair apply(TypePair p) { if (p.typeA == null || p.typeB == null) { return null; } return p.typeA.getTypesUnderShallowInequality(p.typeB);"
+      },
+      {
+        "txt": "} }; private final Function<TypePair, TypePair> INEQ = new Function<TypePair, TypePair>() { @Override public TypePair apply(TypePair p) { return new TypePair( getRestrictedWithoutUndefined(p.typeA), getRestrictedWithoutUndefined(p.typeB));"
+      },
+      {
+        "txt": "} }; public SemanticReverseAbstractInterpreter(CodingConvention convention, JSTypeRegistry typeRegistry) { super(convention, typeRegistry); } @Override public FlowScope getPreciserScopeKnowingConditionOutcome(Node condition, FlowScope blindScope, boolean outcome) { int operatorToken = condition.getType();"
+      },
+      {
+        "txt": "switch (operatorToken) { case Token.EQ: case Token.NE: case Token.SHEQ: case Token.SHNE: case Token.CASE: Node left; Node right; if (operatorToken == Token.CASE) { left = condition.getParent().getFirstChild(); // the switch condition"
+      },
+      {
+        "txt": "right = condition.getFirstChild(); } else { left = condition.getFirstChild(); right = condition.getLastChild(); } Node typeOfNode = null; Node stringNode = null; if (left.isTypeOf() && right.isString()) { typeOfNode = left; stringNode = right;"
+      },
+      {
+        "txt": "} else if (right.isTypeOf() && left.isString()) { typeOfNode = right; stringNode = left; } if (typeOfNode != null && stringNode != null) { Node operandNode = typeOfNode.getFirstChild(); JSType operandType = getTypeIfRefinable(operandNode, blindScope); if (operandType != null) { boolean resultEqualsValue = operatorToken == Token.EQ ||"
+      },
+      {
+        "txt": "operatorToken == Token.SHEQ || operatorToken == Token.CASE; if (!outcome) { resultEqualsValue = !resultEqualsValue; } return caseTypeOf(operandNode, operandType, stringNode.getString(), resultEqualsValue, blindScope); } } } switch (operatorToken) {"
+      },
+      {
+        "txt": "case Token.AND: if (outcome) { return caseAndOrNotShortCircuiting(condition.getFirstChild(), condition.getLastChild(), blindScope, true); } else { return caseAndOrMaybeShortCircuiting(condition.getFirstChild(), condition.getLastChild(), blindScope, true); } case Token.OR: if (!outcome) {"
+      },
+      {
+        "txt": "return caseAndOrNotShortCircuiting(condition.getFirstChild(), condition.getLastChild(), blindScope, false); } else { return caseAndOrMaybeShortCircuiting(condition.getFirstChild(), condition.getLastChild(), blindScope, false); } case Token.EQ: if (outcome) { return caseEquality(condition, blindScope, EQ); } else {"
+      },
+      {
+        "txt": "return caseEquality(condition, blindScope, NE); } case Token.NE: if (outcome) { return caseEquality(condition, blindScope, NE); } else { return caseEquality(condition, blindScope, EQ); } case Token.SHEQ: if (outcome) {"
+      },
+      {
+        "txt": "return caseEquality(condition, blindScope, SHEQ); } else { return caseEquality(condition, blindScope, SHNE); } case Token.SHNE: if (outcome) { return caseEquality(condition, blindScope, SHNE); } else { return caseEquality(condition, blindScope, SHEQ); }"
+      },
+      {
+        "txt": "case Token.NAME: case Token.GETPROP: return caseNameOrGetProp(condition, blindScope, outcome); case Token.ASSIGN: return firstPreciserScopeKnowingConditionOutcome( condition.getFirstChild(), firstPreciserScopeKnowingConditionOutcome( condition.getFirstChild().getNext(), blindScope, outcome), outcome); case Token.NOT:"
+      },
+      {
+        "txt": "return firstPreciserScopeKnowingConditionOutcome( condition.getFirstChild(), blindScope, !outcome); case Token.LE: case Token.LT: case Token.GE: case Token.GT: if (outcome) { return caseEquality(condition, blindScope, INEQ); } break;"
+      },
+      {
+        "txt": "case Token.INSTANCEOF: return caseInstanceOf( condition.getFirstChild(), condition.getLastChild(), blindScope, outcome); case Token.IN: if (outcome && condition.getFirstChild().isString()) { return caseIn(condition.getLastChild(), condition.getFirstChild().getString(), blindScope); } break;"
+      },
+      {
+        "txt": "case Token.CASE: Node left = condition.getParent().getFirstChild(); // the switch condition Node right = condition.getFirstChild(); if (outcome) { return caseEquality(left, right, blindScope, SHEQ); } else { return caseEquality(left, right, blindScope, SHNE); } }"
+      },
+      {
+        "txt": "return nextPreciserScopeKnowingConditionOutcome( condition, blindScope, outcome); } private FlowScope caseEquality(Node condition, FlowScope blindScope, Function<TypePair, TypePair> merging) { return caseEquality(condition.getFirstChild(), condition.getLastChild(), blindScope, merging); } private FlowScope caseEquality(Node left, Node right, FlowScope blindScope, Function<TypePair, TypePair> merging) {"
+      },
+      {
+        "txt": "JSType leftType = getTypeIfRefinable(left, blindScope); boolean leftIsRefineable; if (leftType != null) { leftIsRefineable = true; } else { leftIsRefineable = false; leftType = left.getJSType(); } JSType rightType = getTypeIfRefinable(right, blindScope); boolean rightIsRefineable;"
+      },
+      {
+        "txt": "if (rightType != null) { rightIsRefineable = true; } else { rightIsRefineable = false; rightType = right.getJSType(); } TypePair merged = merging.apply(new TypePair(leftType, rightType)); if (merged != null) { return maybeRestrictTwoNames( blindScope,"
+      },
+      {
+        "txt": "left, leftIsRefineable, merged.typeA, right, rightIsRefineable, merged.typeB); } return blindScope; } private FlowScope caseAndOrNotShortCircuiting(Node left, Node right, FlowScope blindScope, boolean condition) { JSType leftType = getTypeIfRefinable(left, blindScope); boolean leftIsRefineable; if (leftType != null) {"
+      },
+      {
+        "txt": "leftIsRefineable = true; } else { leftIsRefineable = false; leftType = left.getJSType(); blindScope = firstPreciserScopeKnowingConditionOutcome( left, blindScope, condition); } JSType restrictedLeftType = (leftType == null) ? null : leftType.getRestrictedTypeGivenToBooleanOutcome(condition); if (restrictedLeftType == null) {"
+      },
+      {
+        "txt": "return firstPreciserScopeKnowingConditionOutcome( right, blindScope, condition); } JSType rightType = getTypeIfRefinable(right, blindScope); boolean rightIsRefineable; if (rightType != null) { rightIsRefineable = true; } else { rightIsRefineable = false; rightType = right.getJSType();"
+      },
+      {
+        "txt": "blindScope = firstPreciserScopeKnowingConditionOutcome( right, blindScope, condition); } if (condition) { JSType restrictedRightType = (rightType == null) ? null : rightType.getRestrictedTypeGivenToBooleanOutcome(condition); return maybeRestrictTwoNames( blindScope, left, leftIsRefineable, restrictedLeftType, right, rightIsRefineable, restrictedRightType);"
+      },
+      {
+        "txt": "} return blindScope; } private FlowScope caseAndOrMaybeShortCircuiting(Node left, Node right, FlowScope blindScope, boolean condition) { FlowScope leftScope = firstPreciserScopeKnowingConditionOutcome( left, blindScope, !condition); StaticSlot<JSType> leftVar = leftScope.findUniqueRefinedSlot(blindScope); if (leftVar == null) { return blindScope;"
+      },
+      {
+        "txt": "} FlowScope rightScope = firstPreciserScopeKnowingConditionOutcome( left, blindScope, condition); rightScope = firstPreciserScopeKnowingConditionOutcome( right, rightScope, !condition); StaticSlot<JSType> rightVar = rightScope.findUniqueRefinedSlot(blindScope); if (rightVar == null || !leftVar.getName().equals(rightVar.getName())) { return blindScope; } JSType type = leftVar.getType().getLeastSupertype(rightVar.getType());"
+      },
+      {
+        "txt": "FlowScope informed = blindScope.createChildFlowScope(); informed.inferSlotType(leftVar.getName(), type); return informed; } private FlowScope maybeRestrictName( FlowScope blindScope, Node node, JSType originalType, JSType restrictedType) { if (restrictedType != null && !restrictedType.equals(originalType)) { FlowScope informed = blindScope.createChildFlowScope(); declareNameInScope(informed, node, restrictedType); return informed;"
+      },
+      {
+        "txt": "} return blindScope; } private FlowScope maybeRestrictTwoNames( FlowScope blindScope, Node left, boolean leftIsRefineable, JSType restrictedLeftType, Node right, boolean rightIsRefineable, JSType restrictedRightType) { boolean shouldRefineLeft = leftIsRefineable && restrictedLeftType != null; boolean shouldRefineRight ="
+      },
+      {
+        "txt": "rightIsRefineable && restrictedRightType != null; if (shouldRefineLeft || shouldRefineRight) { FlowScope informed = blindScope.createChildFlowScope(); if (shouldRefineLeft) { declareNameInScope(informed, left, restrictedLeftType); } if (shouldRefineRight) { declareNameInScope(informed, right, restrictedRightType); } return informed;"
+      },
+      {
+        "txt": "return blindScope; } private FlowScope caseNameOrGetProp(Node name, FlowScope blindScope, boolean outcome) { JSType type = getTypeIfRefinable(name, blindScope); if (type != null) { <extra_id_0> } return blindScope; } private FlowScope caseTypeOf(Node node, JSType type, String value, boolean resultEqualsValue, FlowScope blindScope) { return maybeRestrictName("
+      },
+      {
+        "txt": "boolean resultEqualsValue, FlowScope blindScope) { return maybeRestrictName( blindScope, node, type, getRestrictedByTypeOfResult(type, value, resultEqualsValue)); } private FlowScope caseInstanceOf(Node left, Node right, FlowScope blindScope, boolean outcome) { JSType leftType = getTypeIfRefinable(left, blindScope); if (leftType == null) { return blindScope;"
+      },
+      {
+        "txt": "} JSType rightType = right.getJSType(); ObjectType targetType = typeRegistry.getNativeObjectType(JSTypeNative.UNKNOWN_TYPE); if (rightType != null && rightType.isFunctionType()) { targetType = rightType.toMaybeFunctionType(); } Visitor<JSType> visitor; if (outcome) { visitor = new RestrictByTrueInstanceOfResultVisitor(targetType);"
+      },
+      {
+        "txt": "} else { visitor = new RestrictByFalseInstanceOfResultVisitor(targetType); } return maybeRestrictName( blindScope, left, leftType, leftType.visit(visitor)); } private FlowScope caseIn(Node object, String propertyName, FlowScope blindScope) { JSType jsType = object.getJSType(); jsType = this.getRestrictedWithoutNull(jsType); jsType = this.getRestrictedWithoutUndefined(jsType);"
+      },
+      {
+        "txt": "boolean hasProperty = false; ObjectType objectType = ObjectType.cast(jsType); if (objectType != null) { hasProperty = objectType.hasProperty(propertyName); } if (!hasProperty) { String qualifiedName = object.getQualifiedName(); if (qualifiedName != null) { String propertyQualifiedName = qualifiedName + \".\" + propertyName; if (blindScope.getSlot(propertyQualifiedName) == null) {"
+      },
+      {
+        "txt": "FlowScope informed = blindScope.createChildFlowScope(); JSType unknownType = typeRegistry.getNativeType( JSTypeNative.UNKNOWN_TYPE); informed.inferQualifiedSlot( object, propertyQualifiedName, unknownType, unknownType); return informed; } } } return blindScope;"
+      },
+      {
+        "txt": "} private class RestrictByTrueInstanceOfResultVisitor extends RestrictByTrueTypeOfResultVisitor { private final ObjectType target; RestrictByTrueInstanceOfResultVisitor(ObjectType target) { this.target = target; } @Override protected JSType caseTopType(JSType type) { return applyCommonRestriction(type);"
+      },
+      {
+        "txt": "} @Override public JSType caseUnknownType() { FunctionType funcTarget = JSType.toMaybeFunctionType(target); if (funcTarget != null && funcTarget.hasInstanceType()) { return funcTarget.getInstanceType(); } return getNativeType(UNKNOWN_TYPE); } @Override"
+      },
+      {
+        "txt": "public JSType caseObjectType(ObjectType type) { return applyCommonRestriction(type); } @Override public JSType caseUnionType(UnionType type) { return applyCommonRestriction(type); } @Override public JSType caseFunctionType(FunctionType type) { return caseObjectType(type);"
+      },
+      {
+        "txt": "} private JSType applyCommonRestriction(JSType type) { if (target.isUnknownType()) { return type; } FunctionType funcTarget = target.toMaybeFunctionType(); if (funcTarget.hasInstanceType()) { return type.getGreatestSubtype(funcTarget.getInstanceType()); } return null;"
+      },
+      {
+        "txt": "} } private class RestrictByFalseInstanceOfResultVisitor extends RestrictByFalseTypeOfResultVisitor { private final ObjectType target; RestrictByFalseInstanceOfResultVisitor(ObjectType target) { this.target = target; } @Override public JSType caseObjectType(ObjectType type) {"
+      },
+      {
+        "txt": "if (target.isUnknownType()) { return type; } FunctionType funcTarget = target.toMaybeFunctionType(); if (funcTarget.hasInstanceType()) { if (type.isSubtype(funcTarget.getInstanceType())) { return null; } return type; }"
+      },
+      {
+        "txt": "return null; } @Override public JSType caseUnionType(UnionType type) { if (target.isUnknownType()) { return type; } FunctionType funcTarget = target.toMaybeFunctionType(); if (funcTarget.hasInstanceType()) { return type.getRestrictedUnion(funcTarget.getInstanceType());"
+      },
+      {
+        "txt": "} return null; } @Override public JSType caseFunctionType(FunctionType type) { return caseObjectType(type); } }"
+      }
+    ]
+  },
+  {
+    "id": 852,
+    "file_path": "src/com/google/javascript/rhino/jstype/JSType.java",
+    "start-bug-line": 883,
+    "end-bug-line": 883,
+    "bug": "",
+    "fix": "if (outcome && this == getNativeType(JSTypeNative.UNKNOWN_TYPE)) { return getNativeType(JSTypeNative.CHECKED_UNKNOWN_TYPE); }",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.google.javascript.rhino.jstype; import static com.google.javascript.rhino.jstype.TernaryValue.UNKNOWN; import com.google.common.base.Predicate; import com.google.javascript.rhino.ErrorReporter; import com.google.javascript.rhino.JSDocInfo; import com.google.javascript.rhino.jstype.JSTypeRegistry.ResolveMode;"
+      },
+      {
+        "txt": "import java.io.Serializable; import java.util.Comparator; public abstract class JSType implements Serializable { private static final long serialVersionUID = 1L; private boolean resolved = false; private JSType resolveResult = null; private boolean inTemplatedCheckVisit = false; public static final String UNKNOWN_NAME = \"Unknown class name\"; public static final String NOT_A_CLASS ="
+      },
+      {
+        "txt": "\"Not declared as a constructor\"; public static final String NOT_A_TYPE = \"Not declared as a type name\"; public static final String EMPTY_TYPE_COMPONENT = \"Named type with empty name component\"; static final Comparator<JSType> ALPHA = new Comparator<JSType>() { @Override public int compare(JSType t1, JSType t2) { return t1.toString().compareTo(t2.toString()); }"
+      },
+      {
+        "txt": "}; public static final int ENUMDECL = 1; public static final int NOT_ENUMDECL = 0; final JSTypeRegistry registry; JSType(JSTypeRegistry registry) { this.registry = registry; } JSType getNativeType(JSTypeNative typeId) { return registry.getNativeType(typeId); }"
+      },
+      {
+        "txt": "public JSDocInfo getJSDocInfo() { return null; } public String getDisplayName() { return null; } public boolean hasDisplayName() { String displayName = getDisplayName(); return displayName != null && !displayName.isEmpty(); }"
+      },
+      {
+        "txt": "public boolean isNoType() { return false; } public boolean isNoResolvedType() { return false; } public boolean isNoObjectType() { return false; } public final boolean isEmptyType() {"
+      },
+      {
+        "txt": "return isNoType() || isNoObjectType() || isNoResolvedType() || (registry.getNativeFunctionType( JSTypeNative.LEAST_FUNCTION_TYPE) == this); } public boolean isNumberObjectType() { return false; } public boolean isNumberValueType() { return false; }"
+      },
+      {
+        "txt": "public boolean isFunctionPrototypeType() { return false; } public boolean isStringObjectType() { return false; } boolean isTheObjectType() { return false; } public boolean isStringValueType() {"
+      },
+      {
+        "txt": "return false; } public final boolean isString() { return this.isSubtype( getNativeType(JSTypeNative.STRING_VALUE_OR_OBJECT_TYPE)); } public final boolean isNumber() { return this.isSubtype( getNativeType(JSTypeNative.NUMBER_VALUE_OR_OBJECT_TYPE)); }"
+      },
+      {
+        "txt": "public boolean isArrayType() { return false; } public boolean isBooleanObjectType() { return false; } public boolean isBooleanValueType() { return false; } public boolean isRegexpType() {"
+      },
+      {
+        "txt": "return false; } public boolean isDateType() { return false; } public boolean isNullType() { return false; } public boolean isVoidType() { return false;"
+      },
+      {
+        "txt": "} public boolean isAllType() { return false; } public boolean isUnknownType() { return false; } public boolean isCheckedUnknownType() { return false; }"
+      },
+      {
+        "txt": "public final boolean isUnionType() { return toMaybeUnionType() != null; } public UnionType toMaybeUnionType() { return null; } public final boolean isGlobalThisType() { return this == registry.getNativeType(JSTypeNative.GLOBAL_THIS); } public final boolean isFunctionType() {"
+      },
+      {
+        "txt": "return toMaybeFunctionType() != null; } public FunctionType toMaybeFunctionType() { return null; } public static FunctionType toMaybeFunctionType(JSType type) { return type == null ? null : type.toMaybeFunctionType(); } public final boolean isEnumElementType() { return toMaybeEnumElementType() != null;"
+      },
+      {
+        "txt": "} public EnumElementType toMaybeEnumElementType() { return null; } public boolean isEnumType() { return toMaybeEnumType() != null; } public EnumType toMaybeEnumType() { return null; }"
+      },
+      {
+        "txt": "boolean isNamedType() { return false; } public boolean isRecordType() { return toMaybeRecordType() != null; } RecordType toMaybeRecordType() { return null; } public final boolean isParameterizedType() {"
+      },
+      {
+        "txt": "return toMaybeParameterizedType() != null; } public ParameterizedType toMaybeParameterizedType() { return null; } public static ParameterizedType toMaybeParameterizedType(JSType type) { return type == null ? null : type.toMaybeParameterizedType(); } public final boolean isTemplateType() { return toMaybeTemplateType() != null;"
+      },
+      {
+        "txt": "} public TemplateType toMaybeTemplateType() { return null; } public static TemplateType toMaybeTemplateType(JSType type) { return type == null ? null : type.toMaybeTemplateType(); } public boolean hasAnyTemplate() { if (!this.inTemplatedCheckVisit) { this.inTemplatedCheckVisit = true;"
+      },
+      {
+        "txt": "boolean result = hasAnyTemplateInternal(); this.inTemplatedCheckVisit = false; return result; } else { return false; } } boolean hasAnyTemplateInternal() { return false; }"
+      },
+      {
+        "txt": "public boolean isObject() { return false; } public boolean isConstructor() { return false; } public boolean isNominalType() { return false; } public final boolean isNominalConstructor() {"
+      },
+      {
+        "txt": "if (isConstructor() || isInterface()) { FunctionType fn = toMaybeFunctionType(); if (fn == null) { return false; } if (fn.getSource() != null) { return true; } return fn.isNativeObjectType(); }"
+      },
+      {
+        "txt": "return false; } public boolean isInstanceType() { return false; } public boolean isInterface() { return false; } public boolean isOrdinaryFunction() { return false;"
+      },
+      {
+        "txt": "} public boolean isEquivalentTo(JSType jsType) { if (jsType instanceof ProxyObjectType) { return jsType.isEquivalentTo(this); } return this == jsType; } public static boolean isEquivalent(JSType typeA, JSType typeB) { return (typeA == null || typeB == null) ? typeA == typeB : typeA.isEquivalentTo(typeB);"
+      },
+      {
+        "txt": "} @Override public boolean equals(Object jsType) { return (jsType instanceof JSType) ? isEquivalentTo((JSType) jsType) : false; } @Override public int hashCode() { return System.identityHashCode(this); }"
+      },
+      {
+        "txt": "public final boolean matchesInt32Context() { return matchesNumberContext(); } public final boolean matchesUint32Context() { return matchesNumberContext(); } public boolean matchesNumberContext() { return false; } public boolean matchesStringContext() {"
+      },
+      {
+        "txt": "return false; } public boolean matchesObjectContext() { return false; } public JSType findPropertyType(String propertyName) { ObjectType autoboxObjType = ObjectType.cast(autoboxesTo()); if (autoboxObjType != null) { return autoboxObjType.findPropertyType(propertyName); }"
+      },
+      {
+        "txt": "return null; } public boolean canBeCalled() { return false; } public boolean canAssignTo(JSType that) { if (this.isSubtype(that)) { return true; } return false;"
+      },
+      {
+        "txt": "} public JSType autoboxesTo() { return null; } public JSType unboxesTo() { return null; } public ObjectType toObjectType() { return this instanceof ObjectType ? (ObjectType) this : null; }"
+      },
+      {
+        "txt": "public JSType autobox() { JSType restricted = restrictByNotNullOrUndefined(); JSType autobox = restricted.autoboxesTo(); return autobox == null ? restricted : autobox; } public final ObjectType dereference() { return ObjectType.cast(autobox()); } public final boolean canTestForEqualityWith(JSType that) { return this.testForEquality(that).equals(UNKNOWN);"
+      },
+      {
+        "txt": "} public TernaryValue testForEquality(JSType that) { return testForEqualityHelper(this, that); } TernaryValue testForEqualityHelper(JSType aType, JSType bType) { if (bType.isAllType() || bType.isUnknownType() || bType.isNoResolvedType() || aType.isAllType() || aType.isUnknownType() || aType.isNoResolvedType()) { return UNKNOWN;"
+      },
+      {
+        "txt": "} boolean aIsEmpty = aType.isEmptyType(); boolean bIsEmpty = bType.isEmptyType(); if (aIsEmpty || bIsEmpty) { if (aIsEmpty && bIsEmpty) { return TernaryValue.TRUE; } else { return UNKNOWN; } }"
+      },
+      {
+        "txt": "if (aType.isFunctionType() || bType.isFunctionType()) { JSType otherType = aType.isFunctionType() ? bType : aType; JSType meet = otherType.getGreatestSubtype( getNativeType(JSTypeNative.OBJECT_TYPE)); if (meet.isNoType() || meet.isNoObjectType()) { return TernaryValue.FALSE; } else { return TernaryValue.UNKNOWN; } }"
+      },
+      {
+        "txt": "if (bType.isEnumElementType() || bType.isUnionType()) { return bType.testForEquality(aType); } return null; } public final boolean canTestForShallowEqualityWith(JSType that) { if (isEmptyType() || that.isEmptyType()) { return isSubtype(that) || that.isSubtype(this); } JSType inf = getGreatestSubtype(that);"
+      },
+      {
+        "txt": "return !inf.isEmptyType() || inf == registry.getNativeType(JSTypeNative.LEAST_FUNCTION_TYPE); } public boolean isNullable() { return this.isSubtype(getNativeType(JSTypeNative.NULL_TYPE)); } public JSType collapseUnion() { return this; } public JSType getLeastSupertype(JSType that) {"
+      },
+      {
+        "txt": "if (that.isUnionType()) { return that.toMaybeUnionType().getLeastSupertype(this); } return getLeastSupertype(this, that); } static JSType getLeastSupertype(JSType thisType, JSType thatType) { boolean areEquivalent = thisType.isEquivalentTo(thatType); return areEquivalent ? thisType : filterNoResolvedType( thisType.registry.createUnionType(thisType, thatType));"
+      },
+      {
+        "txt": "} public JSType getGreatestSubtype(JSType that) { return getGreatestSubtype(this, that); } static JSType getGreatestSubtype(JSType thisType, JSType thatType) { if (thisType.isFunctionType() && thatType.isFunctionType()) { return thisType.toMaybeFunctionType().supAndInfHelper( thatType.toMaybeFunctionType(), false); } else if (thisType.isEquivalentTo(thatType)) { return thisType;"
+      },
+      {
+        "txt": "} else if (thisType.isUnknownType() || thatType.isUnknownType()) { return thisType.isEquivalentTo(thatType) ? thisType : thisType.getNativeType(JSTypeNative.UNKNOWN_TYPE); } else if (thisType.isSubtype(thatType)) { return filterNoResolvedType(thisType); } else if (thatType.isSubtype(thisType)) { return filterNoResolvedType(thatType); } else if (thisType.isUnionType()) { return thisType.toMaybeUnionType().meet(thatType); } else if (thatType.isUnionType()) {"
+      },
+      {
+        "txt": "return thatType.toMaybeUnionType().meet(thisType); } else if (thisType.isRecordType()) { return thisType.toMaybeRecordType().getGreatestSubtypeHelper(thatType); } else if (thatType.isRecordType()) { return thatType.toMaybeRecordType().getGreatestSubtypeHelper(thisType); } if (thisType.isEnumElementType()) { JSType inf = thisType.toMaybeEnumElementType().meet(thatType); if (inf != null) { return inf;"
+      },
+      {
+        "txt": "} } else if (thatType.isEnumElementType()) { JSType inf = thatType.toMaybeEnumElementType().meet(thisType); if (inf != null) { return inf; } } if (thisType.isObject() && thatType.isObject()) { return thisType.getNativeType(JSTypeNative.NO_OBJECT_TYPE); }"
+      },
+      {
+        "txt": "return thisType.getNativeType(JSTypeNative.NO_TYPE); } static JSType filterNoResolvedType(JSType type) { if (type.isNoResolvedType()) { return type.getNativeType(JSTypeNative.NO_RESOLVED_TYPE); } else if (type.isUnionType()) { UnionType unionType = type.toMaybeUnionType(); boolean needsFiltering = false; for (JSType alt : unionType.getAlternates()) { if (alt.isNoResolvedType()) {"
+      },
+      {
+        "txt": "needsFiltering = true; break; } } if (needsFiltering) { UnionTypeBuilder builder = new UnionTypeBuilder(type.registry); for (JSType alt : unionType.getAlternates()) { if (!alt.isNoResolvedType()) { builder.addAlternate(alt); }"
+      },
+      {
+        "txt": "return builder.build(); } } return type; } public JSType getRestrictedTypeGivenToBooleanOutcome(boolean outcome) { <extra_id_0> BooleanLiteralSet literals = getPossibleToBooleanOutcomes(); if (literals.contains(outcome)) { return this; } else { return getNativeType(JSTypeNative.NO_TYPE); }"
+      },
+      {
+        "txt": "return getNativeType(JSTypeNative.NO_TYPE); } } public abstract BooleanLiteralSet getPossibleToBooleanOutcomes(); public TypePair getTypesUnderEquality(JSType that) { if (that.isUnionType()) { TypePair p = that.toMaybeUnionType().getTypesUnderEquality(this); return new TypePair(p.typeB, p.typeA); } switch (this.testForEquality(that)) {"
+      },
+      {
+        "txt": "case FALSE: return new TypePair(null, null); case TRUE: case UNKNOWN: return new TypePair(this, that); } throw new IllegalStateException(); } public TypePair getTypesUnderInequality(JSType that) { if (that.isUnionType()) {"
+      },
+      {
+        "txt": "TypePair p = that.toMaybeUnionType().getTypesUnderInequality(this); return new TypePair(p.typeB, p.typeA); } switch (this.testForEquality(that)) { case TRUE: JSType noType = getNativeType(JSTypeNative.NO_TYPE); return new TypePair(noType, noType); case FALSE: case UNKNOWN: return new TypePair(this, that);"
+      },
+      {
+        "txt": "} throw new IllegalStateException(); } public TypePair getTypesUnderShallowEquality(JSType that) { JSType commonType = getGreatestSubtype(that); return new TypePair(commonType, commonType); } public TypePair getTypesUnderShallowInequality(JSType that) { if (that.isUnionType()) { TypePair p = that.toMaybeUnionType().getTypesUnderShallowInequality(this);"
+      },
+      {
+        "txt": "return new TypePair(p.typeB, p.typeA); } if (this.isNullType() && that.isNullType() || this.isVoidType() && that.isVoidType()) { return new TypePair(null, null); } else { return new TypePair(this, that); } } public JSType restrictByNotNullOrUndefined() {"
+      },
+      {
+        "txt": "return this; } public boolean isSubtype(JSType that) { return isSubtypeHelper(this, that); } public boolean differsFrom(JSType that) { if (!this.isUnknownType() && !that.isUnknownType()) { return !this.isEquivalentTo(that); } return this.isUnknownType() ^ that.isUnknownType();"
+      },
+      {
+        "txt": "} static boolean isSubtypeHelper(JSType thisType, JSType thatType) { if (thatType.isUnknownType()) { return true; } if (thisType.isEquivalentTo(thatType)) { return true; } if (thatType.isAllType()) { return true;"
+      },
+      {
+        "txt": "} if (thatType.isUnionType()) { UnionType union = thatType.toMaybeUnionType(); for (JSType element : union.alternates) { if (thisType.isSubtype(element)) { return true; } } } if (thatType instanceof ProxyObjectType) {"
+      },
+      {
+        "txt": "return thisType.isSubtype( ((ProxyObjectType) thatType).getReferencedTypeInternal()); } return false; } public abstract <T> T visit(Visitor<T> visitor); public final JSType forceResolve(ErrorReporter t, StaticScope<JSType> scope) { ResolveMode oldResolveMode = registry.getResolveMode(); registry.setResolveMode(ResolveMode.IMMEDIATE); JSType result = resolve(t, scope);"
+      },
+      {
+        "txt": "registry.setResolveMode(oldResolveMode); return result; } public final JSType resolve(ErrorReporter t, StaticScope<JSType> scope) { if (resolved) { if (resolveResult == null) { return registry.getNativeType(JSTypeNative.UNKNOWN_TYPE); } return resolveResult; }"
+      },
+      {
+        "txt": "resolved = true; resolveResult = resolveInternal(t, scope); resolveResult.setResolvedTypeInternal(resolveResult); return resolveResult; } abstract JSType resolveInternal(ErrorReporter t, StaticScope<JSType> scope); void setResolvedTypeInternal(JSType type) { resolveResult = type; resolved = true; }"
+      },
+      {
+        "txt": "public final boolean isResolved() { return resolved; } public final void clearResolved() { resolved = false; resolveResult = null; } static final JSType safeResolve( JSType type, ErrorReporter t, StaticScope<JSType> scope) { return type == null ? null : type.resolve(t, scope);"
+      },
+      {
+        "txt": "} public boolean setValidator(Predicate<JSType> validator) { return validator.apply(this); } public static class TypePair { public final JSType typeA; public final JSType typeB; public TypePair(JSType typeA, JSType typeB) { this.typeA = typeA; this.typeB = typeB;"
+      },
+      {
+        "txt": "} } @Override public String toString() { return toStringHelper(false); } public String toDebugHashCodeString() { return \"{\" + this.hashCode() + \"}\"; } public final String toAnnotationString() {"
+      },
+      {
+        "txt": "return toStringHelper(true); } abstract String toStringHelper(boolean forAnnotations); public void matchConstraint(JSType constraint) {}"
+      }
+    ]
+  }
+]

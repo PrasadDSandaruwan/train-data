@@ -1,0 +1,164 @@
+[
+  {
+    "id": 122,
+    "file_path": "src/java/org/apache/commons/cli/PosixParser.java",
+    "start-bug-line": 114,
+    "end-bug-line": 114,
+    "bug": "if (token.indexOf('=') != -1)",
+    "fix": "int pos = token.indexOf('='); String opt = pos == -1 ? token : token.substring(0, pos); // --foo  if (!options.hasOption(opt) && stopAtNonOption)",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.cli; import java.util.ArrayList; import java.util.Arrays; import java.util.Iterator; import java.util.List; public class PosixParser extends Parser { private List tokens = new ArrayList(); private boolean eatTheRest; private Option currentOption;"
+      },
+      {
+        "txt": "private Options options; private void init() { eatTheRest = false; tokens.clear(); currentOption = null; } protected String[] flatten(Options options, String[] arguments, boolean stopAtNonOption) { init();"
+      },
+      {
+        "txt": "Iterator iter = Arrays.asList(arguments).iterator(); while (iter.hasNext()) { String token = (String) iter.next(); if (token.startsWith(\"--\")) { <extra_id_0> { tokens.add(token.substring(0, token.indexOf('='))); tokens.add(token.substring(token.indexOf('=') + 1, token.length())); } else {"
+      },
+      {
+        "txt": "else { tokens.add(token); } } else if (\"-\".equals(token)) { tokens.add(token); } else if (token.startsWith(\"-\"))"
+      },
+      {
+        "txt": "{ if (token.length() == 2) { processOptionToken(token, stopAtNonOption); } else if (options.hasOption(token)) { tokens.add(token); } else"
+      },
+      {
+        "txt": "{ burstToken(token, stopAtNonOption); } } else if (stopAtNonOption) { process(token); } else {"
+      },
+      {
+        "txt": "tokens.add(token); } gobble(iter); } return (String[]) tokens.toArray(new String[tokens.size()]); } private void gobble(Iterator iter) { if (eatTheRest) {"
+      },
+      {
+        "txt": "while (iter.hasNext()) { tokens.add(iter.next()); } } } private void process(String value) { if (currentOption != null && currentOption.hasArg()) {"
+      },
+      {
+        "txt": "if (currentOption.hasArg()) { tokens.add(value); currentOption = null; } else if (currentOption.hasArgs()) { tokens.add(value); } }"
+      },
+      {
+        "txt": "else { eatTheRest = true; tokens.add(\"--\"); tokens.add(value); } } private void processOptionToken(String token, boolean stopAtNonOption) { if (options.hasOption(token))"
+      },
+      {
+        "txt": "{ currentOption = options.getOption(token); } else if (stopAtNonOption) { eatTheRest = true; } tokens.add(token); } protected void burstToken(String token, boolean stopAtNonOption)"
+      },
+      {
+        "txt": "{ for (int i = 1; i < token.length(); i++) { String ch = String.valueOf(token.charAt(i)); if (options.hasOption(ch)) { tokens.add(\"-\" + ch); currentOption = options.getOption(ch); if (currentOption.hasArg() && (token.length() != (i + 1))) {"
+      },
+      {
+        "txt": "tokens.add(token.substring(i + 1)); break; } } else if (stopAtNonOption) { process(token.substring(i)); break; } else"
+      },
+      {
+        "txt": "{ tokens.add(token); break; } } }"
+      }
+    ]
+  },
+  {
+    "id": 123,
+    "file_path": "src/java/org/apache/commons/cli/PosixParser.java",
+    "start-bug-line": 116,
+    "end-bug-line": 117,
+    "bug": "tokens.add(token.substring(0, token.indexOf('='))); tokens.add(token.substring(token.indexOf('=') + 1, token.length()));",
+    "fix": "process(token);",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "import java.util.ArrayList; import java.util.Arrays; import java.util.Iterator; import java.util.List; public class PosixParser extends Parser { private List tokens = new ArrayList(); private boolean eatTheRest; private Option currentOption; private Options options; private void init()"
+      },
+      {
+        "txt": "{ eatTheRest = false; tokens.clear(); currentOption = null; } protected String[] flatten(Options options, String[] arguments, boolean stopAtNonOption) { init(); this.options = options; Iterator iter = Arrays.asList(arguments).iterator();"
+      },
+      {
+        "txt": "{ String token = (String) iter.next(); if (token.startsWith(\"--\")) { if (token.indexOf('=') != -1) { <extra_id_0> } else { tokens.add(token); } }"
+      },
+      {
+        "txt": "} } else if (\"-\".equals(token)) { tokens.add(token); } else if (token.startsWith(\"-\")) { if (token.length() == 2) {"
+      },
+      {
+        "txt": "processOptionToken(token, stopAtNonOption); } else if (options.hasOption(token)) { tokens.add(token); } else { burstToken(token, stopAtNonOption); }"
+      },
+      {
+        "txt": "} else if (stopAtNonOption) { process(token); } else { tokens.add(token); } gobble(iter);"
+      },
+      {
+        "txt": "} return (String[]) tokens.toArray(new String[tokens.size()]); } private void gobble(Iterator iter) { if (eatTheRest) { while (iter.hasNext()) { tokens.add(iter.next());"
+      },
+      {
+        "txt": "} } } private void process(String value) { if (currentOption != null && currentOption.hasArg()) { if (currentOption.hasArg()) { tokens.add(value);"
+      },
+      {
+        "txt": "currentOption = null; } else if (currentOption.hasArgs()) { tokens.add(value); } } else { eatTheRest = true;"
+      },
+      {
+        "txt": "tokens.add(\"--\"); tokens.add(value); } } private void processOptionToken(String token, boolean stopAtNonOption) { if (options.hasOption(token)) { currentOption = options.getOption(token); }"
+      },
+      {
+        "txt": "else if (stopAtNonOption) { eatTheRest = true; } tokens.add(token); } protected void burstToken(String token, boolean stopAtNonOption) { for (int i = 1; i < token.length(); i++) {"
+      },
+      {
+        "txt": "String ch = String.valueOf(token.charAt(i)); if (options.hasOption(ch)) { tokens.add(\"-\" + ch); currentOption = options.getOption(ch); if (currentOption.hasArg() && (token.length() != (i + 1))) { tokens.add(token.substring(i + 1)); break; }"
+      },
+      {
+        "txt": "} else if (stopAtNonOption) { process(token.substring(i)); break; } else { tokens.add(token); break;"
+      },
+      {
+        "txt": "} } }"
+      }
+    ]
+  },
+  {
+    "id": 124,
+    "file_path": "src/java/org/apache/commons/cli/PosixParser.java",
+    "start-bug-line": 121,
+    "end-bug-line": 121,
+    "bug": "tokens.add(token);",
+    "fix": "tokens.add(opt); if (pos != -1) { tokens.add(token.substring(pos + 1)); }",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.cli; import java.util.ArrayList; import java.util.Arrays; import java.util.Iterator; import java.util.List; public class PosixParser extends Parser {"
+      },
+      {
+        "txt": "private List tokens = new ArrayList(); private boolean eatTheRest; private Option currentOption; private Options options; private void init() { eatTheRest = false; tokens.clear(); currentOption = null; }"
+      },
+      {
+        "txt": "protected String[] flatten(Options options, String[] arguments, boolean stopAtNonOption) { init(); this.options = options; Iterator iter = Arrays.asList(arguments).iterator(); while (iter.hasNext()) { String token = (String) iter.next(); if (token.startsWith(\"--\")) {"
+      },
+      {
+        "txt": "{ tokens.add(token.substring(0, token.indexOf('='))); tokens.add(token.substring(token.indexOf('=') + 1, token.length())); } else { <extra_id_0> } } else if (\"-\".equals(token)) { tokens.add(token); }"
+      },
+      {
+        "txt": "tokens.add(token); } else if (token.startsWith(\"-\")) { if (token.length() == 2) { processOptionToken(token, stopAtNonOption); } else if (options.hasOption(token)) {"
+      },
+      {
+        "txt": "tokens.add(token); } else { burstToken(token, stopAtNonOption); } } else if (stopAtNonOption) { process(token);"
+      },
+      {
+        "txt": "} else { tokens.add(token); } gobble(iter); } return (String[]) tokens.toArray(new String[tokens.size()]); } private void gobble(Iterator iter)"
+      },
+      {
+        "txt": "{ if (eatTheRest) { while (iter.hasNext()) { tokens.add(iter.next()); } } } private void process(String value)"
+      },
+      {
+        "txt": "{ if (currentOption != null && currentOption.hasArg()) { if (currentOption.hasArg()) { tokens.add(value); currentOption = null; } else if (currentOption.hasArgs()) {"
+      },
+      {
+        "txt": "tokens.add(value); } } else { eatTheRest = true; tokens.add(\"--\"); tokens.add(value); } }"
+      },
+      {
+        "txt": "private void processOptionToken(String token, boolean stopAtNonOption) { if (options.hasOption(token)) { currentOption = options.getOption(token); } else if (stopAtNonOption) { eatTheRest = true; }"
+      },
+      {
+        "txt": "tokens.add(token); } protected void burstToken(String token, boolean stopAtNonOption) { for (int i = 1; i < token.length(); i++) { String ch = String.valueOf(token.charAt(i)); if (options.hasOption(ch)) { tokens.add(\"-\" + ch);"
+      },
+      {
+        "txt": "currentOption = options.getOption(ch); if (currentOption.hasArg() && (token.length() != (i + 1))) { tokens.add(token.substring(i + 1)); break; } } else if (stopAtNonOption) { process(token.substring(i));"
+      },
+      {
+        "txt": "break; } else { tokens.add(token); break; } } }"
+      }
+    ]
+  }
+]

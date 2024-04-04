@@ -1,0 +1,902 @@
+[
+  {
+    "id": 1643,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/deser/impl/CreatorCollector.java",
+    "start-bug-line": 165,
+    "end-bug-line": 165,
+    "bug": "verifyNonDup(creator, C_ARRAY_DELEGATE, explicit);",
+    "fix": "if (verifyNonDup(creator, C_ARRAY_DELEGATE, explicit)) {",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind.deser.impl; import java.io.IOException; import java.lang.reflect.Member; import java.util.*; import com.fasterxml.jackson.databind.*; import com.fasterxml.jackson.databind.cfg.MapperConfig; import com.fasterxml.jackson.databind.deser.CreatorProperty; import com.fasterxml.jackson.databind.deser.SettableBeanProperty; import com.fasterxml.jackson.databind.deser.ValueInstantiator;"
+      },
+      {
+        "txt": "import com.fasterxml.jackson.databind.deser.std.StdValueInstantiator; import com.fasterxml.jackson.databind.introspect.*; import com.fasterxml.jackson.databind.util.ClassUtil; public class CreatorCollector { protected final static int C_DEFAULT = 0; protected final static int C_STRING = 1; protected final static int C_INT = 2; protected final static int C_LONG = 3; protected final static int C_DOUBLE = 4;"
+      },
+      {
+        "txt": "protected final static int C_BOOLEAN = 5; protected final static int C_DELEGATE = 6; protected final static int C_PROPS = 7; protected final static int C_ARRAY_DELEGATE = 8; protected final static String[] TYPE_DESCS = new String[] { \"default\", \"String\", \"int\", \"long\", \"double\", \"boolean\", \"delegate\", \"property-based\" }; final protected BeanDescription _beanDesc;"
+      },
+      {
+        "txt": "final protected boolean _canFixAccess; final protected boolean _forceAccess; protected final AnnotatedWithParams[] _creators = new AnnotatedWithParams[9]; protected int _explicitCreators = 0; protected boolean _hasNonDefaultCreator = false; protected SettableBeanProperty[] _delegateArgs; protected SettableBeanProperty[] _arrayDelegateArgs; protected SettableBeanProperty[] _propertyBasedArgs; protected AnnotatedParameter _incompleteParameter; public CreatorCollector(BeanDescription beanDesc, MapperConfig<?> config)"
+      },
+      {
+        "txt": "{ _beanDesc = beanDesc; _canFixAccess = config.canOverrideAccessModifiers(); _forceAccess = config.isEnabled(MapperFeature.OVERRIDE_PUBLIC_ACCESS_MODIFIERS); } public ValueInstantiator constructValueInstantiator(DeserializationConfig config) { final JavaType delegateType = _computeDelegateType(_creators[C_DELEGATE], _delegateArgs); final JavaType arrayDelegateType = _computeDelegateType(_creators[C_ARRAY_DELEGATE], _arrayDelegateArgs); final JavaType type = _beanDesc.getType();"
+      },
+      {
+        "txt": "if (!_hasNonDefaultCreator) { final Class<?> rawType = type.getRawClass(); if (rawType == Collection.class || rawType == List.class || rawType == ArrayList.class) { return new Vanilla(Vanilla.TYPE_COLLECTION); } if (rawType == Map.class || rawType == LinkedHashMap.class) { return new Vanilla(Vanilla.TYPE_MAP); } if (rawType == HashMap.class) { return new Vanilla(Vanilla.TYPE_HASH_MAP);"
+      },
+      {
+        "txt": "} } StdValueInstantiator inst = new StdValueInstantiator(config, type); inst.configureFromObjectSettings(_creators[C_DEFAULT], _creators[C_DELEGATE], delegateType, _delegateArgs, _creators[C_PROPS], _propertyBasedArgs); inst.configureFromArraySettings(_creators[C_ARRAY_DELEGATE], arrayDelegateType, _arrayDelegateArgs); inst.configureFromStringCreator(_creators[C_STRING]); inst.configureFromIntCreator(_creators[C_INT]); inst.configureFromLongCreator(_creators[C_LONG]);"
+      },
+      {
+        "txt": "inst.configureFromDoubleCreator(_creators[C_DOUBLE]); inst.configureFromBooleanCreator(_creators[C_BOOLEAN]); inst.configureIncompleteParameter(_incompleteParameter); return inst; } public void setDefaultCreator(AnnotatedWithParams creator) { _creators[C_DEFAULT] = _fixAccess(creator); } public void addStringCreator(AnnotatedWithParams creator, boolean explicit) { verifyNonDup(creator, C_STRING, explicit);"
+      },
+      {
+        "txt": "} public void addIntCreator(AnnotatedWithParams creator, boolean explicit) { verifyNonDup(creator, C_INT, explicit); } public void addLongCreator(AnnotatedWithParams creator, boolean explicit) { verifyNonDup(creator, C_LONG, explicit); } public void addDoubleCreator(AnnotatedWithParams creator, boolean explicit) { verifyNonDup(creator, C_DOUBLE, explicit); }"
+      },
+      {
+        "txt": "verifyNonDup(creator, C_BOOLEAN, explicit); } public void addDelegatingCreator(AnnotatedWithParams creator, boolean explicit, SettableBeanProperty[] injectables) { if (creator.getParameterType(0).isCollectionLikeType()) { <extra_id_0> _arrayDelegateArgs = injectables; } else { verifyNonDup(creator, C_DELEGATE, explicit); _delegateArgs = injectables; } }"
+      },
+      {
+        "txt": "} } public void addPropertyCreator(AnnotatedWithParams creator, boolean explicit, SettableBeanProperty[] properties) { verifyNonDup(creator, C_PROPS, explicit); if (properties.length > 1) { HashMap<String,Integer> names = new HashMap<String,Integer>(); for (int i = 0, len = properties.length; i < len; ++i) { String name = properties[i].getName();"
+      },
+      {
+        "txt": "if (name.length() == 0 && properties[i].getInjectableValueId() != null) { continue; } Integer old = names.put(name, Integer.valueOf(i)); if (old != null) { throw new IllegalArgumentException(\"Duplicate creator property \\\"\"+name+\"\\\" (index \"+old+\" vs \"+i+\")\"); } } } _propertyBasedArgs = properties;"
+      },
+      {
+        "txt": "} public void addIncompeteParameter(AnnotatedParameter parameter) { if (_incompleteParameter == null) { _incompleteParameter = parameter; } } @Deprecated // since 2.5 public void addStringCreator(AnnotatedWithParams creator) { addStringCreator(creator, false); }"
+      },
+      {
+        "txt": "@Deprecated // since 2.5 public void addIntCreator(AnnotatedWithParams creator) { addBooleanCreator(creator, false); } @Deprecated // since 2.5 public void addLongCreator(AnnotatedWithParams creator) { addBooleanCreator(creator, false); } @Deprecated // since 2.5 public void addDoubleCreator(AnnotatedWithParams creator) {"
+      },
+      {
+        "txt": "addBooleanCreator(creator, false); } @Deprecated // since 2.5 public void addBooleanCreator(AnnotatedWithParams creator) { addBooleanCreator(creator, false); } @Deprecated // since 2.5 public void addDelegatingCreator(AnnotatedWithParams creator, CreatorProperty[] injectables) { addDelegatingCreator(creator, false, injectables); }"
+      },
+      {
+        "txt": "@Deprecated // since 2.5 public void addPropertyCreator(AnnotatedWithParams creator, CreatorProperty[] properties) { addPropertyCreator(creator, false, properties); } public boolean hasDefaultCreator() { return _creators[C_DEFAULT] != null; } public boolean hasDelegatingCreator() { return _creators[C_DELEGATE] != null; }"
+      },
+      {
+        "txt": "public boolean hasPropertyBasedCreator() { return _creators[C_PROPS] != null; } private JavaType _computeDelegateType(AnnotatedWithParams creator, SettableBeanProperty[] delegateArgs) { if (!_hasNonDefaultCreator || (creator == null)) { return null; } int ix = 0;"
+      },
+      {
+        "txt": "if (delegateArgs != null) { for (int i = 0, len = delegateArgs.length; i < len; ++i) { if (delegateArgs[i] == null) { // marker for delegate itself ix = i; break; } } } return creator.getParameterType(ix); }"
+      },
+      {
+        "txt": "private <T extends AnnotatedMember> T _fixAccess(T member) { if (member != null && _canFixAccess) { ClassUtil.checkAndFixAccess((Member) member.getAnnotated(), _forceAccess); } return member; } protected void verifyNonDup(AnnotatedWithParams newOne, int typeIndex, boolean explicit) { final int mask = (1 << typeIndex);"
+      },
+      {
+        "txt": "_hasNonDefaultCreator = true; AnnotatedWithParams oldOne = _creators[typeIndex]; if (oldOne != null) { boolean verify; if ((_explicitCreators & mask) != 0) { // already had explicitly annotated, leave as-is if (!explicit) { return; } verify = true; } else {"
+      },
+      {
+        "txt": "verify = !explicit; } if (verify && (oldOne.getClass() == newOne.getClass())) { Class<?> oldType = oldOne.getRawParameterType(0); Class<?> newType = newOne.getRawParameterType(0); if (oldType == newType) { throw new IllegalArgumentException(\"Conflicting \"+TYPE_DESCS[typeIndex] +\" creators: already had explicitly marked \"+oldOne+\", encountered \"+newOne); } if (newType.isAssignableFrom(oldType)) {"
+      },
+      {
+        "txt": "return; } } } if (explicit) { _explicitCreators |= mask; } _creators[typeIndex] = _fixAccess(newOne); } protected final static class Vanilla"
+      },
+      {
+        "txt": "extends ValueInstantiator implements java.io.Serializable { private static final long serialVersionUID = 1L; public final static int TYPE_COLLECTION = 1; public final static int TYPE_MAP = 2; public final static int TYPE_HASH_MAP = 3; private final int _type; public Vanilla(int t) { _type = t;"
+      },
+      {
+        "txt": "} @Override public String getValueTypeDesc() { switch (_type) { case TYPE_COLLECTION: return ArrayList.class.getName(); case TYPE_MAP: return LinkedHashMap.class.getName(); case TYPE_HASH_MAP: return HashMap.class.getName(); } return Object.class.getName(); }"
+      },
+      {
+        "txt": "@Override public boolean canInstantiate() { return true; } @Override public boolean canCreateUsingDefault() { return true; } @Override public Object createUsingDefault(DeserializationContext ctxt) throws IOException { switch (_type) { case TYPE_COLLECTION: return new ArrayList<Object>(); case TYPE_MAP: return new LinkedHashMap<String,Object>(); case TYPE_HASH_MAP: return new HashMap<String,Object>();"
+      },
+      {
+        "txt": "} throw new IllegalStateException(\"Unknown type \"+_type); } }"
+      }
+    ]
+  },
+  {
+    "id": 1644,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/deser/impl/CreatorCollector.java",
+    "start-bug-line": 167,
+    "end-bug-line": 167,
+    "bug": "",
+    "fix": "}",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "import java.io.IOException; import java.lang.reflect.Member; import java.util.*; import com.fasterxml.jackson.databind.*; import com.fasterxml.jackson.databind.cfg.MapperConfig; import com.fasterxml.jackson.databind.deser.CreatorProperty; import com.fasterxml.jackson.databind.deser.SettableBeanProperty; import com.fasterxml.jackson.databind.deser.ValueInstantiator; import com.fasterxml.jackson.databind.deser.std.StdValueInstantiator; import com.fasterxml.jackson.databind.introspect.*;"
+      },
+      {
+        "txt": "import com.fasterxml.jackson.databind.util.ClassUtil; public class CreatorCollector { protected final static int C_DEFAULT = 0; protected final static int C_STRING = 1; protected final static int C_INT = 2; protected final static int C_LONG = 3; protected final static int C_DOUBLE = 4; protected final static int C_BOOLEAN = 5; protected final static int C_DELEGATE = 6;"
+      },
+      {
+        "txt": "protected final static int C_PROPS = 7; protected final static int C_ARRAY_DELEGATE = 8; protected final static String[] TYPE_DESCS = new String[] { \"default\", \"String\", \"int\", \"long\", \"double\", \"boolean\", \"delegate\", \"property-based\" }; final protected BeanDescription _beanDesc; final protected boolean _canFixAccess; final protected boolean _forceAccess;"
+      },
+      {
+        "txt": "protected final AnnotatedWithParams[] _creators = new AnnotatedWithParams[9]; protected int _explicitCreators = 0; protected boolean _hasNonDefaultCreator = false; protected SettableBeanProperty[] _delegateArgs; protected SettableBeanProperty[] _arrayDelegateArgs; protected SettableBeanProperty[] _propertyBasedArgs; protected AnnotatedParameter _incompleteParameter; public CreatorCollector(BeanDescription beanDesc, MapperConfig<?> config) { _beanDesc = beanDesc;"
+      },
+      {
+        "txt": "_canFixAccess = config.canOverrideAccessModifiers(); _forceAccess = config.isEnabled(MapperFeature.OVERRIDE_PUBLIC_ACCESS_MODIFIERS); } public ValueInstantiator constructValueInstantiator(DeserializationConfig config) { final JavaType delegateType = _computeDelegateType(_creators[C_DELEGATE], _delegateArgs); final JavaType arrayDelegateType = _computeDelegateType(_creators[C_ARRAY_DELEGATE], _arrayDelegateArgs); final JavaType type = _beanDesc.getType(); if (!_hasNonDefaultCreator) { final Class<?> rawType = type.getRawClass();"
+      },
+      {
+        "txt": "if (rawType == Collection.class || rawType == List.class || rawType == ArrayList.class) { return new Vanilla(Vanilla.TYPE_COLLECTION); } if (rawType == Map.class || rawType == LinkedHashMap.class) { return new Vanilla(Vanilla.TYPE_MAP); } if (rawType == HashMap.class) { return new Vanilla(Vanilla.TYPE_HASH_MAP); } }"
+      },
+      {
+        "txt": "StdValueInstantiator inst = new StdValueInstantiator(config, type); inst.configureFromObjectSettings(_creators[C_DEFAULT], _creators[C_DELEGATE], delegateType, _delegateArgs, _creators[C_PROPS], _propertyBasedArgs); inst.configureFromArraySettings(_creators[C_ARRAY_DELEGATE], arrayDelegateType, _arrayDelegateArgs); inst.configureFromStringCreator(_creators[C_STRING]); inst.configureFromIntCreator(_creators[C_INT]); inst.configureFromLongCreator(_creators[C_LONG]); inst.configureFromDoubleCreator(_creators[C_DOUBLE]); inst.configureFromBooleanCreator(_creators[C_BOOLEAN]);"
+      },
+      {
+        "txt": "inst.configureIncompleteParameter(_incompleteParameter); return inst; } public void setDefaultCreator(AnnotatedWithParams creator) { _creators[C_DEFAULT] = _fixAccess(creator); } public void addStringCreator(AnnotatedWithParams creator, boolean explicit) { verifyNonDup(creator, C_STRING, explicit); } public void addIntCreator(AnnotatedWithParams creator, boolean explicit) {"
+      },
+      {
+        "txt": "verifyNonDup(creator, C_INT, explicit); } public void addLongCreator(AnnotatedWithParams creator, boolean explicit) { verifyNonDup(creator, C_LONG, explicit); } public void addDoubleCreator(AnnotatedWithParams creator, boolean explicit) { verifyNonDup(creator, C_DOUBLE, explicit); } public void addBooleanCreator(AnnotatedWithParams creator, boolean explicit) { verifyNonDup(creator, C_BOOLEAN, explicit);"
+      },
+      {
+        "txt": "public void addDelegatingCreator(AnnotatedWithParams creator, boolean explicit, SettableBeanProperty[] injectables) { if (creator.getParameterType(0).isCollectionLikeType()) { verifyNonDup(creator, C_ARRAY_DELEGATE, explicit); _arrayDelegateArgs = injectables; <extra_id_0> verifyNonDup(creator, C_DELEGATE, explicit); _delegateArgs = injectables; } } public void addPropertyCreator(AnnotatedWithParams creator, boolean explicit, SettableBeanProperty[] properties)"
+      },
+      {
+        "txt": "public void addPropertyCreator(AnnotatedWithParams creator, boolean explicit, SettableBeanProperty[] properties) { verifyNonDup(creator, C_PROPS, explicit); if (properties.length > 1) { HashMap<String,Integer> names = new HashMap<String,Integer>(); for (int i = 0, len = properties.length; i < len; ++i) { String name = properties[i].getName(); if (name.length() == 0 && properties[i].getInjectableValueId() != null) { continue;"
+      },
+      {
+        "txt": "} Integer old = names.put(name, Integer.valueOf(i)); if (old != null) { throw new IllegalArgumentException(\"Duplicate creator property \\\"\"+name+\"\\\" (index \"+old+\" vs \"+i+\")\"); } } } _propertyBasedArgs = properties; } public void addIncompeteParameter(AnnotatedParameter parameter) {"
+      },
+      {
+        "txt": "if (_incompleteParameter == null) { _incompleteParameter = parameter; } } @Deprecated // since 2.5 public void addStringCreator(AnnotatedWithParams creator) { addStringCreator(creator, false); } @Deprecated // since 2.5 public void addIntCreator(AnnotatedWithParams creator) {"
+      },
+      {
+        "txt": "addBooleanCreator(creator, false); } @Deprecated // since 2.5 public void addLongCreator(AnnotatedWithParams creator) { addBooleanCreator(creator, false); } @Deprecated // since 2.5 public void addDoubleCreator(AnnotatedWithParams creator) { addBooleanCreator(creator, false); }"
+      },
+      {
+        "txt": "@Deprecated // since 2.5 public void addBooleanCreator(AnnotatedWithParams creator) { addBooleanCreator(creator, false); } @Deprecated // since 2.5 public void addDelegatingCreator(AnnotatedWithParams creator, CreatorProperty[] injectables) { addDelegatingCreator(creator, false, injectables); } @Deprecated // since 2.5 public void addPropertyCreator(AnnotatedWithParams creator, CreatorProperty[] properties) {"
+      },
+      {
+        "txt": "addPropertyCreator(creator, false, properties); } public boolean hasDefaultCreator() { return _creators[C_DEFAULT] != null; } public boolean hasDelegatingCreator() { return _creators[C_DELEGATE] != null; } public boolean hasPropertyBasedCreator() { return _creators[C_PROPS] != null;"
+      },
+      {
+        "txt": "} private JavaType _computeDelegateType(AnnotatedWithParams creator, SettableBeanProperty[] delegateArgs) { if (!_hasNonDefaultCreator || (creator == null)) { return null; } int ix = 0; if (delegateArgs != null) { for (int i = 0, len = delegateArgs.length; i < len; ++i) {"
+      },
+      {
+        "txt": "if (delegateArgs[i] == null) { // marker for delegate itself ix = i; break; } } } return creator.getParameterType(ix); } private <T extends AnnotatedMember> T _fixAccess(T member) {"
+      },
+      {
+        "txt": "if (member != null && _canFixAccess) { ClassUtil.checkAndFixAccess((Member) member.getAnnotated(), _forceAccess); } return member; } protected void verifyNonDup(AnnotatedWithParams newOne, int typeIndex, boolean explicit) { final int mask = (1 << typeIndex); _hasNonDefaultCreator = true; AnnotatedWithParams oldOne = _creators[typeIndex];"
+      },
+      {
+        "txt": "if (oldOne != null) { boolean verify; if ((_explicitCreators & mask) != 0) { // already had explicitly annotated, leave as-is if (!explicit) { return; } verify = true; } else { verify = !explicit; }"
+      },
+      {
+        "txt": "if (verify && (oldOne.getClass() == newOne.getClass())) { Class<?> oldType = oldOne.getRawParameterType(0); Class<?> newType = newOne.getRawParameterType(0); if (oldType == newType) { throw new IllegalArgumentException(\"Conflicting \"+TYPE_DESCS[typeIndex] +\" creators: already had explicitly marked \"+oldOne+\", encountered \"+newOne); } if (newType.isAssignableFrom(oldType)) { return; }"
+      },
+      {
+        "txt": "} } if (explicit) { _explicitCreators |= mask; } _creators[typeIndex] = _fixAccess(newOne); } protected final static class Vanilla extends ValueInstantiator implements java.io.Serializable"
+      },
+      {
+        "txt": "{ private static final long serialVersionUID = 1L; public final static int TYPE_COLLECTION = 1; public final static int TYPE_MAP = 2; public final static int TYPE_HASH_MAP = 3; private final int _type; public Vanilla(int t) { _type = t; } @Override"
+      },
+      {
+        "txt": "public String getValueTypeDesc() { switch (_type) { case TYPE_COLLECTION: return ArrayList.class.getName(); case TYPE_MAP: return LinkedHashMap.class.getName(); case TYPE_HASH_MAP: return HashMap.class.getName(); } return Object.class.getName(); } @Override public boolean canInstantiate() { return true; }"
+      },
+      {
+        "txt": "@Override public boolean canCreateUsingDefault() { return true; } @Override public Object createUsingDefault(DeserializationContext ctxt) throws IOException { switch (_type) { case TYPE_COLLECTION: return new ArrayList<Object>(); case TYPE_MAP: return new LinkedHashMap<String,Object>(); case TYPE_HASH_MAP: return new HashMap<String,Object>(); } throw new IllegalStateException(\"Unknown type \"+_type);"
+      },
+      {
+        "txt": "} }"
+      }
+    ]
+  },
+  {
+    "id": 1645,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/deser/impl/CreatorCollector.java",
+    "start-bug-line": 168,
+    "end-bug-line": 168,
+    "bug": "verifyNonDup(creator, C_DELEGATE, explicit);",
+    "fix": "if (verifyNonDup(creator, C_DELEGATE, explicit)) {",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind.deser.impl; import java.io.IOException;"
+      },
+      {
+        "txt": "import java.lang.reflect.Member; import java.util.*; import com.fasterxml.jackson.databind.*; import com.fasterxml.jackson.databind.cfg.MapperConfig; import com.fasterxml.jackson.databind.deser.CreatorProperty; import com.fasterxml.jackson.databind.deser.SettableBeanProperty; import com.fasterxml.jackson.databind.deser.ValueInstantiator; import com.fasterxml.jackson.databind.deser.std.StdValueInstantiator; import com.fasterxml.jackson.databind.introspect.*; import com.fasterxml.jackson.databind.util.ClassUtil;"
+      },
+      {
+        "txt": "public class CreatorCollector { protected final static int C_DEFAULT = 0; protected final static int C_STRING = 1; protected final static int C_INT = 2; protected final static int C_LONG = 3; protected final static int C_DOUBLE = 4; protected final static int C_BOOLEAN = 5; protected final static int C_DELEGATE = 6; protected final static int C_PROPS = 7;"
+      },
+      {
+        "txt": "protected final static int C_ARRAY_DELEGATE = 8; protected final static String[] TYPE_DESCS = new String[] { \"default\", \"String\", \"int\", \"long\", \"double\", \"boolean\", \"delegate\", \"property-based\" }; final protected BeanDescription _beanDesc; final protected boolean _canFixAccess; final protected boolean _forceAccess; protected final AnnotatedWithParams[] _creators = new AnnotatedWithParams[9];"
+      },
+      {
+        "txt": "protected int _explicitCreators = 0; protected boolean _hasNonDefaultCreator = false; protected SettableBeanProperty[] _delegateArgs; protected SettableBeanProperty[] _arrayDelegateArgs; protected SettableBeanProperty[] _propertyBasedArgs; protected AnnotatedParameter _incompleteParameter; public CreatorCollector(BeanDescription beanDesc, MapperConfig<?> config) { _beanDesc = beanDesc; _canFixAccess = config.canOverrideAccessModifiers();"
+      },
+      {
+        "txt": "_forceAccess = config.isEnabled(MapperFeature.OVERRIDE_PUBLIC_ACCESS_MODIFIERS); } public ValueInstantiator constructValueInstantiator(DeserializationConfig config) { final JavaType delegateType = _computeDelegateType(_creators[C_DELEGATE], _delegateArgs); final JavaType arrayDelegateType = _computeDelegateType(_creators[C_ARRAY_DELEGATE], _arrayDelegateArgs); final JavaType type = _beanDesc.getType(); if (!_hasNonDefaultCreator) { final Class<?> rawType = type.getRawClass(); if (rawType == Collection.class || rawType == List.class || rawType == ArrayList.class) {"
+      },
+      {
+        "txt": "return new Vanilla(Vanilla.TYPE_COLLECTION); } if (rawType == Map.class || rawType == LinkedHashMap.class) { return new Vanilla(Vanilla.TYPE_MAP); } if (rawType == HashMap.class) { return new Vanilla(Vanilla.TYPE_HASH_MAP); } } StdValueInstantiator inst = new StdValueInstantiator(config, type);"
+      },
+      {
+        "txt": "inst.configureFromObjectSettings(_creators[C_DEFAULT], _creators[C_DELEGATE], delegateType, _delegateArgs, _creators[C_PROPS], _propertyBasedArgs); inst.configureFromArraySettings(_creators[C_ARRAY_DELEGATE], arrayDelegateType, _arrayDelegateArgs); inst.configureFromStringCreator(_creators[C_STRING]); inst.configureFromIntCreator(_creators[C_INT]); inst.configureFromLongCreator(_creators[C_LONG]); inst.configureFromDoubleCreator(_creators[C_DOUBLE]); inst.configureFromBooleanCreator(_creators[C_BOOLEAN]); inst.configureIncompleteParameter(_incompleteParameter);"
+      },
+      {
+        "txt": "return inst; } public void setDefaultCreator(AnnotatedWithParams creator) { _creators[C_DEFAULT] = _fixAccess(creator); } public void addStringCreator(AnnotatedWithParams creator, boolean explicit) { verifyNonDup(creator, C_STRING, explicit); } public void addIntCreator(AnnotatedWithParams creator, boolean explicit) { verifyNonDup(creator, C_INT, explicit);"
+      },
+      {
+        "txt": "} public void addLongCreator(AnnotatedWithParams creator, boolean explicit) { verifyNonDup(creator, C_LONG, explicit); } public void addDoubleCreator(AnnotatedWithParams creator, boolean explicit) { verifyNonDup(creator, C_DOUBLE, explicit); } public void addBooleanCreator(AnnotatedWithParams creator, boolean explicit) { verifyNonDup(creator, C_BOOLEAN, explicit); }"
+      },
+      {
+        "txt": "SettableBeanProperty[] injectables) { if (creator.getParameterType(0).isCollectionLikeType()) { verifyNonDup(creator, C_ARRAY_DELEGATE, explicit); _arrayDelegateArgs = injectables; } else { <extra_id_0> _delegateArgs = injectables; } } public void addPropertyCreator(AnnotatedWithParams creator, boolean explicit, SettableBeanProperty[] properties) {"
+      },
+      {
+        "txt": "SettableBeanProperty[] properties) { verifyNonDup(creator, C_PROPS, explicit); if (properties.length > 1) { HashMap<String,Integer> names = new HashMap<String,Integer>(); for (int i = 0, len = properties.length; i < len; ++i) { String name = properties[i].getName(); if (name.length() == 0 && properties[i].getInjectableValueId() != null) { continue; }"
+      },
+      {
+        "txt": "Integer old = names.put(name, Integer.valueOf(i)); if (old != null) { throw new IllegalArgumentException(\"Duplicate creator property \\\"\"+name+\"\\\" (index \"+old+\" vs \"+i+\")\"); } } } _propertyBasedArgs = properties; } public void addIncompeteParameter(AnnotatedParameter parameter) { if (_incompleteParameter == null) {"
+      },
+      {
+        "txt": "_incompleteParameter = parameter; } } @Deprecated // since 2.5 public void addStringCreator(AnnotatedWithParams creator) { addStringCreator(creator, false); } @Deprecated // since 2.5 public void addIntCreator(AnnotatedWithParams creator) { addBooleanCreator(creator, false);"
+      },
+      {
+        "txt": "} @Deprecated // since 2.5 public void addLongCreator(AnnotatedWithParams creator) { addBooleanCreator(creator, false); } @Deprecated // since 2.5 public void addDoubleCreator(AnnotatedWithParams creator) { addBooleanCreator(creator, false); } @Deprecated // since 2.5"
+      },
+      {
+        "txt": "public void addBooleanCreator(AnnotatedWithParams creator) { addBooleanCreator(creator, false); } @Deprecated // since 2.5 public void addDelegatingCreator(AnnotatedWithParams creator, CreatorProperty[] injectables) { addDelegatingCreator(creator, false, injectables); } @Deprecated // since 2.5 public void addPropertyCreator(AnnotatedWithParams creator, CreatorProperty[] properties) { addPropertyCreator(creator, false, properties);"
+      },
+      {
+        "txt": "} public boolean hasDefaultCreator() { return _creators[C_DEFAULT] != null; } public boolean hasDelegatingCreator() { return _creators[C_DELEGATE] != null; } public boolean hasPropertyBasedCreator() { return _creators[C_PROPS] != null; }"
+      },
+      {
+        "txt": "private JavaType _computeDelegateType(AnnotatedWithParams creator, SettableBeanProperty[] delegateArgs) { if (!_hasNonDefaultCreator || (creator == null)) { return null; } int ix = 0; if (delegateArgs != null) { for (int i = 0, len = delegateArgs.length; i < len; ++i) { if (delegateArgs[i] == null) { // marker for delegate itself"
+      },
+      {
+        "txt": "ix = i; break; } } } return creator.getParameterType(ix); } private <T extends AnnotatedMember> T _fixAccess(T member) { if (member != null && _canFixAccess) {"
+      },
+      {
+        "txt": "ClassUtil.checkAndFixAccess((Member) member.getAnnotated(), _forceAccess); } return member; } protected void verifyNonDup(AnnotatedWithParams newOne, int typeIndex, boolean explicit) { final int mask = (1 << typeIndex); _hasNonDefaultCreator = true; AnnotatedWithParams oldOne = _creators[typeIndex]; if (oldOne != null) {"
+      },
+      {
+        "txt": "boolean verify; if ((_explicitCreators & mask) != 0) { // already had explicitly annotated, leave as-is if (!explicit) { return; } verify = true; } else { verify = !explicit; } if (verify && (oldOne.getClass() == newOne.getClass())) {"
+      },
+      {
+        "txt": "Class<?> oldType = oldOne.getRawParameterType(0); Class<?> newType = newOne.getRawParameterType(0); if (oldType == newType) { throw new IllegalArgumentException(\"Conflicting \"+TYPE_DESCS[typeIndex] +\" creators: already had explicitly marked \"+oldOne+\", encountered \"+newOne); } if (newType.isAssignableFrom(oldType)) { return; } }"
+      },
+      {
+        "txt": "} if (explicit) { _explicitCreators |= mask; } _creators[typeIndex] = _fixAccess(newOne); } protected final static class Vanilla extends ValueInstantiator implements java.io.Serializable {"
+      },
+      {
+        "txt": "private static final long serialVersionUID = 1L; public final static int TYPE_COLLECTION = 1; public final static int TYPE_MAP = 2; public final static int TYPE_HASH_MAP = 3; private final int _type; public Vanilla(int t) { _type = t; } @Override public String getValueTypeDesc() {"
+      },
+      {
+        "txt": "switch (_type) { case TYPE_COLLECTION: return ArrayList.class.getName(); case TYPE_MAP: return LinkedHashMap.class.getName(); case TYPE_HASH_MAP: return HashMap.class.getName(); } return Object.class.getName(); } @Override public boolean canInstantiate() { return true; } @Override"
+      },
+      {
+        "txt": "public boolean canCreateUsingDefault() { return true; } @Override public Object createUsingDefault(DeserializationContext ctxt) throws IOException { switch (_type) { case TYPE_COLLECTION: return new ArrayList<Object>(); case TYPE_MAP: return new LinkedHashMap<String,Object>(); case TYPE_HASH_MAP: return new HashMap<String,Object>(); } throw new IllegalStateException(\"Unknown type \"+_type); }"
+      }
+    ]
+  },
+  {
+    "id": 1646,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/deser/impl/CreatorCollector.java",
+    "start-bug-line": 170,
+    "end-bug-line": 170,
+    "bug": "",
+    "fix": "}",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind.deser.impl; import java.io.IOException; import java.lang.reflect.Member; import java.util.*;"
+      },
+      {
+        "txt": "import com.fasterxml.jackson.databind.*; import com.fasterxml.jackson.databind.cfg.MapperConfig; import com.fasterxml.jackson.databind.deser.CreatorProperty; import com.fasterxml.jackson.databind.deser.SettableBeanProperty; import com.fasterxml.jackson.databind.deser.ValueInstantiator; import com.fasterxml.jackson.databind.deser.std.StdValueInstantiator; import com.fasterxml.jackson.databind.introspect.*; import com.fasterxml.jackson.databind.util.ClassUtil; public class CreatorCollector {"
+      },
+      {
+        "txt": "protected final static int C_DEFAULT = 0; protected final static int C_STRING = 1; protected final static int C_INT = 2; protected final static int C_LONG = 3; protected final static int C_DOUBLE = 4; protected final static int C_BOOLEAN = 5; protected final static int C_DELEGATE = 6; protected final static int C_PROPS = 7; protected final static int C_ARRAY_DELEGATE = 8; protected final static String[] TYPE_DESCS = new String[] {"
+      },
+      {
+        "txt": "\"default\", \"String\", \"int\", \"long\", \"double\", \"boolean\", \"delegate\", \"property-based\" }; final protected BeanDescription _beanDesc; final protected boolean _canFixAccess; final protected boolean _forceAccess; protected final AnnotatedWithParams[] _creators = new AnnotatedWithParams[9]; protected int _explicitCreators = 0; protected boolean _hasNonDefaultCreator = false;"
+      },
+      {
+        "txt": "protected SettableBeanProperty[] _delegateArgs; protected SettableBeanProperty[] _arrayDelegateArgs; protected SettableBeanProperty[] _propertyBasedArgs; protected AnnotatedParameter _incompleteParameter; public CreatorCollector(BeanDescription beanDesc, MapperConfig<?> config) { _beanDesc = beanDesc; _canFixAccess = config.canOverrideAccessModifiers(); _forceAccess = config.isEnabled(MapperFeature.OVERRIDE_PUBLIC_ACCESS_MODIFIERS); }"
+      },
+      {
+        "txt": "public ValueInstantiator constructValueInstantiator(DeserializationConfig config) { final JavaType delegateType = _computeDelegateType(_creators[C_DELEGATE], _delegateArgs); final JavaType arrayDelegateType = _computeDelegateType(_creators[C_ARRAY_DELEGATE], _arrayDelegateArgs); final JavaType type = _beanDesc.getType(); if (!_hasNonDefaultCreator) { final Class<?> rawType = type.getRawClass(); if (rawType == Collection.class || rawType == List.class || rawType == ArrayList.class) { return new Vanilla(Vanilla.TYPE_COLLECTION); }"
+      },
+      {
+        "txt": "if (rawType == Map.class || rawType == LinkedHashMap.class) { return new Vanilla(Vanilla.TYPE_MAP); } if (rawType == HashMap.class) { return new Vanilla(Vanilla.TYPE_HASH_MAP); } } StdValueInstantiator inst = new StdValueInstantiator(config, type); inst.configureFromObjectSettings(_creators[C_DEFAULT], _creators[C_DELEGATE], delegateType, _delegateArgs,"
+      },
+      {
+        "txt": "_creators[C_PROPS], _propertyBasedArgs); inst.configureFromArraySettings(_creators[C_ARRAY_DELEGATE], arrayDelegateType, _arrayDelegateArgs); inst.configureFromStringCreator(_creators[C_STRING]); inst.configureFromIntCreator(_creators[C_INT]); inst.configureFromLongCreator(_creators[C_LONG]); inst.configureFromDoubleCreator(_creators[C_DOUBLE]); inst.configureFromBooleanCreator(_creators[C_BOOLEAN]); inst.configureIncompleteParameter(_incompleteParameter); return inst; }"
+      },
+      {
+        "txt": "public void setDefaultCreator(AnnotatedWithParams creator) { _creators[C_DEFAULT] = _fixAccess(creator); } public void addStringCreator(AnnotatedWithParams creator, boolean explicit) { verifyNonDup(creator, C_STRING, explicit); } public void addIntCreator(AnnotatedWithParams creator, boolean explicit) { verifyNonDup(creator, C_INT, explicit); } public void addLongCreator(AnnotatedWithParams creator, boolean explicit) {"
+      },
+      {
+        "txt": "verifyNonDup(creator, C_LONG, explicit); } public void addDoubleCreator(AnnotatedWithParams creator, boolean explicit) { verifyNonDup(creator, C_DOUBLE, explicit); } public void addBooleanCreator(AnnotatedWithParams creator, boolean explicit) { verifyNonDup(creator, C_BOOLEAN, explicit); } public void addDelegatingCreator(AnnotatedWithParams creator, boolean explicit, SettableBeanProperty[] injectables)"
+      },
+      {
+        "txt": "if (creator.getParameterType(0).isCollectionLikeType()) { verifyNonDup(creator, C_ARRAY_DELEGATE, explicit); _arrayDelegateArgs = injectables; } else { verifyNonDup(creator, C_DELEGATE, explicit); _delegateArgs = injectables; <extra_id_0> } public void addPropertyCreator(AnnotatedWithParams creator, boolean explicit, SettableBeanProperty[] properties) { verifyNonDup(creator, C_PROPS, explicit); if (properties.length > 1) {"
+      },
+      {
+        "txt": "verifyNonDup(creator, C_PROPS, explicit); if (properties.length > 1) { HashMap<String,Integer> names = new HashMap<String,Integer>(); for (int i = 0, len = properties.length; i < len; ++i) { String name = properties[i].getName(); if (name.length() == 0 && properties[i].getInjectableValueId() != null) { continue; } Integer old = names.put(name, Integer.valueOf(i)); if (old != null) {"
+      },
+      {
+        "txt": "throw new IllegalArgumentException(\"Duplicate creator property \\\"\"+name+\"\\\" (index \"+old+\" vs \"+i+\")\"); } } } _propertyBasedArgs = properties; } public void addIncompeteParameter(AnnotatedParameter parameter) { if (_incompleteParameter == null) { _incompleteParameter = parameter; }"
+      },
+      {
+        "txt": "} @Deprecated // since 2.5 public void addStringCreator(AnnotatedWithParams creator) { addStringCreator(creator, false); } @Deprecated // since 2.5 public void addIntCreator(AnnotatedWithParams creator) { addBooleanCreator(creator, false); } @Deprecated // since 2.5"
+      },
+      {
+        "txt": "public void addLongCreator(AnnotatedWithParams creator) { addBooleanCreator(creator, false); } @Deprecated // since 2.5 public void addDoubleCreator(AnnotatedWithParams creator) { addBooleanCreator(creator, false); } @Deprecated // since 2.5 public void addBooleanCreator(AnnotatedWithParams creator) { addBooleanCreator(creator, false);"
+      },
+      {
+        "txt": "} @Deprecated // since 2.5 public void addDelegatingCreator(AnnotatedWithParams creator, CreatorProperty[] injectables) { addDelegatingCreator(creator, false, injectables); } @Deprecated // since 2.5 public void addPropertyCreator(AnnotatedWithParams creator, CreatorProperty[] properties) { addPropertyCreator(creator, false, properties); } public boolean hasDefaultCreator() {"
+      },
+      {
+        "txt": "return _creators[C_DEFAULT] != null; } public boolean hasDelegatingCreator() { return _creators[C_DELEGATE] != null; } public boolean hasPropertyBasedCreator() { return _creators[C_PROPS] != null; } private JavaType _computeDelegateType(AnnotatedWithParams creator, SettableBeanProperty[] delegateArgs)"
+      },
+      {
+        "txt": "{ if (!_hasNonDefaultCreator || (creator == null)) { return null; } int ix = 0; if (delegateArgs != null) { for (int i = 0, len = delegateArgs.length; i < len; ++i) { if (delegateArgs[i] == null) { // marker for delegate itself ix = i; break;"
+      },
+      {
+        "txt": "} } } return creator.getParameterType(ix); } private <T extends AnnotatedMember> T _fixAccess(T member) { if (member != null && _canFixAccess) { ClassUtil.checkAndFixAccess((Member) member.getAnnotated(), _forceAccess); }"
+      },
+      {
+        "txt": "return member; } protected void verifyNonDup(AnnotatedWithParams newOne, int typeIndex, boolean explicit) { final int mask = (1 << typeIndex); _hasNonDefaultCreator = true; AnnotatedWithParams oldOne = _creators[typeIndex]; if (oldOne != null) { boolean verify; if ((_explicitCreators & mask) != 0) { // already had explicitly annotated, leave as-is"
+      },
+      {
+        "txt": "if (!explicit) { return; } verify = true; } else { verify = !explicit; } if (verify && (oldOne.getClass() == newOne.getClass())) { Class<?> oldType = oldOne.getRawParameterType(0); Class<?> newType = newOne.getRawParameterType(0);"
+      },
+      {
+        "txt": "if (oldType == newType) { throw new IllegalArgumentException(\"Conflicting \"+TYPE_DESCS[typeIndex] +\" creators: already had explicitly marked \"+oldOne+\", encountered \"+newOne); } if (newType.isAssignableFrom(oldType)) { return; } } } if (explicit) {"
+      },
+      {
+        "txt": "_explicitCreators |= mask; } _creators[typeIndex] = _fixAccess(newOne); } protected final static class Vanilla extends ValueInstantiator implements java.io.Serializable { private static final long serialVersionUID = 1L; public final static int TYPE_COLLECTION = 1;"
+      },
+      {
+        "txt": "public final static int TYPE_MAP = 2; public final static int TYPE_HASH_MAP = 3; private final int _type; public Vanilla(int t) { _type = t; } @Override public String getValueTypeDesc() { switch (_type) { case TYPE_COLLECTION: return ArrayList.class.getName();"
+      },
+      {
+        "txt": "case TYPE_MAP: return LinkedHashMap.class.getName(); case TYPE_HASH_MAP: return HashMap.class.getName(); } return Object.class.getName(); } @Override public boolean canInstantiate() { return true; } @Override public boolean canCreateUsingDefault() { return true; } @Override"
+      },
+      {
+        "txt": "public Object createUsingDefault(DeserializationContext ctxt) throws IOException { switch (_type) { case TYPE_COLLECTION: return new ArrayList<Object>(); case TYPE_MAP: return new LinkedHashMap<String,Object>(); case TYPE_HASH_MAP: return new HashMap<String,Object>(); } throw new IllegalStateException(\"Unknown type \"+_type); } }"
+      }
+    ]
+  },
+  {
+    "id": 1647,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/deser/impl/CreatorCollector.java",
+    "start-bug-line": 176,
+    "end-bug-line": 176,
+    "bug": "verifyNonDup(creator, C_PROPS, explicit);",
+    "fix": "if (verifyNonDup(creator, C_PROPS, explicit)) {",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind.deser.impl; import java.io.IOException; import java.lang.reflect.Member; import java.util.*; import com.fasterxml.jackson.databind.*; import com.fasterxml.jackson.databind.cfg.MapperConfig; import com.fasterxml.jackson.databind.deser.CreatorProperty; import com.fasterxml.jackson.databind.deser.SettableBeanProperty; import com.fasterxml.jackson.databind.deser.ValueInstantiator;"
+      },
+      {
+        "txt": "import com.fasterxml.jackson.databind.deser.std.StdValueInstantiator; import com.fasterxml.jackson.databind.introspect.*; import com.fasterxml.jackson.databind.util.ClassUtil; public class CreatorCollector { protected final static int C_DEFAULT = 0; protected final static int C_STRING = 1; protected final static int C_INT = 2; protected final static int C_LONG = 3; protected final static int C_DOUBLE = 4;"
+      },
+      {
+        "txt": "protected final static int C_BOOLEAN = 5; protected final static int C_DELEGATE = 6; protected final static int C_PROPS = 7; protected final static int C_ARRAY_DELEGATE = 8; protected final static String[] TYPE_DESCS = new String[] { \"default\", \"String\", \"int\", \"long\", \"double\", \"boolean\", \"delegate\", \"property-based\" }; final protected BeanDescription _beanDesc;"
+      },
+      {
+        "txt": "final protected boolean _canFixAccess; final protected boolean _forceAccess; protected final AnnotatedWithParams[] _creators = new AnnotatedWithParams[9]; protected int _explicitCreators = 0; protected boolean _hasNonDefaultCreator = false; protected SettableBeanProperty[] _delegateArgs; protected SettableBeanProperty[] _arrayDelegateArgs; protected SettableBeanProperty[] _propertyBasedArgs; protected AnnotatedParameter _incompleteParameter; public CreatorCollector(BeanDescription beanDesc, MapperConfig<?> config)"
+      },
+      {
+        "txt": "{ _beanDesc = beanDesc; _canFixAccess = config.canOverrideAccessModifiers(); _forceAccess = config.isEnabled(MapperFeature.OVERRIDE_PUBLIC_ACCESS_MODIFIERS); } public ValueInstantiator constructValueInstantiator(DeserializationConfig config) { final JavaType delegateType = _computeDelegateType(_creators[C_DELEGATE], _delegateArgs); final JavaType arrayDelegateType = _computeDelegateType(_creators[C_ARRAY_DELEGATE], _arrayDelegateArgs); final JavaType type = _beanDesc.getType();"
+      },
+      {
+        "txt": "if (!_hasNonDefaultCreator) { final Class<?> rawType = type.getRawClass(); if (rawType == Collection.class || rawType == List.class || rawType == ArrayList.class) { return new Vanilla(Vanilla.TYPE_COLLECTION); } if (rawType == Map.class || rawType == LinkedHashMap.class) { return new Vanilla(Vanilla.TYPE_MAP); } if (rawType == HashMap.class) { return new Vanilla(Vanilla.TYPE_HASH_MAP);"
+      },
+      {
+        "txt": "} } StdValueInstantiator inst = new StdValueInstantiator(config, type); inst.configureFromObjectSettings(_creators[C_DEFAULT], _creators[C_DELEGATE], delegateType, _delegateArgs, _creators[C_PROPS], _propertyBasedArgs); inst.configureFromArraySettings(_creators[C_ARRAY_DELEGATE], arrayDelegateType, _arrayDelegateArgs); inst.configureFromStringCreator(_creators[C_STRING]); inst.configureFromIntCreator(_creators[C_INT]); inst.configureFromLongCreator(_creators[C_LONG]);"
+      },
+      {
+        "txt": "inst.configureFromDoubleCreator(_creators[C_DOUBLE]); inst.configureFromBooleanCreator(_creators[C_BOOLEAN]); inst.configureIncompleteParameter(_incompleteParameter); return inst; } public void setDefaultCreator(AnnotatedWithParams creator) { _creators[C_DEFAULT] = _fixAccess(creator); } public void addStringCreator(AnnotatedWithParams creator, boolean explicit) { verifyNonDup(creator, C_STRING, explicit);"
+      },
+      {
+        "txt": "} public void addIntCreator(AnnotatedWithParams creator, boolean explicit) { verifyNonDup(creator, C_INT, explicit); } public void addLongCreator(AnnotatedWithParams creator, boolean explicit) { verifyNonDup(creator, C_LONG, explicit); } public void addDoubleCreator(AnnotatedWithParams creator, boolean explicit) { verifyNonDup(creator, C_DOUBLE, explicit); }"
+      },
+      {
+        "txt": "public void addBooleanCreator(AnnotatedWithParams creator, boolean explicit) { verifyNonDup(creator, C_BOOLEAN, explicit); } public void addDelegatingCreator(AnnotatedWithParams creator, boolean explicit, SettableBeanProperty[] injectables) { if (creator.getParameterType(0).isCollectionLikeType()) { verifyNonDup(creator, C_ARRAY_DELEGATE, explicit); _arrayDelegateArgs = injectables; } else {"
+      },
+      {
+        "txt": "_delegateArgs = injectables; } } public void addPropertyCreator(AnnotatedWithParams creator, boolean explicit, SettableBeanProperty[] properties) { <extra_id_0> if (properties.length > 1) { HashMap<String,Integer> names = new HashMap<String,Integer>(); for (int i = 0, len = properties.length; i < len; ++i) { String name = properties[i].getName(); if (name.length() == 0 && properties[i].getInjectableValueId() != null) { continue;"
+      },
+      {
+        "txt": "if (name.length() == 0 && properties[i].getInjectableValueId() != null) { continue; } Integer old = names.put(name, Integer.valueOf(i)); if (old != null) { throw new IllegalArgumentException(\"Duplicate creator property \\\"\"+name+\"\\\" (index \"+old+\" vs \"+i+\")\"); } } } _propertyBasedArgs = properties;"
+      },
+      {
+        "txt": "} public void addIncompeteParameter(AnnotatedParameter parameter) { if (_incompleteParameter == null) { _incompleteParameter = parameter; } } @Deprecated // since 2.5 public void addStringCreator(AnnotatedWithParams creator) { addStringCreator(creator, false); }"
+      },
+      {
+        "txt": "@Deprecated // since 2.5 public void addIntCreator(AnnotatedWithParams creator) { addBooleanCreator(creator, false); } @Deprecated // since 2.5 public void addLongCreator(AnnotatedWithParams creator) { addBooleanCreator(creator, false); } @Deprecated // since 2.5 public void addDoubleCreator(AnnotatedWithParams creator) {"
+      },
+      {
+        "txt": "addBooleanCreator(creator, false); } @Deprecated // since 2.5 public void addBooleanCreator(AnnotatedWithParams creator) { addBooleanCreator(creator, false); } @Deprecated // since 2.5 public void addDelegatingCreator(AnnotatedWithParams creator, CreatorProperty[] injectables) { addDelegatingCreator(creator, false, injectables); }"
+      },
+      {
+        "txt": "@Deprecated // since 2.5 public void addPropertyCreator(AnnotatedWithParams creator, CreatorProperty[] properties) { addPropertyCreator(creator, false, properties); } public boolean hasDefaultCreator() { return _creators[C_DEFAULT] != null; } public boolean hasDelegatingCreator() { return _creators[C_DELEGATE] != null; }"
+      },
+      {
+        "txt": "public boolean hasPropertyBasedCreator() { return _creators[C_PROPS] != null; } private JavaType _computeDelegateType(AnnotatedWithParams creator, SettableBeanProperty[] delegateArgs) { if (!_hasNonDefaultCreator || (creator == null)) { return null; } int ix = 0;"
+      },
+      {
+        "txt": "if (delegateArgs != null) { for (int i = 0, len = delegateArgs.length; i < len; ++i) { if (delegateArgs[i] == null) { // marker for delegate itself ix = i; break; } } } return creator.getParameterType(ix); }"
+      },
+      {
+        "txt": "private <T extends AnnotatedMember> T _fixAccess(T member) { if (member != null && _canFixAccess) { ClassUtil.checkAndFixAccess((Member) member.getAnnotated(), _forceAccess); } return member; } protected void verifyNonDup(AnnotatedWithParams newOne, int typeIndex, boolean explicit) { final int mask = (1 << typeIndex);"
+      },
+      {
+        "txt": "_hasNonDefaultCreator = true; AnnotatedWithParams oldOne = _creators[typeIndex]; if (oldOne != null) { boolean verify; if ((_explicitCreators & mask) != 0) { // already had explicitly annotated, leave as-is if (!explicit) { return; } verify = true; } else {"
+      },
+      {
+        "txt": "verify = !explicit; } if (verify && (oldOne.getClass() == newOne.getClass())) { Class<?> oldType = oldOne.getRawParameterType(0); Class<?> newType = newOne.getRawParameterType(0); if (oldType == newType) { throw new IllegalArgumentException(\"Conflicting \"+TYPE_DESCS[typeIndex] +\" creators: already had explicitly marked \"+oldOne+\", encountered \"+newOne); } if (newType.isAssignableFrom(oldType)) {"
+      },
+      {
+        "txt": "return; } } } if (explicit) { _explicitCreators |= mask; } _creators[typeIndex] = _fixAccess(newOne); } protected final static class Vanilla"
+      },
+      {
+        "txt": "extends ValueInstantiator implements java.io.Serializable { private static final long serialVersionUID = 1L; public final static int TYPE_COLLECTION = 1; public final static int TYPE_MAP = 2; public final static int TYPE_HASH_MAP = 3; private final int _type; public Vanilla(int t) { _type = t;"
+      },
+      {
+        "txt": "} @Override public String getValueTypeDesc() { switch (_type) { case TYPE_COLLECTION: return ArrayList.class.getName(); case TYPE_MAP: return LinkedHashMap.class.getName(); case TYPE_HASH_MAP: return HashMap.class.getName(); } return Object.class.getName(); }"
+      },
+      {
+        "txt": "@Override public boolean canInstantiate() { return true; } @Override public boolean canCreateUsingDefault() { return true; } @Override public Object createUsingDefault(DeserializationContext ctxt) throws IOException { switch (_type) { case TYPE_COLLECTION: return new ArrayList<Object>(); case TYPE_MAP: return new LinkedHashMap<String,Object>(); case TYPE_HASH_MAP: return new HashMap<String,Object>();"
+      },
+      {
+        "txt": "} throw new IllegalStateException(\"Unknown type \"+_type); } }"
+      }
+    ]
+  },
+  {
+    "id": 1648,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/deser/impl/CreatorCollector.java",
+    "start-bug-line": 195,
+    "end-bug-line": 195,
+    "bug": "",
+    "fix": "}",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind.deser.impl; import java.io.IOException; import java.lang.reflect.Member; import java.util.*;"
+      },
+      {
+        "txt": "import com.fasterxml.jackson.databind.*; import com.fasterxml.jackson.databind.cfg.MapperConfig; import com.fasterxml.jackson.databind.deser.CreatorProperty; import com.fasterxml.jackson.databind.deser.SettableBeanProperty; import com.fasterxml.jackson.databind.deser.ValueInstantiator; import com.fasterxml.jackson.databind.deser.std.StdValueInstantiator; import com.fasterxml.jackson.databind.introspect.*; import com.fasterxml.jackson.databind.util.ClassUtil; public class CreatorCollector {"
+      },
+      {
+        "txt": "protected final static int C_DEFAULT = 0; protected final static int C_STRING = 1; protected final static int C_INT = 2; protected final static int C_LONG = 3; protected final static int C_DOUBLE = 4; protected final static int C_BOOLEAN = 5; protected final static int C_DELEGATE = 6; protected final static int C_PROPS = 7; protected final static int C_ARRAY_DELEGATE = 8; protected final static String[] TYPE_DESCS = new String[] {"
+      },
+      {
+        "txt": "\"default\", \"String\", \"int\", \"long\", \"double\", \"boolean\", \"delegate\", \"property-based\" }; final protected BeanDescription _beanDesc; final protected boolean _canFixAccess; final protected boolean _forceAccess; protected final AnnotatedWithParams[] _creators = new AnnotatedWithParams[9]; protected int _explicitCreators = 0; protected boolean _hasNonDefaultCreator = false;"
+      },
+      {
+        "txt": "protected SettableBeanProperty[] _delegateArgs; protected SettableBeanProperty[] _arrayDelegateArgs; protected SettableBeanProperty[] _propertyBasedArgs; protected AnnotatedParameter _incompleteParameter; public CreatorCollector(BeanDescription beanDesc, MapperConfig<?> config) { _beanDesc = beanDesc; _canFixAccess = config.canOverrideAccessModifiers(); _forceAccess = config.isEnabled(MapperFeature.OVERRIDE_PUBLIC_ACCESS_MODIFIERS); }"
+      },
+      {
+        "txt": "public ValueInstantiator constructValueInstantiator(DeserializationConfig config) { final JavaType delegateType = _computeDelegateType(_creators[C_DELEGATE], _delegateArgs); final JavaType arrayDelegateType = _computeDelegateType(_creators[C_ARRAY_DELEGATE], _arrayDelegateArgs); final JavaType type = _beanDesc.getType(); if (!_hasNonDefaultCreator) { final Class<?> rawType = type.getRawClass(); if (rawType == Collection.class || rawType == List.class || rawType == ArrayList.class) { return new Vanilla(Vanilla.TYPE_COLLECTION); }"
+      },
+      {
+        "txt": "if (rawType == Map.class || rawType == LinkedHashMap.class) { return new Vanilla(Vanilla.TYPE_MAP); } if (rawType == HashMap.class) { return new Vanilla(Vanilla.TYPE_HASH_MAP); } } StdValueInstantiator inst = new StdValueInstantiator(config, type); inst.configureFromObjectSettings(_creators[C_DEFAULT], _creators[C_DELEGATE], delegateType, _delegateArgs,"
+      },
+      {
+        "txt": "_creators[C_PROPS], _propertyBasedArgs); inst.configureFromArraySettings(_creators[C_ARRAY_DELEGATE], arrayDelegateType, _arrayDelegateArgs); inst.configureFromStringCreator(_creators[C_STRING]); inst.configureFromIntCreator(_creators[C_INT]); inst.configureFromLongCreator(_creators[C_LONG]); inst.configureFromDoubleCreator(_creators[C_DOUBLE]); inst.configureFromBooleanCreator(_creators[C_BOOLEAN]); inst.configureIncompleteParameter(_incompleteParameter); return inst; }"
+      },
+      {
+        "txt": "public void setDefaultCreator(AnnotatedWithParams creator) { _creators[C_DEFAULT] = _fixAccess(creator); } public void addStringCreator(AnnotatedWithParams creator, boolean explicit) { verifyNonDup(creator, C_STRING, explicit); } public void addIntCreator(AnnotatedWithParams creator, boolean explicit) { verifyNonDup(creator, C_INT, explicit); } public void addLongCreator(AnnotatedWithParams creator, boolean explicit) {"
+      },
+      {
+        "txt": "verifyNonDup(creator, C_LONG, explicit); } public void addDoubleCreator(AnnotatedWithParams creator, boolean explicit) { verifyNonDup(creator, C_DOUBLE, explicit); } public void addBooleanCreator(AnnotatedWithParams creator, boolean explicit) { verifyNonDup(creator, C_BOOLEAN, explicit); } public void addDelegatingCreator(AnnotatedWithParams creator, boolean explicit, SettableBeanProperty[] injectables)"
+      },
+      {
+        "txt": "{ if (creator.getParameterType(0).isCollectionLikeType()) { verifyNonDup(creator, C_ARRAY_DELEGATE, explicit); _arrayDelegateArgs = injectables; } else { verifyNonDup(creator, C_DELEGATE, explicit); _delegateArgs = injectables; } } public void addPropertyCreator(AnnotatedWithParams creator, boolean explicit,"
+      },
+      {
+        "txt": "SettableBeanProperty[] properties) { verifyNonDup(creator, C_PROPS, explicit); if (properties.length > 1) { HashMap<String,Integer> names = new HashMap<String,Integer>(); for (int i = 0, len = properties.length; i < len; ++i) { String name = properties[i].getName(); if (name.length() == 0 && properties[i].getInjectableValueId() != null) { continue; }"
+      },
+      {
+        "txt": "if (old != null) { throw new IllegalArgumentException(\"Duplicate creator property \\\"\"+name+\"\\\" (index \"+old+\" vs \"+i+\")\"); } } } _propertyBasedArgs = properties; <extra_id_0> public void addIncompeteParameter(AnnotatedParameter parameter) { if (_incompleteParameter == null) { _incompleteParameter = parameter; } } @Deprecated // since 2.5"
+      },
+      {
+        "txt": "} @Deprecated // since 2.5 public void addStringCreator(AnnotatedWithParams creator) { addStringCreator(creator, false); } @Deprecated // since 2.5 public void addIntCreator(AnnotatedWithParams creator) { addBooleanCreator(creator, false); } @Deprecated // since 2.5"
+      },
+      {
+        "txt": "public void addLongCreator(AnnotatedWithParams creator) { addBooleanCreator(creator, false); } @Deprecated // since 2.5 public void addDoubleCreator(AnnotatedWithParams creator) { addBooleanCreator(creator, false); } @Deprecated // since 2.5 public void addBooleanCreator(AnnotatedWithParams creator) { addBooleanCreator(creator, false);"
+      },
+      {
+        "txt": "} @Deprecated // since 2.5 public void addDelegatingCreator(AnnotatedWithParams creator, CreatorProperty[] injectables) { addDelegatingCreator(creator, false, injectables); } @Deprecated // since 2.5 public void addPropertyCreator(AnnotatedWithParams creator, CreatorProperty[] properties) { addPropertyCreator(creator, false, properties); } public boolean hasDefaultCreator() {"
+      },
+      {
+        "txt": "return _creators[C_DEFAULT] != null; } public boolean hasDelegatingCreator() { return _creators[C_DELEGATE] != null; } public boolean hasPropertyBasedCreator() { return _creators[C_PROPS] != null; } private JavaType _computeDelegateType(AnnotatedWithParams creator, SettableBeanProperty[] delegateArgs)"
+      },
+      {
+        "txt": "{ if (!_hasNonDefaultCreator || (creator == null)) { return null; } int ix = 0; if (delegateArgs != null) { for (int i = 0, len = delegateArgs.length; i < len; ++i) { if (delegateArgs[i] == null) { // marker for delegate itself ix = i; break;"
+      },
+      {
+        "txt": "} } } return creator.getParameterType(ix); } private <T extends AnnotatedMember> T _fixAccess(T member) { if (member != null && _canFixAccess) { ClassUtil.checkAndFixAccess((Member) member.getAnnotated(), _forceAccess); }"
+      },
+      {
+        "txt": "return member; } protected void verifyNonDup(AnnotatedWithParams newOne, int typeIndex, boolean explicit) { final int mask = (1 << typeIndex); _hasNonDefaultCreator = true; AnnotatedWithParams oldOne = _creators[typeIndex]; if (oldOne != null) { boolean verify; if ((_explicitCreators & mask) != 0) { // already had explicitly annotated, leave as-is"
+      },
+      {
+        "txt": "if (!explicit) { return; } verify = true; } else { verify = !explicit; } if (verify && (oldOne.getClass() == newOne.getClass())) { Class<?> oldType = oldOne.getRawParameterType(0); Class<?> newType = newOne.getRawParameterType(0);"
+      },
+      {
+        "txt": "if (oldType == newType) { throw new IllegalArgumentException(\"Conflicting \"+TYPE_DESCS[typeIndex] +\" creators: already had explicitly marked \"+oldOne+\", encountered \"+newOne); } if (newType.isAssignableFrom(oldType)) { return; } } } if (explicit) {"
+      },
+      {
+        "txt": "_explicitCreators |= mask; } _creators[typeIndex] = _fixAccess(newOne); } protected final static class Vanilla extends ValueInstantiator implements java.io.Serializable { private static final long serialVersionUID = 1L; public final static int TYPE_COLLECTION = 1;"
+      },
+      {
+        "txt": "public final static int TYPE_MAP = 2; public final static int TYPE_HASH_MAP = 3; private final int _type; public Vanilla(int t) { _type = t; } @Override public String getValueTypeDesc() { switch (_type) { case TYPE_COLLECTION: return ArrayList.class.getName();"
+      },
+      {
+        "txt": "case TYPE_MAP: return LinkedHashMap.class.getName(); case TYPE_HASH_MAP: return HashMap.class.getName(); } return Object.class.getName(); } @Override public boolean canInstantiate() { return true; } @Override public boolean canCreateUsingDefault() { return true; } @Override"
+      },
+      {
+        "txt": "public Object createUsingDefault(DeserializationContext ctxt) throws IOException { switch (_type) { case TYPE_COLLECTION: return new ArrayList<Object>(); case TYPE_MAP: return new LinkedHashMap<String,Object>(); case TYPE_HASH_MAP: return new HashMap<String,Object>(); } throw new IllegalStateException(\"Unknown type \"+_type); } }"
+      }
+    ]
+  },
+  {
+    "id": 1649,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/deser/impl/CreatorCollector.java",
+    "start-bug-line": 299,
+    "end-bug-line": 299,
+    "bug": "protected void verifyNonDup(AnnotatedWithParams newOne, int typeIndex, boolean explicit)",
+    "fix": "protected boolean verifyNonDup(AnnotatedWithParams newOne, int typeIndex, boolean explicit)",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "import java.io.IOException; import java.lang.reflect.Member; import java.util.*; import com.fasterxml.jackson.databind.*; import com.fasterxml.jackson.databind.cfg.MapperConfig; import com.fasterxml.jackson.databind.deser.CreatorProperty; import com.fasterxml.jackson.databind.deser.SettableBeanProperty; import com.fasterxml.jackson.databind.deser.ValueInstantiator; import com.fasterxml.jackson.databind.deser.std.StdValueInstantiator; import com.fasterxml.jackson.databind.introspect.*;"
+      },
+      {
+        "txt": "import com.fasterxml.jackson.databind.util.ClassUtil; public class CreatorCollector { protected final static int C_DEFAULT = 0; protected final static int C_STRING = 1; protected final static int C_INT = 2; protected final static int C_LONG = 3; protected final static int C_DOUBLE = 4; protected final static int C_BOOLEAN = 5; protected final static int C_DELEGATE = 6;"
+      },
+      {
+        "txt": "protected final static int C_PROPS = 7; protected final static int C_ARRAY_DELEGATE = 8; protected final static String[] TYPE_DESCS = new String[] { \"default\", \"String\", \"int\", \"long\", \"double\", \"boolean\", \"delegate\", \"property-based\" }; final protected BeanDescription _beanDesc; final protected boolean _canFixAccess; final protected boolean _forceAccess;"
+      },
+      {
+        "txt": "protected final AnnotatedWithParams[] _creators = new AnnotatedWithParams[9]; protected int _explicitCreators = 0; protected boolean _hasNonDefaultCreator = false; protected SettableBeanProperty[] _delegateArgs; protected SettableBeanProperty[] _arrayDelegateArgs; protected SettableBeanProperty[] _propertyBasedArgs; protected AnnotatedParameter _incompleteParameter; public CreatorCollector(BeanDescription beanDesc, MapperConfig<?> config) { _beanDesc = beanDesc;"
+      },
+      {
+        "txt": "_canFixAccess = config.canOverrideAccessModifiers(); _forceAccess = config.isEnabled(MapperFeature.OVERRIDE_PUBLIC_ACCESS_MODIFIERS); } public ValueInstantiator constructValueInstantiator(DeserializationConfig config) { final JavaType delegateType = _computeDelegateType(_creators[C_DELEGATE], _delegateArgs); final JavaType arrayDelegateType = _computeDelegateType(_creators[C_ARRAY_DELEGATE], _arrayDelegateArgs); final JavaType type = _beanDesc.getType(); if (!_hasNonDefaultCreator) { final Class<?> rawType = type.getRawClass();"
+      },
+      {
+        "txt": "if (rawType == Collection.class || rawType == List.class || rawType == ArrayList.class) { return new Vanilla(Vanilla.TYPE_COLLECTION); } if (rawType == Map.class || rawType == LinkedHashMap.class) { return new Vanilla(Vanilla.TYPE_MAP); } if (rawType == HashMap.class) { return new Vanilla(Vanilla.TYPE_HASH_MAP); } }"
+      },
+      {
+        "txt": "StdValueInstantiator inst = new StdValueInstantiator(config, type); inst.configureFromObjectSettings(_creators[C_DEFAULT], _creators[C_DELEGATE], delegateType, _delegateArgs, _creators[C_PROPS], _propertyBasedArgs); inst.configureFromArraySettings(_creators[C_ARRAY_DELEGATE], arrayDelegateType, _arrayDelegateArgs); inst.configureFromStringCreator(_creators[C_STRING]); inst.configureFromIntCreator(_creators[C_INT]); inst.configureFromLongCreator(_creators[C_LONG]); inst.configureFromDoubleCreator(_creators[C_DOUBLE]); inst.configureFromBooleanCreator(_creators[C_BOOLEAN]);"
+      },
+      {
+        "txt": "inst.configureIncompleteParameter(_incompleteParameter); return inst; } public void setDefaultCreator(AnnotatedWithParams creator) { _creators[C_DEFAULT] = _fixAccess(creator); } public void addStringCreator(AnnotatedWithParams creator, boolean explicit) { verifyNonDup(creator, C_STRING, explicit); } public void addIntCreator(AnnotatedWithParams creator, boolean explicit) {"
+      },
+      {
+        "txt": "verifyNonDup(creator, C_INT, explicit); } public void addLongCreator(AnnotatedWithParams creator, boolean explicit) { verifyNonDup(creator, C_LONG, explicit); } public void addDoubleCreator(AnnotatedWithParams creator, boolean explicit) { verifyNonDup(creator, C_DOUBLE, explicit); } public void addBooleanCreator(AnnotatedWithParams creator, boolean explicit) { verifyNonDup(creator, C_BOOLEAN, explicit);"
+      },
+      {
+        "txt": "} public void addDelegatingCreator(AnnotatedWithParams creator, boolean explicit, SettableBeanProperty[] injectables) { if (creator.getParameterType(0).isCollectionLikeType()) { verifyNonDup(creator, C_ARRAY_DELEGATE, explicit); _arrayDelegateArgs = injectables; } else { verifyNonDup(creator, C_DELEGATE, explicit); _delegateArgs = injectables;"
+      },
+      {
+        "txt": "} } public void addPropertyCreator(AnnotatedWithParams creator, boolean explicit, SettableBeanProperty[] properties) { verifyNonDup(creator, C_PROPS, explicit); if (properties.length > 1) { HashMap<String,Integer> names = new HashMap<String,Integer>(); for (int i = 0, len = properties.length; i < len; ++i) { String name = properties[i].getName();"
+      },
+      {
+        "txt": "if (name.length() == 0 && properties[i].getInjectableValueId() != null) { continue; } Integer old = names.put(name, Integer.valueOf(i)); if (old != null) { throw new IllegalArgumentException(\"Duplicate creator property \\\"\"+name+\"\\\" (index \"+old+\" vs \"+i+\")\"); } } } _propertyBasedArgs = properties;"
+      },
+      {
+        "txt": "} public void addIncompeteParameter(AnnotatedParameter parameter) { if (_incompleteParameter == null) { _incompleteParameter = parameter; } } @Deprecated // since 2.5 public void addStringCreator(AnnotatedWithParams creator) { addStringCreator(creator, false); }"
+      },
+      {
+        "txt": "@Deprecated // since 2.5 public void addIntCreator(AnnotatedWithParams creator) { addBooleanCreator(creator, false); } @Deprecated // since 2.5 public void addLongCreator(AnnotatedWithParams creator) { addBooleanCreator(creator, false); } @Deprecated // since 2.5 public void addDoubleCreator(AnnotatedWithParams creator) {"
+      },
+      {
+        "txt": "addBooleanCreator(creator, false); } @Deprecated // since 2.5 public void addBooleanCreator(AnnotatedWithParams creator) { addBooleanCreator(creator, false); } @Deprecated // since 2.5 public void addDelegatingCreator(AnnotatedWithParams creator, CreatorProperty[] injectables) { addDelegatingCreator(creator, false, injectables); }"
+      },
+      {
+        "txt": "@Deprecated // since 2.5 public void addPropertyCreator(AnnotatedWithParams creator, CreatorProperty[] properties) { addPropertyCreator(creator, false, properties); } public boolean hasDefaultCreator() { return _creators[C_DEFAULT] != null; } public boolean hasDelegatingCreator() { return _creators[C_DELEGATE] != null; }"
+      },
+      {
+        "txt": "public boolean hasPropertyBasedCreator() { return _creators[C_PROPS] != null; } private JavaType _computeDelegateType(AnnotatedWithParams creator, SettableBeanProperty[] delegateArgs) { if (!_hasNonDefaultCreator || (creator == null)) { return null; } int ix = 0;"
+      },
+      {
+        "txt": "if (delegateArgs != null) { for (int i = 0, len = delegateArgs.length; i < len; ++i) { if (delegateArgs[i] == null) { // marker for delegate itself ix = i; break; } } } return creator.getParameterType(ix); }"
+      },
+      {
+        "txt": "{ if (member != null && _canFixAccess) { ClassUtil.checkAndFixAccess((Member) member.getAnnotated(), _forceAccess); } return member; } <extra_id_0> { final int mask = (1 << typeIndex); _hasNonDefaultCreator = true; AnnotatedWithParams oldOne = _creators[typeIndex]; if (oldOne != null) { boolean verify;"
+      },
+      {
+        "txt": "if (oldOne != null) { boolean verify; if ((_explicitCreators & mask) != 0) { // already had explicitly annotated, leave as-is if (!explicit) { return; } verify = true; } else { verify = !explicit; }"
+      },
+      {
+        "txt": "if (verify && (oldOne.getClass() == newOne.getClass())) { Class<?> oldType = oldOne.getRawParameterType(0); Class<?> newType = newOne.getRawParameterType(0); if (oldType == newType) { throw new IllegalArgumentException(\"Conflicting \"+TYPE_DESCS[typeIndex] +\" creators: already had explicitly marked \"+oldOne+\", encountered \"+newOne); } if (newType.isAssignableFrom(oldType)) { return; }"
+      },
+      {
+        "txt": "} } if (explicit) { _explicitCreators |= mask; } _creators[typeIndex] = _fixAccess(newOne); } protected final static class Vanilla extends ValueInstantiator implements java.io.Serializable"
+      },
+      {
+        "txt": "{ private static final long serialVersionUID = 1L; public final static int TYPE_COLLECTION = 1; public final static int TYPE_MAP = 2; public final static int TYPE_HASH_MAP = 3; private final int _type; public Vanilla(int t) { _type = t; } @Override"
+      },
+      {
+        "txt": "public String getValueTypeDesc() { switch (_type) { case TYPE_COLLECTION: return ArrayList.class.getName(); case TYPE_MAP: return LinkedHashMap.class.getName(); case TYPE_HASH_MAP: return HashMap.class.getName(); } return Object.class.getName(); } @Override public boolean canInstantiate() { return true; }"
+      },
+      {
+        "txt": "@Override public boolean canCreateUsingDefault() { return true; } @Override public Object createUsingDefault(DeserializationContext ctxt) throws IOException { switch (_type) { case TYPE_COLLECTION: return new ArrayList<Object>(); case TYPE_MAP: return new LinkedHashMap<String,Object>(); case TYPE_HASH_MAP: return new HashMap<String,Object>(); } throw new IllegalStateException(\"Unknown type \"+_type);"
+      },
+      {
+        "txt": "} }"
+      }
+    ]
+  },
+  {
+    "id": 1650,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/deser/impl/CreatorCollector.java",
+    "start-bug-line": 310,
+    "end-bug-line": 310,
+    "bug": "return;",
+    "fix": "return false;",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind.deser.impl; import java.io.IOException; import java.lang.reflect.Member; import java.util.*; import com.fasterxml.jackson.databind.*; import com.fasterxml.jackson.databind.cfg.MapperConfig; import com.fasterxml.jackson.databind.deser.CreatorProperty; import com.fasterxml.jackson.databind.deser.SettableBeanProperty; import com.fasterxml.jackson.databind.deser.ValueInstantiator; import com.fasterxml.jackson.databind.deser.std.StdValueInstantiator;"
+      },
+      {
+        "txt": "import com.fasterxml.jackson.databind.introspect.*; import com.fasterxml.jackson.databind.util.ClassUtil; public class CreatorCollector { protected final static int C_DEFAULT = 0; protected final static int C_STRING = 1; protected final static int C_INT = 2; protected final static int C_LONG = 3; protected final static int C_DOUBLE = 4; protected final static int C_BOOLEAN = 5;"
+      },
+      {
+        "txt": "protected final static int C_DELEGATE = 6; protected final static int C_PROPS = 7; protected final static int C_ARRAY_DELEGATE = 8; protected final static String[] TYPE_DESCS = new String[] { \"default\", \"String\", \"int\", \"long\", \"double\", \"boolean\", \"delegate\", \"property-based\" }; final protected BeanDescription _beanDesc; final protected boolean _canFixAccess;"
+      },
+      {
+        "txt": "final protected boolean _forceAccess; protected final AnnotatedWithParams[] _creators = new AnnotatedWithParams[9]; protected int _explicitCreators = 0; protected boolean _hasNonDefaultCreator = false; protected SettableBeanProperty[] _delegateArgs; protected SettableBeanProperty[] _arrayDelegateArgs; protected SettableBeanProperty[] _propertyBasedArgs; protected AnnotatedParameter _incompleteParameter; public CreatorCollector(BeanDescription beanDesc, MapperConfig<?> config) {"
+      },
+      {
+        "txt": "_beanDesc = beanDesc; _canFixAccess = config.canOverrideAccessModifiers(); _forceAccess = config.isEnabled(MapperFeature.OVERRIDE_PUBLIC_ACCESS_MODIFIERS); } public ValueInstantiator constructValueInstantiator(DeserializationConfig config) { final JavaType delegateType = _computeDelegateType(_creators[C_DELEGATE], _delegateArgs); final JavaType arrayDelegateType = _computeDelegateType(_creators[C_ARRAY_DELEGATE], _arrayDelegateArgs); final JavaType type = _beanDesc.getType(); if (!_hasNonDefaultCreator) {"
+      },
+      {
+        "txt": "final Class<?> rawType = type.getRawClass(); if (rawType == Collection.class || rawType == List.class || rawType == ArrayList.class) { return new Vanilla(Vanilla.TYPE_COLLECTION); } if (rawType == Map.class || rawType == LinkedHashMap.class) { return new Vanilla(Vanilla.TYPE_MAP); } if (rawType == HashMap.class) { return new Vanilla(Vanilla.TYPE_HASH_MAP); }"
+      },
+      {
+        "txt": "} StdValueInstantiator inst = new StdValueInstantiator(config, type); inst.configureFromObjectSettings(_creators[C_DEFAULT], _creators[C_DELEGATE], delegateType, _delegateArgs, _creators[C_PROPS], _propertyBasedArgs); inst.configureFromArraySettings(_creators[C_ARRAY_DELEGATE], arrayDelegateType, _arrayDelegateArgs); inst.configureFromStringCreator(_creators[C_STRING]); inst.configureFromIntCreator(_creators[C_INT]); inst.configureFromLongCreator(_creators[C_LONG]); inst.configureFromDoubleCreator(_creators[C_DOUBLE]);"
+      },
+      {
+        "txt": "inst.configureFromBooleanCreator(_creators[C_BOOLEAN]); inst.configureIncompleteParameter(_incompleteParameter); return inst; } public void setDefaultCreator(AnnotatedWithParams creator) { _creators[C_DEFAULT] = _fixAccess(creator); } public void addStringCreator(AnnotatedWithParams creator, boolean explicit) { verifyNonDup(creator, C_STRING, explicit); }"
+      },
+      {
+        "txt": "public void addIntCreator(AnnotatedWithParams creator, boolean explicit) { verifyNonDup(creator, C_INT, explicit); } public void addLongCreator(AnnotatedWithParams creator, boolean explicit) { verifyNonDup(creator, C_LONG, explicit); } public void addDoubleCreator(AnnotatedWithParams creator, boolean explicit) { verifyNonDup(creator, C_DOUBLE, explicit); } public void addBooleanCreator(AnnotatedWithParams creator, boolean explicit) {"
+      },
+      {
+        "txt": "verifyNonDup(creator, C_BOOLEAN, explicit); } public void addDelegatingCreator(AnnotatedWithParams creator, boolean explicit, SettableBeanProperty[] injectables) { if (creator.getParameterType(0).isCollectionLikeType()) { verifyNonDup(creator, C_ARRAY_DELEGATE, explicit); _arrayDelegateArgs = injectables; } else { verifyNonDup(creator, C_DELEGATE, explicit);"
+      },
+      {
+        "txt": "_delegateArgs = injectables; } } public void addPropertyCreator(AnnotatedWithParams creator, boolean explicit, SettableBeanProperty[] properties) { verifyNonDup(creator, C_PROPS, explicit); if (properties.length > 1) { HashMap<String,Integer> names = new HashMap<String,Integer>(); for (int i = 0, len = properties.length; i < len; ++i) {"
+      },
+      {
+        "txt": "String name = properties[i].getName(); if (name.length() == 0 && properties[i].getInjectableValueId() != null) { continue; } Integer old = names.put(name, Integer.valueOf(i)); if (old != null) { throw new IllegalArgumentException(\"Duplicate creator property \\\"\"+name+\"\\\" (index \"+old+\" vs \"+i+\")\"); } } }"
+      },
+      {
+        "txt": "_propertyBasedArgs = properties; } public void addIncompeteParameter(AnnotatedParameter parameter) { if (_incompleteParameter == null) { _incompleteParameter = parameter; } } @Deprecated // since 2.5 public void addStringCreator(AnnotatedWithParams creator) { addStringCreator(creator, false);"
+      },
+      {
+        "txt": "} @Deprecated // since 2.5 public void addIntCreator(AnnotatedWithParams creator) { addBooleanCreator(creator, false); } @Deprecated // since 2.5 public void addLongCreator(AnnotatedWithParams creator) { addBooleanCreator(creator, false); } @Deprecated // since 2.5"
+      },
+      {
+        "txt": "public void addDoubleCreator(AnnotatedWithParams creator) { addBooleanCreator(creator, false); } @Deprecated // since 2.5 public void addBooleanCreator(AnnotatedWithParams creator) { addBooleanCreator(creator, false); } @Deprecated // since 2.5 public void addDelegatingCreator(AnnotatedWithParams creator, CreatorProperty[] injectables) { addDelegatingCreator(creator, false, injectables);"
+      },
+      {
+        "txt": "} @Deprecated // since 2.5 public void addPropertyCreator(AnnotatedWithParams creator, CreatorProperty[] properties) { addPropertyCreator(creator, false, properties); } public boolean hasDefaultCreator() { return _creators[C_DEFAULT] != null; } public boolean hasDelegatingCreator() { return _creators[C_DELEGATE] != null;"
+      },
+      {
+        "txt": "} public boolean hasPropertyBasedCreator() { return _creators[C_PROPS] != null; } private JavaType _computeDelegateType(AnnotatedWithParams creator, SettableBeanProperty[] delegateArgs) { if (!_hasNonDefaultCreator || (creator == null)) { return null; }"
+      },
+      {
+        "txt": "int ix = 0; if (delegateArgs != null) { for (int i = 0, len = delegateArgs.length; i < len; ++i) { if (delegateArgs[i] == null) { // marker for delegate itself ix = i; break; } } } return creator.getParameterType(ix);"
+      },
+      {
+        "txt": "} private <T extends AnnotatedMember> T _fixAccess(T member) { if (member != null && _canFixAccess) { ClassUtil.checkAndFixAccess((Member) member.getAnnotated(), _forceAccess); } return member; } protected void verifyNonDup(AnnotatedWithParams newOne, int typeIndex, boolean explicit) {"
+      },
+      {
+        "txt": "_hasNonDefaultCreator = true; AnnotatedWithParams oldOne = _creators[typeIndex]; if (oldOne != null) { boolean verify; if ((_explicitCreators & mask) != 0) { // already had explicitly annotated, leave as-is if (!explicit) { <extra_id_0> } verify = true; } else { verify = !explicit; } if (verify && (oldOne.getClass() == newOne.getClass())) {"
+      },
+      {
+        "txt": "} if (verify && (oldOne.getClass() == newOne.getClass())) { Class<?> oldType = oldOne.getRawParameterType(0); Class<?> newType = newOne.getRawParameterType(0); if (oldType == newType) { throw new IllegalArgumentException(\"Conflicting \"+TYPE_DESCS[typeIndex] +\" creators: already had explicitly marked \"+oldOne+\", encountered \"+newOne); } if (newType.isAssignableFrom(oldType)) { return;"
+      },
+      {
+        "txt": "} } } if (explicit) { _explicitCreators |= mask; } _creators[typeIndex] = _fixAccess(newOne); } protected final static class Vanilla extends ValueInstantiator"
+      },
+      {
+        "txt": "implements java.io.Serializable { private static final long serialVersionUID = 1L; public final static int TYPE_COLLECTION = 1; public final static int TYPE_MAP = 2; public final static int TYPE_HASH_MAP = 3; private final int _type; public Vanilla(int t) { _type = t; }"
+      },
+      {
+        "txt": "@Override public String getValueTypeDesc() { switch (_type) { case TYPE_COLLECTION: return ArrayList.class.getName(); case TYPE_MAP: return LinkedHashMap.class.getName(); case TYPE_HASH_MAP: return HashMap.class.getName(); } return Object.class.getName(); } @Override"
+      },
+      {
+        "txt": "public boolean canInstantiate() { return true; } @Override public boolean canCreateUsingDefault() { return true; } @Override public Object createUsingDefault(DeserializationContext ctxt) throws IOException { switch (_type) { case TYPE_COLLECTION: return new ArrayList<Object>(); case TYPE_MAP: return new LinkedHashMap<String,Object>(); case TYPE_HASH_MAP: return new HashMap<String,Object>(); }"
+      },
+      {
+        "txt": "throw new IllegalStateException(\"Unknown type \"+_type); } }"
+      }
+    ]
+  },
+  {
+    "id": 1651,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/deser/impl/CreatorCollector.java",
+    "start-bug-line": 332,
+    "end-bug-line": 332,
+    "bug": "return;",
+    "fix": "return false;",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind.deser.impl; import java.io.IOException; import java.lang.reflect.Member; import java.util.*;"
+      },
+      {
+        "txt": "import com.fasterxml.jackson.databind.*; import com.fasterxml.jackson.databind.cfg.MapperConfig; import com.fasterxml.jackson.databind.deser.CreatorProperty; import com.fasterxml.jackson.databind.deser.SettableBeanProperty; import com.fasterxml.jackson.databind.deser.ValueInstantiator; import com.fasterxml.jackson.databind.deser.std.StdValueInstantiator; import com.fasterxml.jackson.databind.introspect.*; import com.fasterxml.jackson.databind.util.ClassUtil; public class CreatorCollector {"
+      },
+      {
+        "txt": "protected final static int C_DEFAULT = 0; protected final static int C_STRING = 1; protected final static int C_INT = 2; protected final static int C_LONG = 3; protected final static int C_DOUBLE = 4; protected final static int C_BOOLEAN = 5; protected final static int C_DELEGATE = 6; protected final static int C_PROPS = 7; protected final static int C_ARRAY_DELEGATE = 8; protected final static String[] TYPE_DESCS = new String[] {"
+      },
+      {
+        "txt": "\"default\", \"String\", \"int\", \"long\", \"double\", \"boolean\", \"delegate\", \"property-based\" }; final protected BeanDescription _beanDesc; final protected boolean _canFixAccess; final protected boolean _forceAccess; protected final AnnotatedWithParams[] _creators = new AnnotatedWithParams[9]; protected int _explicitCreators = 0; protected boolean _hasNonDefaultCreator = false;"
+      },
+      {
+        "txt": "protected SettableBeanProperty[] _delegateArgs; protected SettableBeanProperty[] _arrayDelegateArgs; protected SettableBeanProperty[] _propertyBasedArgs; protected AnnotatedParameter _incompleteParameter; public CreatorCollector(BeanDescription beanDesc, MapperConfig<?> config) { _beanDesc = beanDesc; _canFixAccess = config.canOverrideAccessModifiers(); _forceAccess = config.isEnabled(MapperFeature.OVERRIDE_PUBLIC_ACCESS_MODIFIERS); }"
+      },
+      {
+        "txt": "public ValueInstantiator constructValueInstantiator(DeserializationConfig config) { final JavaType delegateType = _computeDelegateType(_creators[C_DELEGATE], _delegateArgs); final JavaType arrayDelegateType = _computeDelegateType(_creators[C_ARRAY_DELEGATE], _arrayDelegateArgs); final JavaType type = _beanDesc.getType(); if (!_hasNonDefaultCreator) { final Class<?> rawType = type.getRawClass(); if (rawType == Collection.class || rawType == List.class || rawType == ArrayList.class) { return new Vanilla(Vanilla.TYPE_COLLECTION); }"
+      },
+      {
+        "txt": "if (rawType == Map.class || rawType == LinkedHashMap.class) { return new Vanilla(Vanilla.TYPE_MAP); } if (rawType == HashMap.class) { return new Vanilla(Vanilla.TYPE_HASH_MAP); } } StdValueInstantiator inst = new StdValueInstantiator(config, type); inst.configureFromObjectSettings(_creators[C_DEFAULT], _creators[C_DELEGATE], delegateType, _delegateArgs,"
+      },
+      {
+        "txt": "_creators[C_PROPS], _propertyBasedArgs); inst.configureFromArraySettings(_creators[C_ARRAY_DELEGATE], arrayDelegateType, _arrayDelegateArgs); inst.configureFromStringCreator(_creators[C_STRING]); inst.configureFromIntCreator(_creators[C_INT]); inst.configureFromLongCreator(_creators[C_LONG]); inst.configureFromDoubleCreator(_creators[C_DOUBLE]); inst.configureFromBooleanCreator(_creators[C_BOOLEAN]); inst.configureIncompleteParameter(_incompleteParameter); return inst; }"
+      },
+      {
+        "txt": "public void setDefaultCreator(AnnotatedWithParams creator) { _creators[C_DEFAULT] = _fixAccess(creator); } public void addStringCreator(AnnotatedWithParams creator, boolean explicit) { verifyNonDup(creator, C_STRING, explicit); } public void addIntCreator(AnnotatedWithParams creator, boolean explicit) { verifyNonDup(creator, C_INT, explicit); } public void addLongCreator(AnnotatedWithParams creator, boolean explicit) {"
+      },
+      {
+        "txt": "verifyNonDup(creator, C_LONG, explicit); } public void addDoubleCreator(AnnotatedWithParams creator, boolean explicit) { verifyNonDup(creator, C_DOUBLE, explicit); } public void addBooleanCreator(AnnotatedWithParams creator, boolean explicit) { verifyNonDup(creator, C_BOOLEAN, explicit); } public void addDelegatingCreator(AnnotatedWithParams creator, boolean explicit, SettableBeanProperty[] injectables)"
+      },
+      {
+        "txt": "{ if (creator.getParameterType(0).isCollectionLikeType()) { verifyNonDup(creator, C_ARRAY_DELEGATE, explicit); _arrayDelegateArgs = injectables; } else { verifyNonDup(creator, C_DELEGATE, explicit); _delegateArgs = injectables; } } public void addPropertyCreator(AnnotatedWithParams creator, boolean explicit,"
+      },
+      {
+        "txt": "SettableBeanProperty[] properties) { verifyNonDup(creator, C_PROPS, explicit); if (properties.length > 1) { HashMap<String,Integer> names = new HashMap<String,Integer>(); for (int i = 0, len = properties.length; i < len; ++i) { String name = properties[i].getName(); if (name.length() == 0 && properties[i].getInjectableValueId() != null) { continue; }"
+      },
+      {
+        "txt": "Integer old = names.put(name, Integer.valueOf(i)); if (old != null) { throw new IllegalArgumentException(\"Duplicate creator property \\\"\"+name+\"\\\" (index \"+old+\" vs \"+i+\")\"); } } } _propertyBasedArgs = properties; } public void addIncompeteParameter(AnnotatedParameter parameter) { if (_incompleteParameter == null) {"
+      },
+      {
+        "txt": "_incompleteParameter = parameter; } } @Deprecated // since 2.5 public void addStringCreator(AnnotatedWithParams creator) { addStringCreator(creator, false); } @Deprecated // since 2.5 public void addIntCreator(AnnotatedWithParams creator) { addBooleanCreator(creator, false);"
+      },
+      {
+        "txt": "} @Deprecated // since 2.5 public void addLongCreator(AnnotatedWithParams creator) { addBooleanCreator(creator, false); } @Deprecated // since 2.5 public void addDoubleCreator(AnnotatedWithParams creator) { addBooleanCreator(creator, false); } @Deprecated // since 2.5"
+      },
+      {
+        "txt": "public void addBooleanCreator(AnnotatedWithParams creator) { addBooleanCreator(creator, false); } @Deprecated // since 2.5 public void addDelegatingCreator(AnnotatedWithParams creator, CreatorProperty[] injectables) { addDelegatingCreator(creator, false, injectables); } @Deprecated // since 2.5 public void addPropertyCreator(AnnotatedWithParams creator, CreatorProperty[] properties) { addPropertyCreator(creator, false, properties);"
+      },
+      {
+        "txt": "} public boolean hasDefaultCreator() { return _creators[C_DEFAULT] != null; } public boolean hasDelegatingCreator() { return _creators[C_DELEGATE] != null; } public boolean hasPropertyBasedCreator() { return _creators[C_PROPS] != null; }"
+      },
+      {
+        "txt": "private JavaType _computeDelegateType(AnnotatedWithParams creator, SettableBeanProperty[] delegateArgs) { if (!_hasNonDefaultCreator || (creator == null)) { return null; } int ix = 0; if (delegateArgs != null) { for (int i = 0, len = delegateArgs.length; i < len; ++i) { if (delegateArgs[i] == null) { // marker for delegate itself"
+      },
+      {
+        "txt": "ix = i; break; } } } return creator.getParameterType(ix); } private <T extends AnnotatedMember> T _fixAccess(T member) { if (member != null && _canFixAccess) {"
+      },
+      {
+        "txt": "ClassUtil.checkAndFixAccess((Member) member.getAnnotated(), _forceAccess); } return member; } protected void verifyNonDup(AnnotatedWithParams newOne, int typeIndex, boolean explicit) { final int mask = (1 << typeIndex); _hasNonDefaultCreator = true; AnnotatedWithParams oldOne = _creators[typeIndex]; if (oldOne != null) {"
+      },
+      {
+        "txt": "boolean verify; if ((_explicitCreators & mask) != 0) { // already had explicitly annotated, leave as-is if (!explicit) { return; } verify = true; } else { verify = !explicit; } if (verify && (oldOne.getClass() == newOne.getClass())) {"
+      },
+      {
+        "txt": "Class<?> newType = newOne.getRawParameterType(0); if (oldType == newType) { throw new IllegalArgumentException(\"Conflicting \"+TYPE_DESCS[typeIndex] +\" creators: already had explicitly marked \"+oldOne+\", encountered \"+newOne); } if (newType.isAssignableFrom(oldType)) { <extra_id_0> } } } if (explicit) { _explicitCreators |= mask; }"
+      },
+      {
+        "txt": "_explicitCreators |= mask; } _creators[typeIndex] = _fixAccess(newOne); } protected final static class Vanilla extends ValueInstantiator implements java.io.Serializable { private static final long serialVersionUID = 1L; public final static int TYPE_COLLECTION = 1;"
+      },
+      {
+        "txt": "public final static int TYPE_MAP = 2; public final static int TYPE_HASH_MAP = 3; private final int _type; public Vanilla(int t) { _type = t; } @Override public String getValueTypeDesc() { switch (_type) { case TYPE_COLLECTION: return ArrayList.class.getName();"
+      },
+      {
+        "txt": "case TYPE_MAP: return LinkedHashMap.class.getName(); case TYPE_HASH_MAP: return HashMap.class.getName(); } return Object.class.getName(); } @Override public boolean canInstantiate() { return true; } @Override public boolean canCreateUsingDefault() { return true; } @Override"
+      },
+      {
+        "txt": "public Object createUsingDefault(DeserializationContext ctxt) throws IOException { switch (_type) { case TYPE_COLLECTION: return new ArrayList<Object>(); case TYPE_MAP: return new LinkedHashMap<String,Object>(); case TYPE_HASH_MAP: return new HashMap<String,Object>(); } throw new IllegalStateException(\"Unknown type \"+_type); } }"
+      }
+    ]
+  },
+  {
+    "id": 1652,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/deser/impl/CreatorCollector.java",
+    "start-bug-line": 341,
+    "end-bug-line": 341,
+    "bug": "",
+    "fix": "return true;",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind.deser.impl; import java.io.IOException;"
+      },
+      {
+        "txt": "import java.lang.reflect.Member; import java.util.*; import com.fasterxml.jackson.databind.*; import com.fasterxml.jackson.databind.cfg.MapperConfig; import com.fasterxml.jackson.databind.deser.CreatorProperty; import com.fasterxml.jackson.databind.deser.SettableBeanProperty; import com.fasterxml.jackson.databind.deser.ValueInstantiator; import com.fasterxml.jackson.databind.deser.std.StdValueInstantiator; import com.fasterxml.jackson.databind.introspect.*; import com.fasterxml.jackson.databind.util.ClassUtil;"
+      },
+      {
+        "txt": "public class CreatorCollector { protected final static int C_DEFAULT = 0; protected final static int C_STRING = 1; protected final static int C_INT = 2; protected final static int C_LONG = 3; protected final static int C_DOUBLE = 4; protected final static int C_BOOLEAN = 5; protected final static int C_DELEGATE = 6; protected final static int C_PROPS = 7;"
+      },
+      {
+        "txt": "protected final static int C_ARRAY_DELEGATE = 8; protected final static String[] TYPE_DESCS = new String[] { \"default\", \"String\", \"int\", \"long\", \"double\", \"boolean\", \"delegate\", \"property-based\" }; final protected BeanDescription _beanDesc; final protected boolean _canFixAccess; final protected boolean _forceAccess; protected final AnnotatedWithParams[] _creators = new AnnotatedWithParams[9];"
+      },
+      {
+        "txt": "protected int _explicitCreators = 0; protected boolean _hasNonDefaultCreator = false; protected SettableBeanProperty[] _delegateArgs; protected SettableBeanProperty[] _arrayDelegateArgs; protected SettableBeanProperty[] _propertyBasedArgs; protected AnnotatedParameter _incompleteParameter; public CreatorCollector(BeanDescription beanDesc, MapperConfig<?> config) { _beanDesc = beanDesc; _canFixAccess = config.canOverrideAccessModifiers();"
+      },
+      {
+        "txt": "_forceAccess = config.isEnabled(MapperFeature.OVERRIDE_PUBLIC_ACCESS_MODIFIERS); } public ValueInstantiator constructValueInstantiator(DeserializationConfig config) { final JavaType delegateType = _computeDelegateType(_creators[C_DELEGATE], _delegateArgs); final JavaType arrayDelegateType = _computeDelegateType(_creators[C_ARRAY_DELEGATE], _arrayDelegateArgs); final JavaType type = _beanDesc.getType(); if (!_hasNonDefaultCreator) { final Class<?> rawType = type.getRawClass(); if (rawType == Collection.class || rawType == List.class || rawType == ArrayList.class) {"
+      },
+      {
+        "txt": "return new Vanilla(Vanilla.TYPE_COLLECTION); } if (rawType == Map.class || rawType == LinkedHashMap.class) { return new Vanilla(Vanilla.TYPE_MAP); } if (rawType == HashMap.class) { return new Vanilla(Vanilla.TYPE_HASH_MAP); } } StdValueInstantiator inst = new StdValueInstantiator(config, type);"
+      },
+      {
+        "txt": "inst.configureFromObjectSettings(_creators[C_DEFAULT], _creators[C_DELEGATE], delegateType, _delegateArgs, _creators[C_PROPS], _propertyBasedArgs); inst.configureFromArraySettings(_creators[C_ARRAY_DELEGATE], arrayDelegateType, _arrayDelegateArgs); inst.configureFromStringCreator(_creators[C_STRING]); inst.configureFromIntCreator(_creators[C_INT]); inst.configureFromLongCreator(_creators[C_LONG]); inst.configureFromDoubleCreator(_creators[C_DOUBLE]); inst.configureFromBooleanCreator(_creators[C_BOOLEAN]); inst.configureIncompleteParameter(_incompleteParameter);"
+      },
+      {
+        "txt": "return inst; } public void setDefaultCreator(AnnotatedWithParams creator) { _creators[C_DEFAULT] = _fixAccess(creator); } public void addStringCreator(AnnotatedWithParams creator, boolean explicit) { verifyNonDup(creator, C_STRING, explicit); } public void addIntCreator(AnnotatedWithParams creator, boolean explicit) { verifyNonDup(creator, C_INT, explicit);"
+      },
+      {
+        "txt": "} public void addLongCreator(AnnotatedWithParams creator, boolean explicit) { verifyNonDup(creator, C_LONG, explicit); } public void addDoubleCreator(AnnotatedWithParams creator, boolean explicit) { verifyNonDup(creator, C_DOUBLE, explicit); } public void addBooleanCreator(AnnotatedWithParams creator, boolean explicit) { verifyNonDup(creator, C_BOOLEAN, explicit); }"
+      },
+      {
+        "txt": "public void addDelegatingCreator(AnnotatedWithParams creator, boolean explicit, SettableBeanProperty[] injectables) { if (creator.getParameterType(0).isCollectionLikeType()) { verifyNonDup(creator, C_ARRAY_DELEGATE, explicit); _arrayDelegateArgs = injectables; } else { verifyNonDup(creator, C_DELEGATE, explicit); _delegateArgs = injectables; }"
+      },
+      {
+        "txt": "} public void addPropertyCreator(AnnotatedWithParams creator, boolean explicit, SettableBeanProperty[] properties) { verifyNonDup(creator, C_PROPS, explicit); if (properties.length > 1) { HashMap<String,Integer> names = new HashMap<String,Integer>(); for (int i = 0, len = properties.length; i < len; ++i) { String name = properties[i].getName(); if (name.length() == 0 && properties[i].getInjectableValueId() != null) {"
+      },
+      {
+        "txt": "continue; } Integer old = names.put(name, Integer.valueOf(i)); if (old != null) { throw new IllegalArgumentException(\"Duplicate creator property \\\"\"+name+\"\\\" (index \"+old+\" vs \"+i+\")\"); } } } _propertyBasedArgs = properties; }"
+      },
+      {
+        "txt": "public void addIncompeteParameter(AnnotatedParameter parameter) { if (_incompleteParameter == null) { _incompleteParameter = parameter; } } @Deprecated // since 2.5 public void addStringCreator(AnnotatedWithParams creator) { addStringCreator(creator, false); } @Deprecated // since 2.5"
+      },
+      {
+        "txt": "public void addIntCreator(AnnotatedWithParams creator) { addBooleanCreator(creator, false); } @Deprecated // since 2.5 public void addLongCreator(AnnotatedWithParams creator) { addBooleanCreator(creator, false); } @Deprecated // since 2.5 public void addDoubleCreator(AnnotatedWithParams creator) { addBooleanCreator(creator, false);"
+      },
+      {
+        "txt": "} @Deprecated // since 2.5 public void addBooleanCreator(AnnotatedWithParams creator) { addBooleanCreator(creator, false); } @Deprecated // since 2.5 public void addDelegatingCreator(AnnotatedWithParams creator, CreatorProperty[] injectables) { addDelegatingCreator(creator, false, injectables); } @Deprecated // since 2.5"
+      },
+      {
+        "txt": "public void addPropertyCreator(AnnotatedWithParams creator, CreatorProperty[] properties) { addPropertyCreator(creator, false, properties); } public boolean hasDefaultCreator() { return _creators[C_DEFAULT] != null; } public boolean hasDelegatingCreator() { return _creators[C_DELEGATE] != null; } public boolean hasPropertyBasedCreator() {"
+      },
+      {
+        "txt": "return _creators[C_PROPS] != null; } private JavaType _computeDelegateType(AnnotatedWithParams creator, SettableBeanProperty[] delegateArgs) { if (!_hasNonDefaultCreator || (creator == null)) { return null; } int ix = 0; if (delegateArgs != null) {"
+      },
+      {
+        "txt": "for (int i = 0, len = delegateArgs.length; i < len; ++i) { if (delegateArgs[i] == null) { // marker for delegate itself ix = i; break; } } } return creator.getParameterType(ix); } private <T extends AnnotatedMember> T _fixAccess(T member)"
+      },
+      {
+        "txt": "{ if (member != null && _canFixAccess) { ClassUtil.checkAndFixAccess((Member) member.getAnnotated(), _forceAccess); } return member; } protected void verifyNonDup(AnnotatedWithParams newOne, int typeIndex, boolean explicit) { final int mask = (1 << typeIndex); _hasNonDefaultCreator = true;"
+      },
+      {
+        "txt": "AnnotatedWithParams oldOne = _creators[typeIndex]; if (oldOne != null) { boolean verify; if ((_explicitCreators & mask) != 0) { // already had explicitly annotated, leave as-is if (!explicit) { return; } verify = true; } else { verify = !explicit;"
+      },
+      {
+        "txt": "} if (verify && (oldOne.getClass() == newOne.getClass())) { Class<?> oldType = oldOne.getRawParameterType(0); Class<?> newType = newOne.getRawParameterType(0); if (oldType == newType) { throw new IllegalArgumentException(\"Conflicting \"+TYPE_DESCS[typeIndex] +\" creators: already had explicitly marked \"+oldOne+\", encountered \"+newOne); } if (newType.isAssignableFrom(oldType)) { return;"
+      },
+      {
+        "txt": "} } if (explicit) { _explicitCreators |= mask; } _creators[typeIndex] = _fixAccess(newOne); <extra_id_0> protected final static class Vanilla extends ValueInstantiator implements java.io.Serializable { private static final long serialVersionUID = 1L; public final static int TYPE_COLLECTION = 1;"
+      },
+      {
+        "txt": "private static final long serialVersionUID = 1L; public final static int TYPE_COLLECTION = 1; public final static int TYPE_MAP = 2; public final static int TYPE_HASH_MAP = 3; private final int _type; public Vanilla(int t) { _type = t; } @Override public String getValueTypeDesc() {"
+      },
+      {
+        "txt": "switch (_type) { case TYPE_COLLECTION: return ArrayList.class.getName(); case TYPE_MAP: return LinkedHashMap.class.getName(); case TYPE_HASH_MAP: return HashMap.class.getName(); } return Object.class.getName(); } @Override public boolean canInstantiate() { return true; } @Override"
+      },
+      {
+        "txt": "public boolean canCreateUsingDefault() { return true; } @Override public Object createUsingDefault(DeserializationContext ctxt) throws IOException { switch (_type) { case TYPE_COLLECTION: return new ArrayList<Object>(); case TYPE_MAP: return new LinkedHashMap<String,Object>(); case TYPE_HASH_MAP: return new HashMap<String,Object>(); } throw new IllegalStateException(\"Unknown type \"+_type); }"
+      }
+    ]
+  }
+]

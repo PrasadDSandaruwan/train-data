@@ -1,0 +1,1070 @@
+[
+  {
+    "id": 2394,
+    "file_path": "src/java/org/apache/commons/lang/StringEscapeUtils.java",
+    "start-bug-line": 86,
+    "end-bug-line": 86,
+    "bug": "return escapeJavaStyleString(str, false);",
+    "fix": "return escapeJavaStyleString(str, false, false);",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.lang; import java.io.IOException; import java.io.StringWriter; import java.io.Writer; import org.apache.commons.lang.exception.NestableRuntimeException; public class StringEscapeUtils { private static final char CSV_DELIMITER = ',';"
+      },
+      {
+        "txt": "private static final String CSV_QUOTE_STR = String.valueOf(CSV_QUOTE); private static final char[] CSV_SEARCH_CHARS = new char[] {CSV_DELIMITER, CSV_QUOTE, CharUtils.CR, CharUtils.LF}; public StringEscapeUtils() { super(); } public static String escapeJava(String str) { <extra_id_0> } public static void escapeJava(Writer out, String str) throws IOException { escapeJavaStyleString(out, str, false); } public static String escapeJavaScript(String str) { return escapeJavaStyleString(str, true);"
+      },
+      {
+        "txt": "public static String escapeJavaScript(String str) { return escapeJavaStyleString(str, true); } public static void escapeJavaScript(Writer out, String str) throws IOException { escapeJavaStyleString(out, str, true); } private static String escapeJavaStyleString(String str, boolean escapeSingleQuotes) { if (str == null) { return null; }"
+      },
+      {
+        "txt": "try { StringWriter writer = new StringWriter(str.length() * 2); escapeJavaStyleString(writer, str, escapeSingleQuotes); return writer.toString(); } catch (IOException ioe) { ioe.printStackTrace(); return null; } } private static void escapeJavaStyleString(Writer out, String str, boolean escapeSingleQuote) throws IOException {"
+      },
+      {
+        "txt": "if (out == null) { throw new IllegalArgumentException(\"The Writer must not be null\"); } if (str == null) { return; } int sz; sz = str.length(); for (int i = 0; i < sz; i++) { char ch = str.charAt(i);"
+      },
+      {
+        "txt": "if (ch > 0xfff) { out.write(\"\\\\u\" + hex(ch)); } else if (ch > 0xff) { out.write(\"\\\\u0\" + hex(ch)); } else if (ch > 0x7f) { out.write(\"\\\\u00\" + hex(ch)); } else if (ch < 32) { switch (ch) { case '\\b' : out.write('\\\\');"
+      },
+      {
+        "txt": "out.write('b'); break; case '\\n' : out.write('\\\\'); out.write('n'); break; case '\\t' : out.write('\\\\'); out.write('t'); break;"
+      },
+      {
+        "txt": "case '\\f' : out.write('\\\\'); out.write('f'); break; case '\\r' : out.write('\\\\'); out.write('r'); break; default : if (ch > 0xf) {"
+      },
+      {
+        "txt": "out.write(\"\\\\u00\" + hex(ch)); } else { out.write(\"\\\\u000\" + hex(ch)); } break; } } else { switch (ch) { case '\\'' : if (escapeSingleQuote) {"
+      },
+      {
+        "txt": "out.write('\\\\'); } out.write('\\''); break; case '\"' : out.write('\\\\'); out.write('\"'); break; case '\\\\' : out.write('\\\\');"
+      },
+      {
+        "txt": "out.write('\\\\'); break; case '/' : out.write('\\\\'); out.write('/'); break; default : out.write(ch); break; }"
+      },
+      {
+        "txt": "} } } private static String hex(char ch) { return Integer.toHexString(ch).toUpperCase(); } public static String unescapeJava(String str) { if (str == null) { return null; }"
+      },
+      {
+        "txt": "try { StringWriter writer = new StringWriter(str.length()); unescapeJava(writer, str); return writer.toString(); } catch (IOException ioe) { ioe.printStackTrace(); return null; } } public static void unescapeJava(Writer out, String str) throws IOException {"
+      },
+      {
+        "txt": "if (out == null) { throw new IllegalArgumentException(\"The Writer must not be null\"); } if (str == null) { return; } int sz = str.length(); StringBuffer unicode = new StringBuffer(4); boolean hadSlash = false; boolean inUnicode = false;"
+      },
+      {
+        "txt": "for (int i = 0; i < sz; i++) { char ch = str.charAt(i); if (inUnicode) { unicode.append(ch); if (unicode.length() == 4) { try { int value = Integer.parseInt(unicode.toString(), 16); out.write((char) value); unicode.setLength(0); inUnicode = false;"
+      },
+      {
+        "txt": "hadSlash = false; } catch (NumberFormatException nfe) { throw new NestableRuntimeException(\"Unable to parse unicode value: \" + unicode, nfe); } } continue; } if (hadSlash) { hadSlash = false; switch (ch) {"
+      },
+      {
+        "txt": "case '\\\\': out.write('\\\\'); break; case '\\'': out.write('\\''); break; case '\\\"': out.write('\"'); break; case 'r':"
+      },
+      {
+        "txt": "out.write('\\r'); break; case 'f': out.write('\\f'); break; case 't': out.write('\\t'); break; case 'n': out.write('\\n');"
+      },
+      {
+        "txt": "break; case 'b': out.write('\\b'); break; case 'u': { inUnicode = true; break; } default :"
+      },
+      {
+        "txt": "out.write(ch); break; } continue; } else if (ch == '\\\\') { hadSlash = true; continue; } out.write(ch); }"
+      },
+      {
+        "txt": "if (hadSlash) { out.write('\\\\'); } } public static String unescapeJavaScript(String str) { return unescapeJava(str); } public static void unescapeJavaScript(Writer out, String str) throws IOException { unescapeJava(out, str); }"
+      },
+      {
+        "txt": "public static String escapeHtml(String str) { if (str == null) { return null; } try { StringWriter writer = new StringWriter ((int)(str.length() * 1.5)); escapeHtml(writer, str); return writer.toString(); } catch (IOException e) { e.printStackTrace();"
+      },
+      {
+        "txt": "return null; } } public static void escapeHtml(Writer writer, String string) throws IOException { if (writer == null ) { throw new IllegalArgumentException (\"The Writer must not be null.\"); } if (string == null) { return; }"
+      },
+      {
+        "txt": "Entities.HTML40.escape(writer, string); } public static String unescapeHtml(String str) { if (str == null) { return null; } try { StringWriter writer = new StringWriter ((int)(str.length() * 1.5)); unescapeHtml(writer, str); return writer.toString();"
+      },
+      {
+        "txt": "} catch (IOException e) { e.printStackTrace(); return null; } } public static void unescapeHtml(Writer writer, String string) throws IOException { if (writer == null ) { throw new IllegalArgumentException (\"The Writer must not be null.\"); } if (string == null) {"
+      },
+      {
+        "txt": "return; } Entities.HTML40.unescape(writer, string); } public static void escapeXml(Writer writer, String str) throws IOException { if (writer == null ) { throw new IllegalArgumentException (\"The Writer must not be null.\"); } if (str == null) { return;"
+      },
+      {
+        "txt": "} Entities.XML.escape(writer, str); } public static String escapeXml(String str) { if (str == null) { return null; } return Entities.XML.escape(str); } public static void unescapeXml(Writer writer, String str) throws IOException {"
+      },
+      {
+        "txt": "if (writer == null ) { throw new IllegalArgumentException (\"The Writer must not be null.\"); } if (str == null) { return; } Entities.XML.unescape(writer, str); } public static String unescapeXml(String str) { if (str == null) {"
+      },
+      {
+        "txt": "return null; } return Entities.XML.unescape(str); } public static String escapeSql(String str) { if (str == null) { return null; } return StringUtils.replace(str, \"'\", \"''\"); }"
+      },
+      {
+        "txt": "public static String escapeCsv(String str) { if (StringUtils.containsNone(str, CSV_SEARCH_CHARS)) { return str; } try { StringWriter writer = new StringWriter(); escapeCsv(writer, str); return writer.toString(); } catch (IOException ioe) { ioe.printStackTrace();"
+      },
+      {
+        "txt": "return null; } } public static void escapeCsv(Writer out, String str) throws IOException { if (StringUtils.containsNone(str, CSV_SEARCH_CHARS)) { if (str != null) { out.write(str); } return; }"
+      },
+      {
+        "txt": "out.write(CSV_QUOTE); for (int i = 0; i < str.length(); i++) { char c = str.charAt(i); if (c == CSV_QUOTE) { out.write(CSV_QUOTE); // escape double quote } out.write(c); } out.write(CSV_QUOTE); }"
+      },
+      {
+        "txt": "public static String unescapeCsv(String str) { if (str == null) { return null; } try { StringWriter writer = new StringWriter(); unescapeCsv(writer, str); return writer.toString(); } catch (IOException ioe) { ioe.printStackTrace();"
+      },
+      {
+        "txt": "return null; } } public static void unescapeCsv(Writer out, String str) throws IOException { if (str == null) { return; } if (str.length() < 2) { out.write(str); return;"
+      },
+      {
+        "txt": "} if ( str.charAt(0) != CSV_QUOTE || str.charAt(str.length() - 1) != CSV_QUOTE ) { out.write(str); return; } String quoteless = str.substring(1, str.length() - 1); if ( StringUtils.containsAny(quoteless, CSV_SEARCH_CHARS) ) { str = StringUtils.replace(quoteless, CSV_QUOTE_STR + CSV_QUOTE_STR, CSV_QUOTE_STR); } out.write(str);"
+      }
+    ]
+  },
+  {
+    "id": 2395,
+    "file_path": "src/java/org/apache/commons/lang/StringEscapeUtils.java",
+    "start-bug-line": 102,
+    "end-bug-line": 102,
+    "bug": "escapeJavaStyleString(out, str, false);",
+    "fix": "escapeJavaStyleString(out, str, false, false);",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.lang; import java.io.IOException; import java.io.StringWriter; import java.io.Writer; import org.apache.commons.lang.exception.NestableRuntimeException; public class StringEscapeUtils { private static final char CSV_DELIMITER = ','; private static final char CSV_QUOTE = '\"'; private static final String CSV_QUOTE_STR = String.valueOf(CSV_QUOTE); private static final char[] CSV_SEARCH_CHARS = new char[] {CSV_DELIMITER, CSV_QUOTE, CharUtils.CR, CharUtils.LF};"
+      },
+      {
+        "txt": "super(); } public static String escapeJava(String str) { return escapeJavaStyleString(str, false); } public static void escapeJava(Writer out, String str) throws IOException { <extra_id_0> } public static String escapeJavaScript(String str) { return escapeJavaStyleString(str, true); } public static void escapeJavaScript(Writer out, String str) throws IOException { escapeJavaStyleString(out, str, true);"
+      },
+      {
+        "txt": "public static void escapeJavaScript(Writer out, String str) throws IOException { escapeJavaStyleString(out, str, true); } private static String escapeJavaStyleString(String str, boolean escapeSingleQuotes) { if (str == null) { return null; } try { StringWriter writer = new StringWriter(str.length() * 2); escapeJavaStyleString(writer, str, escapeSingleQuotes);"
+      },
+      {
+        "txt": "return writer.toString(); } catch (IOException ioe) { ioe.printStackTrace(); return null; } } private static void escapeJavaStyleString(Writer out, String str, boolean escapeSingleQuote) throws IOException { if (out == null) { throw new IllegalArgumentException(\"The Writer must not be null\"); }"
+      },
+      {
+        "txt": "if (str == null) { return; } int sz; sz = str.length(); for (int i = 0; i < sz; i++) { char ch = str.charAt(i); if (ch > 0xfff) { out.write(\"\\\\u\" + hex(ch)); } else if (ch > 0xff) {"
+      },
+      {
+        "txt": "out.write(\"\\\\u0\" + hex(ch)); } else if (ch > 0x7f) { out.write(\"\\\\u00\" + hex(ch)); } else if (ch < 32) { switch (ch) { case '\\b' : out.write('\\\\'); out.write('b'); break; case '\\n' :"
+      },
+      {
+        "txt": "out.write('\\\\'); out.write('n'); break; case '\\t' : out.write('\\\\'); out.write('t'); break; case '\\f' : out.write('\\\\'); out.write('f');"
+      },
+      {
+        "txt": "break; case '\\r' : out.write('\\\\'); out.write('r'); break; default : if (ch > 0xf) { out.write(\"\\\\u00\" + hex(ch)); } else { out.write(\"\\\\u000\" + hex(ch));"
+      },
+      {
+        "txt": "} break; } } else { switch (ch) { case '\\'' : if (escapeSingleQuote) { out.write('\\\\'); } out.write('\\'');"
+      },
+      {
+        "txt": "break; case '\"' : out.write('\\\\'); out.write('\"'); break; case '\\\\' : out.write('\\\\'); out.write('\\\\'); break; case '/' :"
+      },
+      {
+        "txt": "out.write('\\\\'); out.write('/'); break; default : out.write(ch); break; } } } }"
+      },
+      {
+        "txt": "private static String hex(char ch) { return Integer.toHexString(ch).toUpperCase(); } public static String unescapeJava(String str) { if (str == null) { return null; } try { StringWriter writer = new StringWriter(str.length()); unescapeJava(writer, str);"
+      },
+      {
+        "txt": "return writer.toString(); } catch (IOException ioe) { ioe.printStackTrace(); return null; } } public static void unescapeJava(Writer out, String str) throws IOException { if (out == null) { throw new IllegalArgumentException(\"The Writer must not be null\"); }"
+      },
+      {
+        "txt": "if (str == null) { return; } int sz = str.length(); StringBuffer unicode = new StringBuffer(4); boolean hadSlash = false; boolean inUnicode = false; for (int i = 0; i < sz; i++) { char ch = str.charAt(i); if (inUnicode) {"
+      },
+      {
+        "txt": "unicode.append(ch); if (unicode.length() == 4) { try { int value = Integer.parseInt(unicode.toString(), 16); out.write((char) value); unicode.setLength(0); inUnicode = false; hadSlash = false; } catch (NumberFormatException nfe) { throw new NestableRuntimeException(\"Unable to parse unicode value: \" + unicode, nfe);"
+      },
+      {
+        "txt": "} } continue; } if (hadSlash) { hadSlash = false; switch (ch) { case '\\\\': out.write('\\\\'); break;"
+      },
+      {
+        "txt": "case '\\'': out.write('\\''); break; case '\\\"': out.write('\"'); break; case 'r': out.write('\\r'); break; case 'f':"
+      },
+      {
+        "txt": "out.write('\\f'); break; case 't': out.write('\\t'); break; case 'n': out.write('\\n'); break; case 'b': out.write('\\b');"
+      },
+      {
+        "txt": "break; case 'u': { inUnicode = true; break; } default : out.write(ch); break; }"
+      },
+      {
+        "txt": "continue; } else if (ch == '\\\\') { hadSlash = true; continue; } out.write(ch); } if (hadSlash) { out.write('\\\\'); }"
+      },
+      {
+        "txt": "} public static String unescapeJavaScript(String str) { return unescapeJava(str); } public static void unescapeJavaScript(Writer out, String str) throws IOException { unescapeJava(out, str); } public static String escapeHtml(String str) { if (str == null) { return null;"
+      },
+      {
+        "txt": "} try { StringWriter writer = new StringWriter ((int)(str.length() * 1.5)); escapeHtml(writer, str); return writer.toString(); } catch (IOException e) { e.printStackTrace(); return null; } }"
+      },
+      {
+        "txt": "public static void escapeHtml(Writer writer, String string) throws IOException { if (writer == null ) { throw new IllegalArgumentException (\"The Writer must not be null.\"); } if (string == null) { return; } Entities.HTML40.escape(writer, string); } public static String unescapeHtml(String str) {"
+      },
+      {
+        "txt": "if (str == null) { return null; } try { StringWriter writer = new StringWriter ((int)(str.length() * 1.5)); unescapeHtml(writer, str); return writer.toString(); } catch (IOException e) { e.printStackTrace(); return null;"
+      },
+      {
+        "txt": "} } public static void unescapeHtml(Writer writer, String string) throws IOException { if (writer == null ) { throw new IllegalArgumentException (\"The Writer must not be null.\"); } if (string == null) { return; } Entities.HTML40.unescape(writer, string);"
+      },
+      {
+        "txt": "} public static void escapeXml(Writer writer, String str) throws IOException { if (writer == null ) { throw new IllegalArgumentException (\"The Writer must not be null.\"); } if (str == null) { return; } Entities.XML.escape(writer, str); }"
+      },
+      {
+        "txt": "public static String escapeXml(String str) { if (str == null) { return null; } return Entities.XML.escape(str); } public static void unescapeXml(Writer writer, String str) throws IOException { if (writer == null ) { throw new IllegalArgumentException (\"The Writer must not be null.\"); }"
+      },
+      {
+        "txt": "if (str == null) { return; } Entities.XML.unescape(writer, str); } public static String unescapeXml(String str) { if (str == null) { return null; } return Entities.XML.unescape(str);"
+      },
+      {
+        "txt": "} public static String escapeSql(String str) { if (str == null) { return null; } return StringUtils.replace(str, \"'\", \"''\"); } public static String escapeCsv(String str) { if (StringUtils.containsNone(str, CSV_SEARCH_CHARS)) { return str;"
+      },
+      {
+        "txt": "} try { StringWriter writer = new StringWriter(); escapeCsv(writer, str); return writer.toString(); } catch (IOException ioe) { ioe.printStackTrace(); return null; } }"
+      },
+      {
+        "txt": "public static void escapeCsv(Writer out, String str) throws IOException { if (StringUtils.containsNone(str, CSV_SEARCH_CHARS)) { if (str != null) { out.write(str); } return; } out.write(CSV_QUOTE); for (int i = 0; i < str.length(); i++) { char c = str.charAt(i);"
+      },
+      {
+        "txt": "if (c == CSV_QUOTE) { out.write(CSV_QUOTE); // escape double quote } out.write(c); } out.write(CSV_QUOTE); } public static String unescapeCsv(String str) { if (str == null) { return null;"
+      },
+      {
+        "txt": "} try { StringWriter writer = new StringWriter(); unescapeCsv(writer, str); return writer.toString(); } catch (IOException ioe) { ioe.printStackTrace(); return null; } }"
+      },
+      {
+        "txt": "public static void unescapeCsv(Writer out, String str) throws IOException { if (str == null) { return; } if (str.length() < 2) { out.write(str); return; } if ( str.charAt(0) != CSV_QUOTE || str.charAt(str.length() - 1) != CSV_QUOTE ) { out.write(str);"
+      },
+      {
+        "txt": "return; } String quoteless = str.substring(1, str.length() - 1); if ( StringUtils.containsAny(quoteless, CSV_SEARCH_CHARS) ) { str = StringUtils.replace(quoteless, CSV_QUOTE_STR + CSV_QUOTE_STR, CSV_QUOTE_STR); } out.write(str); }"
+      }
+    ]
+  },
+  {
+    "id": 2396,
+    "file_path": "src/java/org/apache/commons/lang/StringEscapeUtils.java",
+    "start-bug-line": 127,
+    "end-bug-line": 127,
+    "bug": "return escapeJavaStyleString(str, true);",
+    "fix": "return escapeJavaStyleString(str, true, true);",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.lang; import java.io.IOException; import java.io.StringWriter;"
+      },
+      {
+        "txt": "import java.io.Writer; import org.apache.commons.lang.exception.NestableRuntimeException; public class StringEscapeUtils { private static final char CSV_DELIMITER = ','; private static final char CSV_QUOTE = '\"'; private static final String CSV_QUOTE_STR = String.valueOf(CSV_QUOTE); private static final char[] CSV_SEARCH_CHARS = new char[] {CSV_DELIMITER, CSV_QUOTE, CharUtils.CR, CharUtils.LF}; public StringEscapeUtils() { super(); }"
+      },
+      {
+        "txt": "return escapeJavaStyleString(str, false); } public static void escapeJava(Writer out, String str) throws IOException { escapeJavaStyleString(out, str, false); } public static String escapeJavaScript(String str) { <extra_id_0> } public static void escapeJavaScript(Writer out, String str) throws IOException { escapeJavaStyleString(out, str, true); } private static String escapeJavaStyleString(String str, boolean escapeSingleQuotes) { if (str == null) {"
+      },
+      {
+        "txt": "private static String escapeJavaStyleString(String str, boolean escapeSingleQuotes) { if (str == null) { return null; } try { StringWriter writer = new StringWriter(str.length() * 2); escapeJavaStyleString(writer, str, escapeSingleQuotes); return writer.toString(); } catch (IOException ioe) { ioe.printStackTrace();"
+      },
+      {
+        "txt": "return null; } } private static void escapeJavaStyleString(Writer out, String str, boolean escapeSingleQuote) throws IOException { if (out == null) { throw new IllegalArgumentException(\"The Writer must not be null\"); } if (str == null) { return; }"
+      },
+      {
+        "txt": "int sz; sz = str.length(); for (int i = 0; i < sz; i++) { char ch = str.charAt(i); if (ch > 0xfff) { out.write(\"\\\\u\" + hex(ch)); } else if (ch > 0xff) { out.write(\"\\\\u0\" + hex(ch)); } else if (ch > 0x7f) { out.write(\"\\\\u00\" + hex(ch));"
+      },
+      {
+        "txt": "} else if (ch < 32) { switch (ch) { case '\\b' : out.write('\\\\'); out.write('b'); break; case '\\n' : out.write('\\\\'); out.write('n'); break;"
+      },
+      {
+        "txt": "case '\\t' : out.write('\\\\'); out.write('t'); break; case '\\f' : out.write('\\\\'); out.write('f'); break; case '\\r' : out.write('\\\\');"
+      },
+      {
+        "txt": "out.write('r'); break; default : if (ch > 0xf) { out.write(\"\\\\u00\" + hex(ch)); } else { out.write(\"\\\\u000\" + hex(ch)); } break; }"
+      },
+      {
+        "txt": "} else { switch (ch) { case '\\'' : if (escapeSingleQuote) { out.write('\\\\'); } out.write('\\''); break; case '\"' : out.write('\\\\');"
+      },
+      {
+        "txt": "out.write('\"'); break; case '\\\\' : out.write('\\\\'); out.write('\\\\'); break; case '/' : out.write('\\\\'); out.write('/'); break;"
+      },
+      {
+        "txt": "default : out.write(ch); break; } } } } private static String hex(char ch) { return Integer.toHexString(ch).toUpperCase(); }"
+      },
+      {
+        "txt": "public static String unescapeJava(String str) { if (str == null) { return null; } try { StringWriter writer = new StringWriter(str.length()); unescapeJava(writer, str); return writer.toString(); } catch (IOException ioe) { ioe.printStackTrace();"
+      },
+      {
+        "txt": "return null; } } public static void unescapeJava(Writer out, String str) throws IOException { if (out == null) { throw new IllegalArgumentException(\"The Writer must not be null\"); } if (str == null) { return; }"
+      },
+      {
+        "txt": "int sz = str.length(); StringBuffer unicode = new StringBuffer(4); boolean hadSlash = false; boolean inUnicode = false; for (int i = 0; i < sz; i++) { char ch = str.charAt(i); if (inUnicode) { unicode.append(ch); if (unicode.length() == 4) { try {"
+      },
+      {
+        "txt": "int value = Integer.parseInt(unicode.toString(), 16); out.write((char) value); unicode.setLength(0); inUnicode = false; hadSlash = false; } catch (NumberFormatException nfe) { throw new NestableRuntimeException(\"Unable to parse unicode value: \" + unicode, nfe); } } continue;"
+      },
+      {
+        "txt": "} if (hadSlash) { hadSlash = false; switch (ch) { case '\\\\': out.write('\\\\'); break; case '\\'': out.write('\\''); break;"
+      },
+      {
+        "txt": "case '\\\"': out.write('\"'); break; case 'r': out.write('\\r'); break; case 'f': out.write('\\f'); break; case 't':"
+      },
+      {
+        "txt": "out.write('\\t'); break; case 'n': out.write('\\n'); break; case 'b': out.write('\\b'); break; case 'u': {"
+      },
+      {
+        "txt": "inUnicode = true; break; } default : out.write(ch); break; } continue; } else if (ch == '\\\\') { hadSlash = true;"
+      },
+      {
+        "txt": "continue; } out.write(ch); } if (hadSlash) { out.write('\\\\'); } } public static String unescapeJavaScript(String str) { return unescapeJava(str);"
+      },
+      {
+        "txt": "} public static void unescapeJavaScript(Writer out, String str) throws IOException { unescapeJava(out, str); } public static String escapeHtml(String str) { if (str == null) { return null; } try { StringWriter writer = new StringWriter ((int)(str.length() * 1.5));"
+      },
+      {
+        "txt": "escapeHtml(writer, str); return writer.toString(); } catch (IOException e) { e.printStackTrace(); return null; } } public static void escapeHtml(Writer writer, String string) throws IOException { if (writer == null ) { throw new IllegalArgumentException (\"The Writer must not be null.\");"
+      },
+      {
+        "txt": "} if (string == null) { return; } Entities.HTML40.escape(writer, string); } public static String unescapeHtml(String str) { if (str == null) { return null; }"
+      },
+      {
+        "txt": "try { StringWriter writer = new StringWriter ((int)(str.length() * 1.5)); unescapeHtml(writer, str); return writer.toString(); } catch (IOException e) { e.printStackTrace(); return null; } } public static void unescapeHtml(Writer writer, String string) throws IOException {"
+      },
+      {
+        "txt": "if (writer == null ) { throw new IllegalArgumentException (\"The Writer must not be null.\"); } if (string == null) { return; } Entities.HTML40.unescape(writer, string); } public static void escapeXml(Writer writer, String str) throws IOException { if (writer == null ) {"
+      },
+      {
+        "txt": "throw new IllegalArgumentException (\"The Writer must not be null.\"); } if (str == null) { return; } Entities.XML.escape(writer, str); } public static String escapeXml(String str) { if (str == null) { return null;"
+      },
+      {
+        "txt": "} return Entities.XML.escape(str); } public static void unescapeXml(Writer writer, String str) throws IOException { if (writer == null ) { throw new IllegalArgumentException (\"The Writer must not be null.\"); } if (str == null) { return; }"
+      },
+      {
+        "txt": "Entities.XML.unescape(writer, str); } public static String unescapeXml(String str) { if (str == null) { return null; } return Entities.XML.unescape(str); } public static String escapeSql(String str) { if (str == null) {"
+      },
+      {
+        "txt": "return null; } return StringUtils.replace(str, \"'\", \"''\"); } public static String escapeCsv(String str) { if (StringUtils.containsNone(str, CSV_SEARCH_CHARS)) { return str; } try { StringWriter writer = new StringWriter();"
+      },
+      {
+        "txt": "escapeCsv(writer, str); return writer.toString(); } catch (IOException ioe) { ioe.printStackTrace(); return null; } } public static void escapeCsv(Writer out, String str) throws IOException { if (StringUtils.containsNone(str, CSV_SEARCH_CHARS)) { if (str != null) {"
+      },
+      {
+        "txt": "out.write(str); } return; } out.write(CSV_QUOTE); for (int i = 0; i < str.length(); i++) { char c = str.charAt(i); if (c == CSV_QUOTE) { out.write(CSV_QUOTE); // escape double quote }"
+      },
+      {
+        "txt": "out.write(c); } out.write(CSV_QUOTE); } public static String unescapeCsv(String str) { if (str == null) { return null; } try { StringWriter writer = new StringWriter();"
+      },
+      {
+        "txt": "unescapeCsv(writer, str); return writer.toString(); } catch (IOException ioe) { ioe.printStackTrace(); return null; } } public static void unescapeCsv(Writer out, String str) throws IOException { if (str == null) { return;"
+      },
+      {
+        "txt": "} if (str.length() < 2) { out.write(str); return; } if ( str.charAt(0) != CSV_QUOTE || str.charAt(str.length() - 1) != CSV_QUOTE ) { out.write(str); return; } String quoteless = str.substring(1, str.length() - 1);"
+      },
+      {
+        "txt": "if ( StringUtils.containsAny(quoteless, CSV_SEARCH_CHARS) ) { str = StringUtils.replace(quoteless, CSV_QUOTE_STR + CSV_QUOTE_STR, CSV_QUOTE_STR); } out.write(str); }"
+      }
+    ]
+  },
+  {
+    "id": 2397,
+    "file_path": "src/java/org/apache/commons/lang/StringEscapeUtils.java",
+    "start-bug-line": 143,
+    "end-bug-line": 143,
+    "bug": "escapeJavaStyleString(out, str, true);",
+    "fix": "escapeJavaStyleString(out, str, true, true);",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.lang; import java.io.IOException; import java.io.StringWriter; import java.io.Writer; import org.apache.commons.lang.exception.NestableRuntimeException; public class StringEscapeUtils {"
+      },
+      {
+        "txt": "private static final char CSV_DELIMITER = ','; private static final char CSV_QUOTE = '\"'; private static final String CSV_QUOTE_STR = String.valueOf(CSV_QUOTE); private static final char[] CSV_SEARCH_CHARS = new char[] {CSV_DELIMITER, CSV_QUOTE, CharUtils.CR, CharUtils.LF}; public StringEscapeUtils() { super(); } public static String escapeJava(String str) { return escapeJavaStyleString(str, false); }"
+      },
+      {
+        "txt": "escapeJavaStyleString(out, str, false); } public static String escapeJavaScript(String str) { return escapeJavaStyleString(str, true); } public static void escapeJavaScript(Writer out, String str) throws IOException { <extra_id_0> } private static String escapeJavaStyleString(String str, boolean escapeSingleQuotes) { if (str == null) { return null; } try {"
+      },
+      {
+        "txt": "} try { StringWriter writer = new StringWriter(str.length() * 2); escapeJavaStyleString(writer, str, escapeSingleQuotes); return writer.toString(); } catch (IOException ioe) { ioe.printStackTrace(); return null; } }"
+      },
+      {
+        "txt": "private static void escapeJavaStyleString(Writer out, String str, boolean escapeSingleQuote) throws IOException { if (out == null) { throw new IllegalArgumentException(\"The Writer must not be null\"); } if (str == null) { return; } int sz; sz = str.length(); for (int i = 0; i < sz; i++) {"
+      },
+      {
+        "txt": "char ch = str.charAt(i); if (ch > 0xfff) { out.write(\"\\\\u\" + hex(ch)); } else if (ch > 0xff) { out.write(\"\\\\u0\" + hex(ch)); } else if (ch > 0x7f) { out.write(\"\\\\u00\" + hex(ch)); } else if (ch < 32) { switch (ch) { case '\\b' :"
+      },
+      {
+        "txt": "out.write('\\\\'); out.write('b'); break; case '\\n' : out.write('\\\\'); out.write('n'); break; case '\\t' : out.write('\\\\'); out.write('t');"
+      },
+      {
+        "txt": "break; case '\\f' : out.write('\\\\'); out.write('f'); break; case '\\r' : out.write('\\\\'); out.write('r'); break; default :"
+      },
+      {
+        "txt": "if (ch > 0xf) { out.write(\"\\\\u00\" + hex(ch)); } else { out.write(\"\\\\u000\" + hex(ch)); } break; } } else { switch (ch) { case '\\'' :"
+      },
+      {
+        "txt": "if (escapeSingleQuote) { out.write('\\\\'); } out.write('\\''); break; case '\"' : out.write('\\\\'); out.write('\"'); break; case '\\\\' :"
+      },
+      {
+        "txt": "out.write('\\\\'); out.write('\\\\'); break; case '/' : out.write('\\\\'); out.write('/'); break; default : out.write(ch); break;"
+      },
+      {
+        "txt": "} } } } private static String hex(char ch) { return Integer.toHexString(ch).toUpperCase(); } public static String unescapeJava(String str) { if (str == null) { return null;"
+      },
+      {
+        "txt": "} try { StringWriter writer = new StringWriter(str.length()); unescapeJava(writer, str); return writer.toString(); } catch (IOException ioe) { ioe.printStackTrace(); return null; } }"
+      },
+      {
+        "txt": "public static void unescapeJava(Writer out, String str) throws IOException { if (out == null) { throw new IllegalArgumentException(\"The Writer must not be null\"); } if (str == null) { return; } int sz = str.length(); StringBuffer unicode = new StringBuffer(4); boolean hadSlash = false;"
+      },
+      {
+        "txt": "boolean inUnicode = false; for (int i = 0; i < sz; i++) { char ch = str.charAt(i); if (inUnicode) { unicode.append(ch); if (unicode.length() == 4) { try { int value = Integer.parseInt(unicode.toString(), 16); out.write((char) value); unicode.setLength(0);"
+      },
+      {
+        "txt": "inUnicode = false; hadSlash = false; } catch (NumberFormatException nfe) { throw new NestableRuntimeException(\"Unable to parse unicode value: \" + unicode, nfe); } } continue; } if (hadSlash) { hadSlash = false;"
+      },
+      {
+        "txt": "switch (ch) { case '\\\\': out.write('\\\\'); break; case '\\'': out.write('\\''); break; case '\\\"': out.write('\"'); break;"
+      },
+      {
+        "txt": "case 'r': out.write('\\r'); break; case 'f': out.write('\\f'); break; case 't': out.write('\\t'); break; case 'n':"
+      },
+      {
+        "txt": "out.write('\\n'); break; case 'b': out.write('\\b'); break; case 'u': { inUnicode = true; break; }"
+      },
+      {
+        "txt": "default : out.write(ch); break; } continue; } else if (ch == '\\\\') { hadSlash = true; continue; } out.write(ch);"
+      },
+      {
+        "txt": "} if (hadSlash) { out.write('\\\\'); } } public static String unescapeJavaScript(String str) { return unescapeJava(str); } public static void unescapeJavaScript(Writer out, String str) throws IOException { unescapeJava(out, str);"
+      },
+      {
+        "txt": "} public static String escapeHtml(String str) { if (str == null) { return null; } try { StringWriter writer = new StringWriter ((int)(str.length() * 1.5)); escapeHtml(writer, str); return writer.toString(); } catch (IOException e) {"
+      },
+      {
+        "txt": "e.printStackTrace(); return null; } } public static void escapeHtml(Writer writer, String string) throws IOException { if (writer == null ) { throw new IllegalArgumentException (\"The Writer must not be null.\"); } if (string == null) { return;"
+      },
+      {
+        "txt": "} Entities.HTML40.escape(writer, string); } public static String unescapeHtml(String str) { if (str == null) { return null; } try { StringWriter writer = new StringWriter ((int)(str.length() * 1.5)); unescapeHtml(writer, str);"
+      },
+      {
+        "txt": "return writer.toString(); } catch (IOException e) { e.printStackTrace(); return null; } } public static void unescapeHtml(Writer writer, String string) throws IOException { if (writer == null ) { throw new IllegalArgumentException (\"The Writer must not be null.\"); }"
+      },
+      {
+        "txt": "if (string == null) { return; } Entities.HTML40.unescape(writer, string); } public static void escapeXml(Writer writer, String str) throws IOException { if (writer == null ) { throw new IllegalArgumentException (\"The Writer must not be null.\"); } if (str == null) {"
+      },
+      {
+        "txt": "return; } Entities.XML.escape(writer, str); } public static String escapeXml(String str) { if (str == null) { return null; } return Entities.XML.escape(str); }"
+      },
+      {
+        "txt": "public static void unescapeXml(Writer writer, String str) throws IOException { if (writer == null ) { throw new IllegalArgumentException (\"The Writer must not be null.\"); } if (str == null) { return; } Entities.XML.unescape(writer, str); } public static String unescapeXml(String str) {"
+      },
+      {
+        "txt": "if (str == null) { return null; } return Entities.XML.unescape(str); } public static String escapeSql(String str) { if (str == null) { return null; } return StringUtils.replace(str, \"'\", \"''\");"
+      },
+      {
+        "txt": "} public static String escapeCsv(String str) { if (StringUtils.containsNone(str, CSV_SEARCH_CHARS)) { return str; } try { StringWriter writer = new StringWriter(); escapeCsv(writer, str); return writer.toString(); } catch (IOException ioe) {"
+      },
+      {
+        "txt": "ioe.printStackTrace(); return null; } } public static void escapeCsv(Writer out, String str) throws IOException { if (StringUtils.containsNone(str, CSV_SEARCH_CHARS)) { if (str != null) { out.write(str); } return;"
+      },
+      {
+        "txt": "} out.write(CSV_QUOTE); for (int i = 0; i < str.length(); i++) { char c = str.charAt(i); if (c == CSV_QUOTE) { out.write(CSV_QUOTE); // escape double quote } out.write(c); } out.write(CSV_QUOTE);"
+      },
+      {
+        "txt": "} public static String unescapeCsv(String str) { if (str == null) { return null; } try { StringWriter writer = new StringWriter(); unescapeCsv(writer, str); return writer.toString(); } catch (IOException ioe) {"
+      },
+      {
+        "txt": "ioe.printStackTrace(); return null; } } public static void unescapeCsv(Writer out, String str) throws IOException { if (str == null) { return; } if (str.length() < 2) { out.write(str);"
+      },
+      {
+        "txt": "return; } if ( str.charAt(0) != CSV_QUOTE || str.charAt(str.length() - 1) != CSV_QUOTE ) { out.write(str); return; } String quoteless = str.substring(1, str.length() - 1); if ( StringUtils.containsAny(quoteless, CSV_SEARCH_CHARS) ) { str = StringUtils.replace(quoteless, CSV_QUOTE_STR + CSV_QUOTE_STR, CSV_QUOTE_STR); }"
+      },
+      {
+        "txt": "out.write(str); }"
+      }
+    ]
+  },
+  {
+    "id": 2398,
+    "file_path": "src/java/org/apache/commons/lang/StringEscapeUtils.java",
+    "start-bug-line": 154,
+    "end-bug-line": 154,
+    "bug": "private static String escapeJavaStyleString(String str, boolean escapeSingleQuotes) {",
+    "fix": "private static String escapeJavaStyleString(String str, boolean escapeSingleQuotes, boolean escapeForwardSlash) {",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.lang; import java.io.IOException; import java.io.StringWriter; import java.io.Writer; import org.apache.commons.lang.exception.NestableRuntimeException; public class StringEscapeUtils { private static final char CSV_DELIMITER = ','; private static final char CSV_QUOTE = '\"';"
+      },
+      {
+        "txt": "private static final String CSV_QUOTE_STR = String.valueOf(CSV_QUOTE); private static final char[] CSV_SEARCH_CHARS = new char[] {CSV_DELIMITER, CSV_QUOTE, CharUtils.CR, CharUtils.LF}; public StringEscapeUtils() { super(); } public static String escapeJava(String str) { return escapeJavaStyleString(str, false); } public static void escapeJava(Writer out, String str) throws IOException { escapeJavaStyleString(out, str, false);"
+      },
+      {
+        "txt": "public static String escapeJavaScript(String str) { return escapeJavaStyleString(str, true); } public static void escapeJavaScript(Writer out, String str) throws IOException { escapeJavaStyleString(out, str, true); } <extra_id_0> if (str == null) { return null; } try { StringWriter writer = new StringWriter(str.length() * 2); escapeJavaStyleString(writer, str, escapeSingleQuotes);"
+      },
+      {
+        "txt": "StringWriter writer = new StringWriter(str.length() * 2); escapeJavaStyleString(writer, str, escapeSingleQuotes); return writer.toString(); } catch (IOException ioe) { ioe.printStackTrace(); return null; } } private static void escapeJavaStyleString(Writer out, String str, boolean escapeSingleQuote) throws IOException { if (out == null) {"
+      },
+      {
+        "txt": "throw new IllegalArgumentException(\"The Writer must not be null\"); } if (str == null) { return; } int sz; sz = str.length(); for (int i = 0; i < sz; i++) { char ch = str.charAt(i); if (ch > 0xfff) {"
+      },
+      {
+        "txt": "out.write(\"\\\\u\" + hex(ch)); } else if (ch > 0xff) { out.write(\"\\\\u0\" + hex(ch)); } else if (ch > 0x7f) { out.write(\"\\\\u00\" + hex(ch)); } else if (ch < 32) { switch (ch) { case '\\b' : out.write('\\\\'); out.write('b');"
+      },
+      {
+        "txt": "break; case '\\n' : out.write('\\\\'); out.write('n'); break; case '\\t' : out.write('\\\\'); out.write('t'); break; case '\\f' :"
+      },
+      {
+        "txt": "out.write('\\\\'); out.write('f'); break; case '\\r' : out.write('\\\\'); out.write('r'); break; default : if (ch > 0xf) { out.write(\"\\\\u00\" + hex(ch));"
+      },
+      {
+        "txt": "} else { out.write(\"\\\\u000\" + hex(ch)); } break; } } else { switch (ch) { case '\\'' : if (escapeSingleQuote) { out.write('\\\\');"
+      },
+      {
+        "txt": "} out.write('\\''); break; case '\"' : out.write('\\\\'); out.write('\"'); break; case '\\\\' : out.write('\\\\'); out.write('\\\\');"
+      },
+      {
+        "txt": "break; case '/' : out.write('\\\\'); out.write('/'); break; default : out.write(ch); break; } }"
+      },
+      {
+        "txt": "} } private static String hex(char ch) { return Integer.toHexString(ch).toUpperCase(); } public static String unescapeJava(String str) { if (str == null) { return null; } try {"
+      },
+      {
+        "txt": "StringWriter writer = new StringWriter(str.length()); unescapeJava(writer, str); return writer.toString(); } catch (IOException ioe) { ioe.printStackTrace(); return null; } } public static void unescapeJava(Writer out, String str) throws IOException { if (out == null) {"
+      },
+      {
+        "txt": "throw new IllegalArgumentException(\"The Writer must not be null\"); } if (str == null) { return; } int sz = str.length(); StringBuffer unicode = new StringBuffer(4); boolean hadSlash = false; boolean inUnicode = false; for (int i = 0; i < sz; i++) {"
+      },
+      {
+        "txt": "char ch = str.charAt(i); if (inUnicode) { unicode.append(ch); if (unicode.length() == 4) { try { int value = Integer.parseInt(unicode.toString(), 16); out.write((char) value); unicode.setLength(0); inUnicode = false; hadSlash = false;"
+      },
+      {
+        "txt": "} catch (NumberFormatException nfe) { throw new NestableRuntimeException(\"Unable to parse unicode value: \" + unicode, nfe); } } continue; } if (hadSlash) { hadSlash = false; switch (ch) { case '\\\\':"
+      },
+      {
+        "txt": "out.write('\\\\'); break; case '\\'': out.write('\\''); break; case '\\\"': out.write('\"'); break; case 'r': out.write('\\r');"
+      },
+      {
+        "txt": "break; case 'f': out.write('\\f'); break; case 't': out.write('\\t'); break; case 'n': out.write('\\n'); break;"
+      },
+      {
+        "txt": "case 'b': out.write('\\b'); break; case 'u': { inUnicode = true; break; } default : out.write(ch);"
+      },
+      {
+        "txt": "break; } continue; } else if (ch == '\\\\') { hadSlash = true; continue; } out.write(ch); } if (hadSlash) {"
+      },
+      {
+        "txt": "out.write('\\\\'); } } public static String unescapeJavaScript(String str) { return unescapeJava(str); } public static void unescapeJavaScript(Writer out, String str) throws IOException { unescapeJava(out, str); } public static String escapeHtml(String str) {"
+      },
+      {
+        "txt": "if (str == null) { return null; } try { StringWriter writer = new StringWriter ((int)(str.length() * 1.5)); escapeHtml(writer, str); return writer.toString(); } catch (IOException e) { e.printStackTrace(); return null;"
+      },
+      {
+        "txt": "} } public static void escapeHtml(Writer writer, String string) throws IOException { if (writer == null ) { throw new IllegalArgumentException (\"The Writer must not be null.\"); } if (string == null) { return; } Entities.HTML40.escape(writer, string);"
+      },
+      {
+        "txt": "} public static String unescapeHtml(String str) { if (str == null) { return null; } try { StringWriter writer = new StringWriter ((int)(str.length() * 1.5)); unescapeHtml(writer, str); return writer.toString(); } catch (IOException e) {"
+      },
+      {
+        "txt": "e.printStackTrace(); return null; } } public static void unescapeHtml(Writer writer, String string) throws IOException { if (writer == null ) { throw new IllegalArgumentException (\"The Writer must not be null.\"); } if (string == null) { return;"
+      },
+      {
+        "txt": "} Entities.HTML40.unescape(writer, string); } public static void escapeXml(Writer writer, String str) throws IOException { if (writer == null ) { throw new IllegalArgumentException (\"The Writer must not be null.\"); } if (str == null) { return; }"
+      },
+      {
+        "txt": "Entities.XML.escape(writer, str); } public static String escapeXml(String str) { if (str == null) { return null; } return Entities.XML.escape(str); } public static void unescapeXml(Writer writer, String str) throws IOException { if (writer == null ) {"
+      },
+      {
+        "txt": "throw new IllegalArgumentException (\"The Writer must not be null.\"); } if (str == null) { return; } Entities.XML.unescape(writer, str); } public static String unescapeXml(String str) { if (str == null) { return null;"
+      },
+      {
+        "txt": "} return Entities.XML.unescape(str); } public static String escapeSql(String str) { if (str == null) { return null; } return StringUtils.replace(str, \"'\", \"''\"); } public static String escapeCsv(String str) {"
+      },
+      {
+        "txt": "if (StringUtils.containsNone(str, CSV_SEARCH_CHARS)) { return str; } try { StringWriter writer = new StringWriter(); escapeCsv(writer, str); return writer.toString(); } catch (IOException ioe) { ioe.printStackTrace(); return null;"
+      },
+      {
+        "txt": "} } public static void escapeCsv(Writer out, String str) throws IOException { if (StringUtils.containsNone(str, CSV_SEARCH_CHARS)) { if (str != null) { out.write(str); } return; } out.write(CSV_QUOTE);"
+      },
+      {
+        "txt": "for (int i = 0; i < str.length(); i++) { char c = str.charAt(i); if (c == CSV_QUOTE) { out.write(CSV_QUOTE); // escape double quote } out.write(c); } out.write(CSV_QUOTE); } public static String unescapeCsv(String str) {"
+      },
+      {
+        "txt": "if (str == null) { return null; } try { StringWriter writer = new StringWriter(); unescapeCsv(writer, str); return writer.toString(); } catch (IOException ioe) { ioe.printStackTrace(); return null;"
+      },
+      {
+        "txt": "} } public static void unescapeCsv(Writer out, String str) throws IOException { if (str == null) { return; } if (str.length() < 2) { out.write(str); return; }"
+      },
+      {
+        "txt": "if ( str.charAt(0) != CSV_QUOTE || str.charAt(str.length() - 1) != CSV_QUOTE ) { out.write(str); return; } String quoteless = str.substring(1, str.length() - 1); if ( StringUtils.containsAny(quoteless, CSV_SEARCH_CHARS) ) { str = StringUtils.replace(quoteless, CSV_QUOTE_STR + CSV_QUOTE_STR, CSV_QUOTE_STR); } out.write(str); }"
+      }
+    ]
+  },
+  {
+    "id": 2399,
+    "file_path": "src/java/org/apache/commons/lang/StringEscapeUtils.java",
+    "start-bug-line": 160,
+    "end-bug-line": 160,
+    "bug": "escapeJavaStyleString(writer, str, escapeSingleQuotes);",
+    "fix": "escapeJavaStyleString(writer, str, escapeSingleQuotes, escapeForwardSlash);",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.lang; import java.io.IOException; import java.io.StringWriter; import java.io.Writer;"
+      },
+      {
+        "txt": "import org.apache.commons.lang.exception.NestableRuntimeException; public class StringEscapeUtils { private static final char CSV_DELIMITER = ','; private static final char CSV_QUOTE = '\"'; private static final String CSV_QUOTE_STR = String.valueOf(CSV_QUOTE); private static final char[] CSV_SEARCH_CHARS = new char[] {CSV_DELIMITER, CSV_QUOTE, CharUtils.CR, CharUtils.LF}; public StringEscapeUtils() { super(); } public static String escapeJava(String str) {"
+      },
+      {
+        "txt": "return escapeJavaStyleString(str, false); } public static void escapeJava(Writer out, String str) throws IOException { escapeJavaStyleString(out, str, false); } public static String escapeJavaScript(String str) { return escapeJavaStyleString(str, true); } public static void escapeJavaScript(Writer out, String str) throws IOException { escapeJavaStyleString(out, str, true);"
+      },
+      {
+        "txt": "private static String escapeJavaStyleString(String str, boolean escapeSingleQuotes) { if (str == null) { return null; } try { StringWriter writer = new StringWriter(str.length() * 2); <extra_id_0> return writer.toString(); } catch (IOException ioe) { ioe.printStackTrace(); return null; } }"
+      },
+      {
+        "txt": "} } private static void escapeJavaStyleString(Writer out, String str, boolean escapeSingleQuote) throws IOException { if (out == null) { throw new IllegalArgumentException(\"The Writer must not be null\"); } if (str == null) { return; } int sz;"
+      },
+      {
+        "txt": "sz = str.length(); for (int i = 0; i < sz; i++) { char ch = str.charAt(i); if (ch > 0xfff) { out.write(\"\\\\u\" + hex(ch)); } else if (ch > 0xff) { out.write(\"\\\\u0\" + hex(ch)); } else if (ch > 0x7f) { out.write(\"\\\\u00\" + hex(ch)); } else if (ch < 32) {"
+      },
+      {
+        "txt": "switch (ch) { case '\\b' : out.write('\\\\'); out.write('b'); break; case '\\n' : out.write('\\\\'); out.write('n'); break; case '\\t' :"
+      },
+      {
+        "txt": "out.write('\\\\'); out.write('t'); break; case '\\f' : out.write('\\\\'); out.write('f'); break; case '\\r' : out.write('\\\\'); out.write('r');"
+      },
+      {
+        "txt": "break; default : if (ch > 0xf) { out.write(\"\\\\u00\" + hex(ch)); } else { out.write(\"\\\\u000\" + hex(ch)); } break; } } else {"
+      },
+      {
+        "txt": "switch (ch) { case '\\'' : if (escapeSingleQuote) { out.write('\\\\'); } out.write('\\''); break; case '\"' : out.write('\\\\'); out.write('\"');"
+      },
+      {
+        "txt": "break; case '\\\\' : out.write('\\\\'); out.write('\\\\'); break; case '/' : out.write('\\\\'); out.write('/'); break; default :"
+      },
+      {
+        "txt": "out.write(ch); break; } } } } private static String hex(char ch) { return Integer.toHexString(ch).toUpperCase(); } public static String unescapeJava(String str) {"
+      },
+      {
+        "txt": "if (str == null) { return null; } try { StringWriter writer = new StringWriter(str.length()); unescapeJava(writer, str); return writer.toString(); } catch (IOException ioe) { ioe.printStackTrace(); return null;"
+      },
+      {
+        "txt": "} } public static void unescapeJava(Writer out, String str) throws IOException { if (out == null) { throw new IllegalArgumentException(\"The Writer must not be null\"); } if (str == null) { return; } int sz = str.length();"
+      },
+      {
+        "txt": "StringBuffer unicode = new StringBuffer(4); boolean hadSlash = false; boolean inUnicode = false; for (int i = 0; i < sz; i++) { char ch = str.charAt(i); if (inUnicode) { unicode.append(ch); if (unicode.length() == 4) { try { int value = Integer.parseInt(unicode.toString(), 16);"
+      },
+      {
+        "txt": "out.write((char) value); unicode.setLength(0); inUnicode = false; hadSlash = false; } catch (NumberFormatException nfe) { throw new NestableRuntimeException(\"Unable to parse unicode value: \" + unicode, nfe); } } continue; }"
+      },
+      {
+        "txt": "if (hadSlash) { hadSlash = false; switch (ch) { case '\\\\': out.write('\\\\'); break; case '\\'': out.write('\\''); break; case '\\\"':"
+      },
+      {
+        "txt": "out.write('\"'); break; case 'r': out.write('\\r'); break; case 'f': out.write('\\f'); break; case 't': out.write('\\t');"
+      },
+      {
+        "txt": "break; case 'n': out.write('\\n'); break; case 'b': out.write('\\b'); break; case 'u': { inUnicode = true;"
+      },
+      {
+        "txt": "break; } default : out.write(ch); break; } continue; } else if (ch == '\\\\') { hadSlash = true; continue;"
+      },
+      {
+        "txt": "} out.write(ch); } if (hadSlash) { out.write('\\\\'); } } public static String unescapeJavaScript(String str) { return unescapeJava(str); }"
+      },
+      {
+        "txt": "public static void unescapeJavaScript(Writer out, String str) throws IOException { unescapeJava(out, str); } public static String escapeHtml(String str) { if (str == null) { return null; } try { StringWriter writer = new StringWriter ((int)(str.length() * 1.5)); escapeHtml(writer, str);"
+      },
+      {
+        "txt": "return writer.toString(); } catch (IOException e) { e.printStackTrace(); return null; } } public static void escapeHtml(Writer writer, String string) throws IOException { if (writer == null ) { throw new IllegalArgumentException (\"The Writer must not be null.\"); }"
+      },
+      {
+        "txt": "if (string == null) { return; } Entities.HTML40.escape(writer, string); } public static String unescapeHtml(String str) { if (str == null) { return null; } try {"
+      },
+      {
+        "txt": "StringWriter writer = new StringWriter ((int)(str.length() * 1.5)); unescapeHtml(writer, str); return writer.toString(); } catch (IOException e) { e.printStackTrace(); return null; } } public static void unescapeHtml(Writer writer, String string) throws IOException { if (writer == null ) {"
+      },
+      {
+        "txt": "throw new IllegalArgumentException (\"The Writer must not be null.\"); } if (string == null) { return; } Entities.HTML40.unescape(writer, string); } public static void escapeXml(Writer writer, String str) throws IOException { if (writer == null ) { throw new IllegalArgumentException (\"The Writer must not be null.\");"
+      },
+      {
+        "txt": "} if (str == null) { return; } Entities.XML.escape(writer, str); } public static String escapeXml(String str) { if (str == null) { return null; }"
+      },
+      {
+        "txt": "return Entities.XML.escape(str); } public static void unescapeXml(Writer writer, String str) throws IOException { if (writer == null ) { throw new IllegalArgumentException (\"The Writer must not be null.\"); } if (str == null) { return; } Entities.XML.unescape(writer, str);"
+      },
+      {
+        "txt": "} public static String unescapeXml(String str) { if (str == null) { return null; } return Entities.XML.unescape(str); } public static String escapeSql(String str) { if (str == null) { return null;"
+      },
+      {
+        "txt": "} return StringUtils.replace(str, \"'\", \"''\"); } public static String escapeCsv(String str) { if (StringUtils.containsNone(str, CSV_SEARCH_CHARS)) { return str; } try { StringWriter writer = new StringWriter(); escapeCsv(writer, str);"
+      },
+      {
+        "txt": "return writer.toString(); } catch (IOException ioe) { ioe.printStackTrace(); return null; } } public static void escapeCsv(Writer out, String str) throws IOException { if (StringUtils.containsNone(str, CSV_SEARCH_CHARS)) { if (str != null) { out.write(str);"
+      },
+      {
+        "txt": "} return; } out.write(CSV_QUOTE); for (int i = 0; i < str.length(); i++) { char c = str.charAt(i); if (c == CSV_QUOTE) { out.write(CSV_QUOTE); // escape double quote } out.write(c);"
+      },
+      {
+        "txt": "} out.write(CSV_QUOTE); } public static String unescapeCsv(String str) { if (str == null) { return null; } try { StringWriter writer = new StringWriter(); unescapeCsv(writer, str);"
+      },
+      {
+        "txt": "return writer.toString(); } catch (IOException ioe) { ioe.printStackTrace(); return null; } } public static void unescapeCsv(Writer out, String str) throws IOException { if (str == null) { return; }"
+      },
+      {
+        "txt": "if (str.length() < 2) { out.write(str); return; } if ( str.charAt(0) != CSV_QUOTE || str.charAt(str.length() - 1) != CSV_QUOTE ) { out.write(str); return; } String quoteless = str.substring(1, str.length() - 1); if ( StringUtils.containsAny(quoteless, CSV_SEARCH_CHARS) ) {"
+      },
+      {
+        "txt": "str = StringUtils.replace(quoteless, CSV_QUOTE_STR + CSV_QUOTE_STR, CSV_QUOTE_STR); } out.write(str); }"
+      }
+    ]
+  },
+  {
+    "id": 2400,
+    "file_path": "src/java/org/apache/commons/lang/StringEscapeUtils.java",
+    "start-bug-line": 178,
+    "end-bug-line": 178,
+    "bug": "private static void escapeJavaStyleString(Writer out, String str, boolean escapeSingleQuote) throws IOException {",
+    "fix": "private static void escapeJavaStyleString(Writer out, String str, boolean escapeSingleQuote, boolean escapeForwardSlash) throws IOException {",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "import java.io.IOException; import java.io.StringWriter; import java.io.Writer; import org.apache.commons.lang.exception.NestableRuntimeException; public class StringEscapeUtils { private static final char CSV_DELIMITER = ','; private static final char CSV_QUOTE = '\"'; private static final String CSV_QUOTE_STR = String.valueOf(CSV_QUOTE); private static final char[] CSV_SEARCH_CHARS = new char[] {CSV_DELIMITER, CSV_QUOTE, CharUtils.CR, CharUtils.LF}; public StringEscapeUtils() {"
+      },
+      {
+        "txt": "super(); } public static String escapeJava(String str) { return escapeJavaStyleString(str, false); } public static void escapeJava(Writer out, String str) throws IOException { escapeJavaStyleString(out, str, false); } public static String escapeJavaScript(String str) { return escapeJavaStyleString(str, true);"
+      },
+      {
+        "txt": "} public static void escapeJavaScript(Writer out, String str) throws IOException { escapeJavaStyleString(out, str, true); } private static String escapeJavaStyleString(String str, boolean escapeSingleQuotes) { if (str == null) { return null; } try { StringWriter writer = new StringWriter(str.length() * 2);"
+      },
+      {
+        "txt": "return writer.toString(); } catch (IOException ioe) { ioe.printStackTrace(); return null; } } <extra_id_0> if (out == null) { throw new IllegalArgumentException(\"The Writer must not be null\"); } if (str == null) { return; }"
+      },
+      {
+        "txt": "return; } int sz; sz = str.length(); for (int i = 0; i < sz; i++) { char ch = str.charAt(i); if (ch > 0xfff) { out.write(\"\\\\u\" + hex(ch)); } else if (ch > 0xff) { out.write(\"\\\\u0\" + hex(ch));"
+      },
+      {
+        "txt": "} else if (ch > 0x7f) { out.write(\"\\\\u00\" + hex(ch)); } else if (ch < 32) { switch (ch) { case '\\b' : out.write('\\\\'); out.write('b'); break; case '\\n' : out.write('\\\\');"
+      },
+      {
+        "txt": "out.write('n'); break; case '\\t' : out.write('\\\\'); out.write('t'); break; case '\\f' : out.write('\\\\'); out.write('f'); break;"
+      },
+      {
+        "txt": "case '\\r' : out.write('\\\\'); out.write('r'); break; default : if (ch > 0xf) { out.write(\"\\\\u00\" + hex(ch)); } else { out.write(\"\\\\u000\" + hex(ch)); }"
+      },
+      {
+        "txt": "break; } } else { switch (ch) { case '\\'' : if (escapeSingleQuote) { out.write('\\\\'); } out.write('\\''); break;"
+      },
+      {
+        "txt": "case '\"' : out.write('\\\\'); out.write('\"'); break; case '\\\\' : out.write('\\\\'); out.write('\\\\'); break; case '/' : out.write('\\\\');"
+      },
+      {
+        "txt": "out.write('/'); break; default : out.write(ch); break; } } } } private static String hex(char ch) {"
+      },
+      {
+        "txt": "return Integer.toHexString(ch).toUpperCase(); } public static String unescapeJava(String str) { if (str == null) { return null; } try { StringWriter writer = new StringWriter(str.length()); unescapeJava(writer, str); return writer.toString();"
+      },
+      {
+        "txt": "} catch (IOException ioe) { ioe.printStackTrace(); return null; } } public static void unescapeJava(Writer out, String str) throws IOException { if (out == null) { throw new IllegalArgumentException(\"The Writer must not be null\"); } if (str == null) {"
+      },
+      {
+        "txt": "return; } int sz = str.length(); StringBuffer unicode = new StringBuffer(4); boolean hadSlash = false; boolean inUnicode = false; for (int i = 0; i < sz; i++) { char ch = str.charAt(i); if (inUnicode) { unicode.append(ch);"
+      },
+      {
+        "txt": "if (unicode.length() == 4) { try { int value = Integer.parseInt(unicode.toString(), 16); out.write((char) value); unicode.setLength(0); inUnicode = false; hadSlash = false; } catch (NumberFormatException nfe) { throw new NestableRuntimeException(\"Unable to parse unicode value: \" + unicode, nfe); }"
+      },
+      {
+        "txt": "} continue; } if (hadSlash) { hadSlash = false; switch (ch) { case '\\\\': out.write('\\\\'); break; case '\\'':"
+      },
+      {
+        "txt": "out.write('\\''); break; case '\\\"': out.write('\"'); break; case 'r': out.write('\\r'); break; case 'f': out.write('\\f');"
+      },
+      {
+        "txt": "break; case 't': out.write('\\t'); break; case 'n': out.write('\\n'); break; case 'b': out.write('\\b'); break;"
+      },
+      {
+        "txt": "case 'u': { inUnicode = true; break; } default : out.write(ch); break; } continue;"
+      },
+      {
+        "txt": "} else if (ch == '\\\\') { hadSlash = true; continue; } out.write(ch); } if (hadSlash) { out.write('\\\\'); } }"
+      },
+      {
+        "txt": "public static String unescapeJavaScript(String str) { return unescapeJava(str); } public static void unescapeJavaScript(Writer out, String str) throws IOException { unescapeJava(out, str); } public static String escapeHtml(String str) { if (str == null) { return null; }"
+      },
+      {
+        "txt": "try { StringWriter writer = new StringWriter ((int)(str.length() * 1.5)); escapeHtml(writer, str); return writer.toString(); } catch (IOException e) { e.printStackTrace(); return null; } } public static void escapeHtml(Writer writer, String string) throws IOException {"
+      },
+      {
+        "txt": "if (writer == null ) { throw new IllegalArgumentException (\"The Writer must not be null.\"); } if (string == null) { return; } Entities.HTML40.escape(writer, string); } public static String unescapeHtml(String str) { if (str == null) {"
+      },
+      {
+        "txt": "return null; } try { StringWriter writer = new StringWriter ((int)(str.length() * 1.5)); unescapeHtml(writer, str); return writer.toString(); } catch (IOException e) { e.printStackTrace(); return null; }"
+      },
+      {
+        "txt": "} public static void unescapeHtml(Writer writer, String string) throws IOException { if (writer == null ) { throw new IllegalArgumentException (\"The Writer must not be null.\"); } if (string == null) { return; } Entities.HTML40.unescape(writer, string); }"
+      },
+      {
+        "txt": "public static void escapeXml(Writer writer, String str) throws IOException { if (writer == null ) { throw new IllegalArgumentException (\"The Writer must not be null.\"); } if (str == null) { return; } Entities.XML.escape(writer, str); } public static String escapeXml(String str) {"
+      },
+      {
+        "txt": "if (str == null) { return null; } return Entities.XML.escape(str); } public static void unescapeXml(Writer writer, String str) throws IOException { if (writer == null ) { throw new IllegalArgumentException (\"The Writer must not be null.\"); } if (str == null) {"
+      },
+      {
+        "txt": "return; } Entities.XML.unescape(writer, str); } public static String unescapeXml(String str) { if (str == null) { return null; } return Entities.XML.unescape(str); }"
+      },
+      {
+        "txt": "public static String escapeSql(String str) { if (str == null) { return null; } return StringUtils.replace(str, \"'\", \"''\"); } public static String escapeCsv(String str) { if (StringUtils.containsNone(str, CSV_SEARCH_CHARS)) { return str; }"
+      },
+      {
+        "txt": "try { StringWriter writer = new StringWriter(); escapeCsv(writer, str); return writer.toString(); } catch (IOException ioe) { ioe.printStackTrace(); return null; } } public static void escapeCsv(Writer out, String str) throws IOException {"
+      },
+      {
+        "txt": "if (StringUtils.containsNone(str, CSV_SEARCH_CHARS)) { if (str != null) { out.write(str); } return; } out.write(CSV_QUOTE); for (int i = 0; i < str.length(); i++) { char c = str.charAt(i); if (c == CSV_QUOTE) {"
+      },
+      {
+        "txt": "out.write(CSV_QUOTE); // escape double quote } out.write(c); } out.write(CSV_QUOTE); } public static String unescapeCsv(String str) { if (str == null) { return null; }"
+      },
+      {
+        "txt": "try { StringWriter writer = new StringWriter(); unescapeCsv(writer, str); return writer.toString(); } catch (IOException ioe) { ioe.printStackTrace(); return null; } } public static void unescapeCsv(Writer out, String str) throws IOException {"
+      },
+      {
+        "txt": "if (str == null) { return; } if (str.length() < 2) { out.write(str); return; } if ( str.charAt(0) != CSV_QUOTE || str.charAt(str.length() - 1) != CSV_QUOTE ) { out.write(str); return;"
+      },
+      {
+        "txt": "} String quoteless = str.substring(1, str.length() - 1); if ( StringUtils.containsAny(quoteless, CSV_SEARCH_CHARS) ) { str = StringUtils.replace(quoteless, CSV_QUOTE_STR + CSV_QUOTE_STR, CSV_QUOTE_STR); } out.write(str); }"
+      }
+    ]
+  },
+  {
+    "id": 2401,
+    "file_path": "src/java/org/apache/commons/lang/StringEscapeUtils.java",
+    "start-bug-line": 244,
+    "end-bug-line": 244,
+    "bug": "",
+    "fix": "if (escapeForwardSlash) {",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.lang; import java.io.IOException; import java.io.StringWriter; import java.io.Writer; import org.apache.commons.lang.exception.NestableRuntimeException;"
+      },
+      {
+        "txt": "public class StringEscapeUtils { private static final char CSV_DELIMITER = ','; private static final char CSV_QUOTE = '\"'; private static final String CSV_QUOTE_STR = String.valueOf(CSV_QUOTE); private static final char[] CSV_SEARCH_CHARS = new char[] {CSV_DELIMITER, CSV_QUOTE, CharUtils.CR, CharUtils.LF}; public StringEscapeUtils() { super(); } public static String escapeJava(String str) { return escapeJavaStyleString(str, false);"
+      },
+      {
+        "txt": "} public static void escapeJava(Writer out, String str) throws IOException { escapeJavaStyleString(out, str, false); } public static String escapeJavaScript(String str) { return escapeJavaStyleString(str, true); } public static void escapeJavaScript(Writer out, String str) throws IOException { escapeJavaStyleString(out, str, true); }"
+      },
+      {
+        "txt": "private static String escapeJavaStyleString(String str, boolean escapeSingleQuotes) { if (str == null) { return null; } try { StringWriter writer = new StringWriter(str.length() * 2); escapeJavaStyleString(writer, str, escapeSingleQuotes); return writer.toString(); } catch (IOException ioe) { ioe.printStackTrace();"
+      },
+      {
+        "txt": "return null; } } private static void escapeJavaStyleString(Writer out, String str, boolean escapeSingleQuote) throws IOException { if (out == null) { throw new IllegalArgumentException(\"The Writer must not be null\"); } if (str == null) { return; }"
+      },
+      {
+        "txt": "int sz; sz = str.length(); for (int i = 0; i < sz; i++) { char ch = str.charAt(i); if (ch > 0xfff) { out.write(\"\\\\u\" + hex(ch)); } else if (ch > 0xff) { out.write(\"\\\\u0\" + hex(ch)); } else if (ch > 0x7f) { out.write(\"\\\\u00\" + hex(ch));"
+      },
+      {
+        "txt": "} else if (ch < 32) { switch (ch) { case '\\b' : out.write('\\\\'); out.write('b'); break; case '\\n' : out.write('\\\\'); out.write('n'); break;"
+      },
+      {
+        "txt": "case '\\t' : out.write('\\\\'); out.write('t'); break; case '\\f' : out.write('\\\\'); out.write('f'); break; case '\\r' : out.write('\\\\');"
+      },
+      {
+        "txt": "out.write('r'); break; default : if (ch > 0xf) { out.write(\"\\\\u00\" + hex(ch)); } else { out.write(\"\\\\u000\" + hex(ch)); } break; }"
+      },
+      {
+        "txt": "} else { switch (ch) { case '\\'' : if (escapeSingleQuote) { out.write('\\\\'); } out.write('\\''); break; case '\"' : out.write('\\\\');"
+      },
+      {
+        "txt": "break; case '\\\\' : out.write('\\\\'); out.write('\\\\'); break; case '/' : <extra_id_0> out.write('/'); break; default : out.write(ch); break; }"
+      },
+      {
+        "txt": "break; } } } } private static String hex(char ch) { return Integer.toHexString(ch).toUpperCase(); } public static String unescapeJava(String str) { if (str == null) {"
+      },
+      {
+        "txt": "return null; } try { StringWriter writer = new StringWriter(str.length()); unescapeJava(writer, str); return writer.toString(); } catch (IOException ioe) { ioe.printStackTrace(); return null; }"
+      },
+      {
+        "txt": "} public static void unescapeJava(Writer out, String str) throws IOException { if (out == null) { throw new IllegalArgumentException(\"The Writer must not be null\"); } if (str == null) { return; } int sz = str.length(); StringBuffer unicode = new StringBuffer(4);"
+      },
+      {
+        "txt": "boolean hadSlash = false; boolean inUnicode = false; for (int i = 0; i < sz; i++) { char ch = str.charAt(i); if (inUnicode) { unicode.append(ch); if (unicode.length() == 4) { try { int value = Integer.parseInt(unicode.toString(), 16); out.write((char) value);"
+      },
+      {
+        "txt": "unicode.setLength(0); inUnicode = false; hadSlash = false; } catch (NumberFormatException nfe) { throw new NestableRuntimeException(\"Unable to parse unicode value: \" + unicode, nfe); } } continue; } if (hadSlash) {"
+      },
+      {
+        "txt": "hadSlash = false; switch (ch) { case '\\\\': out.write('\\\\'); break; case '\\'': out.write('\\''); break; case '\\\"': out.write('\"');"
+      },
+      {
+        "txt": "break; case 'r': out.write('\\r'); break; case 'f': out.write('\\f'); break; case 't': out.write('\\t'); break;"
+      },
+      {
+        "txt": "case 'n': out.write('\\n'); break; case 'b': out.write('\\b'); break; case 'u': { inUnicode = true; break;"
+      },
+      {
+        "txt": "} default : out.write(ch); break; } continue; } else if (ch == '\\\\') { hadSlash = true; continue; }"
+      },
+      {
+        "txt": "out.write(ch); } if (hadSlash) { out.write('\\\\'); } } public static String unescapeJavaScript(String str) { return unescapeJava(str); } public static void unescapeJavaScript(Writer out, String str) throws IOException {"
+      },
+      {
+        "txt": "unescapeJava(out, str); } public static String escapeHtml(String str) { if (str == null) { return null; } try { StringWriter writer = new StringWriter ((int)(str.length() * 1.5)); escapeHtml(writer, str); return writer.toString();"
+      },
+      {
+        "txt": "} catch (IOException e) { e.printStackTrace(); return null; } } public static void escapeHtml(Writer writer, String string) throws IOException { if (writer == null ) { throw new IllegalArgumentException (\"The Writer must not be null.\"); } if (string == null) {"
+      },
+      {
+        "txt": "return; } Entities.HTML40.escape(writer, string); } public static String unescapeHtml(String str) { if (str == null) { return null; } try { StringWriter writer = new StringWriter ((int)(str.length() * 1.5));"
+      },
+      {
+        "txt": "unescapeHtml(writer, str); return writer.toString(); } catch (IOException e) { e.printStackTrace(); return null; } } public static void unescapeHtml(Writer writer, String string) throws IOException { if (writer == null ) { throw new IllegalArgumentException (\"The Writer must not be null.\");"
+      },
+      {
+        "txt": "} if (string == null) { return; } Entities.HTML40.unescape(writer, string); } public static void escapeXml(Writer writer, String str) throws IOException { if (writer == null ) { throw new IllegalArgumentException (\"The Writer must not be null.\"); }"
+      },
+      {
+        "txt": "if (str == null) { return; } Entities.XML.escape(writer, str); } public static String escapeXml(String str) { if (str == null) { return null; } return Entities.XML.escape(str);"
+      },
+      {
+        "txt": "} public static void unescapeXml(Writer writer, String str) throws IOException { if (writer == null ) { throw new IllegalArgumentException (\"The Writer must not be null.\"); } if (str == null) { return; } Entities.XML.unescape(writer, str); }"
+      },
+      {
+        "txt": "public static String unescapeXml(String str) { if (str == null) { return null; } return Entities.XML.unescape(str); } public static String escapeSql(String str) { if (str == null) { return null; }"
+      },
+      {
+        "txt": "return StringUtils.replace(str, \"'\", \"''\"); } public static String escapeCsv(String str) { if (StringUtils.containsNone(str, CSV_SEARCH_CHARS)) { return str; } try { StringWriter writer = new StringWriter(); escapeCsv(writer, str); return writer.toString();"
+      },
+      {
+        "txt": "} catch (IOException ioe) { ioe.printStackTrace(); return null; } } public static void escapeCsv(Writer out, String str) throws IOException { if (StringUtils.containsNone(str, CSV_SEARCH_CHARS)) { if (str != null) { out.write(str); }"
+      },
+      {
+        "txt": "return; } out.write(CSV_QUOTE); for (int i = 0; i < str.length(); i++) { char c = str.charAt(i); if (c == CSV_QUOTE) { out.write(CSV_QUOTE); // escape double quote } out.write(c); }"
+      },
+      {
+        "txt": "out.write(CSV_QUOTE); } public static String unescapeCsv(String str) { if (str == null) { return null; } try { StringWriter writer = new StringWriter(); unescapeCsv(writer, str); return writer.toString();"
+      },
+      {
+        "txt": "} catch (IOException ioe) { ioe.printStackTrace(); return null; } } public static void unescapeCsv(Writer out, String str) throws IOException { if (str == null) { return; } if (str.length() < 2) {"
+      },
+      {
+        "txt": "out.write(str); return; } if ( str.charAt(0) != CSV_QUOTE || str.charAt(str.length() - 1) != CSV_QUOTE ) { out.write(str); return; } String quoteless = str.substring(1, str.length() - 1); if ( StringUtils.containsAny(quoteless, CSV_SEARCH_CHARS) ) { str = StringUtils.replace(quoteless, CSV_QUOTE_STR + CSV_QUOTE_STR, CSV_QUOTE_STR);"
+      },
+      {
+        "txt": "} out.write(str); }"
+      }
+    ]
+  },
+  {
+    "id": 2402,
+    "file_path": "src/java/org/apache/commons/lang/StringEscapeUtils.java",
+    "start-bug-line": 245,
+    "end-bug-line": 245,
+    "bug": "",
+    "fix": "}",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.lang; import java.io.IOException; import java.io.StringWriter; import java.io.Writer; import org.apache.commons.lang.exception.NestableRuntimeException; public class StringEscapeUtils {"
+      },
+      {
+        "txt": "private static final char CSV_DELIMITER = ','; private static final char CSV_QUOTE = '\"'; private static final String CSV_QUOTE_STR = String.valueOf(CSV_QUOTE); private static final char[] CSV_SEARCH_CHARS = new char[] {CSV_DELIMITER, CSV_QUOTE, CharUtils.CR, CharUtils.LF}; public StringEscapeUtils() { super(); } public static String escapeJava(String str) { return escapeJavaStyleString(str, false); }"
+      },
+      {
+        "txt": "public static void escapeJava(Writer out, String str) throws IOException { escapeJavaStyleString(out, str, false); } public static String escapeJavaScript(String str) { return escapeJavaStyleString(str, true); } public static void escapeJavaScript(Writer out, String str) throws IOException { escapeJavaStyleString(out, str, true); } private static String escapeJavaStyleString(String str, boolean escapeSingleQuotes) {"
+      },
+      {
+        "txt": "if (str == null) { return null; } try { StringWriter writer = new StringWriter(str.length() * 2); escapeJavaStyleString(writer, str, escapeSingleQuotes); return writer.toString(); } catch (IOException ioe) { ioe.printStackTrace(); return null;"
+      },
+      {
+        "txt": "} } private static void escapeJavaStyleString(Writer out, String str, boolean escapeSingleQuote) throws IOException { if (out == null) { throw new IllegalArgumentException(\"The Writer must not be null\"); } if (str == null) { return; } int sz;"
+      },
+      {
+        "txt": "sz = str.length(); for (int i = 0; i < sz; i++) { char ch = str.charAt(i); if (ch > 0xfff) { out.write(\"\\\\u\" + hex(ch)); } else if (ch > 0xff) { out.write(\"\\\\u0\" + hex(ch)); } else if (ch > 0x7f) { out.write(\"\\\\u00\" + hex(ch)); } else if (ch < 32) {"
+      },
+      {
+        "txt": "switch (ch) { case '\\b' : out.write('\\\\'); out.write('b'); break; case '\\n' : out.write('\\\\'); out.write('n'); break; case '\\t' :"
+      },
+      {
+        "txt": "out.write('\\\\'); out.write('t'); break; case '\\f' : out.write('\\\\'); out.write('f'); break; case '\\r' : out.write('\\\\'); out.write('r');"
+      },
+      {
+        "txt": "break; default : if (ch > 0xf) { out.write(\"\\\\u00\" + hex(ch)); } else { out.write(\"\\\\u000\" + hex(ch)); } break; } } else {"
+      },
+      {
+        "txt": "switch (ch) { case '\\'' : if (escapeSingleQuote) { out.write('\\\\'); } out.write('\\''); break; case '\"' : out.write('\\\\'); out.write('\"');"
+      },
+      {
+        "txt": "case '\\\\' : out.write('\\\\'); out.write('\\\\'); break; case '/' : out.write('\\\\'); <extra_id_0> break; default : out.write(ch); break; } }"
+      },
+      {
+        "txt": "} } } } private static String hex(char ch) { return Integer.toHexString(ch).toUpperCase(); } public static String unescapeJava(String str) { if (str == null) { return null;"
+      },
+      {
+        "txt": "} try { StringWriter writer = new StringWriter(str.length()); unescapeJava(writer, str); return writer.toString(); } catch (IOException ioe) { ioe.printStackTrace(); return null; } }"
+      },
+      {
+        "txt": "public static void unescapeJava(Writer out, String str) throws IOException { if (out == null) { throw new IllegalArgumentException(\"The Writer must not be null\"); } if (str == null) { return; } int sz = str.length(); StringBuffer unicode = new StringBuffer(4); boolean hadSlash = false;"
+      },
+      {
+        "txt": "boolean inUnicode = false; for (int i = 0; i < sz; i++) { char ch = str.charAt(i); if (inUnicode) { unicode.append(ch); if (unicode.length() == 4) { try { int value = Integer.parseInt(unicode.toString(), 16); out.write((char) value); unicode.setLength(0);"
+      },
+      {
+        "txt": "inUnicode = false; hadSlash = false; } catch (NumberFormatException nfe) { throw new NestableRuntimeException(\"Unable to parse unicode value: \" + unicode, nfe); } } continue; } if (hadSlash) { hadSlash = false;"
+      },
+      {
+        "txt": "switch (ch) { case '\\\\': out.write('\\\\'); break; case '\\'': out.write('\\''); break; case '\\\"': out.write('\"'); break;"
+      },
+      {
+        "txt": "case 'r': out.write('\\r'); break; case 'f': out.write('\\f'); break; case 't': out.write('\\t'); break; case 'n':"
+      },
+      {
+        "txt": "out.write('\\n'); break; case 'b': out.write('\\b'); break; case 'u': { inUnicode = true; break; }"
+      },
+      {
+        "txt": "default : out.write(ch); break; } continue; } else if (ch == '\\\\') { hadSlash = true; continue; } out.write(ch);"
+      },
+      {
+        "txt": "} if (hadSlash) { out.write('\\\\'); } } public static String unescapeJavaScript(String str) { return unescapeJava(str); } public static void unescapeJavaScript(Writer out, String str) throws IOException { unescapeJava(out, str);"
+      },
+      {
+        "txt": "} public static String escapeHtml(String str) { if (str == null) { return null; } try { StringWriter writer = new StringWriter ((int)(str.length() * 1.5)); escapeHtml(writer, str); return writer.toString(); } catch (IOException e) {"
+      },
+      {
+        "txt": "e.printStackTrace(); return null; } } public static void escapeHtml(Writer writer, String string) throws IOException { if (writer == null ) { throw new IllegalArgumentException (\"The Writer must not be null.\"); } if (string == null) { return;"
+      },
+      {
+        "txt": "} Entities.HTML40.escape(writer, string); } public static String unescapeHtml(String str) { if (str == null) { return null; } try { StringWriter writer = new StringWriter ((int)(str.length() * 1.5)); unescapeHtml(writer, str);"
+      },
+      {
+        "txt": "return writer.toString(); } catch (IOException e) { e.printStackTrace(); return null; } } public static void unescapeHtml(Writer writer, String string) throws IOException { if (writer == null ) { throw new IllegalArgumentException (\"The Writer must not be null.\"); }"
+      },
+      {
+        "txt": "if (string == null) { return; } Entities.HTML40.unescape(writer, string); } public static void escapeXml(Writer writer, String str) throws IOException { if (writer == null ) { throw new IllegalArgumentException (\"The Writer must not be null.\"); } if (str == null) {"
+      },
+      {
+        "txt": "return; } Entities.XML.escape(writer, str); } public static String escapeXml(String str) { if (str == null) { return null; } return Entities.XML.escape(str); }"
+      },
+      {
+        "txt": "public static void unescapeXml(Writer writer, String str) throws IOException { if (writer == null ) { throw new IllegalArgumentException (\"The Writer must not be null.\"); } if (str == null) { return; } Entities.XML.unescape(writer, str); } public static String unescapeXml(String str) {"
+      },
+      {
+        "txt": "if (str == null) { return null; } return Entities.XML.unescape(str); } public static String escapeSql(String str) { if (str == null) { return null; } return StringUtils.replace(str, \"'\", \"''\");"
+      },
+      {
+        "txt": "} public static String escapeCsv(String str) { if (StringUtils.containsNone(str, CSV_SEARCH_CHARS)) { return str; } try { StringWriter writer = new StringWriter(); escapeCsv(writer, str); return writer.toString(); } catch (IOException ioe) {"
+      },
+      {
+        "txt": "ioe.printStackTrace(); return null; } } public static void escapeCsv(Writer out, String str) throws IOException { if (StringUtils.containsNone(str, CSV_SEARCH_CHARS)) { if (str != null) { out.write(str); } return;"
+      },
+      {
+        "txt": "} out.write(CSV_QUOTE); for (int i = 0; i < str.length(); i++) { char c = str.charAt(i); if (c == CSV_QUOTE) { out.write(CSV_QUOTE); // escape double quote } out.write(c); } out.write(CSV_QUOTE);"
+      },
+      {
+        "txt": "} public static String unescapeCsv(String str) { if (str == null) { return null; } try { StringWriter writer = new StringWriter(); unescapeCsv(writer, str); return writer.toString(); } catch (IOException ioe) {"
+      },
+      {
+        "txt": "ioe.printStackTrace(); return null; } } public static void unescapeCsv(Writer out, String str) throws IOException { if (str == null) { return; } if (str.length() < 2) { out.write(str);"
+      },
+      {
+        "txt": "return; } if ( str.charAt(0) != CSV_QUOTE || str.charAt(str.length() - 1) != CSV_QUOTE ) { out.write(str); return; } String quoteless = str.substring(1, str.length() - 1); if ( StringUtils.containsAny(quoteless, CSV_SEARCH_CHARS) ) { str = StringUtils.replace(quoteless, CSV_QUOTE_STR + CSV_QUOTE_STR, CSV_QUOTE_STR); }"
+      },
+      {
+        "txt": "out.write(str); }"
+      }
+    ]
+  }
+]

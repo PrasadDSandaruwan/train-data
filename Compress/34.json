@@ -1,0 +1,116 @@
+[
+  {
+    "id": 1092,
+    "file_path": "src/main/java/org/apache/commons/compress/archivers/zip/X7875_NewUnix.java",
+    "start-bug-line": 58,
+    "end-bug-line": 58,
+    "bug": "",
+    "fix": "private static final ZipShort ZERO = new ZipShort(0);",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.compress.archivers.zip; import java.io.Serializable;"
+      },
+      {
+        "txt": "import java.util.zip.ZipException; import static org.apache.commons.compress.archivers.zip.ZipUtil.reverse; import static org.apache.commons.compress.archivers.zip.ZipUtil.signedByteToUnsignedInt; import static org.apache.commons.compress.archivers.zip.ZipUtil.unsignedIntToSignedByte; public class X7875_NewUnix implements ZipExtraField, Cloneable, Serializable { private static final ZipShort HEADER_ID = new ZipShort(0x7875); <extra_id_0> private static final long serialVersionUID = 1L; private int version = 1; // always '1' according to current info-zip spec. private BigInteger uid; private BigInteger gid; public X7875_NewUnix() { reset();"
+      },
+      {
+        "txt": "public X7875_NewUnix() { reset(); } public ZipShort getHeaderId() { return HEADER_ID; } public long getUID() { return ZipUtil.bigToLong(uid); } public long getGID() { return ZipUtil.bigToLong(gid); } public void setUID(long l) { this.uid = ZipUtil.longToBig(l);"
+      },
+      {
+        "txt": "} public void setGID(long l) { this.gid = ZipUtil.longToBig(l); } public ZipShort getLocalFileDataLength() { int uidSize = trimLeadingZeroesForceMinLength(uid.toByteArray()).length; int gidSize = trimLeadingZeroesForceMinLength(gid.toByteArray()).length; return new ZipShort(3 + uidSize + gidSize); } public ZipShort getCentralDirectoryLength() {"
+      },
+      {
+        "txt": "return getLocalFileDataLength(); } public byte[] getLocalFileDataData() { byte[] uidBytes = uid.toByteArray(); byte[] gidBytes = gid.toByteArray(); uidBytes = trimLeadingZeroesForceMinLength(uidBytes); gidBytes = trimLeadingZeroesForceMinLength(gidBytes); byte[] data = new byte[3 + uidBytes.length + gidBytes.length]; reverse(uidBytes); reverse(gidBytes);"
+      },
+      {
+        "txt": "int pos = 0; data[pos++] = unsignedIntToSignedByte(version); data[pos++] = unsignedIntToSignedByte(uidBytes.length); System.arraycopy(uidBytes, 0, data, pos, uidBytes.length); pos += uidBytes.length; data[pos++] = unsignedIntToSignedByte(gidBytes.length); System.arraycopy(gidBytes, 0, data, pos, gidBytes.length); return data; } public byte[] getCentralDirectoryData() {"
+      },
+      {
+        "txt": "return new byte[0]; } public void parseFromLocalFileData( byte[] data, int offset, int length ) throws ZipException { reset(); this.version = signedByteToUnsignedInt(data[offset++]); int uidSize = signedByteToUnsignedInt(data[offset++]); byte[] uidBytes = new byte[uidSize]; System.arraycopy(data, offset, uidBytes, 0, uidSize);"
+      },
+      {
+        "txt": "offset += uidSize; this.uid = new BigInteger(1, reverse(uidBytes)); // sign-bit forced positive int gidSize = signedByteToUnsignedInt(data[offset++]); byte[] gidBytes = new byte[gidSize]; System.arraycopy(data, offset, gidBytes, 0, gidSize); this.gid = new BigInteger(1, reverse(gidBytes)); // sign-bit forced positive } public void parseFromCentralDirectoryData( byte[] buffer, int offset, int length ) throws ZipException {"
+      },
+      {
+        "txt": "} private void reset() { uid = ONE_THOUSAND; gid = ONE_THOUSAND; } @Override public String toString() { return \"0x7875 Zip Extra Field: UID=\" + uid + \" GID=\" + gid; } @Override"
+      },
+      {
+        "txt": "public Object clone() throws CloneNotSupportedException { return super.clone(); } @Override public boolean equals(Object o) { if (o instanceof X7875_NewUnix) { X7875_NewUnix xf = (X7875_NewUnix) o; return version == xf.version && uid.equals(xf.uid) && gid.equals(xf.gid); } return false;"
+      },
+      {
+        "txt": "} @Override public int hashCode() { int hc = -1234567 * version; hc ^= Integer.rotateLeft(uid.hashCode(), 16); hc ^= gid.hashCode(); return hc; } static byte[] trimLeadingZeroesForceMinLength(byte[] array) { if (array == null) {"
+      },
+      {
+        "txt": "return array; } int pos = 0; for (byte b : array) { if (b == 0) { pos++; } else { break; } }"
+      },
+      {
+        "txt": "I agonized over my choice of MIN_LENGTH=1. Here's the situation: InfoZip (the tool I am using to test interop) always sets these to length=4. And so a UID of 0 (typically root) for example is encoded as {4,0,0,0,0} (len=4, 32 bits of zero), when it could just as easily be encoded as {1,0} (len=1, 8 bits of zero) according to the spec. In the end I decided on MIN_LENGTH=1 for four reasons: 1.) We are adhering to the spec as far as I can tell, and so a consumer that cannot parse this is broken. 2.) Fundamentally, zip files are about shrinking things, so"
+      },
+      {
+        "txt": "let's save a few bytes per entry while we can. 3.) Of all the people creating zip files using commons- compress, how many care about UNIX UID/GID attributes of the files they store? (e.g., I am probably thinking way too hard about this and no one cares!) 4.) InfoZip's tool, even though it carefully stores every UID/GID for every file zipped on a unix machine (by default) currently appears unable to ever restore UID/GID. unzip -X has no effect on my machine, even when run as root!!!! And thus it is decided: MIN_LENGTH=1."
+      },
+      {
+        "txt": "If anyone runs into interop problems from this, feel free to set it to MIN_LENGTH=4 at some future time, and then we will behave exactly like InfoZip (requires changes to unit tests, though). And I am sorry that the time you spent reading this comment is now gone and you can never have it back. final int MIN_LENGTH = 1; byte[] trimmedArray = new byte[Math.max(MIN_LENGTH, array.length - pos)]; int startPos = trimmedArray.length - (array.length - pos); System.arraycopy(array, pos, trimmedArray, startPos, trimmedArray.length - startPos); return trimmedArray;"
+      }
+    ]
+  },
+  {
+    "id": 1093,
+    "file_path": "src/main/java/org/apache/commons/compress/archivers/zip/X7875_NewUnix.java",
+    "start-bug-line": 146,
+    "end-bug-line": 146,
+    "bug": "return getLocalFileDataLength();",
+    "fix": "return ZERO;",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.compress.archivers.zip; import java.io.Serializable; import java.math.BigInteger; import java.util.zip.ZipException; import static org.apache.commons.compress.archivers.zip.ZipUtil.reverse; import static org.apache.commons.compress.archivers.zip.ZipUtil.signedByteToUnsignedInt; import static org.apache.commons.compress.archivers.zip.ZipUtil.unsignedIntToSignedByte;"
+      },
+      {
+        "txt": "public class X7875_NewUnix implements ZipExtraField, Cloneable, Serializable { private static final ZipShort HEADER_ID = new ZipShort(0x7875); private static final BigInteger ONE_THOUSAND = BigInteger.valueOf(1000); private static final long serialVersionUID = 1L; private int version = 1; // always '1' according to current info-zip spec. private BigInteger uid; private BigInteger gid; public X7875_NewUnix() { reset(); }"
+      },
+      {
+        "txt": "public ZipShort getHeaderId() { return HEADER_ID; } public long getUID() { return ZipUtil.bigToLong(uid); } public long getGID() { return ZipUtil.bigToLong(gid); } public void setUID(long l) { this.uid = ZipUtil.longToBig(l); } public void setGID(long l) { this.gid = ZipUtil.longToBig(l);"
+      },
+      {
+        "txt": "public ZipShort getLocalFileDataLength() { int uidSize = trimLeadingZeroesForceMinLength(uid.toByteArray()).length; int gidSize = trimLeadingZeroesForceMinLength(gid.toByteArray()).length; return new ZipShort(3 + uidSize + gidSize); } public ZipShort getCentralDirectoryLength() { <extra_id_0> } public byte[] getLocalFileDataData() { byte[] uidBytes = uid.toByteArray(); byte[] gidBytes = gid.toByteArray(); uidBytes = trimLeadingZeroesForceMinLength(uidBytes); gidBytes = trimLeadingZeroesForceMinLength(gidBytes);"
+      },
+      {
+        "txt": "uidBytes = trimLeadingZeroesForceMinLength(uidBytes); gidBytes = trimLeadingZeroesForceMinLength(gidBytes); byte[] data = new byte[3 + uidBytes.length + gidBytes.length]; reverse(uidBytes); reverse(gidBytes); int pos = 0; data[pos++] = unsignedIntToSignedByte(version); data[pos++] = unsignedIntToSignedByte(uidBytes.length); System.arraycopy(uidBytes, 0, data, pos, uidBytes.length); pos += uidBytes.length;"
+      },
+      {
+        "txt": "data[pos++] = unsignedIntToSignedByte(gidBytes.length); System.arraycopy(gidBytes, 0, data, pos, gidBytes.length); return data; } public byte[] getCentralDirectoryData() { return new byte[0]; } public void parseFromLocalFileData( byte[] data, int offset, int length ) throws ZipException {"
+      },
+      {
+        "txt": "reset(); this.version = signedByteToUnsignedInt(data[offset++]); int uidSize = signedByteToUnsignedInt(data[offset++]); byte[] uidBytes = new byte[uidSize]; System.arraycopy(data, offset, uidBytes, 0, uidSize); offset += uidSize; this.uid = new BigInteger(1, reverse(uidBytes)); // sign-bit forced positive int gidSize = signedByteToUnsignedInt(data[offset++]); byte[] gidBytes = new byte[gidSize]; System.arraycopy(data, offset, gidBytes, 0, gidSize);"
+      },
+      {
+        "txt": "this.gid = new BigInteger(1, reverse(gidBytes)); // sign-bit forced positive } public void parseFromCentralDirectoryData( byte[] buffer, int offset, int length ) throws ZipException { } private void reset() { uid = ONE_THOUSAND; gid = ONE_THOUSAND; }"
+      },
+      {
+        "txt": "@Override public String toString() { return \"0x7875 Zip Extra Field: UID=\" + uid + \" GID=\" + gid; } @Override public Object clone() throws CloneNotSupportedException { return super.clone(); } @Override public boolean equals(Object o) {"
+      },
+      {
+        "txt": "if (o instanceof X7875_NewUnix) { X7875_NewUnix xf = (X7875_NewUnix) o; return version == xf.version && uid.equals(xf.uid) && gid.equals(xf.gid); } return false; } @Override public int hashCode() { int hc = -1234567 * version; hc ^= Integer.rotateLeft(uid.hashCode(), 16);"
+      },
+      {
+        "txt": "hc ^= gid.hashCode(); return hc; } static byte[] trimLeadingZeroesForceMinLength(byte[] array) { if (array == null) { return array; } int pos = 0; for (byte b : array) { if (b == 0) {"
+      },
+      {
+        "txt": "pos++; } else { break; } } I agonized over my choice of MIN_LENGTH=1. Here's the situation: InfoZip (the tool I am using to test interop) always sets these to length=4. And so a UID of 0 (typically root) for example is encoded as {4,0,0,0,0} (len=4, 32 bits of zero), when it could just as easily be encoded as {1,0} (len=1, 8 bits of zero) according to"
+      },
+      {
+        "txt": "the spec. In the end I decided on MIN_LENGTH=1 for four reasons: 1.) We are adhering to the spec as far as I can tell, and so a consumer that cannot parse this is broken. 2.) Fundamentally, zip files are about shrinking things, so let's save a few bytes per entry while we can. 3.) Of all the people creating zip files using commons- compress, how many care about UNIX UID/GID attributes of the files they store? (e.g., I am probably thinking way too hard about this and no one cares!)"
+      },
+      {
+        "txt": "4.) InfoZip's tool, even though it carefully stores every UID/GID for every file zipped on a unix machine (by default) currently appears unable to ever restore UID/GID. unzip -X has no effect on my machine, even when run as root!!!! And thus it is decided: MIN_LENGTH=1. If anyone runs into interop problems from this, feel free to set it to MIN_LENGTH=4 at some future time, and then we will behave exactly like InfoZip (requires changes to unit tests, though). And I am sorry that the time you spent reading this comment is now gone and you can never have it back."
+      },
+      {
+        "txt": "final int MIN_LENGTH = 1; byte[] trimmedArray = new byte[Math.max(MIN_LENGTH, array.length - pos)]; int startPos = trimmedArray.length - (array.length - pos); System.arraycopy(array, pos, trimmedArray, startPos, trimmedArray.length - startPos); return trimmedArray; }"
+      }
+    ]
+  }
+]

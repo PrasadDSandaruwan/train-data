@@ -1,0 +1,1079 @@
+[
+  {
+    "id": 1110,
+    "file_path": "src/main/java/org/apache/commons/compress/archivers/zip/ZipArchiveOutputStream.java",
+    "start-bug-line": 1034,
+    "end-bug-line": 1034,
+    "bug": "metaData.put(ze, new EntryMetaData(localHeaderStart, usesDataDescriptor(ze.getMethod())));",
+    "fix": "metaData.put(ze, new EntryMetaData(localHeaderStart, usesDataDescriptor(ze.getMethod(), phased)));",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.compress.archivers.zip; import java.io.ByteArrayOutputStream;"
+      },
+      {
+        "txt": "import java.io.File; import java.io.FileOutputStream; import java.io.IOException; import java.io.InputStream; import java.io.OutputStream; import java.nio.ByteBuffer; import java.nio.channels.SeekableByteChannel; import java.nio.file.Files; import java.nio.file.StandardOpenOption; import java.util.Calendar;"
+      },
+      {
+        "txt": "import java.util.EnumSet; import java.util.HashMap; import java.util.LinkedList; import java.util.List; import java.util.Map; import java.util.zip.Deflater; import java.util.zip.ZipException; import org.apache.commons.compress.archivers.ArchiveEntry; import org.apache.commons.compress.archivers.ArchiveOutputStream; import org.apache.commons.compress.utils.IOUtils;"
+      },
+      {
+        "txt": "import static org.apache.commons.compress.archivers.zip.ZipConstants.DATA_DESCRIPTOR_MIN_VERSION; import static org.apache.commons.compress.archivers.zip.ZipConstants.DEFLATE_MIN_VERSION; import static org.apache.commons.compress.archivers.zip.ZipConstants.DWORD; import static org.apache.commons.compress.archivers.zip.ZipConstants.INITIAL_VERSION; import static org.apache.commons.compress.archivers.zip.ZipConstants.SHORT; import static org.apache.commons.compress.archivers.zip.ZipConstants.WORD; import static org.apache.commons.compress.archivers.zip.ZipConstants.ZIP64_MAGIC; import static org.apache.commons.compress.archivers.zip.ZipConstants.ZIP64_MAGIC_SHORT; import static org.apache.commons.compress.archivers.zip.ZipConstants.ZIP64_MIN_VERSION; import static org.apache.commons.compress.archivers.zip.ZipLong.putLong;"
+      },
+      {
+        "txt": "import static org.apache.commons.compress.archivers.zip.ZipShort.putShort; public class ZipArchiveOutputStream extends ArchiveOutputStream { static final int BUFFER_SIZE = 512; private static final int LFH_SIG_OFFSET = 0; private static final int LFH_VERSION_NEEDED_OFFSET = 4; private static final int LFH_GPB_OFFSET = 6; private static final int LFH_METHOD_OFFSET = 8; private static final int LFH_TIME_OFFSET = 10; private static final int LFH_CRC_OFFSET = 14; private static final int LFH_COMPRESSED_SIZE_OFFSET = 18;"
+      },
+      {
+        "txt": "private static final int LFH_ORIGINAL_SIZE_OFFSET = 22; private static final int LFH_FILENAME_LENGTH_OFFSET = 26; private static final int LFH_EXTRA_LENGTH_OFFSET = 28; private static final int LFH_FILENAME_OFFSET = 30; private static final int CFH_SIG_OFFSET = 0; private static final int CFH_VERSION_MADE_BY_OFFSET = 4; private static final int CFH_VERSION_NEEDED_OFFSET = 6; private static final int CFH_GPB_OFFSET = 8; private static final int CFH_METHOD_OFFSET = 10; private static final int CFH_TIME_OFFSET = 12;"
+      },
+      {
+        "txt": "private static final int CFH_CRC_OFFSET = 16; private static final int CFH_COMPRESSED_SIZE_OFFSET = 20; private static final int CFH_ORIGINAL_SIZE_OFFSET = 24; private static final int CFH_FILENAME_LENGTH_OFFSET = 28; private static final int CFH_EXTRA_LENGTH_OFFSET = 30; private static final int CFH_COMMENT_LENGTH_OFFSET = 32; private static final int CFH_DISK_NUMBER_OFFSET = 34; private static final int CFH_INTERNAL_ATTRIBUTES_OFFSET = 36; private static final int CFH_EXTERNAL_ATTRIBUTES_OFFSET = 38; private static final int CFH_LFH_OFFSET = 42;"
+      },
+      {
+        "txt": "private static final int CFH_FILENAME_OFFSET = 46; protected boolean finished = false; public static final int DEFLATED = java.util.zip.ZipEntry.DEFLATED; public static final int DEFAULT_COMPRESSION = Deflater.DEFAULT_COMPRESSION; public static final int STORED = java.util.zip.ZipEntry.STORED; static final String DEFAULT_ENCODING = ZipEncodingHelper.UTF8; @Deprecated public static final int EFS_FLAG = GeneralPurposeBit.UFT8_NAMES_FLAG; private static final byte[] EMPTY = new byte[0]; private CurrentEntry entry;"
+      },
+      {
+        "txt": "private String comment = \"\"; private int level = DEFAULT_COMPRESSION; private boolean hasCompressionLevelChanged = false; private int method = java.util.zip.ZipEntry.DEFLATED; private final List<ZipArchiveEntry> entries = new LinkedList<>(); private final StreamCompressor streamCompressor; private long cdOffset = 0; private long cdLength = 0; private static final byte[] ZERO = {0, 0};"
+      },
+      {
+        "txt": "private static final byte[] LZERO = {0, 0, 0, 0}; private static final byte[] ONE = ZipLong.getBytes(1L); private final Map<ZipArchiveEntry, EntryMetaData> metaData = new HashMap<>(); private String encoding = DEFAULT_ENCODING; private ZipEncoding zipEncoding = ZipEncodingHelper.getZipEncoding(DEFAULT_ENCODING); protected final Deflater def; private final SeekableByteChannel channel; private final OutputStream out;"
+      },
+      {
+        "txt": "private boolean useUTF8Flag = true; private boolean fallbackToUTF8 = false; private UnicodeExtraFieldPolicy createUnicodeExtraFields = UnicodeExtraFieldPolicy.NEVER; private boolean hasUsedZip64 = false; private Zip64Mode zip64Mode = Zip64Mode.AsNeeded; private final byte[] copyBuffer = new byte[32768]; private final Calendar calendarInstance = Calendar.getInstance(); public ZipArchiveOutputStream(final OutputStream out) { this.out = out; this.channel = null;"
+      },
+      {
+        "txt": "def = new Deflater(level, true); streamCompressor = StreamCompressor.create(out, def); } public ZipArchiveOutputStream(final File file) throws IOException { def = new Deflater(level, true); OutputStream o = null; SeekableByteChannel _channel = null; StreamCompressor _streamCompressor = null; try { _channel = Files.newByteChannel(file.toPath(),"
+      },
+      {
+        "txt": "EnumSet.of(StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.READ, StandardOpenOption.TRUNCATE_EXISTING)); _streamCompressor = StreamCompressor.create(_channel, def); //NOSONAR } catch (final IOException e) { IOUtils.closeQuietly(_channel); _channel = null; o = new FileOutputStream(file); _streamCompressor = StreamCompressor.create(o, def); }"
+      },
+      {
+        "txt": "out = o; channel = _channel; streamCompressor = _streamCompressor; } public ZipArchiveOutputStream(SeekableByteChannel channel) throws IOException { this.channel = channel; def = new Deflater(level, true); streamCompressor = StreamCompressor.create(channel, def); out = null; }"
+      },
+      {
+        "txt": "public boolean isSeekable() { return channel != null; } public void setEncoding(final String encoding) { this.encoding = encoding; this.zipEncoding = ZipEncodingHelper.getZipEncoding(encoding); if (useUTF8Flag && !ZipEncodingHelper.isUTF8(encoding)) { useUTF8Flag = false; } }"
+      },
+      {
+        "txt": "public String getEncoding() { return encoding; } public void setUseLanguageEncodingFlag(final boolean b) { useUTF8Flag = b && ZipEncodingHelper.isUTF8(encoding); } public void setCreateUnicodeExtraFields(final UnicodeExtraFieldPolicy b) { createUnicodeExtraFields = b; } public void setFallbackToUTF8(final boolean b) {"
+      },
+      {
+        "txt": "fallbackToUTF8 = b; } public void setUseZip64(final Zip64Mode mode) { zip64Mode = mode; } @Override public void finish() throws IOException { if (finished) { throw new IOException(\"This archive has already been finished\"); }"
+      },
+      {
+        "txt": "if (entry != null) { throw new IOException(\"This archive contains unclosed entries.\"); } cdOffset = streamCompressor.getTotalBytesWritten(); writeCentralDirectoryInChunks(); cdLength = streamCompressor.getTotalBytesWritten() - cdOffset; writeZip64CentralDirectory(); writeCentralDirectoryEnd(); metaData.clear(); entries.clear();"
+      },
+      {
+        "txt": "streamCompressor.close(); finished = true; } private void writeCentralDirectoryInChunks() throws IOException { final int NUM_PER_WRITE = 1000; final ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream(70 * NUM_PER_WRITE); int count = 0; for (final ZipArchiveEntry ze : entries) { byteArrayOutputStream.write(createCentralFileHeader(ze)); if (++count > NUM_PER_WRITE){"
+      },
+      {
+        "txt": "writeCounted(byteArrayOutputStream.toByteArray()); byteArrayOutputStream.reset(); count = 0; } } writeCounted(byteArrayOutputStream.toByteArray()); } @Override public void closeArchiveEntry() throws IOException { preClose();"
+      },
+      {
+        "txt": "flushDeflater(); final long bytesWritten = streamCompressor.getTotalBytesWritten() - entry.dataStart; final long realCrc = streamCompressor.getCrc32(); entry.bytesRead = streamCompressor.getBytesRead(); final Zip64Mode effectiveMode = getEffectiveZip64Mode(entry.entry); final boolean actuallyNeedsZip64 = handleSizesAndCrc(bytesWritten, realCrc, effectiveMode); closeEntry(actuallyNeedsZip64, false); streamCompressor.reset(); } private void closeCopiedEntry(final boolean phased) throws IOException {"
+      },
+      {
+        "txt": "preClose(); entry.bytesRead = entry.entry.getSize(); final Zip64Mode effectiveMode = getEffectiveZip64Mode(entry.entry); final boolean actuallyNeedsZip64 = checkIfNeedsZip64(effectiveMode); closeEntry(actuallyNeedsZip64, phased); } private void closeEntry(final boolean actuallyNeedsZip64, final boolean phased) throws IOException { if (!phased && channel != null) { rewriteSizesAndCrc(actuallyNeedsZip64); }"
+      },
+      {
+        "txt": "if (!phased) { writeDataDescriptor(entry.entry); } entry = null; } private void preClose() throws IOException { if (finished) { throw new IOException(\"Stream has already been finished\"); } if (entry == null) {"
+      },
+      {
+        "txt": "throw new IOException(\"No current entry to close\"); } if (!entry.hasWritten) { write(EMPTY, 0, 0); } } public void addRawArchiveEntry(final ZipArchiveEntry entry, final InputStream rawStream) throws IOException { final ZipArchiveEntry ae = new ZipArchiveEntry(entry); if (hasZip64Extra(ae)) {"
+      },
+      {
+        "txt": "ae.removeExtraField(Zip64ExtendedInformationExtraField.HEADER_ID); } final boolean is2PhaseSource = ae.getCrc() != ZipArchiveEntry.CRC_UNKNOWN && ae.getSize() != ArchiveEntry.SIZE_UNKNOWN && ae.getCompressedSize() != ArchiveEntry.SIZE_UNKNOWN; putArchiveEntry(ae, is2PhaseSource); copyFromZipInputStream(rawStream); closeCopiedEntry(is2PhaseSource); } private void flushDeflater() throws IOException {"
+      },
+      {
+        "txt": "if (entry.entry.getMethod() == DEFLATED) { streamCompressor.flushDeflater(); } } private boolean handleSizesAndCrc(final long bytesWritten, final long crc, final Zip64Mode effectiveMode) throws ZipException { if (entry.entry.getMethod() == DEFLATED) { entry.entry.setSize(def.getBytesRead()); entry.entry.setSize(entry.bytesRead);"
+      },
+      {
+        "txt": "entry.entry.setCompressedSize(bytesWritten); entry.entry.setCrc(crc); } else if (channel == null) { if (entry.entry.getCrc() != crc) { throw new ZipException(\"bad CRC checksum for entry \" + entry.entry.getName() + \": \" + Long.toHexString(entry.entry.getCrc()) + \" instead of \" + Long.toHexString(crc)); }"
+      },
+      {
+        "txt": "if (entry.entry.getSize() != bytesWritten) { throw new ZipException(\"bad size for entry \" + entry.entry.getName() + \": \" + entry.entry.getSize() + \" instead of \" + bytesWritten); } } else { /* method is STORED and we used SeekableByteChannel */ entry.entry.setSize(bytesWritten); entry.entry.setCompressedSize(bytesWritten);"
+      },
+      {
+        "txt": "entry.entry.setCrc(crc); } return checkIfNeedsZip64(effectiveMode); } private boolean checkIfNeedsZip64(final Zip64Mode effectiveMode) throws ZipException { final boolean actuallyNeedsZip64 = isZip64Required(entry.entry, effectiveMode); if (actuallyNeedsZip64 && effectiveMode == Zip64Mode.Never) { throw new Zip64RequiredException(Zip64RequiredException.getEntryTooBigMessage(entry.entry)); }"
+      },
+      {
+        "txt": "return actuallyNeedsZip64; } private boolean isZip64Required(final ZipArchiveEntry entry1, final Zip64Mode requestedMode) { return requestedMode == Zip64Mode.Always || isTooLageForZip32(entry1); } private boolean isTooLageForZip32(final ZipArchiveEntry zipArchiveEntry){ return zipArchiveEntry.getSize() >= ZIP64_MAGIC || zipArchiveEntry.getCompressedSize() >= ZIP64_MAGIC; } private void rewriteSizesAndCrc(final boolean actuallyNeedsZip64) throws IOException {"
+      },
+      {
+        "txt": "final long save = channel.position(); channel.position(entry.localDataStart); writeOut(ZipLong.getBytes(entry.entry.getCrc())); if (!hasZip64Extra(entry.entry) || !actuallyNeedsZip64) { writeOut(ZipLong.getBytes(entry.entry.getCompressedSize())); writeOut(ZipLong.getBytes(entry.entry.getSize())); } else { writeOut(ZipLong.ZIP64_MAGIC.getBytes()); writeOut(ZipLong.ZIP64_MAGIC.getBytes()); }"
+      },
+      {
+        "txt": "if (hasZip64Extra(entry.entry)) { final ByteBuffer name = getName(entry.entry); final int nameLen = name.limit() - name.position(); channel.position(entry.localDataStart + 3 * WORD + 2 * SHORT + nameLen + 2 * SHORT); writeOut(ZipEightByteInteger.getBytes(entry.entry.getSize())); writeOut(ZipEightByteInteger.getBytes(entry.entry.getCompressedSize())); if (!actuallyNeedsZip64) { channel.position(entry.localDataStart - 5 * SHORT); writeOut(ZipShort.getBytes(versionNeededToExtract(entry.entry.getMethod(), false, false)));"
+      },
+      {
+        "txt": "entry.entry.removeExtraField(Zip64ExtendedInformationExtraField .HEADER_ID); entry.entry.setExtra(); if (entry.causedUseOfZip64) { hasUsedZip64 = false; } } } channel.position(save); }"
+      },
+      {
+        "txt": "@Override public void putArchiveEntry(final ArchiveEntry archiveEntry) throws IOException { putArchiveEntry(archiveEntry, false); } private void putArchiveEntry(final ArchiveEntry archiveEntry, final boolean phased) throws IOException { if (finished) { throw new IOException(\"Stream has already been finished\"); } if (entry != null) { closeArchiveEntry();"
+      },
+      {
+        "txt": "} entry = new CurrentEntry((ZipArchiveEntry) archiveEntry); entries.add(entry.entry); setDefaults(entry.entry); final Zip64Mode effectiveMode = getEffectiveZip64Mode(entry.entry); validateSizeInformation(effectiveMode); if (shouldAddZip64Extra(entry.entry, effectiveMode)) { final Zip64ExtendedInformationExtraField z64 = getZip64Extra(entry.entry); ZipEightByteInteger size, compressedSize; if (phased) {"
+      },
+      {
+        "txt": "size = new ZipEightByteInteger(entry.entry.getSize()); compressedSize = new ZipEightByteInteger(entry.entry.getCompressedSize()); } else if (entry.entry.getMethod() == STORED && entry.entry.getSize() != ArchiveEntry.SIZE_UNKNOWN) { compressedSize = size = new ZipEightByteInteger(entry.entry.getSize()); } else { compressedSize = size = ZipEightByteInteger.ZERO; } z64.setSize(size); z64.setCompressedSize(compressedSize);"
+      },
+      {
+        "txt": "entry.entry.setExtra(); } if (entry.entry.getMethod() == DEFLATED && hasCompressionLevelChanged) { def.setLevel(level); hasCompressionLevelChanged = false; } writeLocalFileHeader((ZipArchiveEntry) archiveEntry, phased); } private void setDefaults(final ZipArchiveEntry entry) { if (entry.getMethod() == -1) { // not specified"
+      },
+      {
+        "txt": "entry.setMethod(method); } if (entry.getTime() == -1) { // not specified entry.setTime(System.currentTimeMillis()); } } private void validateSizeInformation(final Zip64Mode effectiveMode) throws ZipException { if (entry.entry.getMethod() == STORED && channel == null) { if (entry.entry.getSize() == ArchiveEntry.SIZE_UNKNOWN) {"
+      },
+      {
+        "txt": "throw new ZipException(\"uncompressed size is required for\" + \" STORED method when not writing to a\" + \" file\"); } if (entry.entry.getCrc() == ZipArchiveEntry.CRC_UNKNOWN) { throw new ZipException(\"crc checksum is required for STORED\" + \" method when not writing to a file\"); } entry.entry.setCompressedSize(entry.entry.getSize()); }"
+      },
+      {
+        "txt": "if ((entry.entry.getSize() >= ZIP64_MAGIC || entry.entry.getCompressedSize() >= ZIP64_MAGIC) && effectiveMode == Zip64Mode.Never) { throw new Zip64RequiredException(Zip64RequiredException .getEntryTooBigMessage(entry.entry)); } } private boolean shouldAddZip64Extra(final ZipArchiveEntry entry, final Zip64Mode mode) { return mode == Zip64Mode.Always || entry.getSize() >= ZIP64_MAGIC"
+      },
+      {
+        "txt": "|| entry.getCompressedSize() >= ZIP64_MAGIC || (entry.getSize() == ArchiveEntry.SIZE_UNKNOWN && channel != null && mode != Zip64Mode.Never); } public void setComment(final String comment) { this.comment = comment; } public void setLevel(final int level) { if (level < Deflater.DEFAULT_COMPRESSION || level > Deflater.BEST_COMPRESSION) {"
+      },
+      {
+        "txt": "throw new IllegalArgumentException(\"Invalid compression level: \" + level); } hasCompressionLevelChanged = (this.level != level); this.level = level; } public void setMethod(final int method) { this.method = method; } @Override"
+      },
+      {
+        "txt": "public boolean canWriteEntryData(final ArchiveEntry ae) { if (ae instanceof ZipArchiveEntry) { final ZipArchiveEntry zae = (ZipArchiveEntry) ae; return zae.getMethod() != ZipMethod.IMPLODING.getCode() && zae.getMethod() != ZipMethod.UNSHRINKING.getCode() && ZipUtil.canHandleEntryData(zae); } return false; } @Override"
+      },
+      {
+        "txt": "public void write(final byte[] b, final int offset, final int length) throws IOException { if (entry == null) { throw new IllegalStateException(\"No current entry\"); } ZipUtil.checkRequestedFeatures(entry.entry); final long writtenThisTime = streamCompressor.write(b, offset, length, entry.entry.getMethod()); count(writtenThisTime); } private void writeCounted(final byte[] data) throws IOException { streamCompressor.writeCounted(data);"
+      },
+      {
+        "txt": "} private void copyFromZipInputStream(final InputStream src) throws IOException { if (entry == null) { throw new IllegalStateException(\"No current entry\"); } ZipUtil.checkRequestedFeatures(entry.entry); entry.hasWritten = true; int length; while ((length = src.read(copyBuffer)) >= 0 ) {"
+      },
+      {
+        "txt": "streamCompressor.writeCounted(copyBuffer, 0, length); count( length ); } } @Override public void close() throws IOException { if (!finished) { finish(); } destroy();"
+      },
+      {
+        "txt": "} @Override public void flush() throws IOException { if (out != null) { out.flush(); } } static final byte[] LFH_SIG = ZipLong.LFH_SIG.getBytes(); //NOSONAR static final byte[] DD_SIG = ZipLong.DD_SIG.getBytes(); //NOSONAR static final byte[] CFH_SIG = ZipLong.CFH_SIG.getBytes(); //NOSONAR"
+      },
+      {
+        "txt": "static final byte[] EOCD_SIG = ZipLong.getBytes(0X06054B50L); //NOSONAR static final byte[] ZIP64_EOCD_SIG = ZipLong.getBytes(0X06064B50L); //NOSONAR static final byte[] ZIP64_EOCD_LOC_SIG = ZipLong.getBytes(0X07064B50L); //NOSONAR protected final void deflate() throws IOException { streamCompressor.deflate(); } protected void writeLocalFileHeader(final ZipArchiveEntry ze) throws IOException { writeLocalFileHeader(ze, false); } private void writeLocalFileHeader(final ZipArchiveEntry ze, final boolean phased) throws IOException {"
+      },
+      {
+        "txt": "final ByteBuffer name = getName(ze); if (createUnicodeExtraFields != UnicodeExtraFieldPolicy.NEVER) { addUnicodeExtraFields(ze, encodable, name); } final long localHeaderStart = streamCompressor.getTotalBytesWritten(); final byte[] localHeader = createLocalFileHeader(ze, name, encodable, phased, localHeaderStart); <extra_id_0> entry.localDataStart = localHeaderStart + LFH_CRC_OFFSET; // At crc offset writeCounted(localHeader); entry.dataStart = streamCompressor.getTotalBytesWritten(); } private byte[] createLocalFileHeader(final ZipArchiveEntry ze, final ByteBuffer name, final boolean encodable, final boolean phased, long archiveOffset) throws IOException {"
+      },
+      {
+        "txt": "private byte[] createLocalFileHeader(final ZipArchiveEntry ze, final ByteBuffer name, final boolean encodable, final boolean phased, long archiveOffset) throws IOException { ResourceAlignmentExtraField oldAlignmentEx = (ResourceAlignmentExtraField) ze.getExtraField(ResourceAlignmentExtraField.ID); if (oldAlignmentEx != null) { ze.removeExtraField(ResourceAlignmentExtraField.ID); } int alignment = ze.getAlignment(); if (alignment <= 0 && oldAlignmentEx != null) { alignment = oldAlignmentEx.getAlignment();"
+      },
+      {
+        "txt": "} if (alignment > 1 || (oldAlignmentEx != null && !oldAlignmentEx.allowMethodChange())) { int oldLength = LFH_FILENAME_OFFSET + name.limit() - name.position() + ze.getLocalFileDataExtra().length; int padding = (int) ((-archiveOffset - oldLength - ZipExtraField.EXTRAFIELD_HEADER_SIZE - ResourceAlignmentExtraField.BASE_SIZE) & (alignment - 1)); ze.addExtraField(new ResourceAlignmentExtraField(alignment, oldAlignmentEx != null && oldAlignmentEx.allowMethodChange(), padding));"
+      },
+      {
+        "txt": "} final byte[] extra = ze.getLocalFileDataExtra(); final int nameLen = name.limit() - name.position(); final int len = LFH_FILENAME_OFFSET + nameLen + extra.length; final byte[] buf = new byte[len]; System.arraycopy(LFH_SIG, 0, buf, LFH_SIG_OFFSET, WORD); final int zipMethod = ze.getMethod(); final boolean dataDescriptor = usesDataDescriptor(zipMethod); putShort(versionNeededToExtract(zipMethod, hasZip64Extra(ze), dataDescriptor), buf, LFH_VERSION_NEEDED_OFFSET); final GeneralPurposeBit generalPurposeBit = getGeneralPurposeBits(!encodable && fallbackToUTF8, dataDescriptor);"
+      },
+      {
+        "txt": "generalPurposeBit.encode(buf, LFH_GPB_OFFSET); putShort(zipMethod, buf, LFH_METHOD_OFFSET); ZipUtil.toDosTime(calendarInstance, ze.getTime(), buf, LFH_TIME_OFFSET); if (phased){ putLong(ze.getCrc(), buf, LFH_CRC_OFFSET); } else if (zipMethod == DEFLATED || channel != null) { System.arraycopy(LZERO, 0, buf, LFH_CRC_OFFSET, WORD); } else { putLong(ze.getCrc(), buf, LFH_CRC_OFFSET); }"
+      },
+      {
+        "txt": "if (hasZip64Extra(entry.entry)){ ZipLong.ZIP64_MAGIC.putLong(buf, LFH_COMPRESSED_SIZE_OFFSET); ZipLong.ZIP64_MAGIC.putLong(buf, LFH_ORIGINAL_SIZE_OFFSET); } else if (phased) { putLong(ze.getCompressedSize(), buf, LFH_COMPRESSED_SIZE_OFFSET); putLong(ze.getSize(), buf, LFH_ORIGINAL_SIZE_OFFSET); } else if (zipMethod == DEFLATED || channel != null) { System.arraycopy(LZERO, 0, buf, LFH_COMPRESSED_SIZE_OFFSET, WORD); System.arraycopy(LZERO, 0, buf, LFH_ORIGINAL_SIZE_OFFSET, WORD); } else { // Stored"
+      },
+      {
+        "txt": "putLong(ze.getSize(), buf, LFH_COMPRESSED_SIZE_OFFSET); putLong(ze.getSize(), buf, LFH_ORIGINAL_SIZE_OFFSET); } putShort(nameLen, buf, LFH_FILENAME_LENGTH_OFFSET); putShort(extra.length, buf, LFH_EXTRA_LENGTH_OFFSET); System.arraycopy( name.array(), name.arrayOffset(), buf, LFH_FILENAME_OFFSET, nameLen); System.arraycopy(extra, 0, buf, LFH_FILENAME_OFFSET + nameLen, extra.length); return buf; } private void addUnicodeExtraFields(final ZipArchiveEntry ze, final boolean encodable,"
+      },
+      {
+        "txt": "final ByteBuffer name) throws IOException { if (createUnicodeExtraFields == UnicodeExtraFieldPolicy.ALWAYS || !encodable) { ze.addExtraField(new UnicodePathExtraField(ze.getName(), name.array(), name.arrayOffset(), name.limit() - name.position())); }"
+      },
+      {
+        "txt": "final String comm = ze.getComment(); if (comm != null && !\"\".equals(comm)) { final boolean commentEncodable = zipEncoding.canEncode(comm); if (createUnicodeExtraFields == UnicodeExtraFieldPolicy.ALWAYS || !commentEncodable) { final ByteBuffer commentB = getEntryEncoding(ze).encode(comm); ze.addExtraField(new UnicodeCommentExtraField(comm, commentB.array(), commentB.arrayOffset(), commentB.limit()"
+      },
+      {
+        "txt": "- commentB.position()) ); } } } protected void writeDataDescriptor(final ZipArchiveEntry ze) throws IOException { if (ze.getMethod() != DEFLATED || channel != null) { return; } writeCounted(DD_SIG);"
+      },
+      {
+        "txt": "writeCounted(ZipLong.getBytes(ze.getCrc())); if (!hasZip64Extra(ze)) { writeCounted(ZipLong.getBytes(ze.getCompressedSize())); writeCounted(ZipLong.getBytes(ze.getSize())); } else { writeCounted(ZipEightByteInteger.getBytes(ze.getCompressedSize())); writeCounted(ZipEightByteInteger.getBytes(ze.getSize())); } } protected void writeCentralFileHeader(final ZipArchiveEntry ze) throws IOException {"
+      },
+      {
+        "txt": "final byte[] centralFileHeader = createCentralFileHeader(ze); writeCounted(centralFileHeader); } private byte[] createCentralFileHeader(final ZipArchiveEntry ze) throws IOException { final EntryMetaData entryMetaData = metaData.get(ze); final boolean needsZip64Extra = hasZip64Extra(ze) || ze.getCompressedSize() >= ZIP64_MAGIC || ze.getSize() >= ZIP64_MAGIC || entryMetaData.offset >= ZIP64_MAGIC || zip64Mode == Zip64Mode.Always;"
+      },
+      {
+        "txt": "if (needsZip64Extra && zip64Mode == Zip64Mode.Never) { throw new Zip64RequiredException(Zip64RequiredException .ARCHIVE_TOO_BIG_MESSAGE); } handleZip64Extra(ze, entryMetaData.offset, needsZip64Extra); return createCentralFileHeader(ze, getName(ze), entryMetaData, needsZip64Extra); } private byte[] createCentralFileHeader(final ZipArchiveEntry ze, final ByteBuffer name, final EntryMetaData entryMetaData, final boolean needsZip64Extra) throws IOException {"
+      },
+      {
+        "txt": "final byte[] extra = ze.getCentralDirectoryExtra(); String comm = ze.getComment(); if (comm == null) { comm = \"\"; } final ByteBuffer commentB = getEntryEncoding(ze).encode(comm); final int nameLen = name.limit() - name.position(); final int commentLen = commentB.limit() - commentB.position(); final int len= CFH_FILENAME_OFFSET + nameLen + extra.length + commentLen; final byte[] buf = new byte[len];"
+      },
+      {
+        "txt": "System.arraycopy(CFH_SIG, 0, buf, CFH_SIG_OFFSET, WORD); putShort((ze.getPlatform() << 8) | (!hasUsedZip64 ? DATA_DESCRIPTOR_MIN_VERSION : ZIP64_MIN_VERSION), buf, CFH_VERSION_MADE_BY_OFFSET); final int zipMethod = ze.getMethod(); final boolean encodable = zipEncoding.canEncode(ze.getName()); putShort(versionNeededToExtract(zipMethod, needsZip64Extra, entryMetaData.usesDataDescriptor), buf, CFH_VERSION_NEEDED_OFFSET); getGeneralPurposeBits(!encodable && fallbackToUTF8, entryMetaData.usesDataDescriptor).encode(buf, CFH_GPB_OFFSET); putShort(zipMethod, buf, CFH_METHOD_OFFSET); ZipUtil.toDosTime(calendarInstance, ze.getTime(), buf, CFH_TIME_OFFSET);"
+      },
+      {
+        "txt": "putLong(ze.getCrc(), buf, CFH_CRC_OFFSET); if (ze.getCompressedSize() >= ZIP64_MAGIC || ze.getSize() >= ZIP64_MAGIC || zip64Mode == Zip64Mode.Always) { ZipLong.ZIP64_MAGIC.putLong(buf, CFH_COMPRESSED_SIZE_OFFSET); ZipLong.ZIP64_MAGIC.putLong(buf, CFH_ORIGINAL_SIZE_OFFSET); } else { putLong(ze.getCompressedSize(), buf, CFH_COMPRESSED_SIZE_OFFSET); putLong(ze.getSize(), buf, CFH_ORIGINAL_SIZE_OFFSET); }"
+      },
+      {
+        "txt": "putShort(nameLen, buf, CFH_FILENAME_LENGTH_OFFSET); putShort(extra.length, buf, CFH_EXTRA_LENGTH_OFFSET); putShort(commentLen, buf, CFH_COMMENT_LENGTH_OFFSET); System.arraycopy(ZERO, 0, buf, CFH_DISK_NUMBER_OFFSET, SHORT); putShort(ze.getInternalAttributes(), buf, CFH_INTERNAL_ATTRIBUTES_OFFSET); putLong(ze.getExternalAttributes(), buf, CFH_EXTERNAL_ATTRIBUTES_OFFSET); if (entryMetaData.offset >= ZIP64_MAGIC || zip64Mode == Zip64Mode.Always) { putLong(ZIP64_MAGIC, buf, CFH_LFH_OFFSET); } else { putLong(Math.min(entryMetaData.offset, ZIP64_MAGIC), buf, CFH_LFH_OFFSET);"
+      },
+      {
+        "txt": "} System.arraycopy(name.array(), name.arrayOffset(), buf, CFH_FILENAME_OFFSET, nameLen); final int extraStart = CFH_FILENAME_OFFSET + nameLen; System.arraycopy(extra, 0, buf, extraStart, extra.length); final int commentStart = extraStart + extra.length; System.arraycopy(commentB.array(), commentB.arrayOffset(), buf, commentStart, commentLen); return buf; } private void handleZip64Extra(final ZipArchiveEntry ze, final long lfhOffset, final boolean needsZip64Extra) {"
+      },
+      {
+        "txt": "if (needsZip64Extra) { final Zip64ExtendedInformationExtraField z64 = getZip64Extra(ze); if (ze.getCompressedSize() >= ZIP64_MAGIC || ze.getSize() >= ZIP64_MAGIC || zip64Mode == Zip64Mode.Always) { z64.setCompressedSize(new ZipEightByteInteger(ze.getCompressedSize())); z64.setSize(new ZipEightByteInteger(ze.getSize())); } else { z64.setCompressedSize(null); z64.setSize(null);"
+      },
+      {
+        "txt": "} if (lfhOffset >= ZIP64_MAGIC || zip64Mode == Zip64Mode.Always) { z64.setRelativeHeaderOffset(new ZipEightByteInteger(lfhOffset)); } ze.setExtra(); } } protected void writeCentralDirectoryEnd() throws IOException { writeCounted(EOCD_SIG); writeCounted(ZERO);"
+      },
+      {
+        "txt": "writeCounted(ZERO); final int numberOfEntries = entries.size(); if (numberOfEntries > ZIP64_MAGIC_SHORT && zip64Mode == Zip64Mode.Never) { throw new Zip64RequiredException(Zip64RequiredException .TOO_MANY_ENTRIES_MESSAGE); } if (cdOffset > ZIP64_MAGIC && zip64Mode == Zip64Mode.Never) { throw new Zip64RequiredException(Zip64RequiredException .ARCHIVE_TOO_BIG_MESSAGE);"
+      },
+      {
+        "txt": "} final byte[] num = ZipShort.getBytes(Math.min(numberOfEntries, ZIP64_MAGIC_SHORT)); writeCounted(num); writeCounted(num); writeCounted(ZipLong.getBytes(Math.min(cdLength, ZIP64_MAGIC))); writeCounted(ZipLong.getBytes(Math.min(cdOffset, ZIP64_MAGIC))); final ByteBuffer data = this.zipEncoding.encode(comment); final int dataLen = data.limit() - data.position(); writeCounted(ZipShort.getBytes(dataLen));"
+      },
+      {
+        "txt": "streamCompressor.writeCounted(data.array(), data.arrayOffset(), dataLen); } protected void writeZip64CentralDirectory() throws IOException { if (zip64Mode == Zip64Mode.Never) { return; } if (!hasUsedZip64 && (cdOffset >= ZIP64_MAGIC || cdLength >= ZIP64_MAGIC || entries.size() >= ZIP64_MAGIC_SHORT)) { hasUsedZip64 = true;"
+      },
+      {
+        "txt": "} if (!hasUsedZip64) { return; } final long offset = streamCompressor.getTotalBytesWritten(); writeOut(ZIP64_EOCD_SIG); writeOut(ZipEightByteInteger .getBytes(SHORT /* version made by */ + SHORT /* version needed to extract */ + WORD /* disk number */"
+      },
+      {
+        "txt": "+ WORD /* disk with central directory */ + DWORD /* number of entries in CD on this disk */ + DWORD /* total number of entries */ + DWORD /* size of CD */ + (long) DWORD /* offset of CD */ )); writeOut(ZipShort.getBytes(ZIP64_MIN_VERSION)); writeOut(ZipShort.getBytes(ZIP64_MIN_VERSION)); writeOut(LZERO); writeOut(LZERO);"
+      },
+      {
+        "txt": "final byte[] num = ZipEightByteInteger.getBytes(entries.size()); writeOut(num); writeOut(num); writeOut(ZipEightByteInteger.getBytes(cdLength)); writeOut(ZipEightByteInteger.getBytes(cdOffset)); writeOut(ZIP64_EOCD_LOC_SIG); writeOut(LZERO); writeOut(ZipEightByteInteger.getBytes(offset)); writeOut(ONE); }"
+      },
+      {
+        "txt": "protected final void writeOut(final byte[] data) throws IOException { streamCompressor.writeOut(data, 0, data.length); } protected final void writeOut(final byte[] data, final int offset, final int length) throws IOException { streamCompressor.writeOut(data, offset, length); } private GeneralPurposeBit getGeneralPurposeBits(final boolean utfFallback, boolean usesDataDescriptor) { final GeneralPurposeBit b = new GeneralPurposeBit(); b.useUTF8ForNames(useUTF8Flag || utfFallback);"
+      },
+      {
+        "txt": "if (usesDataDescriptor) { b.useDataDescriptor(true); } return b; } private int versionNeededToExtract(final int zipMethod, final boolean zip64, final boolean usedDataDescriptor) { if (zip64) { return ZIP64_MIN_VERSION; } if (usedDataDescriptor) {"
+      },
+      {
+        "txt": "return DATA_DESCRIPTOR_MIN_VERSION; } return versionNeededToExtractMethod(zipMethod); } private boolean usesDataDescriptor(final int zipMethod) { return zipMethod == DEFLATED && channel == null; } private int versionNeededToExtractMethod(int zipMethod) { return zipMethod == DEFLATED ? DEFLATE_MIN_VERSION : INITIAL_VERSION; }"
+      },
+      {
+        "txt": "@Override public ArchiveEntry createArchiveEntry(final File inputFile, final String entryName) throws IOException { if (finished) { throw new IOException(\"Stream has already been finished\"); } return new ZipArchiveEntry(inputFile, entryName); } private Zip64ExtendedInformationExtraField getZip64Extra(final ZipArchiveEntry ze) {"
+      },
+      {
+        "txt": "if (entry != null) { entry.causedUseOfZip64 = !hasUsedZip64; } hasUsedZip64 = true; Zip64ExtendedInformationExtraField z64 = (Zip64ExtendedInformationExtraField) ze.getExtraField(Zip64ExtendedInformationExtraField .HEADER_ID); if (z64 == null) { System.err.println(\"Adding z64 for \" + ze.getName()"
+      },
+      {
+        "txt": "+ \", method: \" + ze.getMethod() + \" (\" + (ze.getMethod() == STORED) + \")\" + \", channel: \" + (channel != null)); z64 = new Zip64ExtendedInformationExtraField(); } ze.addAsFirstExtraField(z64); return z64; } private boolean hasZip64Extra(final ZipArchiveEntry ze) { return ze.getExtraField(Zip64ExtendedInformationExtraField"
+      },
+      {
+        "txt": ".HEADER_ID) != null; } private Zip64Mode getEffectiveZip64Mode(final ZipArchiveEntry ze) { if (zip64Mode != Zip64Mode.AsNeeded || channel != null || ze.getMethod() != DEFLATED || ze.getSize() != ArchiveEntry.SIZE_UNKNOWN) { return zip64Mode; }"
+      },
+      {
+        "txt": "return Zip64Mode.Never; } private ZipEncoding getEntryEncoding(final ZipArchiveEntry ze) { final boolean encodable = zipEncoding.canEncode(ze.getName()); return !encodable && fallbackToUTF8 ? ZipEncodingHelper.UTF8_ZIP_ENCODING : zipEncoding; } private ByteBuffer getName(final ZipArchiveEntry ze) throws IOException { return getEntryEncoding(ze).encode(ze.getName()); }"
+      },
+      {
+        "txt": "void destroy() throws IOException { if (channel != null) { channel.close(); } if (out != null) { out.close(); } } public static final class UnicodeExtraFieldPolicy { public static final UnicodeExtraFieldPolicy ALWAYS = new UnicodeExtraFieldPolicy(\"always\");"
+      },
+      {
+        "txt": "public static final UnicodeExtraFieldPolicy NEVER = new UnicodeExtraFieldPolicy(\"never\"); public static final UnicodeExtraFieldPolicy NOT_ENCODEABLE = new UnicodeExtraFieldPolicy(\"not encodeable\"); private final String name; private UnicodeExtraFieldPolicy(final String n) { name = n; } @Override public String toString() { return name;"
+      },
+      {
+        "txt": "} } private static final class CurrentEntry { private CurrentEntry(final ZipArchiveEntry entry) { this.entry = entry; } private final ZipArchiveEntry entry; private long localDataStart = 0; private long dataStart = 0; private long bytesRead = 0;"
+      },
+      {
+        "txt": "private boolean causedUseOfZip64 = false; private boolean hasWritten; } private static final class EntryMetaData { private final long offset; private final boolean usesDataDescriptor; private EntryMetaData(long offset, boolean usesDataDescriptor) { this.offset = offset; this.usesDataDescriptor = usesDataDescriptor; }"
+      }
+    ]
+  },
+  {
+    "id": 1111,
+    "file_path": "src/main/java/org/apache/commons/compress/archivers/zip/ZipArchiveOutputStream.java",
+    "start-bug-line": 1075,
+    "end-bug-line": 1075,
+    "bug": "final boolean dataDescriptor = usesDataDescriptor(zipMethod);",
+    "fix": "final boolean dataDescriptor = usesDataDescriptor(zipMethod, phased);",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.compress.archivers.zip; import java.io.ByteArrayOutputStream; import java.io.File; import java.io.FileOutputStream;"
+      },
+      {
+        "txt": "import java.io.IOException; import java.io.InputStream; import java.io.OutputStream; import java.nio.ByteBuffer; import java.nio.channels.SeekableByteChannel; import java.nio.file.Files; import java.nio.file.StandardOpenOption; import java.util.Calendar; import java.util.EnumSet; import java.util.HashMap;"
+      },
+      {
+        "txt": "import java.util.LinkedList; import java.util.List; import java.util.Map; import java.util.zip.Deflater; import java.util.zip.ZipException; import org.apache.commons.compress.archivers.ArchiveEntry; import org.apache.commons.compress.archivers.ArchiveOutputStream; import org.apache.commons.compress.utils.IOUtils; import static org.apache.commons.compress.archivers.zip.ZipConstants.DATA_DESCRIPTOR_MIN_VERSION; import static org.apache.commons.compress.archivers.zip.ZipConstants.DEFLATE_MIN_VERSION;"
+      },
+      {
+        "txt": "import static org.apache.commons.compress.archivers.zip.ZipConstants.DWORD; import static org.apache.commons.compress.archivers.zip.ZipConstants.INITIAL_VERSION; import static org.apache.commons.compress.archivers.zip.ZipConstants.SHORT; import static org.apache.commons.compress.archivers.zip.ZipConstants.WORD; import static org.apache.commons.compress.archivers.zip.ZipConstants.ZIP64_MAGIC; import static org.apache.commons.compress.archivers.zip.ZipConstants.ZIP64_MAGIC_SHORT; import static org.apache.commons.compress.archivers.zip.ZipConstants.ZIP64_MIN_VERSION; import static org.apache.commons.compress.archivers.zip.ZipLong.putLong; import static org.apache.commons.compress.archivers.zip.ZipShort.putShort; public class ZipArchiveOutputStream extends ArchiveOutputStream {"
+      },
+      {
+        "txt": "static final int BUFFER_SIZE = 512; private static final int LFH_SIG_OFFSET = 0; private static final int LFH_VERSION_NEEDED_OFFSET = 4; private static final int LFH_GPB_OFFSET = 6; private static final int LFH_METHOD_OFFSET = 8; private static final int LFH_TIME_OFFSET = 10; private static final int LFH_CRC_OFFSET = 14; private static final int LFH_COMPRESSED_SIZE_OFFSET = 18; private static final int LFH_ORIGINAL_SIZE_OFFSET = 22; private static final int LFH_FILENAME_LENGTH_OFFSET = 26;"
+      },
+      {
+        "txt": "private static final int LFH_EXTRA_LENGTH_OFFSET = 28; private static final int LFH_FILENAME_OFFSET = 30; private static final int CFH_SIG_OFFSET = 0; private static final int CFH_VERSION_MADE_BY_OFFSET = 4; private static final int CFH_VERSION_NEEDED_OFFSET = 6; private static final int CFH_GPB_OFFSET = 8; private static final int CFH_METHOD_OFFSET = 10; private static final int CFH_TIME_OFFSET = 12; private static final int CFH_CRC_OFFSET = 16; private static final int CFH_COMPRESSED_SIZE_OFFSET = 20;"
+      },
+      {
+        "txt": "private static final int CFH_ORIGINAL_SIZE_OFFSET = 24; private static final int CFH_FILENAME_LENGTH_OFFSET = 28; private static final int CFH_EXTRA_LENGTH_OFFSET = 30; private static final int CFH_COMMENT_LENGTH_OFFSET = 32; private static final int CFH_DISK_NUMBER_OFFSET = 34; private static final int CFH_INTERNAL_ATTRIBUTES_OFFSET = 36; private static final int CFH_EXTERNAL_ATTRIBUTES_OFFSET = 38; private static final int CFH_LFH_OFFSET = 42; private static final int CFH_FILENAME_OFFSET = 46; protected boolean finished = false;"
+      },
+      {
+        "txt": "public static final int DEFLATED = java.util.zip.ZipEntry.DEFLATED; public static final int DEFAULT_COMPRESSION = Deflater.DEFAULT_COMPRESSION; public static final int STORED = java.util.zip.ZipEntry.STORED; static final String DEFAULT_ENCODING = ZipEncodingHelper.UTF8; @Deprecated public static final int EFS_FLAG = GeneralPurposeBit.UFT8_NAMES_FLAG; private static final byte[] EMPTY = new byte[0]; private CurrentEntry entry; private String comment = \"\"; private int level = DEFAULT_COMPRESSION;"
+      },
+      {
+        "txt": "private boolean hasCompressionLevelChanged = false; private int method = java.util.zip.ZipEntry.DEFLATED; private final List<ZipArchiveEntry> entries = new LinkedList<>(); private final StreamCompressor streamCompressor; private long cdOffset = 0; private long cdLength = 0; private static final byte[] ZERO = {0, 0}; private static final byte[] LZERO = {0, 0, 0, 0}; private static final byte[] ONE = ZipLong.getBytes(1L);"
+      },
+      {
+        "txt": "private final Map<ZipArchiveEntry, EntryMetaData> metaData = new HashMap<>(); private String encoding = DEFAULT_ENCODING; private ZipEncoding zipEncoding = ZipEncodingHelper.getZipEncoding(DEFAULT_ENCODING); protected final Deflater def; private final SeekableByteChannel channel; private final OutputStream out; private boolean useUTF8Flag = true; private boolean fallbackToUTF8 = false;"
+      },
+      {
+        "txt": "private UnicodeExtraFieldPolicy createUnicodeExtraFields = UnicodeExtraFieldPolicy.NEVER; private boolean hasUsedZip64 = false; private Zip64Mode zip64Mode = Zip64Mode.AsNeeded; private final byte[] copyBuffer = new byte[32768]; private final Calendar calendarInstance = Calendar.getInstance(); public ZipArchiveOutputStream(final OutputStream out) { this.out = out; this.channel = null; def = new Deflater(level, true); streamCompressor = StreamCompressor.create(out, def);"
+      },
+      {
+        "txt": "} public ZipArchiveOutputStream(final File file) throws IOException { def = new Deflater(level, true); OutputStream o = null; SeekableByteChannel _channel = null; StreamCompressor _streamCompressor = null; try { _channel = Files.newByteChannel(file.toPath(), EnumSet.of(StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.READ,"
+      },
+      {
+        "txt": "StandardOpenOption.TRUNCATE_EXISTING)); _streamCompressor = StreamCompressor.create(_channel, def); //NOSONAR } catch (final IOException e) { IOUtils.closeQuietly(_channel); _channel = null; o = new FileOutputStream(file); _streamCompressor = StreamCompressor.create(o, def); } out = o; channel = _channel;"
+      },
+      {
+        "txt": "streamCompressor = _streamCompressor; } public ZipArchiveOutputStream(SeekableByteChannel channel) throws IOException { this.channel = channel; def = new Deflater(level, true); streamCompressor = StreamCompressor.create(channel, def); out = null; } public boolean isSeekable() { return channel != null;"
+      },
+      {
+        "txt": "} public void setEncoding(final String encoding) { this.encoding = encoding; this.zipEncoding = ZipEncodingHelper.getZipEncoding(encoding); if (useUTF8Flag && !ZipEncodingHelper.isUTF8(encoding)) { useUTF8Flag = false; } } public String getEncoding() { return encoding;"
+      },
+      {
+        "txt": "} public void setUseLanguageEncodingFlag(final boolean b) { useUTF8Flag = b && ZipEncodingHelper.isUTF8(encoding); } public void setCreateUnicodeExtraFields(final UnicodeExtraFieldPolicy b) { createUnicodeExtraFields = b; } public void setFallbackToUTF8(final boolean b) { fallbackToUTF8 = b; }"
+      },
+      {
+        "txt": "public void setUseZip64(final Zip64Mode mode) { zip64Mode = mode; } @Override public void finish() throws IOException { if (finished) { throw new IOException(\"This archive has already been finished\"); } if (entry != null) { throw new IOException(\"This archive contains unclosed entries.\");"
+      },
+      {
+        "txt": "} cdOffset = streamCompressor.getTotalBytesWritten(); writeCentralDirectoryInChunks(); cdLength = streamCompressor.getTotalBytesWritten() - cdOffset; writeZip64CentralDirectory(); writeCentralDirectoryEnd(); metaData.clear(); entries.clear(); streamCompressor.close(); finished = true;"
+      },
+      {
+        "txt": "} private void writeCentralDirectoryInChunks() throws IOException { final int NUM_PER_WRITE = 1000; final ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream(70 * NUM_PER_WRITE); int count = 0; for (final ZipArchiveEntry ze : entries) { byteArrayOutputStream.write(createCentralFileHeader(ze)); if (++count > NUM_PER_WRITE){ writeCounted(byteArrayOutputStream.toByteArray()); byteArrayOutputStream.reset();"
+      },
+      {
+        "txt": "count = 0; } } writeCounted(byteArrayOutputStream.toByteArray()); } @Override public void closeArchiveEntry() throws IOException { preClose(); flushDeflater(); final long bytesWritten = streamCompressor.getTotalBytesWritten() - entry.dataStart;"
+      },
+      {
+        "txt": "final long realCrc = streamCompressor.getCrc32(); entry.bytesRead = streamCompressor.getBytesRead(); final Zip64Mode effectiveMode = getEffectiveZip64Mode(entry.entry); final boolean actuallyNeedsZip64 = handleSizesAndCrc(bytesWritten, realCrc, effectiveMode); closeEntry(actuallyNeedsZip64, false); streamCompressor.reset(); } private void closeCopiedEntry(final boolean phased) throws IOException { preClose(); entry.bytesRead = entry.entry.getSize();"
+      },
+      {
+        "txt": "final Zip64Mode effectiveMode = getEffectiveZip64Mode(entry.entry); final boolean actuallyNeedsZip64 = checkIfNeedsZip64(effectiveMode); closeEntry(actuallyNeedsZip64, phased); } private void closeEntry(final boolean actuallyNeedsZip64, final boolean phased) throws IOException { if (!phased && channel != null) { rewriteSizesAndCrc(actuallyNeedsZip64); } if (!phased) { writeDataDescriptor(entry.entry);"
+      },
+      {
+        "txt": "} entry = null; } private void preClose() throws IOException { if (finished) { throw new IOException(\"Stream has already been finished\"); } if (entry == null) { throw new IOException(\"No current entry to close\"); }"
+      },
+      {
+        "txt": "if (!entry.hasWritten) { write(EMPTY, 0, 0); } } public void addRawArchiveEntry(final ZipArchiveEntry entry, final InputStream rawStream) throws IOException { final ZipArchiveEntry ae = new ZipArchiveEntry(entry); if (hasZip64Extra(ae)) { ae.removeExtraField(Zip64ExtendedInformationExtraField.HEADER_ID); }"
+      },
+      {
+        "txt": "final boolean is2PhaseSource = ae.getCrc() != ZipArchiveEntry.CRC_UNKNOWN && ae.getSize() != ArchiveEntry.SIZE_UNKNOWN && ae.getCompressedSize() != ArchiveEntry.SIZE_UNKNOWN; putArchiveEntry(ae, is2PhaseSource); copyFromZipInputStream(rawStream); closeCopiedEntry(is2PhaseSource); } private void flushDeflater() throws IOException { if (entry.entry.getMethod() == DEFLATED) { streamCompressor.flushDeflater();"
+      },
+      {
+        "txt": "} } private boolean handleSizesAndCrc(final long bytesWritten, final long crc, final Zip64Mode effectiveMode) throws ZipException { if (entry.entry.getMethod() == DEFLATED) { entry.entry.setSize(def.getBytesRead()); entry.entry.setSize(entry.bytesRead); entry.entry.setCompressedSize(bytesWritten); entry.entry.setCrc(crc);"
+      },
+      {
+        "txt": "} else if (channel == null) { if (entry.entry.getCrc() != crc) { throw new ZipException(\"bad CRC checksum for entry \" + entry.entry.getName() + \": \" + Long.toHexString(entry.entry.getCrc()) + \" instead of \" + Long.toHexString(crc)); } if (entry.entry.getSize() != bytesWritten) { throw new ZipException(\"bad size for entry \""
+      },
+      {
+        "txt": "+ entry.entry.getName() + \": \" + entry.entry.getSize() + \" instead of \" + bytesWritten); } } else { /* method is STORED and we used SeekableByteChannel */ entry.entry.setSize(bytesWritten); entry.entry.setCompressedSize(bytesWritten); entry.entry.setCrc(crc); }"
+      },
+      {
+        "txt": "return checkIfNeedsZip64(effectiveMode); } private boolean checkIfNeedsZip64(final Zip64Mode effectiveMode) throws ZipException { final boolean actuallyNeedsZip64 = isZip64Required(entry.entry, effectiveMode); if (actuallyNeedsZip64 && effectiveMode == Zip64Mode.Never) { throw new Zip64RequiredException(Zip64RequiredException.getEntryTooBigMessage(entry.entry)); } return actuallyNeedsZip64; }"
+      },
+      {
+        "txt": "private boolean isZip64Required(final ZipArchiveEntry entry1, final Zip64Mode requestedMode) { return requestedMode == Zip64Mode.Always || isTooLageForZip32(entry1); } private boolean isTooLageForZip32(final ZipArchiveEntry zipArchiveEntry){ return zipArchiveEntry.getSize() >= ZIP64_MAGIC || zipArchiveEntry.getCompressedSize() >= ZIP64_MAGIC; } private void rewriteSizesAndCrc(final boolean actuallyNeedsZip64) throws IOException { final long save = channel.position(); channel.position(entry.localDataStart);"
+      },
+      {
+        "txt": "writeOut(ZipLong.getBytes(entry.entry.getCrc())); if (!hasZip64Extra(entry.entry) || !actuallyNeedsZip64) { writeOut(ZipLong.getBytes(entry.entry.getCompressedSize())); writeOut(ZipLong.getBytes(entry.entry.getSize())); } else { writeOut(ZipLong.ZIP64_MAGIC.getBytes()); writeOut(ZipLong.ZIP64_MAGIC.getBytes()); } if (hasZip64Extra(entry.entry)) { final ByteBuffer name = getName(entry.entry);"
+      },
+      {
+        "txt": "final int nameLen = name.limit() - name.position(); channel.position(entry.localDataStart + 3 * WORD + 2 * SHORT + nameLen + 2 * SHORT); writeOut(ZipEightByteInteger.getBytes(entry.entry.getSize())); writeOut(ZipEightByteInteger.getBytes(entry.entry.getCompressedSize())); if (!actuallyNeedsZip64) { channel.position(entry.localDataStart - 5 * SHORT); writeOut(ZipShort.getBytes(versionNeededToExtract(entry.entry.getMethod(), false, false))); entry.entry.removeExtraField(Zip64ExtendedInformationExtraField .HEADER_ID);"
+      },
+      {
+        "txt": "entry.entry.setExtra(); if (entry.causedUseOfZip64) { hasUsedZip64 = false; } } } channel.position(save); } @Override public void putArchiveEntry(final ArchiveEntry archiveEntry) throws IOException {"
+      },
+      {
+        "txt": "putArchiveEntry(archiveEntry, false); } private void putArchiveEntry(final ArchiveEntry archiveEntry, final boolean phased) throws IOException { if (finished) { throw new IOException(\"Stream has already been finished\"); } if (entry != null) { closeArchiveEntry(); } entry = new CurrentEntry((ZipArchiveEntry) archiveEntry);"
+      },
+      {
+        "txt": "entries.add(entry.entry); setDefaults(entry.entry); final Zip64Mode effectiveMode = getEffectiveZip64Mode(entry.entry); validateSizeInformation(effectiveMode); if (shouldAddZip64Extra(entry.entry, effectiveMode)) { final Zip64ExtendedInformationExtraField z64 = getZip64Extra(entry.entry); ZipEightByteInteger size, compressedSize; if (phased) { size = new ZipEightByteInteger(entry.entry.getSize()); compressedSize = new ZipEightByteInteger(entry.entry.getCompressedSize());"
+      },
+      {
+        "txt": "} else if (entry.entry.getMethod() == STORED && entry.entry.getSize() != ArchiveEntry.SIZE_UNKNOWN) { compressedSize = size = new ZipEightByteInteger(entry.entry.getSize()); } else { compressedSize = size = ZipEightByteInteger.ZERO; } z64.setSize(size); z64.setCompressedSize(compressedSize); entry.entry.setExtra(); }"
+      },
+      {
+        "txt": "if (entry.entry.getMethod() == DEFLATED && hasCompressionLevelChanged) { def.setLevel(level); hasCompressionLevelChanged = false; } writeLocalFileHeader((ZipArchiveEntry) archiveEntry, phased); } private void setDefaults(final ZipArchiveEntry entry) { if (entry.getMethod() == -1) { // not specified entry.setMethod(method); }"
+      },
+      {
+        "txt": "if (entry.getTime() == -1) { // not specified entry.setTime(System.currentTimeMillis()); } } private void validateSizeInformation(final Zip64Mode effectiveMode) throws ZipException { if (entry.entry.getMethod() == STORED && channel == null) { if (entry.entry.getSize() == ArchiveEntry.SIZE_UNKNOWN) { throw new ZipException(\"uncompressed size is required for\" + \" STORED method when not writing to a\""
+      },
+      {
+        "txt": "+ \" file\"); } if (entry.entry.getCrc() == ZipArchiveEntry.CRC_UNKNOWN) { throw new ZipException(\"crc checksum is required for STORED\" + \" method when not writing to a file\"); } entry.entry.setCompressedSize(entry.entry.getSize()); } if ((entry.entry.getSize() >= ZIP64_MAGIC || entry.entry.getCompressedSize() >= ZIP64_MAGIC)"
+      },
+      {
+        "txt": "&& effectiveMode == Zip64Mode.Never) { throw new Zip64RequiredException(Zip64RequiredException .getEntryTooBigMessage(entry.entry)); } } private boolean shouldAddZip64Extra(final ZipArchiveEntry entry, final Zip64Mode mode) { return mode == Zip64Mode.Always || entry.getSize() >= ZIP64_MAGIC || entry.getCompressedSize() >= ZIP64_MAGIC || (entry.getSize() == ArchiveEntry.SIZE_UNKNOWN"
+      },
+      {
+        "txt": "&& channel != null && mode != Zip64Mode.Never); } public void setComment(final String comment) { this.comment = comment; } public void setLevel(final int level) { if (level < Deflater.DEFAULT_COMPRESSION || level > Deflater.BEST_COMPRESSION) { throw new IllegalArgumentException(\"Invalid compression level: \" + level);"
+      },
+      {
+        "txt": "} hasCompressionLevelChanged = (this.level != level); this.level = level; } public void setMethod(final int method) { this.method = method; } @Override public boolean canWriteEntryData(final ArchiveEntry ae) { if (ae instanceof ZipArchiveEntry) {"
+      },
+      {
+        "txt": "final ZipArchiveEntry zae = (ZipArchiveEntry) ae; return zae.getMethod() != ZipMethod.IMPLODING.getCode() && zae.getMethod() != ZipMethod.UNSHRINKING.getCode() && ZipUtil.canHandleEntryData(zae); } return false; } @Override public void write(final byte[] b, final int offset, final int length) throws IOException { if (entry == null) {"
+      },
+      {
+        "txt": "throw new IllegalStateException(\"No current entry\"); } ZipUtil.checkRequestedFeatures(entry.entry); final long writtenThisTime = streamCompressor.write(b, offset, length, entry.entry.getMethod()); count(writtenThisTime); } private void writeCounted(final byte[] data) throws IOException { streamCompressor.writeCounted(data); } private void copyFromZipInputStream(final InputStream src) throws IOException {"
+      },
+      {
+        "txt": "if (entry == null) { throw new IllegalStateException(\"No current entry\"); } ZipUtil.checkRequestedFeatures(entry.entry); entry.hasWritten = true; int length; while ((length = src.read(copyBuffer)) >= 0 ) { streamCompressor.writeCounted(copyBuffer, 0, length); count( length );"
+      },
+      {
+        "txt": "} } @Override public void close() throws IOException { if (!finished) { finish(); } destroy(); } @Override"
+      },
+      {
+        "txt": "public void flush() throws IOException { if (out != null) { out.flush(); } } static final byte[] LFH_SIG = ZipLong.LFH_SIG.getBytes(); //NOSONAR static final byte[] DD_SIG = ZipLong.DD_SIG.getBytes(); //NOSONAR static final byte[] CFH_SIG = ZipLong.CFH_SIG.getBytes(); //NOSONAR static final byte[] EOCD_SIG = ZipLong.getBytes(0X06054B50L); //NOSONAR static final byte[] ZIP64_EOCD_SIG = ZipLong.getBytes(0X06064B50L); //NOSONAR"
+      },
+      {
+        "txt": "static final byte[] ZIP64_EOCD_LOC_SIG = ZipLong.getBytes(0X07064B50L); //NOSONAR protected final void deflate() throws IOException { streamCompressor.deflate(); } protected void writeLocalFileHeader(final ZipArchiveEntry ze) throws IOException { writeLocalFileHeader(ze, false); } private void writeLocalFileHeader(final ZipArchiveEntry ze, final boolean phased) throws IOException { final boolean encodable = zipEncoding.canEncode(ze.getName()); final ByteBuffer name = getName(ze);"
+      },
+      {
+        "txt": "if (createUnicodeExtraFields != UnicodeExtraFieldPolicy.NEVER) { addUnicodeExtraFields(ze, encodable, name); } final long localHeaderStart = streamCompressor.getTotalBytesWritten(); final byte[] localHeader = createLocalFileHeader(ze, name, encodable, phased, localHeaderStart); metaData.put(ze, new EntryMetaData(localHeaderStart, usesDataDescriptor(ze.getMethod()))); entry.localDataStart = localHeaderStart + LFH_CRC_OFFSET; // At crc offset writeCounted(localHeader); entry.dataStart = streamCompressor.getTotalBytesWritten(); }"
+      },
+      {
+        "txt": "private byte[] createLocalFileHeader(final ZipArchiveEntry ze, final ByteBuffer name, final boolean encodable, final boolean phased, long archiveOffset) throws IOException { ResourceAlignmentExtraField oldAlignmentEx = (ResourceAlignmentExtraField) ze.getExtraField(ResourceAlignmentExtraField.ID); if (oldAlignmentEx != null) { ze.removeExtraField(ResourceAlignmentExtraField.ID); } int alignment = ze.getAlignment(); if (alignment <= 0 && oldAlignmentEx != null) { alignment = oldAlignmentEx.getAlignment();"
+      },
+      {
+        "txt": "} if (alignment > 1 || (oldAlignmentEx != null && !oldAlignmentEx.allowMethodChange())) { int oldLength = LFH_FILENAME_OFFSET + name.limit() - name.position() + ze.getLocalFileDataExtra().length; int padding = (int) ((-archiveOffset - oldLength - ZipExtraField.EXTRAFIELD_HEADER_SIZE - ResourceAlignmentExtraField.BASE_SIZE) & (alignment - 1)); ze.addExtraField(new ResourceAlignmentExtraField(alignment, oldAlignmentEx != null && oldAlignmentEx.allowMethodChange(), padding));"
+      },
+      {
+        "txt": "final byte[] extra = ze.getLocalFileDataExtra(); final int nameLen = name.limit() - name.position(); final int len = LFH_FILENAME_OFFSET + nameLen + extra.length; final byte[] buf = new byte[len]; System.arraycopy(LFH_SIG, 0, buf, LFH_SIG_OFFSET, WORD); final int zipMethod = ze.getMethod(); <extra_id_0> putShort(versionNeededToExtract(zipMethod, hasZip64Extra(ze), dataDescriptor), buf, LFH_VERSION_NEEDED_OFFSET); final GeneralPurposeBit generalPurposeBit = getGeneralPurposeBits(!encodable && fallbackToUTF8, dataDescriptor); generalPurposeBit.encode(buf, LFH_GPB_OFFSET); putShort(zipMethod, buf, LFH_METHOD_OFFSET); ZipUtil.toDosTime(calendarInstance, ze.getTime(), buf, LFH_TIME_OFFSET); if (phased){"
+      },
+      {
+        "txt": "ZipUtil.toDosTime(calendarInstance, ze.getTime(), buf, LFH_TIME_OFFSET); if (phased){ putLong(ze.getCrc(), buf, LFH_CRC_OFFSET); } else if (zipMethod == DEFLATED || channel != null) { System.arraycopy(LZERO, 0, buf, LFH_CRC_OFFSET, WORD); } else { putLong(ze.getCrc(), buf, LFH_CRC_OFFSET); } if (hasZip64Extra(entry.entry)){ ZipLong.ZIP64_MAGIC.putLong(buf, LFH_COMPRESSED_SIZE_OFFSET);"
+      },
+      {
+        "txt": "ZipLong.ZIP64_MAGIC.putLong(buf, LFH_ORIGINAL_SIZE_OFFSET); } else if (phased) { putLong(ze.getCompressedSize(), buf, LFH_COMPRESSED_SIZE_OFFSET); putLong(ze.getSize(), buf, LFH_ORIGINAL_SIZE_OFFSET); } else if (zipMethod == DEFLATED || channel != null) { System.arraycopy(LZERO, 0, buf, LFH_COMPRESSED_SIZE_OFFSET, WORD); System.arraycopy(LZERO, 0, buf, LFH_ORIGINAL_SIZE_OFFSET, WORD); } else { // Stored putLong(ze.getSize(), buf, LFH_COMPRESSED_SIZE_OFFSET); putLong(ze.getSize(), buf, LFH_ORIGINAL_SIZE_OFFSET);"
+      },
+      {
+        "txt": "} putShort(nameLen, buf, LFH_FILENAME_LENGTH_OFFSET); putShort(extra.length, buf, LFH_EXTRA_LENGTH_OFFSET); System.arraycopy( name.array(), name.arrayOffset(), buf, LFH_FILENAME_OFFSET, nameLen); System.arraycopy(extra, 0, buf, LFH_FILENAME_OFFSET + nameLen, extra.length); return buf; } private void addUnicodeExtraFields(final ZipArchiveEntry ze, final boolean encodable, final ByteBuffer name) throws IOException {"
+      },
+      {
+        "txt": "if (createUnicodeExtraFields == UnicodeExtraFieldPolicy.ALWAYS || !encodable) { ze.addExtraField(new UnicodePathExtraField(ze.getName(), name.array(), name.arrayOffset(), name.limit() - name.position())); } final String comm = ze.getComment(); if (comm != null && !\"\".equals(comm)) {"
+      },
+      {
+        "txt": "final boolean commentEncodable = zipEncoding.canEncode(comm); if (createUnicodeExtraFields == UnicodeExtraFieldPolicy.ALWAYS || !commentEncodable) { final ByteBuffer commentB = getEntryEncoding(ze).encode(comm); ze.addExtraField(new UnicodeCommentExtraField(comm, commentB.array(), commentB.arrayOffset(), commentB.limit() - commentB.position()) );"
+      },
+      {
+        "txt": "} } } protected void writeDataDescriptor(final ZipArchiveEntry ze) throws IOException { if (ze.getMethod() != DEFLATED || channel != null) { return; } writeCounted(DD_SIG); writeCounted(ZipLong.getBytes(ze.getCrc())); if (!hasZip64Extra(ze)) {"
+      },
+      {
+        "txt": "writeCounted(ZipLong.getBytes(ze.getCompressedSize())); writeCounted(ZipLong.getBytes(ze.getSize())); } else { writeCounted(ZipEightByteInteger.getBytes(ze.getCompressedSize())); writeCounted(ZipEightByteInteger.getBytes(ze.getSize())); } } protected void writeCentralFileHeader(final ZipArchiveEntry ze) throws IOException { final byte[] centralFileHeader = createCentralFileHeader(ze); writeCounted(centralFileHeader);"
+      },
+      {
+        "txt": "} private byte[] createCentralFileHeader(final ZipArchiveEntry ze) throws IOException { final EntryMetaData entryMetaData = metaData.get(ze); final boolean needsZip64Extra = hasZip64Extra(ze) || ze.getCompressedSize() >= ZIP64_MAGIC || ze.getSize() >= ZIP64_MAGIC || entryMetaData.offset >= ZIP64_MAGIC || zip64Mode == Zip64Mode.Always; if (needsZip64Extra && zip64Mode == Zip64Mode.Never) { throw new Zip64RequiredException(Zip64RequiredException"
+      },
+      {
+        "txt": ".ARCHIVE_TOO_BIG_MESSAGE); } handleZip64Extra(ze, entryMetaData.offset, needsZip64Extra); return createCentralFileHeader(ze, getName(ze), entryMetaData, needsZip64Extra); } private byte[] createCentralFileHeader(final ZipArchiveEntry ze, final ByteBuffer name, final EntryMetaData entryMetaData, final boolean needsZip64Extra) throws IOException { final byte[] extra = ze.getCentralDirectoryExtra(); String comm = ze.getComment();"
+      },
+      {
+        "txt": "if (comm == null) { comm = \"\"; } final ByteBuffer commentB = getEntryEncoding(ze).encode(comm); final int nameLen = name.limit() - name.position(); final int commentLen = commentB.limit() - commentB.position(); final int len= CFH_FILENAME_OFFSET + nameLen + extra.length + commentLen; final byte[] buf = new byte[len]; System.arraycopy(CFH_SIG, 0, buf, CFH_SIG_OFFSET, WORD); putShort((ze.getPlatform() << 8) | (!hasUsedZip64 ? DATA_DESCRIPTOR_MIN_VERSION : ZIP64_MIN_VERSION),"
+      },
+      {
+        "txt": "buf, CFH_VERSION_MADE_BY_OFFSET); final int zipMethod = ze.getMethod(); final boolean encodable = zipEncoding.canEncode(ze.getName()); putShort(versionNeededToExtract(zipMethod, needsZip64Extra, entryMetaData.usesDataDescriptor), buf, CFH_VERSION_NEEDED_OFFSET); getGeneralPurposeBits(!encodable && fallbackToUTF8, entryMetaData.usesDataDescriptor).encode(buf, CFH_GPB_OFFSET); putShort(zipMethod, buf, CFH_METHOD_OFFSET); ZipUtil.toDosTime(calendarInstance, ze.getTime(), buf, CFH_TIME_OFFSET); putLong(ze.getCrc(), buf, CFH_CRC_OFFSET); if (ze.getCompressedSize() >= ZIP64_MAGIC"
+      },
+      {
+        "txt": "|| ze.getSize() >= ZIP64_MAGIC || zip64Mode == Zip64Mode.Always) { ZipLong.ZIP64_MAGIC.putLong(buf, CFH_COMPRESSED_SIZE_OFFSET); ZipLong.ZIP64_MAGIC.putLong(buf, CFH_ORIGINAL_SIZE_OFFSET); } else { putLong(ze.getCompressedSize(), buf, CFH_COMPRESSED_SIZE_OFFSET); putLong(ze.getSize(), buf, CFH_ORIGINAL_SIZE_OFFSET); } putShort(nameLen, buf, CFH_FILENAME_LENGTH_OFFSET); putShort(extra.length, buf, CFH_EXTRA_LENGTH_OFFSET);"
+      },
+      {
+        "txt": "putShort(commentLen, buf, CFH_COMMENT_LENGTH_OFFSET); System.arraycopy(ZERO, 0, buf, CFH_DISK_NUMBER_OFFSET, SHORT); putShort(ze.getInternalAttributes(), buf, CFH_INTERNAL_ATTRIBUTES_OFFSET); putLong(ze.getExternalAttributes(), buf, CFH_EXTERNAL_ATTRIBUTES_OFFSET); if (entryMetaData.offset >= ZIP64_MAGIC || zip64Mode == Zip64Mode.Always) { putLong(ZIP64_MAGIC, buf, CFH_LFH_OFFSET); } else { putLong(Math.min(entryMetaData.offset, ZIP64_MAGIC), buf, CFH_LFH_OFFSET); } System.arraycopy(name.array(), name.arrayOffset(), buf, CFH_FILENAME_OFFSET, nameLen);"
+      },
+      {
+        "txt": "final int extraStart = CFH_FILENAME_OFFSET + nameLen; System.arraycopy(extra, 0, buf, extraStart, extra.length); final int commentStart = extraStart + extra.length; System.arraycopy(commentB.array(), commentB.arrayOffset(), buf, commentStart, commentLen); return buf; } private void handleZip64Extra(final ZipArchiveEntry ze, final long lfhOffset, final boolean needsZip64Extra) { if (needsZip64Extra) { final Zip64ExtendedInformationExtraField z64 = getZip64Extra(ze);"
+      },
+      {
+        "txt": "if (ze.getCompressedSize() >= ZIP64_MAGIC || ze.getSize() >= ZIP64_MAGIC || zip64Mode == Zip64Mode.Always) { z64.setCompressedSize(new ZipEightByteInteger(ze.getCompressedSize())); z64.setSize(new ZipEightByteInteger(ze.getSize())); } else { z64.setCompressedSize(null); z64.setSize(null); } if (lfhOffset >= ZIP64_MAGIC || zip64Mode == Zip64Mode.Always) {"
+      },
+      {
+        "txt": "z64.setRelativeHeaderOffset(new ZipEightByteInteger(lfhOffset)); } ze.setExtra(); } } protected void writeCentralDirectoryEnd() throws IOException { writeCounted(EOCD_SIG); writeCounted(ZERO); writeCounted(ZERO); final int numberOfEntries = entries.size();"
+      },
+      {
+        "txt": "if (numberOfEntries > ZIP64_MAGIC_SHORT && zip64Mode == Zip64Mode.Never) { throw new Zip64RequiredException(Zip64RequiredException .TOO_MANY_ENTRIES_MESSAGE); } if (cdOffset > ZIP64_MAGIC && zip64Mode == Zip64Mode.Never) { throw new Zip64RequiredException(Zip64RequiredException .ARCHIVE_TOO_BIG_MESSAGE); } final byte[] num = ZipShort.getBytes(Math.min(numberOfEntries,"
+      },
+      {
+        "txt": "ZIP64_MAGIC_SHORT)); writeCounted(num); writeCounted(num); writeCounted(ZipLong.getBytes(Math.min(cdLength, ZIP64_MAGIC))); writeCounted(ZipLong.getBytes(Math.min(cdOffset, ZIP64_MAGIC))); final ByteBuffer data = this.zipEncoding.encode(comment); final int dataLen = data.limit() - data.position(); writeCounted(ZipShort.getBytes(dataLen)); streamCompressor.writeCounted(data.array(), data.arrayOffset(), dataLen); }"
+      },
+      {
+        "txt": "protected void writeZip64CentralDirectory() throws IOException { if (zip64Mode == Zip64Mode.Never) { return; } if (!hasUsedZip64 && (cdOffset >= ZIP64_MAGIC || cdLength >= ZIP64_MAGIC || entries.size() >= ZIP64_MAGIC_SHORT)) { hasUsedZip64 = true; } if (!hasUsedZip64) {"
+      },
+      {
+        "txt": "return; } final long offset = streamCompressor.getTotalBytesWritten(); writeOut(ZIP64_EOCD_SIG); writeOut(ZipEightByteInteger .getBytes(SHORT /* version made by */ + SHORT /* version needed to extract */ + WORD /* disk number */ + WORD /* disk with central directory */ + DWORD /* number of entries in CD on this disk */"
+      },
+      {
+        "txt": "+ DWORD /* total number of entries */ + DWORD /* size of CD */ + (long) DWORD /* offset of CD */ )); writeOut(ZipShort.getBytes(ZIP64_MIN_VERSION)); writeOut(ZipShort.getBytes(ZIP64_MIN_VERSION)); writeOut(LZERO); writeOut(LZERO); final byte[] num = ZipEightByteInteger.getBytes(entries.size()); writeOut(num);"
+      },
+      {
+        "txt": "writeOut(num); writeOut(ZipEightByteInteger.getBytes(cdLength)); writeOut(ZipEightByteInteger.getBytes(cdOffset)); writeOut(ZIP64_EOCD_LOC_SIG); writeOut(LZERO); writeOut(ZipEightByteInteger.getBytes(offset)); writeOut(ONE); } protected final void writeOut(final byte[] data) throws IOException { streamCompressor.writeOut(data, 0, data.length);"
+      },
+      {
+        "txt": "} protected final void writeOut(final byte[] data, final int offset, final int length) throws IOException { streamCompressor.writeOut(data, offset, length); } private GeneralPurposeBit getGeneralPurposeBits(final boolean utfFallback, boolean usesDataDescriptor) { final GeneralPurposeBit b = new GeneralPurposeBit(); b.useUTF8ForNames(useUTF8Flag || utfFallback); if (usesDataDescriptor) { b.useDataDescriptor(true);"
+      },
+      {
+        "txt": "} return b; } private int versionNeededToExtract(final int zipMethod, final boolean zip64, final boolean usedDataDescriptor) { if (zip64) { return ZIP64_MIN_VERSION; } if (usedDataDescriptor) { return DATA_DESCRIPTOR_MIN_VERSION; }"
+      },
+      {
+        "txt": "return versionNeededToExtractMethod(zipMethod); } private boolean usesDataDescriptor(final int zipMethod) { return zipMethod == DEFLATED && channel == null; } private int versionNeededToExtractMethod(int zipMethod) { return zipMethod == DEFLATED ? DEFLATE_MIN_VERSION : INITIAL_VERSION; } @Override public ArchiveEntry createArchiveEntry(final File inputFile, final String entryName)"
+      },
+      {
+        "txt": "throws IOException { if (finished) { throw new IOException(\"Stream has already been finished\"); } return new ZipArchiveEntry(inputFile, entryName); } private Zip64ExtendedInformationExtraField getZip64Extra(final ZipArchiveEntry ze) { if (entry != null) { entry.causedUseOfZip64 = !hasUsedZip64;"
+      },
+      {
+        "txt": "} hasUsedZip64 = true; Zip64ExtendedInformationExtraField z64 = (Zip64ExtendedInformationExtraField) ze.getExtraField(Zip64ExtendedInformationExtraField .HEADER_ID); if (z64 == null) { System.err.println(\"Adding z64 for \" + ze.getName() + \", method: \" + ze.getMethod() + \" (\" + (ze.getMethod() == STORED) + \")\""
+      },
+      {
+        "txt": "+ \", channel: \" + (channel != null)); z64 = new Zip64ExtendedInformationExtraField(); } ze.addAsFirstExtraField(z64); return z64; } private boolean hasZip64Extra(final ZipArchiveEntry ze) { return ze.getExtraField(Zip64ExtendedInformationExtraField .HEADER_ID) != null;"
+      },
+      {
+        "txt": "} private Zip64Mode getEffectiveZip64Mode(final ZipArchiveEntry ze) { if (zip64Mode != Zip64Mode.AsNeeded || channel != null || ze.getMethod() != DEFLATED || ze.getSize() != ArchiveEntry.SIZE_UNKNOWN) { return zip64Mode; } return Zip64Mode.Never; }"
+      },
+      {
+        "txt": "private ZipEncoding getEntryEncoding(final ZipArchiveEntry ze) { final boolean encodable = zipEncoding.canEncode(ze.getName()); return !encodable && fallbackToUTF8 ? ZipEncodingHelper.UTF8_ZIP_ENCODING : zipEncoding; } private ByteBuffer getName(final ZipArchiveEntry ze) throws IOException { return getEntryEncoding(ze).encode(ze.getName()); } void destroy() throws IOException { if (channel != null) {"
+      },
+      {
+        "txt": "channel.close(); } if (out != null) { out.close(); } } public static final class UnicodeExtraFieldPolicy { public static final UnicodeExtraFieldPolicy ALWAYS = new UnicodeExtraFieldPolicy(\"always\"); public static final UnicodeExtraFieldPolicy NEVER = new UnicodeExtraFieldPolicy(\"never\"); public static final UnicodeExtraFieldPolicy NOT_ENCODEABLE ="
+      },
+      {
+        "txt": "new UnicodeExtraFieldPolicy(\"not encodeable\"); private final String name; private UnicodeExtraFieldPolicy(final String n) { name = n; } @Override public String toString() { return name; } }"
+      },
+      {
+        "txt": "private static final class CurrentEntry { private CurrentEntry(final ZipArchiveEntry entry) { this.entry = entry; } private final ZipArchiveEntry entry; private long localDataStart = 0; private long dataStart = 0; private long bytesRead = 0; private boolean causedUseOfZip64 = false; private boolean hasWritten;"
+      },
+      {
+        "txt": "} private static final class EntryMetaData { private final long offset; private final boolean usesDataDescriptor; private EntryMetaData(long offset, boolean usesDataDescriptor) { this.offset = offset; this.usesDataDescriptor = usesDataDescriptor; } }"
+      }
+    ]
+  },
+  {
+    "id": 1112,
+    "file_path": "src/main/java/org/apache/commons/compress/archivers/zip/ZipArchiveOutputStream.java",
+    "start-bug-line": 1171,
+    "end-bug-line": 1171,
+    "bug": "if (ze.getMethod() != DEFLATED || channel != null) {",
+    "fix": "if (!usesDataDescriptor(ze.getMethod(), false)) {",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.compress.archivers.zip; import java.io.ByteArrayOutputStream; import java.io.File;"
+      },
+      {
+        "txt": "import java.io.FileOutputStream; import java.io.IOException; import java.io.InputStream; import java.io.OutputStream; import java.nio.ByteBuffer; import java.nio.channels.SeekableByteChannel; import java.nio.file.Files; import java.nio.file.StandardOpenOption; import java.util.Calendar; import java.util.EnumSet;"
+      },
+      {
+        "txt": "import java.util.HashMap; import java.util.LinkedList; import java.util.List; import java.util.Map; import java.util.zip.Deflater; import java.util.zip.ZipException; import org.apache.commons.compress.archivers.ArchiveEntry; import org.apache.commons.compress.archivers.ArchiveOutputStream; import org.apache.commons.compress.utils.IOUtils; import static org.apache.commons.compress.archivers.zip.ZipConstants.DATA_DESCRIPTOR_MIN_VERSION;"
+      },
+      {
+        "txt": "import static org.apache.commons.compress.archivers.zip.ZipConstants.DEFLATE_MIN_VERSION; import static org.apache.commons.compress.archivers.zip.ZipConstants.DWORD; import static org.apache.commons.compress.archivers.zip.ZipConstants.INITIAL_VERSION; import static org.apache.commons.compress.archivers.zip.ZipConstants.SHORT; import static org.apache.commons.compress.archivers.zip.ZipConstants.WORD; import static org.apache.commons.compress.archivers.zip.ZipConstants.ZIP64_MAGIC; import static org.apache.commons.compress.archivers.zip.ZipConstants.ZIP64_MAGIC_SHORT; import static org.apache.commons.compress.archivers.zip.ZipConstants.ZIP64_MIN_VERSION; import static org.apache.commons.compress.archivers.zip.ZipLong.putLong; import static org.apache.commons.compress.archivers.zip.ZipShort.putShort;"
+      },
+      {
+        "txt": "public class ZipArchiveOutputStream extends ArchiveOutputStream { static final int BUFFER_SIZE = 512; private static final int LFH_SIG_OFFSET = 0; private static final int LFH_VERSION_NEEDED_OFFSET = 4; private static final int LFH_GPB_OFFSET = 6; private static final int LFH_METHOD_OFFSET = 8; private static final int LFH_TIME_OFFSET = 10; private static final int LFH_CRC_OFFSET = 14; private static final int LFH_COMPRESSED_SIZE_OFFSET = 18; private static final int LFH_ORIGINAL_SIZE_OFFSET = 22;"
+      },
+      {
+        "txt": "private static final int LFH_FILENAME_LENGTH_OFFSET = 26; private static final int LFH_EXTRA_LENGTH_OFFSET = 28; private static final int LFH_FILENAME_OFFSET = 30; private static final int CFH_SIG_OFFSET = 0; private static final int CFH_VERSION_MADE_BY_OFFSET = 4; private static final int CFH_VERSION_NEEDED_OFFSET = 6; private static final int CFH_GPB_OFFSET = 8; private static final int CFH_METHOD_OFFSET = 10; private static final int CFH_TIME_OFFSET = 12; private static final int CFH_CRC_OFFSET = 16;"
+      },
+      {
+        "txt": "private static final int CFH_COMPRESSED_SIZE_OFFSET = 20; private static final int CFH_ORIGINAL_SIZE_OFFSET = 24; private static final int CFH_FILENAME_LENGTH_OFFSET = 28; private static final int CFH_EXTRA_LENGTH_OFFSET = 30; private static final int CFH_COMMENT_LENGTH_OFFSET = 32; private static final int CFH_DISK_NUMBER_OFFSET = 34; private static final int CFH_INTERNAL_ATTRIBUTES_OFFSET = 36; private static final int CFH_EXTERNAL_ATTRIBUTES_OFFSET = 38; private static final int CFH_LFH_OFFSET = 42; private static final int CFH_FILENAME_OFFSET = 46;"
+      },
+      {
+        "txt": "protected boolean finished = false; public static final int DEFLATED = java.util.zip.ZipEntry.DEFLATED; public static final int DEFAULT_COMPRESSION = Deflater.DEFAULT_COMPRESSION; public static final int STORED = java.util.zip.ZipEntry.STORED; static final String DEFAULT_ENCODING = ZipEncodingHelper.UTF8; @Deprecated public static final int EFS_FLAG = GeneralPurposeBit.UFT8_NAMES_FLAG; private static final byte[] EMPTY = new byte[0]; private CurrentEntry entry; private String comment = \"\";"
+      },
+      {
+        "txt": "private int level = DEFAULT_COMPRESSION; private boolean hasCompressionLevelChanged = false; private int method = java.util.zip.ZipEntry.DEFLATED; private final List<ZipArchiveEntry> entries = new LinkedList<>(); private final StreamCompressor streamCompressor; private long cdOffset = 0; private long cdLength = 0; private static final byte[] ZERO = {0, 0}; private static final byte[] LZERO = {0, 0, 0, 0};"
+      },
+      {
+        "txt": "private static final byte[] ONE = ZipLong.getBytes(1L); private final Map<ZipArchiveEntry, EntryMetaData> metaData = new HashMap<>(); private String encoding = DEFAULT_ENCODING; private ZipEncoding zipEncoding = ZipEncodingHelper.getZipEncoding(DEFAULT_ENCODING); protected final Deflater def; private final SeekableByteChannel channel; private final OutputStream out; private boolean useUTF8Flag = true;"
+      },
+      {
+        "txt": "private boolean fallbackToUTF8 = false; private UnicodeExtraFieldPolicy createUnicodeExtraFields = UnicodeExtraFieldPolicy.NEVER; private boolean hasUsedZip64 = false; private Zip64Mode zip64Mode = Zip64Mode.AsNeeded; private final byte[] copyBuffer = new byte[32768]; private final Calendar calendarInstance = Calendar.getInstance(); public ZipArchiveOutputStream(final OutputStream out) { this.out = out; this.channel = null; def = new Deflater(level, true);"
+      },
+      {
+        "txt": "streamCompressor = StreamCompressor.create(out, def); } public ZipArchiveOutputStream(final File file) throws IOException { def = new Deflater(level, true); OutputStream o = null; SeekableByteChannel _channel = null; StreamCompressor _streamCompressor = null; try { _channel = Files.newByteChannel(file.toPath(), EnumSet.of(StandardOpenOption.CREATE, StandardOpenOption.WRITE,"
+      },
+      {
+        "txt": "StandardOpenOption.READ, StandardOpenOption.TRUNCATE_EXISTING)); _streamCompressor = StreamCompressor.create(_channel, def); //NOSONAR } catch (final IOException e) { IOUtils.closeQuietly(_channel); _channel = null; o = new FileOutputStream(file); _streamCompressor = StreamCompressor.create(o, def); } out = o;"
+      },
+      {
+        "txt": "channel = _channel; streamCompressor = _streamCompressor; } public ZipArchiveOutputStream(SeekableByteChannel channel) throws IOException { this.channel = channel; def = new Deflater(level, true); streamCompressor = StreamCompressor.create(channel, def); out = null; } public boolean isSeekable() {"
+      },
+      {
+        "txt": "return channel != null; } public void setEncoding(final String encoding) { this.encoding = encoding; this.zipEncoding = ZipEncodingHelper.getZipEncoding(encoding); if (useUTF8Flag && !ZipEncodingHelper.isUTF8(encoding)) { useUTF8Flag = false; } } public String getEncoding() {"
+      },
+      {
+        "txt": "return encoding; } public void setUseLanguageEncodingFlag(final boolean b) { useUTF8Flag = b && ZipEncodingHelper.isUTF8(encoding); } public void setCreateUnicodeExtraFields(final UnicodeExtraFieldPolicy b) { createUnicodeExtraFields = b; } public void setFallbackToUTF8(final boolean b) { fallbackToUTF8 = b;"
+      },
+      {
+        "txt": "} public void setUseZip64(final Zip64Mode mode) { zip64Mode = mode; } @Override public void finish() throws IOException { if (finished) { throw new IOException(\"This archive has already been finished\"); } if (entry != null) {"
+      },
+      {
+        "txt": "throw new IOException(\"This archive contains unclosed entries.\"); } cdOffset = streamCompressor.getTotalBytesWritten(); writeCentralDirectoryInChunks(); cdLength = streamCompressor.getTotalBytesWritten() - cdOffset; writeZip64CentralDirectory(); writeCentralDirectoryEnd(); metaData.clear(); entries.clear(); streamCompressor.close();"
+      },
+      {
+        "txt": "finished = true; } private void writeCentralDirectoryInChunks() throws IOException { final int NUM_PER_WRITE = 1000; final ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream(70 * NUM_PER_WRITE); int count = 0; for (final ZipArchiveEntry ze : entries) { byteArrayOutputStream.write(createCentralFileHeader(ze)); if (++count > NUM_PER_WRITE){ writeCounted(byteArrayOutputStream.toByteArray());"
+      },
+      {
+        "txt": "byteArrayOutputStream.reset(); count = 0; } } writeCounted(byteArrayOutputStream.toByteArray()); } @Override public void closeArchiveEntry() throws IOException { preClose(); flushDeflater();"
+      },
+      {
+        "txt": "final long bytesWritten = streamCompressor.getTotalBytesWritten() - entry.dataStart; final long realCrc = streamCompressor.getCrc32(); entry.bytesRead = streamCompressor.getBytesRead(); final Zip64Mode effectiveMode = getEffectiveZip64Mode(entry.entry); final boolean actuallyNeedsZip64 = handleSizesAndCrc(bytesWritten, realCrc, effectiveMode); closeEntry(actuallyNeedsZip64, false); streamCompressor.reset(); } private void closeCopiedEntry(final boolean phased) throws IOException { preClose();"
+      },
+      {
+        "txt": "entry.bytesRead = entry.entry.getSize(); final Zip64Mode effectiveMode = getEffectiveZip64Mode(entry.entry); final boolean actuallyNeedsZip64 = checkIfNeedsZip64(effectiveMode); closeEntry(actuallyNeedsZip64, phased); } private void closeEntry(final boolean actuallyNeedsZip64, final boolean phased) throws IOException { if (!phased && channel != null) { rewriteSizesAndCrc(actuallyNeedsZip64); } if (!phased) {"
+      },
+      {
+        "txt": "writeDataDescriptor(entry.entry); } entry = null; } private void preClose() throws IOException { if (finished) { throw new IOException(\"Stream has already been finished\"); } if (entry == null) { throw new IOException(\"No current entry to close\");"
+      },
+      {
+        "txt": "} if (!entry.hasWritten) { write(EMPTY, 0, 0); } } public void addRawArchiveEntry(final ZipArchiveEntry entry, final InputStream rawStream) throws IOException { final ZipArchiveEntry ae = new ZipArchiveEntry(entry); if (hasZip64Extra(ae)) { ae.removeExtraField(Zip64ExtendedInformationExtraField.HEADER_ID);"
+      },
+      {
+        "txt": "} final boolean is2PhaseSource = ae.getCrc() != ZipArchiveEntry.CRC_UNKNOWN && ae.getSize() != ArchiveEntry.SIZE_UNKNOWN && ae.getCompressedSize() != ArchiveEntry.SIZE_UNKNOWN; putArchiveEntry(ae, is2PhaseSource); copyFromZipInputStream(rawStream); closeCopiedEntry(is2PhaseSource); } private void flushDeflater() throws IOException { if (entry.entry.getMethod() == DEFLATED) {"
+      },
+      {
+        "txt": "streamCompressor.flushDeflater(); } } private boolean handleSizesAndCrc(final long bytesWritten, final long crc, final Zip64Mode effectiveMode) throws ZipException { if (entry.entry.getMethod() == DEFLATED) { entry.entry.setSize(def.getBytesRead()); entry.entry.setSize(entry.bytesRead); entry.entry.setCompressedSize(bytesWritten);"
+      },
+      {
+        "txt": "entry.entry.setCrc(crc); } else if (channel == null) { if (entry.entry.getCrc() != crc) { throw new ZipException(\"bad CRC checksum for entry \" + entry.entry.getName() + \": \" + Long.toHexString(entry.entry.getCrc()) + \" instead of \" + Long.toHexString(crc)); } if (entry.entry.getSize() != bytesWritten) {"
+      },
+      {
+        "txt": "throw new ZipException(\"bad size for entry \" + entry.entry.getName() + \": \" + entry.entry.getSize() + \" instead of \" + bytesWritten); } } else { /* method is STORED and we used SeekableByteChannel */ entry.entry.setSize(bytesWritten); entry.entry.setCompressedSize(bytesWritten); entry.entry.setCrc(crc);"
+      },
+      {
+        "txt": "} return checkIfNeedsZip64(effectiveMode); } private boolean checkIfNeedsZip64(final Zip64Mode effectiveMode) throws ZipException { final boolean actuallyNeedsZip64 = isZip64Required(entry.entry, effectiveMode); if (actuallyNeedsZip64 && effectiveMode == Zip64Mode.Never) { throw new Zip64RequiredException(Zip64RequiredException.getEntryTooBigMessage(entry.entry)); } return actuallyNeedsZip64;"
+      },
+      {
+        "txt": "} private boolean isZip64Required(final ZipArchiveEntry entry1, final Zip64Mode requestedMode) { return requestedMode == Zip64Mode.Always || isTooLageForZip32(entry1); } private boolean isTooLageForZip32(final ZipArchiveEntry zipArchiveEntry){ return zipArchiveEntry.getSize() >= ZIP64_MAGIC || zipArchiveEntry.getCompressedSize() >= ZIP64_MAGIC; } private void rewriteSizesAndCrc(final boolean actuallyNeedsZip64) throws IOException { final long save = channel.position();"
+      },
+      {
+        "txt": "channel.position(entry.localDataStart); writeOut(ZipLong.getBytes(entry.entry.getCrc())); if (!hasZip64Extra(entry.entry) || !actuallyNeedsZip64) { writeOut(ZipLong.getBytes(entry.entry.getCompressedSize())); writeOut(ZipLong.getBytes(entry.entry.getSize())); } else { writeOut(ZipLong.ZIP64_MAGIC.getBytes()); writeOut(ZipLong.ZIP64_MAGIC.getBytes()); } if (hasZip64Extra(entry.entry)) {"
+      },
+      {
+        "txt": "final ByteBuffer name = getName(entry.entry); final int nameLen = name.limit() - name.position(); channel.position(entry.localDataStart + 3 * WORD + 2 * SHORT + nameLen + 2 * SHORT); writeOut(ZipEightByteInteger.getBytes(entry.entry.getSize())); writeOut(ZipEightByteInteger.getBytes(entry.entry.getCompressedSize())); if (!actuallyNeedsZip64) { channel.position(entry.localDataStart - 5 * SHORT); writeOut(ZipShort.getBytes(versionNeededToExtract(entry.entry.getMethod(), false, false))); entry.entry.removeExtraField(Zip64ExtendedInformationExtraField"
+      },
+      {
+        "txt": ".HEADER_ID); entry.entry.setExtra(); if (entry.causedUseOfZip64) { hasUsedZip64 = false; } } } channel.position(save); } @Override"
+      },
+      {
+        "txt": "public void putArchiveEntry(final ArchiveEntry archiveEntry) throws IOException { putArchiveEntry(archiveEntry, false); } private void putArchiveEntry(final ArchiveEntry archiveEntry, final boolean phased) throws IOException { if (finished) { throw new IOException(\"Stream has already been finished\"); } if (entry != null) { closeArchiveEntry(); }"
+      },
+      {
+        "txt": "entry = new CurrentEntry((ZipArchiveEntry) archiveEntry); entries.add(entry.entry); setDefaults(entry.entry); final Zip64Mode effectiveMode = getEffectiveZip64Mode(entry.entry); validateSizeInformation(effectiveMode); if (shouldAddZip64Extra(entry.entry, effectiveMode)) { final Zip64ExtendedInformationExtraField z64 = getZip64Extra(entry.entry); ZipEightByteInteger size, compressedSize; if (phased) { size = new ZipEightByteInteger(entry.entry.getSize());"
+      },
+      {
+        "txt": "compressedSize = new ZipEightByteInteger(entry.entry.getCompressedSize()); } else if (entry.entry.getMethod() == STORED && entry.entry.getSize() != ArchiveEntry.SIZE_UNKNOWN) { compressedSize = size = new ZipEightByteInteger(entry.entry.getSize()); } else { compressedSize = size = ZipEightByteInteger.ZERO; } z64.setSize(size); z64.setCompressedSize(compressedSize); entry.entry.setExtra();"
+      },
+      {
+        "txt": "} if (entry.entry.getMethod() == DEFLATED && hasCompressionLevelChanged) { def.setLevel(level); hasCompressionLevelChanged = false; } writeLocalFileHeader((ZipArchiveEntry) archiveEntry, phased); } private void setDefaults(final ZipArchiveEntry entry) { if (entry.getMethod() == -1) { // not specified entry.setMethod(method);"
+      },
+      {
+        "txt": "} if (entry.getTime() == -1) { // not specified entry.setTime(System.currentTimeMillis()); } } private void validateSizeInformation(final Zip64Mode effectiveMode) throws ZipException { if (entry.entry.getMethod() == STORED && channel == null) { if (entry.entry.getSize() == ArchiveEntry.SIZE_UNKNOWN) { throw new ZipException(\"uncompressed size is required for\""
+      },
+      {
+        "txt": "+ \" STORED method when not writing to a\" + \" file\"); } if (entry.entry.getCrc() == ZipArchiveEntry.CRC_UNKNOWN) { throw new ZipException(\"crc checksum is required for STORED\" + \" method when not writing to a file\"); } entry.entry.setCompressedSize(entry.entry.getSize()); } if ((entry.entry.getSize() >= ZIP64_MAGIC"
+      },
+      {
+        "txt": "|| entry.entry.getCompressedSize() >= ZIP64_MAGIC) && effectiveMode == Zip64Mode.Never) { throw new Zip64RequiredException(Zip64RequiredException .getEntryTooBigMessage(entry.entry)); } } private boolean shouldAddZip64Extra(final ZipArchiveEntry entry, final Zip64Mode mode) { return mode == Zip64Mode.Always || entry.getSize() >= ZIP64_MAGIC || entry.getCompressedSize() >= ZIP64_MAGIC"
+      },
+      {
+        "txt": "|| (entry.getSize() == ArchiveEntry.SIZE_UNKNOWN && channel != null && mode != Zip64Mode.Never); } public void setComment(final String comment) { this.comment = comment; } public void setLevel(final int level) { if (level < Deflater.DEFAULT_COMPRESSION || level > Deflater.BEST_COMPRESSION) { throw new IllegalArgumentException(\"Invalid compression level: \""
+      },
+      {
+        "txt": "+ level); } hasCompressionLevelChanged = (this.level != level); this.level = level; } public void setMethod(final int method) { this.method = method; } @Override public boolean canWriteEntryData(final ArchiveEntry ae) {"
+      },
+      {
+        "txt": "if (ae instanceof ZipArchiveEntry) { final ZipArchiveEntry zae = (ZipArchiveEntry) ae; return zae.getMethod() != ZipMethod.IMPLODING.getCode() && zae.getMethod() != ZipMethod.UNSHRINKING.getCode() && ZipUtil.canHandleEntryData(zae); } return false; } @Override public void write(final byte[] b, final int offset, final int length) throws IOException {"
+      },
+      {
+        "txt": "if (entry == null) { throw new IllegalStateException(\"No current entry\"); } ZipUtil.checkRequestedFeatures(entry.entry); final long writtenThisTime = streamCompressor.write(b, offset, length, entry.entry.getMethod()); count(writtenThisTime); } private void writeCounted(final byte[] data) throws IOException { streamCompressor.writeCounted(data); }"
+      },
+      {
+        "txt": "private void copyFromZipInputStream(final InputStream src) throws IOException { if (entry == null) { throw new IllegalStateException(\"No current entry\"); } ZipUtil.checkRequestedFeatures(entry.entry); entry.hasWritten = true; int length; while ((length = src.read(copyBuffer)) >= 0 ) { streamCompressor.writeCounted(copyBuffer, 0, length);"
+      },
+      {
+        "txt": "count( length ); } } @Override public void close() throws IOException { if (!finished) { finish(); } destroy(); }"
+      },
+      {
+        "txt": "@Override public void flush() throws IOException { if (out != null) { out.flush(); } } static final byte[] LFH_SIG = ZipLong.LFH_SIG.getBytes(); //NOSONAR static final byte[] DD_SIG = ZipLong.DD_SIG.getBytes(); //NOSONAR static final byte[] CFH_SIG = ZipLong.CFH_SIG.getBytes(); //NOSONAR static final byte[] EOCD_SIG = ZipLong.getBytes(0X06054B50L); //NOSONAR"
+      },
+      {
+        "txt": "static final byte[] ZIP64_EOCD_SIG = ZipLong.getBytes(0X06064B50L); //NOSONAR static final byte[] ZIP64_EOCD_LOC_SIG = ZipLong.getBytes(0X07064B50L); //NOSONAR protected final void deflate() throws IOException { streamCompressor.deflate(); } protected void writeLocalFileHeader(final ZipArchiveEntry ze) throws IOException { writeLocalFileHeader(ze, false); } private void writeLocalFileHeader(final ZipArchiveEntry ze, final boolean phased) throws IOException { final boolean encodable = zipEncoding.canEncode(ze.getName());"
+      },
+      {
+        "txt": "final ByteBuffer name = getName(ze); if (createUnicodeExtraFields != UnicodeExtraFieldPolicy.NEVER) { addUnicodeExtraFields(ze, encodable, name); } final long localHeaderStart = streamCompressor.getTotalBytesWritten(); final byte[] localHeader = createLocalFileHeader(ze, name, encodable, phased, localHeaderStart); metaData.put(ze, new EntryMetaData(localHeaderStart, usesDataDescriptor(ze.getMethod()))); entry.localDataStart = localHeaderStart + LFH_CRC_OFFSET; // At crc offset writeCounted(localHeader); entry.dataStart = streamCompressor.getTotalBytesWritten();"
+      },
+      {
+        "txt": "} private byte[] createLocalFileHeader(final ZipArchiveEntry ze, final ByteBuffer name, final boolean encodable, final boolean phased, long archiveOffset) throws IOException { ResourceAlignmentExtraField oldAlignmentEx = (ResourceAlignmentExtraField) ze.getExtraField(ResourceAlignmentExtraField.ID); if (oldAlignmentEx != null) { ze.removeExtraField(ResourceAlignmentExtraField.ID); } int alignment = ze.getAlignment(); if (alignment <= 0 && oldAlignmentEx != null) {"
+      },
+      {
+        "txt": "alignment = oldAlignmentEx.getAlignment(); } if (alignment > 1 || (oldAlignmentEx != null && !oldAlignmentEx.allowMethodChange())) { int oldLength = LFH_FILENAME_OFFSET + name.limit() - name.position() + ze.getLocalFileDataExtra().length; int padding = (int) ((-archiveOffset - oldLength - ZipExtraField.EXTRAFIELD_HEADER_SIZE - ResourceAlignmentExtraField.BASE_SIZE) & (alignment - 1)); ze.addExtraField(new ResourceAlignmentExtraField(alignment,"
+      },
+      {
+        "txt": "oldAlignmentEx != null && oldAlignmentEx.allowMethodChange(), padding)); } final byte[] extra = ze.getLocalFileDataExtra(); final int nameLen = name.limit() - name.position(); final int len = LFH_FILENAME_OFFSET + nameLen + extra.length; final byte[] buf = new byte[len]; System.arraycopy(LFH_SIG, 0, buf, LFH_SIG_OFFSET, WORD); final int zipMethod = ze.getMethod(); final boolean dataDescriptor = usesDataDescriptor(zipMethod); putShort(versionNeededToExtract(zipMethod, hasZip64Extra(ze), dataDescriptor), buf, LFH_VERSION_NEEDED_OFFSET);"
+      },
+      {
+        "txt": "final GeneralPurposeBit generalPurposeBit = getGeneralPurposeBits(!encodable && fallbackToUTF8, dataDescriptor); generalPurposeBit.encode(buf, LFH_GPB_OFFSET); putShort(zipMethod, buf, LFH_METHOD_OFFSET); ZipUtil.toDosTime(calendarInstance, ze.getTime(), buf, LFH_TIME_OFFSET); if (phased){ putLong(ze.getCrc(), buf, LFH_CRC_OFFSET); } else if (zipMethod == DEFLATED || channel != null) { System.arraycopy(LZERO, 0, buf, LFH_CRC_OFFSET, WORD); } else { putLong(ze.getCrc(), buf, LFH_CRC_OFFSET);"
+      },
+      {
+        "txt": "} if (hasZip64Extra(entry.entry)){ ZipLong.ZIP64_MAGIC.putLong(buf, LFH_COMPRESSED_SIZE_OFFSET); ZipLong.ZIP64_MAGIC.putLong(buf, LFH_ORIGINAL_SIZE_OFFSET); } else if (phased) { putLong(ze.getCompressedSize(), buf, LFH_COMPRESSED_SIZE_OFFSET); putLong(ze.getSize(), buf, LFH_ORIGINAL_SIZE_OFFSET); } else if (zipMethod == DEFLATED || channel != null) { System.arraycopy(LZERO, 0, buf, LFH_COMPRESSED_SIZE_OFFSET, WORD); System.arraycopy(LZERO, 0, buf, LFH_ORIGINAL_SIZE_OFFSET, WORD);"
+      },
+      {
+        "txt": "} else { // Stored putLong(ze.getSize(), buf, LFH_COMPRESSED_SIZE_OFFSET); putLong(ze.getSize(), buf, LFH_ORIGINAL_SIZE_OFFSET); } putShort(nameLen, buf, LFH_FILENAME_LENGTH_OFFSET); putShort(extra.length, buf, LFH_EXTRA_LENGTH_OFFSET); System.arraycopy( name.array(), name.arrayOffset(), buf, LFH_FILENAME_OFFSET, nameLen); System.arraycopy(extra, 0, buf, LFH_FILENAME_OFFSET + nameLen, extra.length); return buf; }"
+      },
+      {
+        "txt": "private void addUnicodeExtraFields(final ZipArchiveEntry ze, final boolean encodable, final ByteBuffer name) throws IOException { if (createUnicodeExtraFields == UnicodeExtraFieldPolicy.ALWAYS || !encodable) { ze.addExtraField(new UnicodePathExtraField(ze.getName(), name.array(), name.arrayOffset(), name.limit() - name.position()));"
+      },
+      {
+        "txt": "} final String comm = ze.getComment(); if (comm != null && !\"\".equals(comm)) { final boolean commentEncodable = zipEncoding.canEncode(comm); if (createUnicodeExtraFields == UnicodeExtraFieldPolicy.ALWAYS || !commentEncodable) { final ByteBuffer commentB = getEntryEncoding(ze).encode(comm); ze.addExtraField(new UnicodeCommentExtraField(comm, commentB.array(), commentB.arrayOffset(),"
+      },
+      {
+        "txt": "- commentB.position()) ); } } } protected void writeDataDescriptor(final ZipArchiveEntry ze) throws IOException { <extra_id_0> return; } writeCounted(DD_SIG); writeCounted(ZipLong.getBytes(ze.getCrc())); if (!hasZip64Extra(ze)) { writeCounted(ZipLong.getBytes(ze.getCompressedSize()));"
+      },
+      {
+        "txt": "if (!hasZip64Extra(ze)) { writeCounted(ZipLong.getBytes(ze.getCompressedSize())); writeCounted(ZipLong.getBytes(ze.getSize())); } else { writeCounted(ZipEightByteInteger.getBytes(ze.getCompressedSize())); writeCounted(ZipEightByteInteger.getBytes(ze.getSize())); } } protected void writeCentralFileHeader(final ZipArchiveEntry ze) throws IOException { final byte[] centralFileHeader = createCentralFileHeader(ze);"
+      },
+      {
+        "txt": "writeCounted(centralFileHeader); } private byte[] createCentralFileHeader(final ZipArchiveEntry ze) throws IOException { final EntryMetaData entryMetaData = metaData.get(ze); final boolean needsZip64Extra = hasZip64Extra(ze) || ze.getCompressedSize() >= ZIP64_MAGIC || ze.getSize() >= ZIP64_MAGIC || entryMetaData.offset >= ZIP64_MAGIC || zip64Mode == Zip64Mode.Always; if (needsZip64Extra && zip64Mode == Zip64Mode.Never) {"
+      },
+      {
+        "txt": "throw new Zip64RequiredException(Zip64RequiredException .ARCHIVE_TOO_BIG_MESSAGE); } handleZip64Extra(ze, entryMetaData.offset, needsZip64Extra); return createCentralFileHeader(ze, getName(ze), entryMetaData, needsZip64Extra); } private byte[] createCentralFileHeader(final ZipArchiveEntry ze, final ByteBuffer name, final EntryMetaData entryMetaData, final boolean needsZip64Extra) throws IOException { final byte[] extra = ze.getCentralDirectoryExtra();"
+      },
+      {
+        "txt": "String comm = ze.getComment(); if (comm == null) { comm = \"\"; } final ByteBuffer commentB = getEntryEncoding(ze).encode(comm); final int nameLen = name.limit() - name.position(); final int commentLen = commentB.limit() - commentB.position(); final int len= CFH_FILENAME_OFFSET + nameLen + extra.length + commentLen; final byte[] buf = new byte[len]; System.arraycopy(CFH_SIG, 0, buf, CFH_SIG_OFFSET, WORD);"
+      },
+      {
+        "txt": "putShort((ze.getPlatform() << 8) | (!hasUsedZip64 ? DATA_DESCRIPTOR_MIN_VERSION : ZIP64_MIN_VERSION), buf, CFH_VERSION_MADE_BY_OFFSET); final int zipMethod = ze.getMethod(); final boolean encodable = zipEncoding.canEncode(ze.getName()); putShort(versionNeededToExtract(zipMethod, needsZip64Extra, entryMetaData.usesDataDescriptor), buf, CFH_VERSION_NEEDED_OFFSET); getGeneralPurposeBits(!encodable && fallbackToUTF8, entryMetaData.usesDataDescriptor).encode(buf, CFH_GPB_OFFSET); putShort(zipMethod, buf, CFH_METHOD_OFFSET); ZipUtil.toDosTime(calendarInstance, ze.getTime(), buf, CFH_TIME_OFFSET); putLong(ze.getCrc(), buf, CFH_CRC_OFFSET);"
+      },
+      {
+        "txt": "if (ze.getCompressedSize() >= ZIP64_MAGIC || ze.getSize() >= ZIP64_MAGIC || zip64Mode == Zip64Mode.Always) { ZipLong.ZIP64_MAGIC.putLong(buf, CFH_COMPRESSED_SIZE_OFFSET); ZipLong.ZIP64_MAGIC.putLong(buf, CFH_ORIGINAL_SIZE_OFFSET); } else { putLong(ze.getCompressedSize(), buf, CFH_COMPRESSED_SIZE_OFFSET); putLong(ze.getSize(), buf, CFH_ORIGINAL_SIZE_OFFSET); } putShort(nameLen, buf, CFH_FILENAME_LENGTH_OFFSET);"
+      },
+      {
+        "txt": "putShort(extra.length, buf, CFH_EXTRA_LENGTH_OFFSET); putShort(commentLen, buf, CFH_COMMENT_LENGTH_OFFSET); System.arraycopy(ZERO, 0, buf, CFH_DISK_NUMBER_OFFSET, SHORT); putShort(ze.getInternalAttributes(), buf, CFH_INTERNAL_ATTRIBUTES_OFFSET); putLong(ze.getExternalAttributes(), buf, CFH_EXTERNAL_ATTRIBUTES_OFFSET); if (entryMetaData.offset >= ZIP64_MAGIC || zip64Mode == Zip64Mode.Always) { putLong(ZIP64_MAGIC, buf, CFH_LFH_OFFSET); } else { putLong(Math.min(entryMetaData.offset, ZIP64_MAGIC), buf, CFH_LFH_OFFSET); }"
+      },
+      {
+        "txt": "System.arraycopy(name.array(), name.arrayOffset(), buf, CFH_FILENAME_OFFSET, nameLen); final int extraStart = CFH_FILENAME_OFFSET + nameLen; System.arraycopy(extra, 0, buf, extraStart, extra.length); final int commentStart = extraStart + extra.length; System.arraycopy(commentB.array(), commentB.arrayOffset(), buf, commentStart, commentLen); return buf; } private void handleZip64Extra(final ZipArchiveEntry ze, final long lfhOffset, final boolean needsZip64Extra) { if (needsZip64Extra) {"
+      },
+      {
+        "txt": "final Zip64ExtendedInformationExtraField z64 = getZip64Extra(ze); if (ze.getCompressedSize() >= ZIP64_MAGIC || ze.getSize() >= ZIP64_MAGIC || zip64Mode == Zip64Mode.Always) { z64.setCompressedSize(new ZipEightByteInteger(ze.getCompressedSize())); z64.setSize(new ZipEightByteInteger(ze.getSize())); } else { z64.setCompressedSize(null); z64.setSize(null); }"
+      },
+      {
+        "txt": "if (lfhOffset >= ZIP64_MAGIC || zip64Mode == Zip64Mode.Always) { z64.setRelativeHeaderOffset(new ZipEightByteInteger(lfhOffset)); } ze.setExtra(); } } protected void writeCentralDirectoryEnd() throws IOException { writeCounted(EOCD_SIG); writeCounted(ZERO); writeCounted(ZERO);"
+      },
+      {
+        "txt": "final int numberOfEntries = entries.size(); if (numberOfEntries > ZIP64_MAGIC_SHORT && zip64Mode == Zip64Mode.Never) { throw new Zip64RequiredException(Zip64RequiredException .TOO_MANY_ENTRIES_MESSAGE); } if (cdOffset > ZIP64_MAGIC && zip64Mode == Zip64Mode.Never) { throw new Zip64RequiredException(Zip64RequiredException .ARCHIVE_TOO_BIG_MESSAGE); }"
+      },
+      {
+        "txt": "final byte[] num = ZipShort.getBytes(Math.min(numberOfEntries, ZIP64_MAGIC_SHORT)); writeCounted(num); writeCounted(num); writeCounted(ZipLong.getBytes(Math.min(cdLength, ZIP64_MAGIC))); writeCounted(ZipLong.getBytes(Math.min(cdOffset, ZIP64_MAGIC))); final ByteBuffer data = this.zipEncoding.encode(comment); final int dataLen = data.limit() - data.position(); writeCounted(ZipShort.getBytes(dataLen)); streamCompressor.writeCounted(data.array(), data.arrayOffset(), dataLen);"
+      },
+      {
+        "txt": "} protected void writeZip64CentralDirectory() throws IOException { if (zip64Mode == Zip64Mode.Never) { return; } if (!hasUsedZip64 && (cdOffset >= ZIP64_MAGIC || cdLength >= ZIP64_MAGIC || entries.size() >= ZIP64_MAGIC_SHORT)) { hasUsedZip64 = true; }"
+      },
+      {
+        "txt": "if (!hasUsedZip64) { return; } final long offset = streamCompressor.getTotalBytesWritten(); writeOut(ZIP64_EOCD_SIG); writeOut(ZipEightByteInteger .getBytes(SHORT /* version made by */ + SHORT /* version needed to extract */ + WORD /* disk number */ + WORD /* disk with central directory */"
+      },
+      {
+        "txt": "+ DWORD /* number of entries in CD on this disk */ + DWORD /* total number of entries */ + DWORD /* size of CD */ + (long) DWORD /* offset of CD */ )); writeOut(ZipShort.getBytes(ZIP64_MIN_VERSION)); writeOut(ZipShort.getBytes(ZIP64_MIN_VERSION)); writeOut(LZERO); writeOut(LZERO); final byte[] num = ZipEightByteInteger.getBytes(entries.size());"
+      },
+      {
+        "txt": "writeOut(num); writeOut(num); writeOut(ZipEightByteInteger.getBytes(cdLength)); writeOut(ZipEightByteInteger.getBytes(cdOffset)); writeOut(ZIP64_EOCD_LOC_SIG); writeOut(LZERO); writeOut(ZipEightByteInteger.getBytes(offset)); writeOut(ONE); } protected final void writeOut(final byte[] data) throws IOException {"
+      },
+      {
+        "txt": "streamCompressor.writeOut(data, 0, data.length); } protected final void writeOut(final byte[] data, final int offset, final int length) throws IOException { streamCompressor.writeOut(data, offset, length); } private GeneralPurposeBit getGeneralPurposeBits(final boolean utfFallback, boolean usesDataDescriptor) { final GeneralPurposeBit b = new GeneralPurposeBit(); b.useUTF8ForNames(useUTF8Flag || utfFallback); if (usesDataDescriptor) {"
+      },
+      {
+        "txt": "b.useDataDescriptor(true); } return b; } private int versionNeededToExtract(final int zipMethod, final boolean zip64, final boolean usedDataDescriptor) { if (zip64) { return ZIP64_MIN_VERSION; } if (usedDataDescriptor) { return DATA_DESCRIPTOR_MIN_VERSION;"
+      },
+      {
+        "txt": "} return versionNeededToExtractMethod(zipMethod); } private boolean usesDataDescriptor(final int zipMethod) { return zipMethod == DEFLATED && channel == null; } private int versionNeededToExtractMethod(int zipMethod) { return zipMethod == DEFLATED ? DEFLATE_MIN_VERSION : INITIAL_VERSION; } @Override"
+      },
+      {
+        "txt": "public ArchiveEntry createArchiveEntry(final File inputFile, final String entryName) throws IOException { if (finished) { throw new IOException(\"Stream has already been finished\"); } return new ZipArchiveEntry(inputFile, entryName); } private Zip64ExtendedInformationExtraField getZip64Extra(final ZipArchiveEntry ze) { if (entry != null) {"
+      },
+      {
+        "txt": "entry.causedUseOfZip64 = !hasUsedZip64; } hasUsedZip64 = true; Zip64ExtendedInformationExtraField z64 = (Zip64ExtendedInformationExtraField) ze.getExtraField(Zip64ExtendedInformationExtraField .HEADER_ID); if (z64 == null) { System.err.println(\"Adding z64 for \" + ze.getName() + \", method: \" + ze.getMethod()"
+      },
+      {
+        "txt": "+ \" (\" + (ze.getMethod() == STORED) + \")\" + \", channel: \" + (channel != null)); z64 = new Zip64ExtendedInformationExtraField(); } ze.addAsFirstExtraField(z64); return z64; } private boolean hasZip64Extra(final ZipArchiveEntry ze) { return ze.getExtraField(Zip64ExtendedInformationExtraField .HEADER_ID)"
+      },
+      {
+        "txt": "!= null; } private Zip64Mode getEffectiveZip64Mode(final ZipArchiveEntry ze) { if (zip64Mode != Zip64Mode.AsNeeded || channel != null || ze.getMethod() != DEFLATED || ze.getSize() != ArchiveEntry.SIZE_UNKNOWN) { return zip64Mode; } return Zip64Mode.Never;"
+      },
+      {
+        "txt": "} private ZipEncoding getEntryEncoding(final ZipArchiveEntry ze) { final boolean encodable = zipEncoding.canEncode(ze.getName()); return !encodable && fallbackToUTF8 ? ZipEncodingHelper.UTF8_ZIP_ENCODING : zipEncoding; } private ByteBuffer getName(final ZipArchiveEntry ze) throws IOException { return getEntryEncoding(ze).encode(ze.getName()); } void destroy() throws IOException {"
+      },
+      {
+        "txt": "if (channel != null) { channel.close(); } if (out != null) { out.close(); } } public static final class UnicodeExtraFieldPolicy { public static final UnicodeExtraFieldPolicy ALWAYS = new UnicodeExtraFieldPolicy(\"always\"); public static final UnicodeExtraFieldPolicy NEVER = new UnicodeExtraFieldPolicy(\"never\");"
+      },
+      {
+        "txt": "public static final UnicodeExtraFieldPolicy NOT_ENCODEABLE = new UnicodeExtraFieldPolicy(\"not encodeable\"); private final String name; private UnicodeExtraFieldPolicy(final String n) { name = n; } @Override public String toString() { return name; }"
+      },
+      {
+        "txt": "} private static final class CurrentEntry { private CurrentEntry(final ZipArchiveEntry entry) { this.entry = entry; } private final ZipArchiveEntry entry; private long localDataStart = 0; private long dataStart = 0; private long bytesRead = 0; private boolean causedUseOfZip64 = false;"
+      },
+      {
+        "txt": "private boolean hasWritten; } private static final class EntryMetaData { private final long offset; private final boolean usesDataDescriptor; private EntryMetaData(long offset, boolean usesDataDescriptor) { this.offset = offset; this.usesDataDescriptor = usesDataDescriptor; } }"
+      }
+    ]
+  },
+  {
+    "id": 1113,
+    "file_path": "src/main/java/org/apache/commons/compress/archivers/zip/ZipArchiveOutputStream.java",
+    "start-bug-line": 1492,
+    "end-bug-line": 1493,
+    "bug": "private boolean usesDataDescriptor(final int zipMethod) { return zipMethod == DEFLATED && channel == null;",
+    "fix": "private boolean usesDataDescriptor(final int zipMethod, boolean phased) { return !phased && zipMethod == DEFLATED && channel == null;",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "import java.io.ByteArrayOutputStream; import java.io.File; import java.io.FileOutputStream; import java.io.IOException; import java.io.InputStream; import java.io.OutputStream; import java.nio.ByteBuffer; import java.nio.channels.SeekableByteChannel; import java.nio.file.Files; import java.nio.file.StandardOpenOption;"
+      },
+      {
+        "txt": "import java.util.Calendar; import java.util.EnumSet; import java.util.HashMap; import java.util.LinkedList; import java.util.List; import java.util.Map; import java.util.zip.Deflater; import java.util.zip.ZipException; import org.apache.commons.compress.archivers.ArchiveEntry; import org.apache.commons.compress.archivers.ArchiveOutputStream;"
+      },
+      {
+        "txt": "import org.apache.commons.compress.utils.IOUtils; import static org.apache.commons.compress.archivers.zip.ZipConstants.DATA_DESCRIPTOR_MIN_VERSION; import static org.apache.commons.compress.archivers.zip.ZipConstants.DEFLATE_MIN_VERSION; import static org.apache.commons.compress.archivers.zip.ZipConstants.DWORD; import static org.apache.commons.compress.archivers.zip.ZipConstants.INITIAL_VERSION; import static org.apache.commons.compress.archivers.zip.ZipConstants.SHORT; import static org.apache.commons.compress.archivers.zip.ZipConstants.WORD; import static org.apache.commons.compress.archivers.zip.ZipConstants.ZIP64_MAGIC; import static org.apache.commons.compress.archivers.zip.ZipConstants.ZIP64_MAGIC_SHORT; import static org.apache.commons.compress.archivers.zip.ZipConstants.ZIP64_MIN_VERSION;"
+      },
+      {
+        "txt": "import static org.apache.commons.compress.archivers.zip.ZipLong.putLong; import static org.apache.commons.compress.archivers.zip.ZipShort.putShort; public class ZipArchiveOutputStream extends ArchiveOutputStream { static final int BUFFER_SIZE = 512; private static final int LFH_SIG_OFFSET = 0; private static final int LFH_VERSION_NEEDED_OFFSET = 4; private static final int LFH_GPB_OFFSET = 6; private static final int LFH_METHOD_OFFSET = 8; private static final int LFH_TIME_OFFSET = 10; private static final int LFH_CRC_OFFSET = 14;"
+      },
+      {
+        "txt": "private static final int LFH_COMPRESSED_SIZE_OFFSET = 18; private static final int LFH_ORIGINAL_SIZE_OFFSET = 22; private static final int LFH_FILENAME_LENGTH_OFFSET = 26; private static final int LFH_EXTRA_LENGTH_OFFSET = 28; private static final int LFH_FILENAME_OFFSET = 30; private static final int CFH_SIG_OFFSET = 0; private static final int CFH_VERSION_MADE_BY_OFFSET = 4; private static final int CFH_VERSION_NEEDED_OFFSET = 6; private static final int CFH_GPB_OFFSET = 8; private static final int CFH_METHOD_OFFSET = 10;"
+      },
+      {
+        "txt": "private static final int CFH_TIME_OFFSET = 12; private static final int CFH_CRC_OFFSET = 16; private static final int CFH_COMPRESSED_SIZE_OFFSET = 20; private static final int CFH_ORIGINAL_SIZE_OFFSET = 24; private static final int CFH_FILENAME_LENGTH_OFFSET = 28; private static final int CFH_EXTRA_LENGTH_OFFSET = 30; private static final int CFH_COMMENT_LENGTH_OFFSET = 32; private static final int CFH_DISK_NUMBER_OFFSET = 34; private static final int CFH_INTERNAL_ATTRIBUTES_OFFSET = 36; private static final int CFH_EXTERNAL_ATTRIBUTES_OFFSET = 38;"
+      },
+      {
+        "txt": "private static final int CFH_LFH_OFFSET = 42; private static final int CFH_FILENAME_OFFSET = 46; protected boolean finished = false; public static final int DEFLATED = java.util.zip.ZipEntry.DEFLATED; public static final int DEFAULT_COMPRESSION = Deflater.DEFAULT_COMPRESSION; public static final int STORED = java.util.zip.ZipEntry.STORED; static final String DEFAULT_ENCODING = ZipEncodingHelper.UTF8; @Deprecated public static final int EFS_FLAG = GeneralPurposeBit.UFT8_NAMES_FLAG; private static final byte[] EMPTY = new byte[0];"
+      },
+      {
+        "txt": "private CurrentEntry entry; private String comment = \"\"; private int level = DEFAULT_COMPRESSION; private boolean hasCompressionLevelChanged = false; private int method = java.util.zip.ZipEntry.DEFLATED; private final List<ZipArchiveEntry> entries = new LinkedList<>(); private final StreamCompressor streamCompressor; private long cdOffset = 0; private long cdLength = 0;"
+      },
+      {
+        "txt": "private static final byte[] ZERO = {0, 0}; private static final byte[] LZERO = {0, 0, 0, 0}; private static final byte[] ONE = ZipLong.getBytes(1L); private final Map<ZipArchiveEntry, EntryMetaData> metaData = new HashMap<>(); private String encoding = DEFAULT_ENCODING; private ZipEncoding zipEncoding = ZipEncodingHelper.getZipEncoding(DEFAULT_ENCODING); protected final Deflater def; private final SeekableByteChannel channel;"
+      },
+      {
+        "txt": "private final OutputStream out; private boolean useUTF8Flag = true; private boolean fallbackToUTF8 = false; private UnicodeExtraFieldPolicy createUnicodeExtraFields = UnicodeExtraFieldPolicy.NEVER; private boolean hasUsedZip64 = false; private Zip64Mode zip64Mode = Zip64Mode.AsNeeded; private final byte[] copyBuffer = new byte[32768]; private final Calendar calendarInstance = Calendar.getInstance(); public ZipArchiveOutputStream(final OutputStream out) { this.out = out;"
+      },
+      {
+        "txt": "this.channel = null; def = new Deflater(level, true); streamCompressor = StreamCompressor.create(out, def); } public ZipArchiveOutputStream(final File file) throws IOException { def = new Deflater(level, true); OutputStream o = null; SeekableByteChannel _channel = null; StreamCompressor _streamCompressor = null; try {"
+      },
+      {
+        "txt": "_channel = Files.newByteChannel(file.toPath(), EnumSet.of(StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.READ, StandardOpenOption.TRUNCATE_EXISTING)); _streamCompressor = StreamCompressor.create(_channel, def); //NOSONAR } catch (final IOException e) { IOUtils.closeQuietly(_channel); _channel = null; o = new FileOutputStream(file); _streamCompressor = StreamCompressor.create(o, def);"
+      },
+      {
+        "txt": "} out = o; channel = _channel; streamCompressor = _streamCompressor; } public ZipArchiveOutputStream(SeekableByteChannel channel) throws IOException { this.channel = channel; def = new Deflater(level, true); streamCompressor = StreamCompressor.create(channel, def); out = null;"
+      },
+      {
+        "txt": "} public boolean isSeekable() { return channel != null; } public void setEncoding(final String encoding) { this.encoding = encoding; this.zipEncoding = ZipEncodingHelper.getZipEncoding(encoding); if (useUTF8Flag && !ZipEncodingHelper.isUTF8(encoding)) { useUTF8Flag = false; }"
+      },
+      {
+        "txt": "} public String getEncoding() { return encoding; } public void setUseLanguageEncodingFlag(final boolean b) { useUTF8Flag = b && ZipEncodingHelper.isUTF8(encoding); } public void setCreateUnicodeExtraFields(final UnicodeExtraFieldPolicy b) { createUnicodeExtraFields = b; }"
+      },
+      {
+        "txt": "public void setFallbackToUTF8(final boolean b) { fallbackToUTF8 = b; } public void setUseZip64(final Zip64Mode mode) { zip64Mode = mode; } @Override public void finish() throws IOException { if (finished) { throw new IOException(\"This archive has already been finished\");"
+      },
+      {
+        "txt": "} if (entry != null) { throw new IOException(\"This archive contains unclosed entries.\"); } cdOffset = streamCompressor.getTotalBytesWritten(); writeCentralDirectoryInChunks(); cdLength = streamCompressor.getTotalBytesWritten() - cdOffset; writeZip64CentralDirectory(); writeCentralDirectoryEnd(); metaData.clear();"
+      },
+      {
+        "txt": "entries.clear(); streamCompressor.close(); finished = true; } private void writeCentralDirectoryInChunks() throws IOException { final int NUM_PER_WRITE = 1000; final ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream(70 * NUM_PER_WRITE); int count = 0; for (final ZipArchiveEntry ze : entries) { byteArrayOutputStream.write(createCentralFileHeader(ze));"
+      },
+      {
+        "txt": "if (++count > NUM_PER_WRITE){ writeCounted(byteArrayOutputStream.toByteArray()); byteArrayOutputStream.reset(); count = 0; } } writeCounted(byteArrayOutputStream.toByteArray()); } @Override public void closeArchiveEntry() throws IOException {"
+      },
+      {
+        "txt": "preClose(); flushDeflater(); final long bytesWritten = streamCompressor.getTotalBytesWritten() - entry.dataStart; final long realCrc = streamCompressor.getCrc32(); entry.bytesRead = streamCompressor.getBytesRead(); final Zip64Mode effectiveMode = getEffectiveZip64Mode(entry.entry); final boolean actuallyNeedsZip64 = handleSizesAndCrc(bytesWritten, realCrc, effectiveMode); closeEntry(actuallyNeedsZip64, false); streamCompressor.reset(); }"
+      },
+      {
+        "txt": "private void closeCopiedEntry(final boolean phased) throws IOException { preClose(); entry.bytesRead = entry.entry.getSize(); final Zip64Mode effectiveMode = getEffectiveZip64Mode(entry.entry); final boolean actuallyNeedsZip64 = checkIfNeedsZip64(effectiveMode); closeEntry(actuallyNeedsZip64, phased); } private void closeEntry(final boolean actuallyNeedsZip64, final boolean phased) throws IOException { if (!phased && channel != null) { rewriteSizesAndCrc(actuallyNeedsZip64);"
+      },
+      {
+        "txt": "} if (!phased) { writeDataDescriptor(entry.entry); } entry = null; } private void preClose() throws IOException { if (finished) { throw new IOException(\"Stream has already been finished\"); }"
+      },
+      {
+        "txt": "if (entry == null) { throw new IOException(\"No current entry to close\"); } if (!entry.hasWritten) { write(EMPTY, 0, 0); } } public void addRawArchiveEntry(final ZipArchiveEntry entry, final InputStream rawStream) throws IOException { final ZipArchiveEntry ae = new ZipArchiveEntry(entry);"
+      },
+      {
+        "txt": "if (hasZip64Extra(ae)) { ae.removeExtraField(Zip64ExtendedInformationExtraField.HEADER_ID); } final boolean is2PhaseSource = ae.getCrc() != ZipArchiveEntry.CRC_UNKNOWN && ae.getSize() != ArchiveEntry.SIZE_UNKNOWN && ae.getCompressedSize() != ArchiveEntry.SIZE_UNKNOWN; putArchiveEntry(ae, is2PhaseSource); copyFromZipInputStream(rawStream); closeCopiedEntry(is2PhaseSource); }"
+      },
+      {
+        "txt": "private void flushDeflater() throws IOException { if (entry.entry.getMethod() == DEFLATED) { streamCompressor.flushDeflater(); } } private boolean handleSizesAndCrc(final long bytesWritten, final long crc, final Zip64Mode effectiveMode) throws ZipException { if (entry.entry.getMethod() == DEFLATED) { entry.entry.setSize(def.getBytesRead());"
+      },
+      {
+        "txt": "entry.entry.setSize(entry.bytesRead); entry.entry.setCompressedSize(bytesWritten); entry.entry.setCrc(crc); } else if (channel == null) { if (entry.entry.getCrc() != crc) { throw new ZipException(\"bad CRC checksum for entry \" + entry.entry.getName() + \": \" + Long.toHexString(entry.entry.getCrc()) + \" instead of \" + Long.toHexString(crc));"
+      },
+      {
+        "txt": "} if (entry.entry.getSize() != bytesWritten) { throw new ZipException(\"bad size for entry \" + entry.entry.getName() + \": \" + entry.entry.getSize() + \" instead of \" + bytesWritten); } } else { /* method is STORED and we used SeekableByteChannel */ entry.entry.setSize(bytesWritten);"
+      },
+      {
+        "txt": "entry.entry.setCompressedSize(bytesWritten); entry.entry.setCrc(crc); } return checkIfNeedsZip64(effectiveMode); } private boolean checkIfNeedsZip64(final Zip64Mode effectiveMode) throws ZipException { final boolean actuallyNeedsZip64 = isZip64Required(entry.entry, effectiveMode); if (actuallyNeedsZip64 && effectiveMode == Zip64Mode.Never) { throw new Zip64RequiredException(Zip64RequiredException.getEntryTooBigMessage(entry.entry));"
+      },
+      {
+        "txt": "} return actuallyNeedsZip64; } private boolean isZip64Required(final ZipArchiveEntry entry1, final Zip64Mode requestedMode) { return requestedMode == Zip64Mode.Always || isTooLageForZip32(entry1); } private boolean isTooLageForZip32(final ZipArchiveEntry zipArchiveEntry){ return zipArchiveEntry.getSize() >= ZIP64_MAGIC || zipArchiveEntry.getCompressedSize() >= ZIP64_MAGIC; } private void rewriteSizesAndCrc(final boolean actuallyNeedsZip64)"
+      },
+      {
+        "txt": "throws IOException { final long save = channel.position(); channel.position(entry.localDataStart); writeOut(ZipLong.getBytes(entry.entry.getCrc())); if (!hasZip64Extra(entry.entry) || !actuallyNeedsZip64) { writeOut(ZipLong.getBytes(entry.entry.getCompressedSize())); writeOut(ZipLong.getBytes(entry.entry.getSize())); } else { writeOut(ZipLong.ZIP64_MAGIC.getBytes()); writeOut(ZipLong.ZIP64_MAGIC.getBytes());"
+      },
+      {
+        "txt": "} if (hasZip64Extra(entry.entry)) { final ByteBuffer name = getName(entry.entry); final int nameLen = name.limit() - name.position(); channel.position(entry.localDataStart + 3 * WORD + 2 * SHORT + nameLen + 2 * SHORT); writeOut(ZipEightByteInteger.getBytes(entry.entry.getSize())); writeOut(ZipEightByteInteger.getBytes(entry.entry.getCompressedSize())); if (!actuallyNeedsZip64) { channel.position(entry.localDataStart - 5 * SHORT);"
+      },
+      {
+        "txt": "writeOut(ZipShort.getBytes(versionNeededToExtract(entry.entry.getMethod(), false, false))); entry.entry.removeExtraField(Zip64ExtendedInformationExtraField .HEADER_ID); entry.entry.setExtra(); if (entry.causedUseOfZip64) { hasUsedZip64 = false; } } } channel.position(save);"
+      },
+      {
+        "txt": "} @Override public void putArchiveEntry(final ArchiveEntry archiveEntry) throws IOException { putArchiveEntry(archiveEntry, false); } private void putArchiveEntry(final ArchiveEntry archiveEntry, final boolean phased) throws IOException { if (finished) { throw new IOException(\"Stream has already been finished\"); } if (entry != null) {"
+      },
+      {
+        "txt": "closeArchiveEntry(); } entry = new CurrentEntry((ZipArchiveEntry) archiveEntry); entries.add(entry.entry); setDefaults(entry.entry); final Zip64Mode effectiveMode = getEffectiveZip64Mode(entry.entry); validateSizeInformation(effectiveMode); if (shouldAddZip64Extra(entry.entry, effectiveMode)) { final Zip64ExtendedInformationExtraField z64 = getZip64Extra(entry.entry); ZipEightByteInteger size, compressedSize;"
+      },
+      {
+        "txt": "if (phased) { size = new ZipEightByteInteger(entry.entry.getSize()); compressedSize = new ZipEightByteInteger(entry.entry.getCompressedSize()); } else if (entry.entry.getMethod() == STORED && entry.entry.getSize() != ArchiveEntry.SIZE_UNKNOWN) { compressedSize = size = new ZipEightByteInteger(entry.entry.getSize()); } else { compressedSize = size = ZipEightByteInteger.ZERO; } z64.setSize(size);"
+      },
+      {
+        "txt": "z64.setCompressedSize(compressedSize); entry.entry.setExtra(); } if (entry.entry.getMethod() == DEFLATED && hasCompressionLevelChanged) { def.setLevel(level); hasCompressionLevelChanged = false; } writeLocalFileHeader((ZipArchiveEntry) archiveEntry, phased); } private void setDefaults(final ZipArchiveEntry entry) {"
+      },
+      {
+        "txt": "if (entry.getMethod() == -1) { // not specified entry.setMethod(method); } if (entry.getTime() == -1) { // not specified entry.setTime(System.currentTimeMillis()); } } private void validateSizeInformation(final Zip64Mode effectiveMode) throws ZipException { if (entry.entry.getMethod() == STORED && channel == null) {"
+      },
+      {
+        "txt": "if (entry.entry.getSize() == ArchiveEntry.SIZE_UNKNOWN) { throw new ZipException(\"uncompressed size is required for\" + \" STORED method when not writing to a\" + \" file\"); } if (entry.entry.getCrc() == ZipArchiveEntry.CRC_UNKNOWN) { throw new ZipException(\"crc checksum is required for STORED\" + \" method when not writing to a file\"); } entry.entry.setCompressedSize(entry.entry.getSize());"
+      },
+      {
+        "txt": "} if ((entry.entry.getSize() >= ZIP64_MAGIC || entry.entry.getCompressedSize() >= ZIP64_MAGIC) && effectiveMode == Zip64Mode.Never) { throw new Zip64RequiredException(Zip64RequiredException .getEntryTooBigMessage(entry.entry)); } } private boolean shouldAddZip64Extra(final ZipArchiveEntry entry, final Zip64Mode mode) { return mode == Zip64Mode.Always"
+      },
+      {
+        "txt": "|| entry.getSize() >= ZIP64_MAGIC || entry.getCompressedSize() >= ZIP64_MAGIC || (entry.getSize() == ArchiveEntry.SIZE_UNKNOWN && channel != null && mode != Zip64Mode.Never); } public void setComment(final String comment) { this.comment = comment; } public void setLevel(final int level) { if (level < Deflater.DEFAULT_COMPRESSION"
+      },
+      {
+        "txt": "|| level > Deflater.BEST_COMPRESSION) { throw new IllegalArgumentException(\"Invalid compression level: \" + level); } hasCompressionLevelChanged = (this.level != level); this.level = level; } public void setMethod(final int method) { this.method = method; }"
+      },
+      {
+        "txt": "@Override public boolean canWriteEntryData(final ArchiveEntry ae) { if (ae instanceof ZipArchiveEntry) { final ZipArchiveEntry zae = (ZipArchiveEntry) ae; return zae.getMethod() != ZipMethod.IMPLODING.getCode() && zae.getMethod() != ZipMethod.UNSHRINKING.getCode() && ZipUtil.canHandleEntryData(zae); } return false; }"
+      },
+      {
+        "txt": "@Override public void write(final byte[] b, final int offset, final int length) throws IOException { if (entry == null) { throw new IllegalStateException(\"No current entry\"); } ZipUtil.checkRequestedFeatures(entry.entry); final long writtenThisTime = streamCompressor.write(b, offset, length, entry.entry.getMethod()); count(writtenThisTime); } private void writeCounted(final byte[] data) throws IOException {"
+      },
+      {
+        "txt": "streamCompressor.writeCounted(data); } private void copyFromZipInputStream(final InputStream src) throws IOException { if (entry == null) { throw new IllegalStateException(\"No current entry\"); } ZipUtil.checkRequestedFeatures(entry.entry); entry.hasWritten = true; int length; while ((length = src.read(copyBuffer)) >= 0 )"
+      },
+      {
+        "txt": "{ streamCompressor.writeCounted(copyBuffer, 0, length); count( length ); } } @Override public void close() throws IOException { if (!finished) { finish(); }"
+      },
+      {
+        "txt": "destroy(); } @Override public void flush() throws IOException { if (out != null) { out.flush(); } } static final byte[] LFH_SIG = ZipLong.LFH_SIG.getBytes(); //NOSONAR static final byte[] DD_SIG = ZipLong.DD_SIG.getBytes(); //NOSONAR"
+      },
+      {
+        "txt": "static final byte[] CFH_SIG = ZipLong.CFH_SIG.getBytes(); //NOSONAR static final byte[] EOCD_SIG = ZipLong.getBytes(0X06054B50L); //NOSONAR static final byte[] ZIP64_EOCD_SIG = ZipLong.getBytes(0X06064B50L); //NOSONAR static final byte[] ZIP64_EOCD_LOC_SIG = ZipLong.getBytes(0X07064B50L); //NOSONAR protected final void deflate() throws IOException { streamCompressor.deflate(); } protected void writeLocalFileHeader(final ZipArchiveEntry ze) throws IOException { writeLocalFileHeader(ze, false); }"
+      },
+      {
+        "txt": "private void writeLocalFileHeader(final ZipArchiveEntry ze, final boolean phased) throws IOException { final boolean encodable = zipEncoding.canEncode(ze.getName()); final ByteBuffer name = getName(ze); if (createUnicodeExtraFields != UnicodeExtraFieldPolicy.NEVER) { addUnicodeExtraFields(ze, encodable, name); } final long localHeaderStart = streamCompressor.getTotalBytesWritten(); final byte[] localHeader = createLocalFileHeader(ze, name, encodable, phased, localHeaderStart); metaData.put(ze, new EntryMetaData(localHeaderStart, usesDataDescriptor(ze.getMethod()))); entry.localDataStart = localHeaderStart + LFH_CRC_OFFSET; // At crc offset"
+      },
+      {
+        "txt": "writeCounted(localHeader); entry.dataStart = streamCompressor.getTotalBytesWritten(); } private byte[] createLocalFileHeader(final ZipArchiveEntry ze, final ByteBuffer name, final boolean encodable, final boolean phased, long archiveOffset) throws IOException { ResourceAlignmentExtraField oldAlignmentEx = (ResourceAlignmentExtraField) ze.getExtraField(ResourceAlignmentExtraField.ID); if (oldAlignmentEx != null) { ze.removeExtraField(ResourceAlignmentExtraField.ID); }"
+      },
+      {
+        "txt": "int alignment = ze.getAlignment(); if (alignment <= 0 && oldAlignmentEx != null) { alignment = oldAlignmentEx.getAlignment(); } if (alignment > 1 || (oldAlignmentEx != null && !oldAlignmentEx.allowMethodChange())) { int oldLength = LFH_FILENAME_OFFSET + name.limit() - name.position() + ze.getLocalFileDataExtra().length; int padding = (int) ((-archiveOffset - oldLength - ZipExtraField.EXTRAFIELD_HEADER_SIZE - ResourceAlignmentExtraField.BASE_SIZE) &"
+      },
+      {
+        "txt": "(alignment - 1)); ze.addExtraField(new ResourceAlignmentExtraField(alignment, oldAlignmentEx != null && oldAlignmentEx.allowMethodChange(), padding)); } final byte[] extra = ze.getLocalFileDataExtra(); final int nameLen = name.limit() - name.position(); final int len = LFH_FILENAME_OFFSET + nameLen + extra.length; final byte[] buf = new byte[len]; System.arraycopy(LFH_SIG, 0, buf, LFH_SIG_OFFSET, WORD); final int zipMethod = ze.getMethod();"
+      },
+      {
+        "txt": "final boolean dataDescriptor = usesDataDescriptor(zipMethod); putShort(versionNeededToExtract(zipMethod, hasZip64Extra(ze), dataDescriptor), buf, LFH_VERSION_NEEDED_OFFSET); final GeneralPurposeBit generalPurposeBit = getGeneralPurposeBits(!encodable && fallbackToUTF8, dataDescriptor); generalPurposeBit.encode(buf, LFH_GPB_OFFSET); putShort(zipMethod, buf, LFH_METHOD_OFFSET); ZipUtil.toDosTime(calendarInstance, ze.getTime(), buf, LFH_TIME_OFFSET); if (phased){ putLong(ze.getCrc(), buf, LFH_CRC_OFFSET); } else if (zipMethod == DEFLATED || channel != null) { System.arraycopy(LZERO, 0, buf, LFH_CRC_OFFSET, WORD);"
+      },
+      {
+        "txt": "} else { putLong(ze.getCrc(), buf, LFH_CRC_OFFSET); } if (hasZip64Extra(entry.entry)){ ZipLong.ZIP64_MAGIC.putLong(buf, LFH_COMPRESSED_SIZE_OFFSET); ZipLong.ZIP64_MAGIC.putLong(buf, LFH_ORIGINAL_SIZE_OFFSET); } else if (phased) { putLong(ze.getCompressedSize(), buf, LFH_COMPRESSED_SIZE_OFFSET); putLong(ze.getSize(), buf, LFH_ORIGINAL_SIZE_OFFSET); } else if (zipMethod == DEFLATED || channel != null) {"
+      },
+      {
+        "txt": "System.arraycopy(LZERO, 0, buf, LFH_COMPRESSED_SIZE_OFFSET, WORD); System.arraycopy(LZERO, 0, buf, LFH_ORIGINAL_SIZE_OFFSET, WORD); } else { // Stored putLong(ze.getSize(), buf, LFH_COMPRESSED_SIZE_OFFSET); putLong(ze.getSize(), buf, LFH_ORIGINAL_SIZE_OFFSET); } putShort(nameLen, buf, LFH_FILENAME_LENGTH_OFFSET); putShort(extra.length, buf, LFH_EXTRA_LENGTH_OFFSET); System.arraycopy( name.array(), name.arrayOffset(), buf, LFH_FILENAME_OFFSET, nameLen); System.arraycopy(extra, 0, buf, LFH_FILENAME_OFFSET + nameLen, extra.length);"
+      },
+      {
+        "txt": "return buf; } private void addUnicodeExtraFields(final ZipArchiveEntry ze, final boolean encodable, final ByteBuffer name) throws IOException { if (createUnicodeExtraFields == UnicodeExtraFieldPolicy.ALWAYS || !encodable) { ze.addExtraField(new UnicodePathExtraField(ze.getName(), name.array(), name.arrayOffset(),"
+      },
+      {
+        "txt": "name.limit() - name.position())); } final String comm = ze.getComment(); if (comm != null && !\"\".equals(comm)) { final boolean commentEncodable = zipEncoding.canEncode(comm); if (createUnicodeExtraFields == UnicodeExtraFieldPolicy.ALWAYS || !commentEncodable) { final ByteBuffer commentB = getEntryEncoding(ze).encode(comm); ze.addExtraField(new UnicodeCommentExtraField(comm,"
+      },
+      {
+        "txt": "commentB.array(), commentB.arrayOffset(), commentB.limit() - commentB.position()) ); } } } protected void writeDataDescriptor(final ZipArchiveEntry ze) throws IOException { if (ze.getMethod() != DEFLATED || channel != null) {"
+      },
+      {
+        "txt": "return; } writeCounted(DD_SIG); writeCounted(ZipLong.getBytes(ze.getCrc())); if (!hasZip64Extra(ze)) { writeCounted(ZipLong.getBytes(ze.getCompressedSize())); writeCounted(ZipLong.getBytes(ze.getSize())); } else { writeCounted(ZipEightByteInteger.getBytes(ze.getCompressedSize())); writeCounted(ZipEightByteInteger.getBytes(ze.getSize()));"
+      },
+      {
+        "txt": "} } protected void writeCentralFileHeader(final ZipArchiveEntry ze) throws IOException { final byte[] centralFileHeader = createCentralFileHeader(ze); writeCounted(centralFileHeader); } private byte[] createCentralFileHeader(final ZipArchiveEntry ze) throws IOException { final EntryMetaData entryMetaData = metaData.get(ze); final boolean needsZip64Extra = hasZip64Extra(ze) || ze.getCompressedSize() >= ZIP64_MAGIC"
+      },
+      {
+        "txt": "|| ze.getSize() >= ZIP64_MAGIC || entryMetaData.offset >= ZIP64_MAGIC || zip64Mode == Zip64Mode.Always; if (needsZip64Extra && zip64Mode == Zip64Mode.Never) { throw new Zip64RequiredException(Zip64RequiredException .ARCHIVE_TOO_BIG_MESSAGE); } handleZip64Extra(ze, entryMetaData.offset, needsZip64Extra); return createCentralFileHeader(ze, getName(ze), entryMetaData, needsZip64Extra); }"
+      },
+      {
+        "txt": "private byte[] createCentralFileHeader(final ZipArchiveEntry ze, final ByteBuffer name, final EntryMetaData entryMetaData, final boolean needsZip64Extra) throws IOException { final byte[] extra = ze.getCentralDirectoryExtra(); String comm = ze.getComment(); if (comm == null) { comm = \"\"; } final ByteBuffer commentB = getEntryEncoding(ze).encode(comm); final int nameLen = name.limit() - name.position();"
+      },
+      {
+        "txt": "final int commentLen = commentB.limit() - commentB.position(); final int len= CFH_FILENAME_OFFSET + nameLen + extra.length + commentLen; final byte[] buf = new byte[len]; System.arraycopy(CFH_SIG, 0, buf, CFH_SIG_OFFSET, WORD); putShort((ze.getPlatform() << 8) | (!hasUsedZip64 ? DATA_DESCRIPTOR_MIN_VERSION : ZIP64_MIN_VERSION), buf, CFH_VERSION_MADE_BY_OFFSET); final int zipMethod = ze.getMethod(); final boolean encodable = zipEncoding.canEncode(ze.getName()); putShort(versionNeededToExtract(zipMethod, needsZip64Extra, entryMetaData.usesDataDescriptor), buf, CFH_VERSION_NEEDED_OFFSET);"
+      },
+      {
+        "txt": "getGeneralPurposeBits(!encodable && fallbackToUTF8, entryMetaData.usesDataDescriptor).encode(buf, CFH_GPB_OFFSET); putShort(zipMethod, buf, CFH_METHOD_OFFSET); ZipUtil.toDosTime(calendarInstance, ze.getTime(), buf, CFH_TIME_OFFSET); putLong(ze.getCrc(), buf, CFH_CRC_OFFSET); if (ze.getCompressedSize() >= ZIP64_MAGIC || ze.getSize() >= ZIP64_MAGIC || zip64Mode == Zip64Mode.Always) { ZipLong.ZIP64_MAGIC.putLong(buf, CFH_COMPRESSED_SIZE_OFFSET); ZipLong.ZIP64_MAGIC.putLong(buf, CFH_ORIGINAL_SIZE_OFFSET); } else {"
+      },
+      {
+        "txt": "putLong(ze.getCompressedSize(), buf, CFH_COMPRESSED_SIZE_OFFSET); putLong(ze.getSize(), buf, CFH_ORIGINAL_SIZE_OFFSET); } putShort(nameLen, buf, CFH_FILENAME_LENGTH_OFFSET); putShort(extra.length, buf, CFH_EXTRA_LENGTH_OFFSET); putShort(commentLen, buf, CFH_COMMENT_LENGTH_OFFSET); System.arraycopy(ZERO, 0, buf, CFH_DISK_NUMBER_OFFSET, SHORT); putShort(ze.getInternalAttributes(), buf, CFH_INTERNAL_ATTRIBUTES_OFFSET); putLong(ze.getExternalAttributes(), buf, CFH_EXTERNAL_ATTRIBUTES_OFFSET); if (entryMetaData.offset >= ZIP64_MAGIC || zip64Mode == Zip64Mode.Always) {"
+      },
+      {
+        "txt": "putLong(ZIP64_MAGIC, buf, CFH_LFH_OFFSET); } else { putLong(Math.min(entryMetaData.offset, ZIP64_MAGIC), buf, CFH_LFH_OFFSET); } System.arraycopy(name.array(), name.arrayOffset(), buf, CFH_FILENAME_OFFSET, nameLen); final int extraStart = CFH_FILENAME_OFFSET + nameLen; System.arraycopy(extra, 0, buf, extraStart, extra.length); final int commentStart = extraStart + extra.length; System.arraycopy(commentB.array(), commentB.arrayOffset(), buf, commentStart, commentLen); return buf;"
+      },
+      {
+        "txt": "} private void handleZip64Extra(final ZipArchiveEntry ze, final long lfhOffset, final boolean needsZip64Extra) { if (needsZip64Extra) { final Zip64ExtendedInformationExtraField z64 = getZip64Extra(ze); if (ze.getCompressedSize() >= ZIP64_MAGIC || ze.getSize() >= ZIP64_MAGIC || zip64Mode == Zip64Mode.Always) { z64.setCompressedSize(new ZipEightByteInteger(ze.getCompressedSize())); z64.setSize(new ZipEightByteInteger(ze.getSize()));"
+      },
+      {
+        "txt": "} else { z64.setCompressedSize(null); z64.setSize(null); } if (lfhOffset >= ZIP64_MAGIC || zip64Mode == Zip64Mode.Always) { z64.setRelativeHeaderOffset(new ZipEightByteInteger(lfhOffset)); } ze.setExtra(); } }"
+      },
+      {
+        "txt": "protected void writeCentralDirectoryEnd() throws IOException { writeCounted(EOCD_SIG); writeCounted(ZERO); writeCounted(ZERO); final int numberOfEntries = entries.size(); if (numberOfEntries > ZIP64_MAGIC_SHORT && zip64Mode == Zip64Mode.Never) { throw new Zip64RequiredException(Zip64RequiredException .TOO_MANY_ENTRIES_MESSAGE); }"
+      },
+      {
+        "txt": "if (cdOffset > ZIP64_MAGIC && zip64Mode == Zip64Mode.Never) { throw new Zip64RequiredException(Zip64RequiredException .ARCHIVE_TOO_BIG_MESSAGE); } final byte[] num = ZipShort.getBytes(Math.min(numberOfEntries, ZIP64_MAGIC_SHORT)); writeCounted(num); writeCounted(num); writeCounted(ZipLong.getBytes(Math.min(cdLength, ZIP64_MAGIC))); writeCounted(ZipLong.getBytes(Math.min(cdOffset, ZIP64_MAGIC)));"
+      },
+      {
+        "txt": "final ByteBuffer data = this.zipEncoding.encode(comment); final int dataLen = data.limit() - data.position(); writeCounted(ZipShort.getBytes(dataLen)); streamCompressor.writeCounted(data.array(), data.arrayOffset(), dataLen); } protected void writeZip64CentralDirectory() throws IOException { if (zip64Mode == Zip64Mode.Never) { return; } if (!hasUsedZip64"
+      },
+      {
+        "txt": "&& (cdOffset >= ZIP64_MAGIC || cdLength >= ZIP64_MAGIC || entries.size() >= ZIP64_MAGIC_SHORT)) { hasUsedZip64 = true; } if (!hasUsedZip64) { return; } final long offset = streamCompressor.getTotalBytesWritten(); writeOut(ZIP64_EOCD_SIG); writeOut(ZipEightByteInteger"
+      },
+      {
+        "txt": ".getBytes(SHORT /* version made by */ + SHORT /* version needed to extract */ + WORD /* disk number */ + WORD /* disk with central directory */ + DWORD /* number of entries in CD on this disk */ + DWORD /* total number of entries */ + DWORD /* size of CD */ + (long) DWORD /* offset of CD */ )); writeOut(ZipShort.getBytes(ZIP64_MIN_VERSION));"
+      },
+      {
+        "txt": "writeOut(ZipShort.getBytes(ZIP64_MIN_VERSION)); writeOut(LZERO); writeOut(LZERO); final byte[] num = ZipEightByteInteger.getBytes(entries.size()); writeOut(num); writeOut(num); writeOut(ZipEightByteInteger.getBytes(cdLength)); writeOut(ZipEightByteInteger.getBytes(cdOffset)); writeOut(ZIP64_EOCD_LOC_SIG); writeOut(LZERO);"
+      },
+      {
+        "txt": "writeOut(ZipEightByteInteger.getBytes(offset)); writeOut(ONE); } protected final void writeOut(final byte[] data) throws IOException { streamCompressor.writeOut(data, 0, data.length); } protected final void writeOut(final byte[] data, final int offset, final int length) throws IOException { streamCompressor.writeOut(data, offset, length); }"
+      },
+      {
+        "txt": "private GeneralPurposeBit getGeneralPurposeBits(final boolean utfFallback, boolean usesDataDescriptor) { final GeneralPurposeBit b = new GeneralPurposeBit(); b.useUTF8ForNames(useUTF8Flag || utfFallback); if (usesDataDescriptor) { b.useDataDescriptor(true); } return b; } private int versionNeededToExtract(final int zipMethod, final boolean zip64, final boolean usedDataDescriptor) { if (zip64) {"
+      },
+      {
+        "txt": "} if (usedDataDescriptor) { return DATA_DESCRIPTOR_MIN_VERSION; } return versionNeededToExtractMethod(zipMethod); } <extra_id_0> } private int versionNeededToExtractMethod(int zipMethod) { return zipMethod == DEFLATED ? DEFLATE_MIN_VERSION : INITIAL_VERSION; } @Override public ArchiveEntry createArchiveEntry(final File inputFile, final String entryName)"
+      },
+      {
+        "txt": "@Override public ArchiveEntry createArchiveEntry(final File inputFile, final String entryName) throws IOException { if (finished) { throw new IOException(\"Stream has already been finished\"); } return new ZipArchiveEntry(inputFile, entryName); } private Zip64ExtendedInformationExtraField getZip64Extra(final ZipArchiveEntry ze) {"
+      },
+      {
+        "txt": "if (entry != null) { entry.causedUseOfZip64 = !hasUsedZip64; } hasUsedZip64 = true; Zip64ExtendedInformationExtraField z64 = (Zip64ExtendedInformationExtraField) ze.getExtraField(Zip64ExtendedInformationExtraField .HEADER_ID); if (z64 == null) { System.err.println(\"Adding z64 for \" + ze.getName()"
+      },
+      {
+        "txt": "+ \", method: \" + ze.getMethod() + \" (\" + (ze.getMethod() == STORED) + \")\" + \", channel: \" + (channel != null)); z64 = new Zip64ExtendedInformationExtraField(); } ze.addAsFirstExtraField(z64); return z64; } private boolean hasZip64Extra(final ZipArchiveEntry ze) { return ze.getExtraField(Zip64ExtendedInformationExtraField"
+      },
+      {
+        "txt": ".HEADER_ID) != null; } private Zip64Mode getEffectiveZip64Mode(final ZipArchiveEntry ze) { if (zip64Mode != Zip64Mode.AsNeeded || channel != null || ze.getMethod() != DEFLATED || ze.getSize() != ArchiveEntry.SIZE_UNKNOWN) { return zip64Mode; }"
+      },
+      {
+        "txt": "return Zip64Mode.Never; } private ZipEncoding getEntryEncoding(final ZipArchiveEntry ze) { final boolean encodable = zipEncoding.canEncode(ze.getName()); return !encodable && fallbackToUTF8 ? ZipEncodingHelper.UTF8_ZIP_ENCODING : zipEncoding; } private ByteBuffer getName(final ZipArchiveEntry ze) throws IOException { return getEntryEncoding(ze).encode(ze.getName()); }"
+      },
+      {
+        "txt": "void destroy() throws IOException { if (channel != null) { channel.close(); } if (out != null) { out.close(); } } public static final class UnicodeExtraFieldPolicy { public static final UnicodeExtraFieldPolicy ALWAYS = new UnicodeExtraFieldPolicy(\"always\");"
+      },
+      {
+        "txt": "public static final UnicodeExtraFieldPolicy NEVER = new UnicodeExtraFieldPolicy(\"never\"); public static final UnicodeExtraFieldPolicy NOT_ENCODEABLE = new UnicodeExtraFieldPolicy(\"not encodeable\"); private final String name; private UnicodeExtraFieldPolicy(final String n) { name = n; } @Override public String toString() { return name;"
+      },
+      {
+        "txt": "} } private static final class CurrentEntry { private CurrentEntry(final ZipArchiveEntry entry) { this.entry = entry; } private final ZipArchiveEntry entry; private long localDataStart = 0; private long dataStart = 0; private long bytesRead = 0;"
+      },
+      {
+        "txt": "private boolean causedUseOfZip64 = false; private boolean hasWritten; } private static final class EntryMetaData { private final long offset; private final boolean usesDataDescriptor; private EntryMetaData(long offset, boolean usesDataDescriptor) { this.offset = offset; this.usesDataDescriptor = usesDataDescriptor; }"
+      }
+    ]
+  }
+]

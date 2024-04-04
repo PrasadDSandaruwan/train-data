@@ -1,0 +1,740 @@
+[
+  {
+    "id": 2625,
+    "file_path": "src/main/java/org/apache/commons/math/optimization/univariate/BrentOptimizer.java",
+    "start-bug-line": 44,
+    "end-bug-line": 44,
+    "bug": "setMaxEvaluations(Integer.MAX_VALUE);",
+    "fix": "setMaxEvaluations(1000);",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.math.optimization.univariate; import org.apache.commons.math.FunctionEvaluationException;"
+      },
+      {
+        "txt": "import org.apache.commons.math.exception.NotStrictlyPositiveException; import org.apache.commons.math.analysis.UnivariateRealFunction; import org.apache.commons.math.optimization.GoalType; public class BrentOptimizer extends AbstractUnivariateRealOptimizer { private static final double GOLDEN_SECTION = 0.5 * (3 - Math.sqrt(5)); public BrentOptimizer() { <extra_id_0> setMaximalIterationCount(100); setAbsoluteAccuracy(1E-10); setRelativeAccuracy(1.0e-14); } protected double doOptimize() throws MaxIterationsExceededException, FunctionEvaluationException {"
+      },
+      {
+        "txt": "protected double doOptimize() throws MaxIterationsExceededException, FunctionEvaluationException { throw new UnsupportedOperationException(); } public double optimize(final UnivariateRealFunction f, final GoalType goalType, final double min, final double max, final double startValue) throws MaxIterationsExceededException, FunctionEvaluationException { clearResult(); return localMin(getGoalType() == GoalType.MINIMIZE, f, goalType, min, startValue, max, getRelativeAccuracy(), getAbsoluteAccuracy()); }"
+      },
+      {
+        "txt": "public double optimize(final UnivariateRealFunction f, final GoalType goalType, final double min, final double max) throws MaxIterationsExceededException, FunctionEvaluationException { return optimize(f, goalType, min, max, min + GOLDEN_SECTION * (max - min)); } private double localMin(boolean isMinim, UnivariateRealFunction f, GoalType goalType, double lo, double mid, double hi, double eps, double t) throws MaxIterationsExceededException, FunctionEvaluationException { if (eps <= 0) {"
+      },
+      {
+        "txt": "throw new NotStrictlyPositiveException(eps); } if (t <= 0) { throw new NotStrictlyPositiveException(t); } double a, b; if (lo < hi) { a = lo; b = hi; } else {"
+      },
+      {
+        "txt": "a = hi; b = lo; } double x = mid; double v = x; double w = x; double d = 0; double e = 0; double fx = computeObjectiveValue(f, x); if (goalType == GoalType.MAXIMIZE) {"
+      },
+      {
+        "txt": "fx = -fx; } double fv = fx; double fw = fx; int count = 0; while (count < maximalIterationCount) { double m = 0.5 * (a + b); final double tol1 = eps * Math.abs(x) + t; final double tol2 = 2 * tol1; if (Math.abs(x - m) > tol2 - 0.5 * (b - a)) {"
+      },
+      {
+        "txt": "double p = 0; double q = 0; double r = 0; double u = 0; if (Math.abs(e) > tol1) { // Fit parabola. r = (x - w) * (fx - fv); q = (x - v) * (fx - fw); p = (x - v) * q - (x - w) * r; q = 2 * (q - r); if (q > 0) {"
+      },
+      {
+        "txt": "p = -p; } else { q = -q; } r = e; e = d; if (p > q * (a - x) && p < q * (b - x) && Math.abs(p) < Math.abs(0.5 * q * r)) { d = p / q;"
+      },
+      {
+        "txt": "u = x + d; if (u - a < tol2 || b - u < tol2) { if (x <= m) { d = tol1; } else { d = -tol1; } } } else {"
+      },
+      {
+        "txt": "if (x < m) { e = b - x; } else { e = a - x; } d = GOLDEN_SECTION * e; } } else { if (x < m) { e = b - x;"
+      },
+      {
+        "txt": "} else { e = a - x; } d = GOLDEN_SECTION * e; } if (Math.abs(d) < tol1) { if (d >= 0) { u = x + tol1; } else { u = x - tol1;"
+      },
+      {
+        "txt": "} } else { u = x + d; } double fu = computeObjectiveValue(f, u); if (goalType == GoalType.MAXIMIZE) { fu = -fu; } if (fu <= fx) { if (u < x) {"
+      },
+      {
+        "txt": "b = x; } else { a = x; } v = w; fv = fw; w = x; fw = fx; x = u; fx = fu;"
+      },
+      {
+        "txt": "} else { if (u < x) { a = u; } else { b = u; } if (fu <= fw || w == x) { v = w; fv = fw;"
+      },
+      {
+        "txt": "w = u; fw = fu; } else if (fu <= fv || v == x || v == w) { v = u; fv = fu; } } } else { // termination"
+      },
+      {
+        "txt": "setResult(x, (goalType == GoalType.MAXIMIZE) ? -fx : fx, count); return x; } ++count; } throw new MaxIterationsExceededException(maximalIterationCount); }"
+      }
+    ]
+  },
+  {
+    "id": 2626,
+    "file_path": "src/main/java/org/apache/commons/math/optimization/univariate/BrentOptimizer.java",
+    "start-bug-line": 46,
+    "end-bug-line": 47,
+    "bug": "setAbsoluteAccuracy(1E-10); setRelativeAccuracy(1.0e-14);",
+    "fix": "setAbsoluteAccuracy(1e-11); setRelativeAccuracy(1e-9);",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.math.optimization.univariate; import org.apache.commons.math.FunctionEvaluationException; import org.apache.commons.math.MaxIterationsExceededException; import org.apache.commons.math.exception.NotStrictlyPositiveException;"
+      },
+      {
+        "txt": "import org.apache.commons.math.optimization.GoalType; public class BrentOptimizer extends AbstractUnivariateRealOptimizer { private static final double GOLDEN_SECTION = 0.5 * (3 - Math.sqrt(5)); public BrentOptimizer() { setMaxEvaluations(Integer.MAX_VALUE); setMaximalIterationCount(100); <extra_id_0> } protected double doOptimize() throws MaxIterationsExceededException, FunctionEvaluationException { throw new UnsupportedOperationException(); } public double optimize(final UnivariateRealFunction f, final GoalType goalType, final double min, final double max, final double startValue) throws MaxIterationsExceededException, FunctionEvaluationException {"
+      },
+      {
+        "txt": "} public double optimize(final UnivariateRealFunction f, final GoalType goalType, final double min, final double max, final double startValue) throws MaxIterationsExceededException, FunctionEvaluationException { clearResult(); return localMin(getGoalType() == GoalType.MINIMIZE, f, goalType, min, startValue, max, getRelativeAccuracy(), getAbsoluteAccuracy()); } public double optimize(final UnivariateRealFunction f, final GoalType goalType, final double min, final double max) throws MaxIterationsExceededException, FunctionEvaluationException { return optimize(f, goalType, min, max, min + GOLDEN_SECTION * (max - min)); }"
+      },
+      {
+        "txt": "private double localMin(boolean isMinim, UnivariateRealFunction f, GoalType goalType, double lo, double mid, double hi, double eps, double t) throws MaxIterationsExceededException, FunctionEvaluationException { if (eps <= 0) { throw new NotStrictlyPositiveException(eps); } if (t <= 0) {"
+      },
+      {
+        "txt": "throw new NotStrictlyPositiveException(t); } double a, b; if (lo < hi) { a = lo; b = hi; } else { a = hi; b = lo; }"
+      },
+      {
+        "txt": "double x = mid; double v = x; double w = x; double d = 0; double e = 0; double fx = computeObjectiveValue(f, x); if (goalType == GoalType.MAXIMIZE) { fx = -fx; } double fv = fx;"
+      },
+      {
+        "txt": "double fw = fx; int count = 0; while (count < maximalIterationCount) { double m = 0.5 * (a + b); final double tol1 = eps * Math.abs(x) + t; final double tol2 = 2 * tol1; if (Math.abs(x - m) > tol2 - 0.5 * (b - a)) { double p = 0; double q = 0; double r = 0;"
+      },
+      {
+        "txt": "double u = 0; if (Math.abs(e) > tol1) { // Fit parabola. r = (x - w) * (fx - fv); q = (x - v) * (fx - fw); p = (x - v) * q - (x - w) * r; q = 2 * (q - r); if (q > 0) { p = -p; } else { q = -q;"
+      },
+      {
+        "txt": "} r = e; e = d; if (p > q * (a - x) && p < q * (b - x) && Math.abs(p) < Math.abs(0.5 * q * r)) { d = p / q; u = x + d; if (u - a < tol2 || b - u < tol2) {"
+      },
+      {
+        "txt": "if (x <= m) { d = tol1; } else { d = -tol1; } } } else { if (x < m) { e = b - x; } else {"
+      },
+      {
+        "txt": "e = a - x; } d = GOLDEN_SECTION * e; } } else { if (x < m) { e = b - x; } else { e = a - x; }"
+      },
+      {
+        "txt": "d = GOLDEN_SECTION * e; } if (Math.abs(d) < tol1) { if (d >= 0) { u = x + tol1; } else { u = x - tol1; } } else { u = x + d;"
+      },
+      {
+        "txt": "} double fu = computeObjectiveValue(f, u); if (goalType == GoalType.MAXIMIZE) { fu = -fu; } if (fu <= fx) { if (u < x) { b = x; } else { a = x;"
+      },
+      {
+        "txt": "} v = w; fv = fw; w = x; fw = fx; x = u; fx = fu; } else { if (u < x) { a = u;"
+      },
+      {
+        "txt": "} else { b = u; } if (fu <= fw || w == x) { v = w; fv = fw; w = u; fw = fu; } else if (fu <= fv"
+      },
+      {
+        "txt": "|| v == x || v == w) { v = u; fv = fu; } } } else { // termination setResult(x, (goalType == GoalType.MAXIMIZE) ? -fx : fx, count); return x; }"
+      },
+      {
+        "txt": "++count; } throw new MaxIterationsExceededException(maximalIterationCount); }"
+      }
+    ]
+  },
+  {
+    "id": 2627,
+    "file_path": "src/main/java/org/apache/commons/math/optimization/univariate/BrentOptimizer.java",
+    "start-bug-line": 57,
+    "end-bug-line": 60,
+    "bug": "throw new UnsupportedOperationException(); } public double optimize(final UnivariateRealFunction f, final GoalType goalType, final double min, final double max, final double startValue) throws MaxIterationsExceededException, FunctionEvaluationException { clearResult();",
+    "fix": "[Delete]",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.math.optimization.univariate; import org.apache.commons.math.FunctionEvaluationException; import org.apache.commons.math.MaxIterationsExceededException; import org.apache.commons.math.exception.NotStrictlyPositiveException; import org.apache.commons.math.analysis.UnivariateRealFunction; import org.apache.commons.math.optimization.GoalType; public class BrentOptimizer extends AbstractUnivariateRealOptimizer { private static final double GOLDEN_SECTION = 0.5 * (3 - Math.sqrt(5)); public BrentOptimizer() {"
+      },
+      {
+        "txt": "setMaximalIterationCount(100); setAbsoluteAccuracy(1E-10); setRelativeAccuracy(1.0e-14); } protected double doOptimize() throws MaxIterationsExceededException, FunctionEvaluationException { <extra_id_0> return localMin(getGoalType() == GoalType.MINIMIZE, f, goalType, min, startValue, max, getRelativeAccuracy(), getAbsoluteAccuracy()); } public double optimize(final UnivariateRealFunction f, final GoalType goalType, final double min, final double max) throws MaxIterationsExceededException, FunctionEvaluationException { return optimize(f, goalType, min, max, min + GOLDEN_SECTION * (max - min));"
+      },
+      {
+        "txt": "public double optimize(final UnivariateRealFunction f, final GoalType goalType, final double min, final double max) throws MaxIterationsExceededException, FunctionEvaluationException { return optimize(f, goalType, min, max, min + GOLDEN_SECTION * (max - min)); } private double localMin(boolean isMinim, UnivariateRealFunction f, GoalType goalType, double lo, double mid, double hi, double eps, double t) throws MaxIterationsExceededException, FunctionEvaluationException { if (eps <= 0) {"
+      },
+      {
+        "txt": "throw new NotStrictlyPositiveException(eps); } if (t <= 0) { throw new NotStrictlyPositiveException(t); } double a, b; if (lo < hi) { a = lo; b = hi; } else {"
+      },
+      {
+        "txt": "a = hi; b = lo; } double x = mid; double v = x; double w = x; double d = 0; double e = 0; double fx = computeObjectiveValue(f, x); if (goalType == GoalType.MAXIMIZE) {"
+      },
+      {
+        "txt": "fx = -fx; } double fv = fx; double fw = fx; int count = 0; while (count < maximalIterationCount) { double m = 0.5 * (a + b); final double tol1 = eps * Math.abs(x) + t; final double tol2 = 2 * tol1; if (Math.abs(x - m) > tol2 - 0.5 * (b - a)) {"
+      },
+      {
+        "txt": "double p = 0; double q = 0; double r = 0; double u = 0; if (Math.abs(e) > tol1) { // Fit parabola. r = (x - w) * (fx - fv); q = (x - v) * (fx - fw); p = (x - v) * q - (x - w) * r; q = 2 * (q - r); if (q > 0) {"
+      },
+      {
+        "txt": "p = -p; } else { q = -q; } r = e; e = d; if (p > q * (a - x) && p < q * (b - x) && Math.abs(p) < Math.abs(0.5 * q * r)) { d = p / q;"
+      },
+      {
+        "txt": "u = x + d; if (u - a < tol2 || b - u < tol2) { if (x <= m) { d = tol1; } else { d = -tol1; } } } else {"
+      },
+      {
+        "txt": "if (x < m) { e = b - x; } else { e = a - x; } d = GOLDEN_SECTION * e; } } else { if (x < m) { e = b - x;"
+      },
+      {
+        "txt": "} else { e = a - x; } d = GOLDEN_SECTION * e; } if (Math.abs(d) < tol1) { if (d >= 0) { u = x + tol1; } else { u = x - tol1;"
+      },
+      {
+        "txt": "} } else { u = x + d; } double fu = computeObjectiveValue(f, u); if (goalType == GoalType.MAXIMIZE) { fu = -fu; } if (fu <= fx) { if (u < x) {"
+      },
+      {
+        "txt": "b = x; } else { a = x; } v = w; fv = fw; w = x; fw = fx; x = u; fx = fu;"
+      },
+      {
+        "txt": "} else { if (u < x) { a = u; } else { b = u; } if (fu <= fw || w == x) { v = w; fv = fw;"
+      },
+      {
+        "txt": "w = u; fw = fu; } else if (fu <= fv || v == x || v == w) { v = u; fv = fu; } } } else { // termination"
+      },
+      {
+        "txt": "setResult(x, (goalType == GoalType.MAXIMIZE) ? -fx : fx, count); return x; } ++count; } throw new MaxIterationsExceededException(maximalIterationCount); }"
+      }
+    ]
+  },
+  {
+    "id": 2628,
+    "file_path": "src/main/java/org/apache/commons/math/optimization/univariate/BrentOptimizer.java",
+    "start-bug-line": 62,
+    "end-bug-line": 62,
+    "bug": "f, goalType, min, startValue, max,",
+    "fix": "getMin(), getStartValue(), getMax(),",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.math.optimization.univariate; import org.apache.commons.math.FunctionEvaluationException; import org.apache.commons.math.MaxIterationsExceededException; import org.apache.commons.math.exception.NotStrictlyPositiveException;"
+      },
+      {
+        "txt": "import org.apache.commons.math.analysis.UnivariateRealFunction; import org.apache.commons.math.optimization.GoalType; public class BrentOptimizer extends AbstractUnivariateRealOptimizer { private static final double GOLDEN_SECTION = 0.5 * (3 - Math.sqrt(5)); public BrentOptimizer() { setMaxEvaluations(Integer.MAX_VALUE); setMaximalIterationCount(100); setAbsoluteAccuracy(1E-10); setRelativeAccuracy(1.0e-14); }"
+      },
+      {
+        "txt": "throws MaxIterationsExceededException, FunctionEvaluationException { throw new UnsupportedOperationException(); } public double optimize(final UnivariateRealFunction f, final GoalType goalType, final double min, final double max, final double startValue) throws MaxIterationsExceededException, FunctionEvaluationException { clearResult(); return localMin(getGoalType() == GoalType.MINIMIZE, <extra_id_0> getRelativeAccuracy(), getAbsoluteAccuracy()); } public double optimize(final UnivariateRealFunction f, final GoalType goalType, final double min, final double max) throws MaxIterationsExceededException, FunctionEvaluationException { return optimize(f, goalType, min, max, min + GOLDEN_SECTION * (max - min)); } private double localMin(boolean isMinim,"
+      },
+      {
+        "txt": "} private double localMin(boolean isMinim, UnivariateRealFunction f, GoalType goalType, double lo, double mid, double hi, double eps, double t) throws MaxIterationsExceededException, FunctionEvaluationException { if (eps <= 0) { throw new NotStrictlyPositiveException(eps); }"
+      },
+      {
+        "txt": "if (t <= 0) { throw new NotStrictlyPositiveException(t); } double a, b; if (lo < hi) { a = lo; b = hi; } else { a = hi; b = lo;"
+      },
+      {
+        "txt": "} double x = mid; double v = x; double w = x; double d = 0; double e = 0; double fx = computeObjectiveValue(f, x); if (goalType == GoalType.MAXIMIZE) { fx = -fx; }"
+      },
+      {
+        "txt": "double fv = fx; double fw = fx; int count = 0; while (count < maximalIterationCount) { double m = 0.5 * (a + b); final double tol1 = eps * Math.abs(x) + t; final double tol2 = 2 * tol1; if (Math.abs(x - m) > tol2 - 0.5 * (b - a)) { double p = 0; double q = 0;"
+      },
+      {
+        "txt": "double r = 0; double u = 0; if (Math.abs(e) > tol1) { // Fit parabola. r = (x - w) * (fx - fv); q = (x - v) * (fx - fw); p = (x - v) * q - (x - w) * r; q = 2 * (q - r); if (q > 0) { p = -p; } else {"
+      },
+      {
+        "txt": "q = -q; } r = e; e = d; if (p > q * (a - x) && p < q * (b - x) && Math.abs(p) < Math.abs(0.5 * q * r)) { d = p / q; u = x + d; if (u - a < tol2"
+      },
+      {
+        "txt": "|| b - u < tol2) { if (x <= m) { d = tol1; } else { d = -tol1; } } } else { if (x < m) { e = b - x;"
+      },
+      {
+        "txt": "} else { e = a - x; } d = GOLDEN_SECTION * e; } } else { if (x < m) { e = b - x; } else { e = a - x;"
+      },
+      {
+        "txt": "} d = GOLDEN_SECTION * e; } if (Math.abs(d) < tol1) { if (d >= 0) { u = x + tol1; } else { u = x - tol1; } } else {"
+      },
+      {
+        "txt": "u = x + d; } double fu = computeObjectiveValue(f, u); if (goalType == GoalType.MAXIMIZE) { fu = -fu; } if (fu <= fx) { if (u < x) { b = x; } else {"
+      },
+      {
+        "txt": "a = x; } v = w; fv = fw; w = x; fw = fx; x = u; fx = fu; } else { if (u < x) {"
+      },
+      {
+        "txt": "a = u; } else { b = u; } if (fu <= fw || w == x) { v = w; fv = fw; w = u; fw = fu;"
+      },
+      {
+        "txt": "} else if (fu <= fv || v == x || v == w) { v = u; fv = fu; } } } else { // termination setResult(x, (goalType == GoalType.MAXIMIZE) ? -fx : fx, count); return x;"
+      },
+      {
+        "txt": "} ++count; } throw new MaxIterationsExceededException(maximalIterationCount); }"
+      }
+    ]
+  },
+  {
+    "id": 2629,
+    "file_path": "src/main/java/org/apache/commons/math/optimization/univariate/BrentOptimizer.java",
+    "start-bug-line": 65,
+    "end-bug-line": 67,
+    "bug": "public double optimize(final UnivariateRealFunction f, final GoalType goalType, final double min, final double max) throws MaxIterationsExceededException, FunctionEvaluationException { return optimize(f, goalType, min, max, min + GOLDEN_SECTION * (max - min)); }",
+    "fix": "[Delete]",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.math.optimization.univariate; import org.apache.commons.math.FunctionEvaluationException; import org.apache.commons.math.MaxIterationsExceededException; import org.apache.commons.math.exception.NotStrictlyPositiveException; import org.apache.commons.math.analysis.UnivariateRealFunction; import org.apache.commons.math.optimization.GoalType; public class BrentOptimizer extends AbstractUnivariateRealOptimizer {"
+      },
+      {
+        "txt": "private static final double GOLDEN_SECTION = 0.5 * (3 - Math.sqrt(5)); public BrentOptimizer() { setMaxEvaluations(Integer.MAX_VALUE); setMaximalIterationCount(100); setAbsoluteAccuracy(1E-10); setRelativeAccuracy(1.0e-14); } protected double doOptimize() throws MaxIterationsExceededException, FunctionEvaluationException { throw new UnsupportedOperationException();"
+      },
+      {
+        "txt": "public double optimize(final UnivariateRealFunction f, final GoalType goalType, final double min, final double max, final double startValue) throws MaxIterationsExceededException, FunctionEvaluationException { clearResult(); return localMin(getGoalType() == GoalType.MINIMIZE, f, goalType, min, startValue, max, getRelativeAccuracy(), getAbsoluteAccuracy()); } <extra_id_0> private double localMin(boolean isMinim, UnivariateRealFunction f, GoalType goalType, double lo, double mid, double hi, double eps, double t) throws MaxIterationsExceededException, FunctionEvaluationException {"
+      },
+      {
+        "txt": "double eps, double t) throws MaxIterationsExceededException, FunctionEvaluationException { if (eps <= 0) { throw new NotStrictlyPositiveException(eps); } if (t <= 0) { throw new NotStrictlyPositiveException(t); } double a, b; if (lo < hi) {"
+      },
+      {
+        "txt": "a = lo; b = hi; } else { a = hi; b = lo; } double x = mid; double v = x; double w = x; double d = 0;"
+      },
+      {
+        "txt": "double e = 0; double fx = computeObjectiveValue(f, x); if (goalType == GoalType.MAXIMIZE) { fx = -fx; } double fv = fx; double fw = fx; int count = 0; while (count < maximalIterationCount) { double m = 0.5 * (a + b);"
+      },
+      {
+        "txt": "final double tol1 = eps * Math.abs(x) + t; final double tol2 = 2 * tol1; if (Math.abs(x - m) > tol2 - 0.5 * (b - a)) { double p = 0; double q = 0; double r = 0; double u = 0; if (Math.abs(e) > tol1) { // Fit parabola. r = (x - w) * (fx - fv); q = (x - v) * (fx - fw);"
+      },
+      {
+        "txt": "p = (x - v) * q - (x - w) * r; q = 2 * (q - r); if (q > 0) { p = -p; } else { q = -q; } r = e; e = d; if (p > q * (a - x)"
+      },
+      {
+        "txt": "&& p < q * (b - x) && Math.abs(p) < Math.abs(0.5 * q * r)) { d = p / q; u = x + d; if (u - a < tol2 || b - u < tol2) { if (x <= m) { d = tol1; } else { d = -tol1;"
+      },
+      {
+        "txt": "} } } else { if (x < m) { e = b - x; } else { e = a - x; } d = GOLDEN_SECTION * e; }"
+      },
+      {
+        "txt": "} else { if (x < m) { e = b - x; } else { e = a - x; } d = GOLDEN_SECTION * e; } if (Math.abs(d) < tol1) { if (d >= 0) {"
+      },
+      {
+        "txt": "u = x + tol1; } else { u = x - tol1; } } else { u = x + d; } double fu = computeObjectiveValue(f, u); if (goalType == GoalType.MAXIMIZE) { fu = -fu;"
+      },
+      {
+        "txt": "} if (fu <= fx) { if (u < x) { b = x; } else { a = x; } v = w; fv = fw; w = x;"
+      },
+      {
+        "txt": "fw = fx; x = u; fx = fu; } else { if (u < x) { a = u; } else { b = u; } if (fu <= fw"
+      },
+      {
+        "txt": "|| w == x) { v = w; fv = fw; w = u; fw = fu; } else if (fu <= fv || v == x || v == w) { v = u; fv = fu;"
+      },
+      {
+        "txt": "} } } else { // termination setResult(x, (goalType == GoalType.MAXIMIZE) ? -fx : fx, count); return x; } ++count; } throw new MaxIterationsExceededException(maximalIterationCount); }"
+      }
+    ]
+  },
+  {
+    "id": 2630,
+    "file_path": "src/main/java/org/apache/commons/math/optimization/univariate/BrentOptimizer.java",
+    "start-bug-line": 94,
+    "end-bug-line": 95,
+    "bug": "UnivariateRealFunction f, GoalType goalType,",
+    "fix": "[Delete]",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "import org.apache.commons.math.FunctionEvaluationException; import org.apache.commons.math.MaxIterationsExceededException; import org.apache.commons.math.exception.NotStrictlyPositiveException; import org.apache.commons.math.analysis.UnivariateRealFunction; import org.apache.commons.math.optimization.GoalType; public class BrentOptimizer extends AbstractUnivariateRealOptimizer { private static final double GOLDEN_SECTION = 0.5 * (3 - Math.sqrt(5)); public BrentOptimizer() { setMaxEvaluations(Integer.MAX_VALUE); setMaximalIterationCount(100);"
+      },
+      {
+        "txt": "setAbsoluteAccuracy(1E-10); setRelativeAccuracy(1.0e-14); } protected double doOptimize() throws MaxIterationsExceededException, FunctionEvaluationException { throw new UnsupportedOperationException(); } public double optimize(final UnivariateRealFunction f, final GoalType goalType, final double min, final double max, final double startValue) throws MaxIterationsExceededException, FunctionEvaluationException { clearResult(); return localMin(getGoalType() == GoalType.MINIMIZE,"
+      },
+      {
+        "txt": "getRelativeAccuracy(), getAbsoluteAccuracy()); } public double optimize(final UnivariateRealFunction f, final GoalType goalType, final double min, final double max) throws MaxIterationsExceededException, FunctionEvaluationException { return optimize(f, goalType, min, max, min + GOLDEN_SECTION * (max - min)); } private double localMin(boolean isMinim, <extra_id_0> double lo, double mid, double hi, double eps, double t) throws MaxIterationsExceededException, FunctionEvaluationException { if (eps <= 0) { throw new NotStrictlyPositiveException(eps); }"
+      },
+      {
+        "txt": "throw new NotStrictlyPositiveException(eps); } if (t <= 0) { throw new NotStrictlyPositiveException(t); } double a, b; if (lo < hi) { a = lo; b = hi; } else {"
+      },
+      {
+        "txt": "a = hi; b = lo; } double x = mid; double v = x; double w = x; double d = 0; double e = 0; double fx = computeObjectiveValue(f, x); if (goalType == GoalType.MAXIMIZE) {"
+      },
+      {
+        "txt": "fx = -fx; } double fv = fx; double fw = fx; int count = 0; while (count < maximalIterationCount) { double m = 0.5 * (a + b); final double tol1 = eps * Math.abs(x) + t; final double tol2 = 2 * tol1; if (Math.abs(x - m) > tol2 - 0.5 * (b - a)) {"
+      },
+      {
+        "txt": "double p = 0; double q = 0; double r = 0; double u = 0; if (Math.abs(e) > tol1) { // Fit parabola. r = (x - w) * (fx - fv); q = (x - v) * (fx - fw); p = (x - v) * q - (x - w) * r; q = 2 * (q - r); if (q > 0) {"
+      },
+      {
+        "txt": "p = -p; } else { q = -q; } r = e; e = d; if (p > q * (a - x) && p < q * (b - x) && Math.abs(p) < Math.abs(0.5 * q * r)) { d = p / q;"
+      },
+      {
+        "txt": "u = x + d; if (u - a < tol2 || b - u < tol2) { if (x <= m) { d = tol1; } else { d = -tol1; } } } else {"
+      },
+      {
+        "txt": "if (x < m) { e = b - x; } else { e = a - x; } d = GOLDEN_SECTION * e; } } else { if (x < m) { e = b - x;"
+      },
+      {
+        "txt": "} else { e = a - x; } d = GOLDEN_SECTION * e; } if (Math.abs(d) < tol1) { if (d >= 0) { u = x + tol1; } else { u = x - tol1;"
+      },
+      {
+        "txt": "} } else { u = x + d; } double fu = computeObjectiveValue(f, u); if (goalType == GoalType.MAXIMIZE) { fu = -fu; } if (fu <= fx) { if (u < x) {"
+      },
+      {
+        "txt": "b = x; } else { a = x; } v = w; fv = fw; w = x; fw = fx; x = u; fx = fu;"
+      },
+      {
+        "txt": "} else { if (u < x) { a = u; } else { b = u; } if (fu <= fw || w == x) { v = w; fv = fw;"
+      },
+      {
+        "txt": "w = u; fw = fu; } else if (fu <= fv || v == x || v == w) { v = u; fv = fu; } } } else { // termination"
+      },
+      {
+        "txt": "setResult(x, (goalType == GoalType.MAXIMIZE) ? -fx : fx, count); return x; } ++count; } throw new MaxIterationsExceededException(maximalIterationCount); }"
+      }
+    ]
+  },
+  {
+    "id": 2631,
+    "file_path": "src/main/java/org/apache/commons/math/optimization/univariate/BrentOptimizer.java",
+    "start-bug-line": 119,
+    "end-bug-line": 120,
+    "bug": "double fx = computeObjectiveValue(f, x); if (goalType == GoalType.MAXIMIZE) {",
+    "fix": "double fx = computeObjectiveValue(x); if (!isMinim) {",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.math.optimization.univariate; import org.apache.commons.math.FunctionEvaluationException; import org.apache.commons.math.MaxIterationsExceededException; import org.apache.commons.math.exception.NotStrictlyPositiveException; import org.apache.commons.math.analysis.UnivariateRealFunction;"
+      },
+      {
+        "txt": "import org.apache.commons.math.optimization.GoalType; public class BrentOptimizer extends AbstractUnivariateRealOptimizer { private static final double GOLDEN_SECTION = 0.5 * (3 - Math.sqrt(5)); public BrentOptimizer() { setMaxEvaluations(Integer.MAX_VALUE); setMaximalIterationCount(100); setAbsoluteAccuracy(1E-10); setRelativeAccuracy(1.0e-14); } protected double doOptimize()"
+      },
+      {
+        "txt": "throws MaxIterationsExceededException, FunctionEvaluationException { throw new UnsupportedOperationException(); } public double optimize(final UnivariateRealFunction f, final GoalType goalType, final double min, final double max, final double startValue) throws MaxIterationsExceededException, FunctionEvaluationException { clearResult(); return localMin(getGoalType() == GoalType.MINIMIZE, f, goalType, min, startValue, max, getRelativeAccuracy(), getAbsoluteAccuracy()); } public double optimize(final UnivariateRealFunction f, final GoalType goalType, final double min, final double max) throws MaxIterationsExceededException, FunctionEvaluationException {"
+      },
+      {
+        "txt": "return optimize(f, goalType, min, max, min + GOLDEN_SECTION * (max - min)); } private double localMin(boolean isMinim, UnivariateRealFunction f, GoalType goalType, double lo, double mid, double hi, double eps, double t) throws MaxIterationsExceededException, FunctionEvaluationException { if (eps <= 0) { throw new NotStrictlyPositiveException(eps);"
+      },
+      {
+        "txt": "} if (t <= 0) { throw new NotStrictlyPositiveException(t); } double a, b; if (lo < hi) { a = lo; b = hi; } else { a = hi;"
+      },
+      {
+        "txt": "} double x = mid; double v = x; double w = x; double d = 0; double e = 0; <extra_id_0> fx = -fx; } double fv = fx; double fw = fx; int count = 0; while (count < maximalIterationCount) {"
+      },
+      {
+        "txt": "int count = 0; while (count < maximalIterationCount) { double m = 0.5 * (a + b); final double tol1 = eps * Math.abs(x) + t; final double tol2 = 2 * tol1; if (Math.abs(x - m) > tol2 - 0.5 * (b - a)) { double p = 0; double q = 0; double r = 0; double u = 0;"
+      },
+      {
+        "txt": "if (Math.abs(e) > tol1) { // Fit parabola. r = (x - w) * (fx - fv); q = (x - v) * (fx - fw); p = (x - v) * q - (x - w) * r; q = 2 * (q - r); if (q > 0) { p = -p; } else { q = -q; }"
+      },
+      {
+        "txt": "r = e; e = d; if (p > q * (a - x) && p < q * (b - x) && Math.abs(p) < Math.abs(0.5 * q * r)) { d = p / q; u = x + d; if (u - a < tol2 || b - u < tol2) { if (x <= m) {"
+      },
+      {
+        "txt": "d = tol1; } else { d = -tol1; } } } else { if (x < m) { e = b - x; } else { e = a - x;"
+      },
+      {
+        "txt": "} d = GOLDEN_SECTION * e; } } else { if (x < m) { e = b - x; } else { e = a - x; } d = GOLDEN_SECTION * e;"
+      },
+      {
+        "txt": "} if (Math.abs(d) < tol1) { if (d >= 0) { u = x + tol1; } else { u = x - tol1; } } else { u = x + d; }"
+      },
+      {
+        "txt": "double fu = computeObjectiveValue(f, u); if (goalType == GoalType.MAXIMIZE) { fu = -fu; } if (fu <= fx) { if (u < x) { b = x; } else { a = x; }"
+      },
+      {
+        "txt": "v = w; fv = fw; w = x; fw = fx; x = u; fx = fu; } else { if (u < x) { a = u; } else {"
+      },
+      {
+        "txt": "b = u; } if (fu <= fw || w == x) { v = w; fv = fw; w = u; fw = fu; } else if (fu <= fv || v == x"
+      },
+      {
+        "txt": "|| v == w) { v = u; fv = fu; } } } else { // termination setResult(x, (goalType == GoalType.MAXIMIZE) ? -fx : fx, count); return x; } ++count;"
+      },
+      {
+        "txt": "} throw new MaxIterationsExceededException(maximalIterationCount); }"
+      }
+    ]
+  },
+  {
+    "id": 2632,
+    "file_path": "src/main/java/org/apache/commons/math/optimization/univariate/BrentOptimizer.java",
+    "start-bug-line": 126,
+    "end-bug-line": 127,
+    "bug": "int count = 0; while (count < maximalIterationCount) {",
+    "fix": "while (true) {",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "import org.apache.commons.math.FunctionEvaluationException; import org.apache.commons.math.MaxIterationsExceededException; import org.apache.commons.math.exception.NotStrictlyPositiveException; import org.apache.commons.math.analysis.UnivariateRealFunction; import org.apache.commons.math.optimization.GoalType; public class BrentOptimizer extends AbstractUnivariateRealOptimizer { private static final double GOLDEN_SECTION = 0.5 * (3 - Math.sqrt(5)); public BrentOptimizer() { setMaxEvaluations(Integer.MAX_VALUE); setMaximalIterationCount(100);"
+      },
+      {
+        "txt": "setAbsoluteAccuracy(1E-10); setRelativeAccuracy(1.0e-14); } protected double doOptimize() throws MaxIterationsExceededException, FunctionEvaluationException { throw new UnsupportedOperationException(); } public double optimize(final UnivariateRealFunction f, final GoalType goalType, final double min, final double max, final double startValue) throws MaxIterationsExceededException, FunctionEvaluationException { clearResult(); return localMin(getGoalType() == GoalType.MINIMIZE,"
+      },
+      {
+        "txt": "f, goalType, min, startValue, max, getRelativeAccuracy(), getAbsoluteAccuracy()); } public double optimize(final UnivariateRealFunction f, final GoalType goalType, final double min, final double max) throws MaxIterationsExceededException, FunctionEvaluationException { return optimize(f, goalType, min, max, min + GOLDEN_SECTION * (max - min)); } private double localMin(boolean isMinim, UnivariateRealFunction f, GoalType goalType, double lo, double mid, double hi,"
+      },
+      {
+        "txt": "double eps, double t) throws MaxIterationsExceededException, FunctionEvaluationException { if (eps <= 0) { throw new NotStrictlyPositiveException(eps); } if (t <= 0) { throw new NotStrictlyPositiveException(t); } double a, b; if (lo < hi) {"
+      },
+      {
+        "txt": "a = lo; b = hi; } else { a = hi; b = lo; } double x = mid; double v = x; double w = x; double d = 0;"
+      },
+      {
+        "txt": "double fx = computeObjectiveValue(f, x); if (goalType == GoalType.MAXIMIZE) { fx = -fx; } double fv = fx; double fw = fx; <extra_id_0> double m = 0.5 * (a + b); final double tol1 = eps * Math.abs(x) + t; final double tol2 = 2 * tol1; if (Math.abs(x - m) > tol2 - 0.5 * (b - a)) { double p = 0; double q = 0;"
+      },
+      {
+        "txt": "double p = 0; double q = 0; double r = 0; double u = 0; if (Math.abs(e) > tol1) { // Fit parabola. r = (x - w) * (fx - fv); q = (x - v) * (fx - fw); p = (x - v) * q - (x - w) * r; q = 2 * (q - r); if (q > 0) {"
+      },
+      {
+        "txt": "p = -p; } else { q = -q; } r = e; e = d; if (p > q * (a - x) && p < q * (b - x) && Math.abs(p) < Math.abs(0.5 * q * r)) { d = p / q;"
+      },
+      {
+        "txt": "u = x + d; if (u - a < tol2 || b - u < tol2) { if (x <= m) { d = tol1; } else { d = -tol1; } } } else {"
+      },
+      {
+        "txt": "if (x < m) { e = b - x; } else { e = a - x; } d = GOLDEN_SECTION * e; } } else { if (x < m) { e = b - x;"
+      },
+      {
+        "txt": "} else { e = a - x; } d = GOLDEN_SECTION * e; } if (Math.abs(d) < tol1) { if (d >= 0) { u = x + tol1; } else { u = x - tol1;"
+      },
+      {
+        "txt": "} } else { u = x + d; } double fu = computeObjectiveValue(f, u); if (goalType == GoalType.MAXIMIZE) { fu = -fu; } if (fu <= fx) { if (u < x) {"
+      },
+      {
+        "txt": "b = x; } else { a = x; } v = w; fv = fw; w = x; fw = fx; x = u; fx = fu;"
+      },
+      {
+        "txt": "} else { if (u < x) { a = u; } else { b = u; } if (fu <= fw || w == x) { v = w; fv = fw;"
+      },
+      {
+        "txt": "w = u; fw = fu; } else if (fu <= fv || v == x || v == w) { v = u; fv = fu; } } } else { // termination"
+      },
+      {
+        "txt": "setResult(x, (goalType == GoalType.MAXIMIZE) ? -fx : fx, count); return x; } ++count; } throw new MaxIterationsExceededException(maximalIterationCount); }"
+      }
+    ]
+  },
+  {
+    "id": 2633,
+    "file_path": "src/main/java/org/apache/commons/math/optimization/univariate/BrentOptimizer.java",
+    "start-bug-line": 200,
+    "end-bug-line": 201,
+    "bug": "double fu = computeObjectiveValue(f, u); if (goalType == GoalType.MAXIMIZE) {",
+    "fix": "double fu = computeObjectiveValue(u); if (!isMinim) {",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "import org.apache.commons.math.FunctionEvaluationException; import org.apache.commons.math.MaxIterationsExceededException; import org.apache.commons.math.exception.NotStrictlyPositiveException; import org.apache.commons.math.analysis.UnivariateRealFunction; import org.apache.commons.math.optimization.GoalType; public class BrentOptimizer extends AbstractUnivariateRealOptimizer { private static final double GOLDEN_SECTION = 0.5 * (3 - Math.sqrt(5)); public BrentOptimizer() { setMaxEvaluations(Integer.MAX_VALUE); setMaximalIterationCount(100);"
+      },
+      {
+        "txt": "setAbsoluteAccuracy(1E-10); setRelativeAccuracy(1.0e-14); } protected double doOptimize() throws MaxIterationsExceededException, FunctionEvaluationException { throw new UnsupportedOperationException(); } public double optimize(final UnivariateRealFunction f, final GoalType goalType, final double min, final double max, final double startValue) throws MaxIterationsExceededException, FunctionEvaluationException { clearResult(); return localMin(getGoalType() == GoalType.MINIMIZE,"
+      },
+      {
+        "txt": "f, goalType, min, startValue, max, getRelativeAccuracy(), getAbsoluteAccuracy()); } public double optimize(final UnivariateRealFunction f, final GoalType goalType, final double min, final double max) throws MaxIterationsExceededException, FunctionEvaluationException { return optimize(f, goalType, min, max, min + GOLDEN_SECTION * (max - min)); } private double localMin(boolean isMinim, UnivariateRealFunction f, GoalType goalType, double lo, double mid, double hi,"
+      },
+      {
+        "txt": "double eps, double t) throws MaxIterationsExceededException, FunctionEvaluationException { if (eps <= 0) { throw new NotStrictlyPositiveException(eps); } if (t <= 0) { throw new NotStrictlyPositiveException(t); } double a, b; if (lo < hi) {"
+      },
+      {
+        "txt": "a = lo; b = hi; } else { a = hi; b = lo; } double x = mid; double v = x; double w = x; double d = 0;"
+      },
+      {
+        "txt": "double e = 0; double fx = computeObjectiveValue(f, x); if (goalType == GoalType.MAXIMIZE) { fx = -fx; } double fv = fx; double fw = fx; int count = 0; while (count < maximalIterationCount) { double m = 0.5 * (a + b);"
+      },
+      {
+        "txt": "final double tol1 = eps * Math.abs(x) + t; final double tol2 = 2 * tol1; if (Math.abs(x - m) > tol2 - 0.5 * (b - a)) { double p = 0; double q = 0; double r = 0; double u = 0; if (Math.abs(e) > tol1) { // Fit parabola. r = (x - w) * (fx - fv); q = (x - v) * (fx - fw);"
+      },
+      {
+        "txt": "p = (x - v) * q - (x - w) * r; q = 2 * (q - r); if (q > 0) { p = -p; } else { q = -q; } r = e; e = d; if (p > q * (a - x)"
+      },
+      {
+        "txt": "&& p < q * (b - x) && Math.abs(p) < Math.abs(0.5 * q * r)) { d = p / q; u = x + d; if (u - a < tol2 || b - u < tol2) { if (x <= m) { d = tol1; } else { d = -tol1;"
+      },
+      {
+        "txt": "} } } else { if (x < m) { e = b - x; } else { e = a - x; } d = GOLDEN_SECTION * e; }"
+      },
+      {
+        "txt": "} else { if (x < m) { e = b - x; } else { e = a - x; } d = GOLDEN_SECTION * e; } if (Math.abs(d) < tol1) { if (d >= 0) {"
+      },
+      {
+        "txt": "} else { u = x - tol1; } } else { u = x + d; } <extra_id_0> fu = -fu; } if (fu <= fx) { if (u < x) { b = x; } else {"
+      },
+      {
+        "txt": "b = x; } else { a = x; } v = w; fv = fw; w = x; fw = fx; x = u; fx = fu;"
+      },
+      {
+        "txt": "} else { if (u < x) { a = u; } else { b = u; } if (fu <= fw || w == x) { v = w; fv = fw;"
+      },
+      {
+        "txt": "w = u; fw = fu; } else if (fu <= fv || v == x || v == w) { v = u; fv = fu; } } } else { // termination"
+      },
+      {
+        "txt": "setResult(x, (goalType == GoalType.MAXIMIZE) ? -fx : fx, count); return x; } ++count; } throw new MaxIterationsExceededException(maximalIterationCount); }"
+      }
+    ]
+  },
+  {
+    "id": 2634,
+    "file_path": "src/main/java/org/apache/commons/math/optimization/univariate/BrentOptimizer.java",
+    "start-bug-line": 238,
+    "end-bug-line": 238,
+    "bug": "setResult(x, (goalType == GoalType.MAXIMIZE) ? -fx : fx, count);",
+    "fix": "setFunctionValue(isMinim ? fx : -fx);",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.math.optimization.univariate; import org.apache.commons.math.FunctionEvaluationException; import org.apache.commons.math.MaxIterationsExceededException; import org.apache.commons.math.exception.NotStrictlyPositiveException; import org.apache.commons.math.analysis.UnivariateRealFunction; import org.apache.commons.math.optimization.GoalType; public class BrentOptimizer extends AbstractUnivariateRealOptimizer {"
+      },
+      {
+        "txt": "private static final double GOLDEN_SECTION = 0.5 * (3 - Math.sqrt(5)); public BrentOptimizer() { setMaxEvaluations(Integer.MAX_VALUE); setMaximalIterationCount(100); setAbsoluteAccuracy(1E-10); setRelativeAccuracy(1.0e-14); } protected double doOptimize() throws MaxIterationsExceededException, FunctionEvaluationException { throw new UnsupportedOperationException();"
+      },
+      {
+        "txt": "} public double optimize(final UnivariateRealFunction f, final GoalType goalType, final double min, final double max, final double startValue) throws MaxIterationsExceededException, FunctionEvaluationException { clearResult(); return localMin(getGoalType() == GoalType.MINIMIZE, f, goalType, min, startValue, max, getRelativeAccuracy(), getAbsoluteAccuracy()); } public double optimize(final UnivariateRealFunction f, final GoalType goalType, final double min, final double max) throws MaxIterationsExceededException, FunctionEvaluationException { return optimize(f, goalType, min, max, min + GOLDEN_SECTION * (max - min)); }"
+      },
+      {
+        "txt": "private double localMin(boolean isMinim, UnivariateRealFunction f, GoalType goalType, double lo, double mid, double hi, double eps, double t) throws MaxIterationsExceededException, FunctionEvaluationException { if (eps <= 0) { throw new NotStrictlyPositiveException(eps); } if (t <= 0) {"
+      },
+      {
+        "txt": "throw new NotStrictlyPositiveException(t); } double a, b; if (lo < hi) { a = lo; b = hi; } else { a = hi; b = lo; }"
+      },
+      {
+        "txt": "double x = mid; double v = x; double w = x; double d = 0; double e = 0; double fx = computeObjectiveValue(f, x); if (goalType == GoalType.MAXIMIZE) { fx = -fx; } double fv = fx;"
+      },
+      {
+        "txt": "double fw = fx; int count = 0; while (count < maximalIterationCount) { double m = 0.5 * (a + b); final double tol1 = eps * Math.abs(x) + t; final double tol2 = 2 * tol1; if (Math.abs(x - m) > tol2 - 0.5 * (b - a)) { double p = 0; double q = 0; double r = 0;"
+      },
+      {
+        "txt": "double u = 0; if (Math.abs(e) > tol1) { // Fit parabola. r = (x - w) * (fx - fv); q = (x - v) * (fx - fw); p = (x - v) * q - (x - w) * r; q = 2 * (q - r); if (q > 0) { p = -p; } else { q = -q;"
+      },
+      {
+        "txt": "} r = e; e = d; if (p > q * (a - x) && p < q * (b - x) && Math.abs(p) < Math.abs(0.5 * q * r)) { d = p / q; u = x + d; if (u - a < tol2 || b - u < tol2) {"
+      },
+      {
+        "txt": "if (x <= m) { d = tol1; } else { d = -tol1; } } } else { if (x < m) { e = b - x; } else {"
+      },
+      {
+        "txt": "e = a - x; } d = GOLDEN_SECTION * e; } } else { if (x < m) { e = b - x; } else { e = a - x; }"
+      },
+      {
+        "txt": "d = GOLDEN_SECTION * e; } if (Math.abs(d) < tol1) { if (d >= 0) { u = x + tol1; } else { u = x - tol1; } } else { u = x + d;"
+      },
+      {
+        "txt": "} double fu = computeObjectiveValue(f, u); if (goalType == GoalType.MAXIMIZE) { fu = -fu; } if (fu <= fx) { if (u < x) { b = x; } else { a = x;"
+      },
+      {
+        "txt": "} v = w; fv = fw; w = x; fw = fx; x = u; fx = fu; } else { if (u < x) { a = u;"
+      },
+      {
+        "txt": "} else { b = u; } if (fu <= fw || w == x) { v = w; fv = fw; w = u; fw = fu; } else if (fu <= fv"
+      },
+      {
+        "txt": "|| v == w) { v = u; fv = fu; } } } else { // termination <extra_id_0> return x; } ++count; } throw new MaxIterationsExceededException(maximalIterationCount); }"
+      },
+      {
+        "txt": "throw new MaxIterationsExceededException(maximalIterationCount); }"
+      }
+    ]
+  },
+  {
+    "id": 2635,
+    "file_path": "src/main/java/org/apache/commons/math/optimization/univariate/BrentOptimizer.java",
+    "start-bug-line": 241,
+    "end-bug-line": 241,
+    "bug": "++count;",
+    "fix": "incrementIterationsCounter();",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.math.optimization.univariate; import org.apache.commons.math.FunctionEvaluationException; import org.apache.commons.math.MaxIterationsExceededException; import org.apache.commons.math.exception.NotStrictlyPositiveException; import org.apache.commons.math.analysis.UnivariateRealFunction; import org.apache.commons.math.optimization.GoalType; public class BrentOptimizer extends AbstractUnivariateRealOptimizer { private static final double GOLDEN_SECTION = 0.5 * (3 - Math.sqrt(5)); public BrentOptimizer() { setMaxEvaluations(Integer.MAX_VALUE);"
+      },
+      {
+        "txt": "setMaximalIterationCount(100); setAbsoluteAccuracy(1E-10); setRelativeAccuracy(1.0e-14); } protected double doOptimize() throws MaxIterationsExceededException, FunctionEvaluationException { throw new UnsupportedOperationException(); } public double optimize(final UnivariateRealFunction f, final GoalType goalType, final double min, final double max, final double startValue) throws MaxIterationsExceededException, FunctionEvaluationException { clearResult();"
+      },
+      {
+        "txt": "return localMin(getGoalType() == GoalType.MINIMIZE, f, goalType, min, startValue, max, getRelativeAccuracy(), getAbsoluteAccuracy()); } public double optimize(final UnivariateRealFunction f, final GoalType goalType, final double min, final double max) throws MaxIterationsExceededException, FunctionEvaluationException { return optimize(f, goalType, min, max, min + GOLDEN_SECTION * (max - min)); } private double localMin(boolean isMinim, UnivariateRealFunction f, GoalType goalType,"
+      },
+      {
+        "txt": "double lo, double mid, double hi, double eps, double t) throws MaxIterationsExceededException, FunctionEvaluationException { if (eps <= 0) { throw new NotStrictlyPositiveException(eps); } if (t <= 0) { throw new NotStrictlyPositiveException(t); } double a, b;"
+      },
+      {
+        "txt": "if (lo < hi) { a = lo; b = hi; } else { a = hi; b = lo; } double x = mid; double v = x; double w = x;"
+      },
+      {
+        "txt": "double d = 0; double e = 0; double fx = computeObjectiveValue(f, x); if (goalType == GoalType.MAXIMIZE) { fx = -fx; } double fv = fx; double fw = fx; int count = 0; while (count < maximalIterationCount) {"
+      },
+      {
+        "txt": "double m = 0.5 * (a + b); final double tol1 = eps * Math.abs(x) + t; final double tol2 = 2 * tol1; if (Math.abs(x - m) > tol2 - 0.5 * (b - a)) { double p = 0; double q = 0; double r = 0; double u = 0; if (Math.abs(e) > tol1) { // Fit parabola. r = (x - w) * (fx - fv);"
+      },
+      {
+        "txt": "q = (x - v) * (fx - fw); p = (x - v) * q - (x - w) * r; q = 2 * (q - r); if (q > 0) { p = -p; } else { q = -q; } r = e; e = d;"
+      },
+      {
+        "txt": "if (p > q * (a - x) && p < q * (b - x) && Math.abs(p) < Math.abs(0.5 * q * r)) { d = p / q; u = x + d; if (u - a < tol2 || b - u < tol2) { if (x <= m) { d = tol1; } else {"
+      },
+      {
+        "txt": "d = -tol1; } } } else { if (x < m) { e = b - x; } else { e = a - x; } d = GOLDEN_SECTION * e;"
+      },
+      {
+        "txt": "} } else { if (x < m) { e = b - x; } else { e = a - x; } d = GOLDEN_SECTION * e; } if (Math.abs(d) < tol1) {"
+      },
+      {
+        "txt": "if (d >= 0) { u = x + tol1; } else { u = x - tol1; } } else { u = x + d; } double fu = computeObjectiveValue(f, u); if (goalType == GoalType.MAXIMIZE) {"
+      },
+      {
+        "txt": "fu = -fu; } if (fu <= fx) { if (u < x) { b = x; } else { a = x; } v = w; fv = fw;"
+      },
+      {
+        "txt": "w = x; fw = fx; x = u; fx = fu; } else { if (u < x) { a = u; } else { b = u; }"
+      },
+      {
+        "txt": "if (fu <= fw || w == x) { v = w; fv = fw; w = u; fw = fu; } else if (fu <= fv || v == x || v == w) { v = u;"
+      },
+      {
+        "txt": "} } } else { // termination setResult(x, (goalType == GoalType.MAXIMIZE) ? -fx : fx, count); return x; } <extra_id_0> } throw new MaxIterationsExceededException(maximalIterationCount); } }"
+      }
+    ]
+  },
+  {
+    "id": 2636,
+    "file_path": "src/main/java/org/apache/commons/math/optimization/univariate/BrentOptimizer.java",
+    "start-bug-line": 243,
+    "end-bug-line": 243,
+    "bug": "throw new MaxIterationsExceededException(maximalIterationCount);",
+    "fix": "[Delete]",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.math.optimization.univariate; import org.apache.commons.math.FunctionEvaluationException;"
+      },
+      {
+        "txt": "import org.apache.commons.math.MaxIterationsExceededException; import org.apache.commons.math.exception.NotStrictlyPositiveException; import org.apache.commons.math.analysis.UnivariateRealFunction; import org.apache.commons.math.optimization.GoalType; public class BrentOptimizer extends AbstractUnivariateRealOptimizer { private static final double GOLDEN_SECTION = 0.5 * (3 - Math.sqrt(5)); public BrentOptimizer() { setMaxEvaluations(Integer.MAX_VALUE); setMaximalIterationCount(100); setAbsoluteAccuracy(1E-10);"
+      },
+      {
+        "txt": "setRelativeAccuracy(1.0e-14); } protected double doOptimize() throws MaxIterationsExceededException, FunctionEvaluationException { throw new UnsupportedOperationException(); } public double optimize(final UnivariateRealFunction f, final GoalType goalType, final double min, final double max, final double startValue) throws MaxIterationsExceededException, FunctionEvaluationException { clearResult(); return localMin(getGoalType() == GoalType.MINIMIZE, f, goalType, min, startValue, max,"
+      },
+      {
+        "txt": "getRelativeAccuracy(), getAbsoluteAccuracy()); } public double optimize(final UnivariateRealFunction f, final GoalType goalType, final double min, final double max) throws MaxIterationsExceededException, FunctionEvaluationException { return optimize(f, goalType, min, max, min + GOLDEN_SECTION * (max - min)); } private double localMin(boolean isMinim, UnivariateRealFunction f, GoalType goalType, double lo, double mid, double hi, double eps, double t)"
+      },
+      {
+        "txt": "throws MaxIterationsExceededException, FunctionEvaluationException { if (eps <= 0) { throw new NotStrictlyPositiveException(eps); } if (t <= 0) { throw new NotStrictlyPositiveException(t); } double a, b; if (lo < hi) { a = lo;"
+      },
+      {
+        "txt": "b = hi; } else { a = hi; b = lo; } double x = mid; double v = x; double w = x; double d = 0; double e = 0;"
+      },
+      {
+        "txt": "double fx = computeObjectiveValue(f, x); if (goalType == GoalType.MAXIMIZE) { fx = -fx; } double fv = fx; double fw = fx; int count = 0; while (count < maximalIterationCount) { double m = 0.5 * (a + b); final double tol1 = eps * Math.abs(x) + t;"
+      },
+      {
+        "txt": "final double tol2 = 2 * tol1; if (Math.abs(x - m) > tol2 - 0.5 * (b - a)) { double p = 0; double q = 0; double r = 0; double u = 0; if (Math.abs(e) > tol1) { // Fit parabola. r = (x - w) * (fx - fv); q = (x - v) * (fx - fw); p = (x - v) * q - (x - w) * r;"
+      },
+      {
+        "txt": "q = 2 * (q - r); if (q > 0) { p = -p; } else { q = -q; } r = e; e = d; if (p > q * (a - x) && p < q * (b - x)"
+      },
+      {
+        "txt": "&& Math.abs(p) < Math.abs(0.5 * q * r)) { d = p / q; u = x + d; if (u - a < tol2 || b - u < tol2) { if (x <= m) { d = tol1; } else { d = -tol1; }"
+      },
+      {
+        "txt": "} } else { if (x < m) { e = b - x; } else { e = a - x; } d = GOLDEN_SECTION * e; } } else {"
+      },
+      {
+        "txt": "if (x < m) { e = b - x; } else { e = a - x; } d = GOLDEN_SECTION * e; } if (Math.abs(d) < tol1) { if (d >= 0) { u = x + tol1;"
+      },
+      {
+        "txt": "} else { u = x - tol1; } } else { u = x + d; } double fu = computeObjectiveValue(f, u); if (goalType == GoalType.MAXIMIZE) { fu = -fu; }"
+      },
+      {
+        "txt": "if (fu <= fx) { if (u < x) { b = x; } else { a = x; } v = w; fv = fw; w = x; fw = fx;"
+      },
+      {
+        "txt": "x = u; fx = fu; } else { if (u < x) { a = u; } else { b = u; } if (fu <= fw || w == x) {"
+      },
+      {
+        "txt": "v = w; fv = fw; w = u; fw = fu; } else if (fu <= fv || v == x || v == w) { v = u; fv = fu; }"
+      },
+      {
+        "txt": "} else { // termination setResult(x, (goalType == GoalType.MAXIMIZE) ? -fx : fx, count); return x; } ++count; } <extra_id_0> } }"
+      }
+    ]
+  }
+]

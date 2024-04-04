@@ -1,0 +1,146 @@
+[
+  {
+    "id": 1820,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/deser/std/StringCollectionDeserializer.java",
+    "start-bug-line": 107,
+    "end-bug-line": 107,
+    "bug": "AnnotatedWithParams delegateCreator = _valueInstantiator.getDelegateCreator();",
+    "fix": "AnnotatedWithParams delegateCreator = _valueInstantiator.getArrayDelegateCreator();",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "import java.io.IOException; import java.util.Collection; import com.fasterxml.jackson.annotation.JsonFormat; import com.fasterxml.jackson.core.*; import com.fasterxml.jackson.databind.*; import com.fasterxml.jackson.databind.annotation.JacksonStdImpl; import com.fasterxml.jackson.databind.deser.ContextualDeserializer; import com.fasterxml.jackson.databind.deser.NullValueProvider; import com.fasterxml.jackson.databind.deser.ValueInstantiator; import com.fasterxml.jackson.databind.introspect.AnnotatedWithParams;"
+      },
+      {
+        "txt": "import com.fasterxml.jackson.databind.jsontype.TypeDeserializer; @JacksonStdImpl public final class StringCollectionDeserializer extends ContainerDeserializerBase<Collection<String>> implements ContextualDeserializer { private static final long serialVersionUID = 1L; protected final JsonDeserializer<String> _valueDeserializer; protected final ValueInstantiator _valueInstantiator; protected final JsonDeserializer<Object> _delegateDeserializer;"
+      },
+      {
+        "txt": "public StringCollectionDeserializer(JavaType collectionType, JsonDeserializer<?> valueDeser, ValueInstantiator valueInstantiator) { this(collectionType, valueInstantiator, null, valueDeser, valueDeser, null); } @SuppressWarnings(\"unchecked\") protected StringCollectionDeserializer(JavaType collectionType, ValueInstantiator valueInstantiator, JsonDeserializer<?> delegateDeser, JsonDeserializer<?> valueDeser, NullValueProvider nuller, Boolean unwrapSingle)"
+      },
+      {
+        "txt": "{ super(collectionType, nuller, unwrapSingle); _valueDeserializer = (JsonDeserializer<String>) valueDeser; _valueInstantiator = valueInstantiator; _delegateDeserializer = (JsonDeserializer<Object>) delegateDeser; } protected StringCollectionDeserializer withResolved(JsonDeserializer<?> delegateDeser, JsonDeserializer<?> valueDeser, NullValueProvider nuller, Boolean unwrapSingle) {"
+      },
+      {
+        "txt": "if ((_unwrapSingle == unwrapSingle) && (_nullProvider == nuller) && (_valueDeserializer == valueDeser) && (_delegateDeserializer == delegateDeser)) { return this; } return new StringCollectionDeserializer(_containerType, _valueInstantiator, delegateDeser, valueDeser, nuller, unwrapSingle); } @Override // since 2.5 public boolean isCachable() { return (_valueDeserializer == null) && (_delegateDeserializer == null);"
+      },
+      {
+        "txt": "@Override public JsonDeserializer<?> createContextual(DeserializationContext ctxt, BeanProperty property) throws JsonMappingException { JsonDeserializer<Object> delegate = null; if (_valueInstantiator != null) { <extra_id_0> if (delegateCreator != null) { JavaType delegateType = _valueInstantiator.getDelegateType(ctxt.getConfig()); delegate = findDeserializer(ctxt, delegateType, property); } } JsonDeserializer<?> valueDeser = _valueDeserializer;"
+      },
+      {
+        "txt": "} JsonDeserializer<?> valueDeser = _valueDeserializer; final JavaType valueType = _containerType.getContentType(); if (valueDeser == null) { valueDeser = findConvertingContentDeserializer(ctxt, property, valueDeser); if (valueDeser == null) { valueDeser = ctxt.findContextualValueDeserializer(valueType, property); } } else { // if directly assigned, probably not yet contextual, so: valueDeser = ctxt.handleSecondaryContextualization(valueDeser, property, valueType);"
+      },
+      {
+        "txt": "} Boolean unwrapSingle = findFormatFeature(ctxt, property, Collection.class, JsonFormat.Feature.ACCEPT_SINGLE_VALUE_AS_ARRAY); NullValueProvider nuller = findContentNullProvider(ctxt, property, valueDeser); if (isDefaultDeserializer(valueDeser)) { valueDeser = null; } return withResolved(delegate, valueDeser, nuller, unwrapSingle); } @SuppressWarnings(\"unchecked\")"
+      },
+      {
+        "txt": "@Override public JsonDeserializer<Object> getContentDeserializer() { JsonDeserializer<?> deser = _valueDeserializer; return (JsonDeserializer<Object>) deser; } @Override public ValueInstantiator getValueInstantiator() { return _valueInstantiator; } @SuppressWarnings(\"unchecked\")"
+      },
+      {
+        "txt": "@Override public Collection<String> deserialize(JsonParser p, DeserializationContext ctxt) throws IOException { if (_delegateDeserializer != null) { return (Collection<String>) _valueInstantiator.createUsingDelegate(ctxt, _delegateDeserializer.deserialize(p, ctxt)); } final Collection<String> result = (Collection<String>) _valueInstantiator.createUsingDefault(ctxt); return deserialize(p, ctxt, result);"
+      },
+      {
+        "txt": "} @Override public Collection<String> deserialize(JsonParser p, DeserializationContext ctxt, Collection<String> result) throws IOException { if (!p.isExpectedStartArrayToken()) { return handleNonArray(p, ctxt, result); } if (_valueDeserializer != null) {"
+      },
+      {
+        "txt": "return deserializeUsingCustom(p, ctxt, result, _valueDeserializer); } try { while (true) { String value = p.nextTextValue(); if (value != null) { result.add(value); continue; } JsonToken t = p.getCurrentToken();"
+      },
+      {
+        "txt": "if (t == JsonToken.END_ARRAY) { break; } if (t == JsonToken.VALUE_NULL) { if (_skipNullValues) { continue; } value = (String) _nullProvider.getNullValue(ctxt); } else { value = _parseString(p, ctxt);"
+      },
+      {
+        "txt": "} result.add(value); } } catch (Exception e) { throw JsonMappingException.wrapWithPath(e, result, result.size()); } return result; } private Collection<String> deserializeUsingCustom(JsonParser p, DeserializationContext ctxt, Collection<String> result, final JsonDeserializer<String> deser) throws IOException"
+      },
+      {
+        "txt": "{ while (true) { String value; if (p.nextTextValue() == null) { JsonToken t = p.getCurrentToken(); if (t == JsonToken.END_ARRAY) { break; } if (t == JsonToken.VALUE_NULL) { if (_skipNullValues) {"
+      },
+      {
+        "txt": "continue; } value = (String) _nullProvider.getNullValue(ctxt); } else { value = deser.deserialize(p, ctxt); } } else { value = deser.deserialize(p, ctxt); } result.add(value);"
+      },
+      {
+        "txt": "} return result; } @Override public Object deserializeWithType(JsonParser p, DeserializationContext ctxt, TypeDeserializer typeDeserializer) throws IOException { return typeDeserializer.deserializeTypedFromArray(p, ctxt); } @SuppressWarnings(\"unchecked\") private final Collection<String> handleNonArray(JsonParser p, DeserializationContext ctxt,"
+      },
+      {
+        "txt": "Collection<String> result) throws IOException { boolean canWrap = (_unwrapSingle == Boolean.TRUE) || ((_unwrapSingle == null) && ctxt.isEnabled(DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY)); if (!canWrap) { return (Collection<String>) ctxt.handleUnexpectedToken(_containerType.getRawClass(), p); } JsonDeserializer<String> valueDes = _valueDeserializer; JsonToken t = p.getCurrentToken();"
+      },
+      {
+        "txt": "String value; if (t == JsonToken.VALUE_NULL) { if (_skipNullValues) { return result; } value = (String) _nullProvider.getNullValue(ctxt); } else { value = (valueDes == null) ? _parseString(p, ctxt) : valueDes.deserialize(p, ctxt); } result.add(value);"
+      },
+      {
+        "txt": "return result; }"
+      }
+    ]
+  },
+  {
+    "id": 1821,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/deser/std/StringCollectionDeserializer.java",
+    "start-bug-line": 109,
+    "end-bug-line": 109,
+    "bug": "",
+    "fix": "JavaType delegateType = _valueInstantiator.getArrayDelegateType(ctxt.getConfig()); delegate = findDeserializer(ctxt, delegateType, property); } else if ((delegateCreator = _valueInstantiator.getDelegateCreator()) != null) {",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind.deser.std; import java.io.IOException; import java.util.Collection;"
+      },
+      {
+        "txt": "import com.fasterxml.jackson.annotation.JsonFormat; import com.fasterxml.jackson.core.*; import com.fasterxml.jackson.databind.*; import com.fasterxml.jackson.databind.annotation.JacksonStdImpl; import com.fasterxml.jackson.databind.deser.ContextualDeserializer; import com.fasterxml.jackson.databind.deser.NullValueProvider; import com.fasterxml.jackson.databind.deser.ValueInstantiator; import com.fasterxml.jackson.databind.introspect.AnnotatedWithParams; import com.fasterxml.jackson.databind.jsontype.TypeDeserializer; @JacksonStdImpl"
+      },
+      {
+        "txt": "public final class StringCollectionDeserializer extends ContainerDeserializerBase<Collection<String>> implements ContextualDeserializer { private static final long serialVersionUID = 1L; protected final JsonDeserializer<String> _valueDeserializer; protected final ValueInstantiator _valueInstantiator; protected final JsonDeserializer<Object> _delegateDeserializer; public StringCollectionDeserializer(JavaType collectionType, JsonDeserializer<?> valueDeser, ValueInstantiator valueInstantiator)"
+      },
+      {
+        "txt": "{ this(collectionType, valueInstantiator, null, valueDeser, valueDeser, null); } @SuppressWarnings(\"unchecked\") protected StringCollectionDeserializer(JavaType collectionType, ValueInstantiator valueInstantiator, JsonDeserializer<?> delegateDeser, JsonDeserializer<?> valueDeser, NullValueProvider nuller, Boolean unwrapSingle) { super(collectionType, nuller, unwrapSingle);"
+      },
+      {
+        "txt": "_valueDeserializer = (JsonDeserializer<String>) valueDeser; _valueInstantiator = valueInstantiator; _delegateDeserializer = (JsonDeserializer<Object>) delegateDeser; } protected StringCollectionDeserializer withResolved(JsonDeserializer<?> delegateDeser, JsonDeserializer<?> valueDeser, NullValueProvider nuller, Boolean unwrapSingle) { if ((_unwrapSingle == unwrapSingle) && (_nullProvider == nuller) && (_valueDeserializer == valueDeser) && (_delegateDeserializer == delegateDeser)) {"
+      },
+      {
+        "txt": "return this; } return new StringCollectionDeserializer(_containerType, _valueInstantiator, delegateDeser, valueDeser, nuller, unwrapSingle); } @Override // since 2.5 public boolean isCachable() { return (_valueDeserializer == null) && (_delegateDeserializer == null); } @Override"
+      },
+      {
+        "txt": "BeanProperty property) throws JsonMappingException { JsonDeserializer<Object> delegate = null; if (_valueInstantiator != null) { AnnotatedWithParams delegateCreator = _valueInstantiator.getDelegateCreator(); if (delegateCreator != null) { <extra_id_0> delegate = findDeserializer(ctxt, delegateType, property); } } JsonDeserializer<?> valueDeser = _valueDeserializer; final JavaType valueType = _containerType.getContentType(); if (valueDeser == null) {"
+      },
+      {
+        "txt": "final JavaType valueType = _containerType.getContentType(); if (valueDeser == null) { valueDeser = findConvertingContentDeserializer(ctxt, property, valueDeser); if (valueDeser == null) { valueDeser = ctxt.findContextualValueDeserializer(valueType, property); } } else { // if directly assigned, probably not yet contextual, so: valueDeser = ctxt.handleSecondaryContextualization(valueDeser, property, valueType); } Boolean unwrapSingle = findFormatFeature(ctxt, property, Collection.class,"
+      },
+      {
+        "txt": "JsonFormat.Feature.ACCEPT_SINGLE_VALUE_AS_ARRAY); NullValueProvider nuller = findContentNullProvider(ctxt, property, valueDeser); if (isDefaultDeserializer(valueDeser)) { valueDeser = null; } return withResolved(delegate, valueDeser, nuller, unwrapSingle); } @SuppressWarnings(\"unchecked\") @Override public JsonDeserializer<Object> getContentDeserializer() {"
+      },
+      {
+        "txt": "JsonDeserializer<?> deser = _valueDeserializer; return (JsonDeserializer<Object>) deser; } @Override public ValueInstantiator getValueInstantiator() { return _valueInstantiator; } @SuppressWarnings(\"unchecked\") @Override public Collection<String> deserialize(JsonParser p, DeserializationContext ctxt)"
+      },
+      {
+        "txt": "throws IOException { if (_delegateDeserializer != null) { return (Collection<String>) _valueInstantiator.createUsingDelegate(ctxt, _delegateDeserializer.deserialize(p, ctxt)); } final Collection<String> result = (Collection<String>) _valueInstantiator.createUsingDefault(ctxt); return deserialize(p, ctxt, result); } @Override"
+      },
+      {
+        "txt": "public Collection<String> deserialize(JsonParser p, DeserializationContext ctxt, Collection<String> result) throws IOException { if (!p.isExpectedStartArrayToken()) { return handleNonArray(p, ctxt, result); } if (_valueDeserializer != null) { return deserializeUsingCustom(p, ctxt, result, _valueDeserializer); }"
+      },
+      {
+        "txt": "try { while (true) { String value = p.nextTextValue(); if (value != null) { result.add(value); continue; } JsonToken t = p.getCurrentToken(); if (t == JsonToken.END_ARRAY) { break;"
+      },
+      {
+        "txt": "} if (t == JsonToken.VALUE_NULL) { if (_skipNullValues) { continue; } value = (String) _nullProvider.getNullValue(ctxt); } else { value = _parseString(p, ctxt); } result.add(value);"
+      },
+      {
+        "txt": "} } catch (Exception e) { throw JsonMappingException.wrapWithPath(e, result, result.size()); } return result; } private Collection<String> deserializeUsingCustom(JsonParser p, DeserializationContext ctxt, Collection<String> result, final JsonDeserializer<String> deser) throws IOException { while (true) {"
+      },
+      {
+        "txt": "String value; if (p.nextTextValue() == null) { JsonToken t = p.getCurrentToken(); if (t == JsonToken.END_ARRAY) { break; } if (t == JsonToken.VALUE_NULL) { if (_skipNullValues) { continue; }"
+      },
+      {
+        "txt": "value = (String) _nullProvider.getNullValue(ctxt); } else { value = deser.deserialize(p, ctxt); } } else { value = deser.deserialize(p, ctxt); } result.add(value); } return result;"
+      },
+      {
+        "txt": "} @Override public Object deserializeWithType(JsonParser p, DeserializationContext ctxt, TypeDeserializer typeDeserializer) throws IOException { return typeDeserializer.deserializeTypedFromArray(p, ctxt); } @SuppressWarnings(\"unchecked\") private final Collection<String> handleNonArray(JsonParser p, DeserializationContext ctxt, Collection<String> result) throws IOException {"
+      },
+      {
+        "txt": "boolean canWrap = (_unwrapSingle == Boolean.TRUE) || ((_unwrapSingle == null) && ctxt.isEnabled(DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY)); if (!canWrap) { return (Collection<String>) ctxt.handleUnexpectedToken(_containerType.getRawClass(), p); } JsonDeserializer<String> valueDes = _valueDeserializer; JsonToken t = p.getCurrentToken(); String value; if (t == JsonToken.VALUE_NULL) {"
+      },
+      {
+        "txt": "if (_skipNullValues) { return result; } value = (String) _nullProvider.getNullValue(ctxt); } else { value = (valueDes == null) ? _parseString(p, ctxt) : valueDes.deserialize(p, ctxt); } result.add(value); return result; }"
+      }
+    ]
+  }
+]

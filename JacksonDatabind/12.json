@@ -1,0 +1,152 @@
+[
+  {
+    "id": 1351,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/deser/std/MapDeserializer.java",
+    "start-bug-line": 303,
+    "end-bug-line": 303,
+    "bug": "return (_valueTypeDeserializer == null)",
+    "fix": "return (_valueDeserializer == null) && (_keyDeserializer == null) && (_valueTypeDeserializer == null)",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "import java.io.IOException; import java.lang.reflect.InvocationTargetException; import java.util.*; import com.fasterxml.jackson.core.*; import com.fasterxml.jackson.databind.*; import com.fasterxml.jackson.databind.annotation.JacksonStdImpl; import com.fasterxml.jackson.databind.deser.*; import com.fasterxml.jackson.databind.deser.impl.PropertyBasedCreator; import com.fasterxml.jackson.databind.deser.impl.PropertyValueBuffer; import com.fasterxml.jackson.databind.deser.impl.ReadableObjectId.Referring;"
+      },
+      {
+        "txt": "import com.fasterxml.jackson.databind.jsontype.TypeDeserializer; import com.fasterxml.jackson.databind.util.ArrayBuilders; @JacksonStdImpl public class MapDeserializer extends ContainerDeserializerBase<Map<Object,Object>> implements ContextualDeserializer, ResolvableDeserializer { private static final long serialVersionUID = -3378654289961736240L; protected final JavaType _mapType; protected final KeyDeserializer _keyDeserializer;"
+      },
+      {
+        "txt": "protected boolean _standardStringKey; protected final JsonDeserializer<Object> _valueDeserializer; protected final TypeDeserializer _valueTypeDeserializer; protected final ValueInstantiator _valueInstantiator; protected final boolean _hasDefaultCreator; protected JsonDeserializer<Object> _delegateDeserializer; protected PropertyBasedCreator _propertyBasedCreator; protected HashSet<String> _ignorableProperties; public MapDeserializer(JavaType mapType, ValueInstantiator valueInstantiator, KeyDeserializer keyDeser, JsonDeserializer<Object> valueDeser,"
+      },
+      {
+        "txt": "TypeDeserializer valueTypeDeser) { super(mapType); _mapType = mapType; _keyDeserializer = keyDeser; _valueDeserializer = valueDeser; _valueTypeDeserializer = valueTypeDeser; _valueInstantiator = valueInstantiator; _hasDefaultCreator = valueInstantiator.canCreateUsingDefault(); _delegateDeserializer = null;"
+      },
+      {
+        "txt": "_propertyBasedCreator = null; _standardStringKey = _isStdKeyDeser(mapType, keyDeser); } protected MapDeserializer(MapDeserializer src) { super(src._mapType); _mapType = src._mapType; _keyDeserializer = src._keyDeserializer; _valueDeserializer = src._valueDeserializer; _valueTypeDeserializer = src._valueTypeDeserializer;"
+      },
+      {
+        "txt": "_valueInstantiator = src._valueInstantiator; _propertyBasedCreator = src._propertyBasedCreator; _delegateDeserializer = src._delegateDeserializer; _hasDefaultCreator = src._hasDefaultCreator; _ignorableProperties = src._ignorableProperties; _standardStringKey = src._standardStringKey; } protected MapDeserializer(MapDeserializer src, KeyDeserializer keyDeser, JsonDeserializer<Object> valueDeser, TypeDeserializer valueTypeDeser,"
+      },
+      {
+        "txt": "HashSet<String> ignorable) { super(src._mapType); _mapType = src._mapType; _keyDeserializer = keyDeser; _valueDeserializer = valueDeser; _valueTypeDeserializer = valueTypeDeser; _valueInstantiator = src._valueInstantiator; _propertyBasedCreator = src._propertyBasedCreator; _delegateDeserializer = src._delegateDeserializer;"
+      },
+      {
+        "txt": "_hasDefaultCreator = src._hasDefaultCreator; _ignorableProperties = ignorable; _standardStringKey = _isStdKeyDeser(_mapType, keyDeser); } @SuppressWarnings(\"unchecked\") protected MapDeserializer withResolved(KeyDeserializer keyDeser, TypeDeserializer valueTypeDeser, JsonDeserializer<?> valueDeser, HashSet<String> ignorable) { if ((_keyDeserializer == keyDeser) && (_valueDeserializer == valueDeser)"
+      },
+      {
+        "txt": "&& (_valueTypeDeserializer == valueTypeDeser) && (_ignorableProperties == ignorable)) { return this; } return new MapDeserializer(this, keyDeser, (JsonDeserializer<Object>) valueDeser, valueTypeDeser, ignorable); } protected final boolean _isStdKeyDeser(JavaType mapType, KeyDeserializer keyDeser) { if (keyDeser == null) { return true;"
+      },
+      {
+        "txt": "} JavaType keyType = mapType.getKeyType(); if (keyType == null) { // assumed to be Object return true; } Class<?> rawKeyType = keyType.getRawClass(); return ((rawKeyType == String.class || rawKeyType == Object.class) && isDefaultKeyDeserializer(keyDeser)); } public void setIgnorableProperties(String[] ignorable) {"
+      },
+      {
+        "txt": "_ignorableProperties = (ignorable == null || ignorable.length == 0) ? null : ArrayBuilders.arrayToSet(ignorable); } @Override public void resolve(DeserializationContext ctxt) throws JsonMappingException { if (_valueInstantiator.canCreateUsingDelegate()) { JavaType delegateType = _valueInstantiator.getDelegateType(ctxt.getConfig()); if (delegateType == null) { throw new IllegalArgumentException(\"Invalid delegate-creator definition for \"+_mapType"
+      },
+      {
+        "txt": "+\": value instantiator (\"+_valueInstantiator.getClass().getName() +\") returned true for 'canCreateUsingDelegate()', but null for 'getDelegateType()'\"); } _delegateDeserializer = findDeserializer(ctxt, delegateType, null); } if (_valueInstantiator.canCreateFromObjectWith()) { SettableBeanProperty[] creatorProps = _valueInstantiator.getFromObjectArguments(ctxt.getConfig()); _propertyBasedCreator = PropertyBasedCreator.construct(ctxt, _valueInstantiator, creatorProps); } _standardStringKey = _isStdKeyDeser(_mapType, _keyDeserializer);"
+      },
+      {
+        "txt": "} @Override public JsonDeserializer<?> createContextual(DeserializationContext ctxt, BeanProperty property) throws JsonMappingException { KeyDeserializer kd = _keyDeserializer; if (kd == null) { kd = ctxt.findKeyDeserializer(_mapType.getKeyType(), property); } else { if (kd instanceof ContextualKeyDeserializer) {"
+      },
+      {
+        "txt": "kd = ((ContextualKeyDeserializer) kd).createContextual(ctxt, property); } } JsonDeserializer<?> vd = _valueDeserializer; vd = findConvertingContentDeserializer(ctxt, property, vd); if (vd == null) { vd = ctxt.findContextualValueDeserializer(_mapType.getContentType(), property); } else { // if directly assigned, probably not yet contextual, so: vd = ctxt.handleSecondaryContextualization(vd, property); }"
+      },
+      {
+        "txt": "TypeDeserializer vtd = _valueTypeDeserializer; if (vtd != null) { vtd = vtd.forProperty(property); } HashSet<String> ignored = _ignorableProperties; AnnotationIntrospector intr = ctxt.getAnnotationIntrospector(); if (intr != null && property != null) { String[] moreToIgnore = intr.findPropertiesToIgnore(property.getMember()); if (moreToIgnore != null) { ignored = (ignored == null) ? new HashSet<String>() : new HashSet<String>(ignored);"
+      },
+      {
+        "txt": "for (String str : moreToIgnore) { ignored.add(str); } } } return withResolved(kd, vtd, vd, ignored); } @Override public JavaType getContentType() { return _mapType.getContentType();"
+      },
+      {
+        "txt": "@Override public JsonDeserializer<Object> getContentDeserializer() { return _valueDeserializer; } @Override public boolean isCachable() { <extra_id_0> && (_ignorableProperties == null); } @Override @SuppressWarnings(\"unchecked\") public Map<Object,Object> deserialize(JsonParser jp, DeserializationContext ctxt) throws IOException, JsonProcessingException"
+      },
+      {
+        "txt": "public Map<Object,Object> deserialize(JsonParser jp, DeserializationContext ctxt) throws IOException, JsonProcessingException { if (_propertyBasedCreator != null) { return _deserializeUsingCreator(jp, ctxt); } if (_delegateDeserializer != null) { return (Map<Object,Object>) _valueInstantiator.createUsingDelegate(ctxt, _delegateDeserializer.deserialize(jp, ctxt)); }"
+      },
+      {
+        "txt": "if (!_hasDefaultCreator) { throw ctxt.instantiationException(getMapClass(), \"No default constructor found\"); } JsonToken t = jp.getCurrentToken(); if (t != JsonToken.START_OBJECT && t != JsonToken.FIELD_NAME && t != JsonToken.END_OBJECT) { if (t == JsonToken.VALUE_STRING) { return (Map<Object,Object>) _valueInstantiator.createFromString(ctxt, jp.getText()); } throw ctxt.mappingException(getMapClass()); }"
+      },
+      {
+        "txt": "final Map<Object,Object> result = (Map<Object,Object>) _valueInstantiator.createUsingDefault(ctxt); if (_standardStringKey) { _readAndBindStringMap(jp, ctxt, result); return result; } _readAndBind(jp, ctxt, result); return result; } @Override public Map<Object,Object> deserialize(JsonParser jp, DeserializationContext ctxt,"
+      },
+      {
+        "txt": "Map<Object,Object> result) throws IOException, JsonProcessingException { JsonToken t = jp.getCurrentToken(); if (t != JsonToken.START_OBJECT && t != JsonToken.FIELD_NAME) { throw ctxt.mappingException(getMapClass()); } if (_standardStringKey) { _readAndBindStringMap(jp, ctxt, result); return result;"
+      },
+      {
+        "txt": "} _readAndBind(jp, ctxt, result); return result; } @Override public Object deserializeWithType(JsonParser jp, DeserializationContext ctxt, TypeDeserializer typeDeserializer) throws IOException, JsonProcessingException { return typeDeserializer.deserializeTypedFromObject(jp, ctxt);"
+      },
+      {
+        "txt": "} @SuppressWarnings(\"unchecked\") public final Class<?> getMapClass() { return (Class<Map<Object,Object>>) _mapType.getRawClass(); } @Override public JavaType getValueType() { return _mapType; } protected final void _readAndBind(JsonParser jp, DeserializationContext ctxt, Map<Object,Object> result) throws IOException, JsonProcessingException { JsonToken t = jp.getCurrentToken(); if (t == JsonToken.START_OBJECT) {"
+      },
+      {
+        "txt": "t = jp.nextToken(); } final KeyDeserializer keyDes = _keyDeserializer; final JsonDeserializer<Object> valueDes = _valueDeserializer; final TypeDeserializer typeDeser = _valueTypeDeserializer; MapReferringAccumulator referringAccumulator = null; boolean useObjectId = valueDes.getObjectIdReader() != null; if (useObjectId) { referringAccumulator = new MapReferringAccumulator(_mapType.getContentType().getRawClass(), result); }"
+      },
+      {
+        "txt": "for (; t == JsonToken.FIELD_NAME; t = jp.nextToken()) { String fieldName = jp.getCurrentName(); Object key = keyDes.deserializeKey(fieldName, ctxt); t = jp.nextToken(); if (_ignorableProperties != null && _ignorableProperties.contains(fieldName)) { jp.skipChildren(); continue; } try{ Object value;"
+      },
+      {
+        "txt": "if (t == JsonToken.VALUE_NULL) { value = valueDes.getNullValue(); } else if (typeDeser == null) { value = valueDes.deserialize(jp, ctxt); } else { value = valueDes.deserializeWithType(jp, ctxt, typeDeser); } if (useObjectId) { referringAccumulator.put(key, value); } else {"
+      },
+      {
+        "txt": "result.put(key, value); } } catch (UnresolvedForwardReference reference) { handleUnresolvedReference(jp, referringAccumulator, key, reference); } catch (Exception e) { wrapAndThrow(e, result, fieldName); } } } protected final void _readAndBindStringMap(JsonParser jp, DeserializationContext ctxt,"
+      },
+      {
+        "txt": "Map<Object,Object> result) throws IOException, JsonProcessingException { JsonToken t = jp.getCurrentToken(); if (t == JsonToken.START_OBJECT) { t = jp.nextToken(); } final JsonDeserializer<Object> valueDes = _valueDeserializer; final TypeDeserializer typeDeser = _valueTypeDeserializer; MapReferringAccumulator referringAccumulator = null;"
+      },
+      {
+        "txt": "boolean useObjectId = valueDes.getObjectIdReader() != null; if (useObjectId) { referringAccumulator = new MapReferringAccumulator(_mapType.getContentType().getRawClass(), result); } for (; t == JsonToken.FIELD_NAME; t = jp.nextToken()) { String fieldName = jp.getCurrentName(); t = jp.nextToken(); if (_ignorableProperties != null && _ignorableProperties.contains(fieldName)) { jp.skipChildren(); continue;"
+      },
+      {
+        "txt": "} try { Object value; if (t == JsonToken.VALUE_NULL) { value = valueDes.getNullValue(); } else if (typeDeser == null) { value = valueDes.deserialize(jp, ctxt); } else { value = valueDes.deserializeWithType(jp, ctxt, typeDeser); }"
+      },
+      {
+        "txt": "if (useObjectId) { referringAccumulator.put(fieldName, value); } else { result.put(fieldName, value); } } catch (UnresolvedForwardReference reference) { handleUnresolvedReference(jp, referringAccumulator, fieldName, reference); } catch (Exception e) { wrapAndThrow(e, result, fieldName); }"
+      },
+      {
+        "txt": "} } @SuppressWarnings(\"unchecked\") public Map<Object,Object> _deserializeUsingCreator(JsonParser jp, DeserializationContext ctxt) throws IOException, JsonProcessingException { final PropertyBasedCreator creator = _propertyBasedCreator; PropertyValueBuffer buffer = creator.startBuilding(jp, ctxt, null); JsonToken t = jp.getCurrentToken(); if (t == JsonToken.START_OBJECT) {"
+      },
+      {
+        "txt": "t = jp.nextToken(); } final JsonDeserializer<Object> valueDes = _valueDeserializer; final TypeDeserializer typeDeser = _valueTypeDeserializer; for (; t == JsonToken.FIELD_NAME; t = jp.nextToken()) { String propName = jp.getCurrentName(); t = jp.nextToken(); // to get to value if (_ignorableProperties != null && _ignorableProperties.contains(propName)) { jp.skipChildren(); // and skip it (in case of array/object) continue;"
+      },
+      {
+        "txt": "} SettableBeanProperty prop = creator.findCreatorProperty(propName); if (prop != null) { Object value = prop.deserialize(jp, ctxt); if (buffer.assignParameter(prop.getCreatorIndex(), value)) { jp.nextToken(); Map<Object,Object> result; try { result = (Map<Object,Object>)creator.build(ctxt, buffer); } catch (Exception e) {"
+      },
+      {
+        "txt": "wrapAndThrow(e, _mapType.getRawClass(), propName); return null; } _readAndBind(jp, ctxt, result); return result; } continue; } String fieldName = jp.getCurrentName(); Object key = _keyDeserializer.deserializeKey(fieldName, ctxt);"
+      },
+      {
+        "txt": "Object value; try { if (t == JsonToken.VALUE_NULL) { value = valueDes.getNullValue(); } else if (typeDeser == null) { value = valueDes.deserialize(jp, ctxt); } else { value = valueDes.deserializeWithType(jp, ctxt, typeDeser); } } catch (Exception e) {"
+      },
+      {
+        "txt": "wrapAndThrow(e, _mapType.getRawClass(), propName); return null; } buffer.bufferMapProperty(key, value); } try { return (Map<Object,Object>)creator.build(ctxt, buffer); } catch (Exception e) { wrapAndThrow(e, _mapType.getRawClass(), null); return null;"
+      },
+      {
+        "txt": "} } @Deprecated // since 2.5 protected void wrapAndThrow(Throwable t, Object ref) throws IOException { wrapAndThrow(t, ref, null); } protected void wrapAndThrow(Throwable t, Object ref, String key) throws IOException { while (t instanceof InvocationTargetException && t.getCause() != null) { t = t.getCause();"
+      },
+      {
+        "txt": "} if (t instanceof Error) { throw (Error) t; } if (t instanceof IOException && !(t instanceof JsonMappingException)) { throw (IOException) t; } throw JsonMappingException.wrapWithPath(t, ref, key); } private void handleUnresolvedReference(JsonParser jp, MapReferringAccumulator accumulator,"
+      },
+      {
+        "txt": "Object key, UnresolvedForwardReference reference) throws JsonMappingException { if (accumulator == null) { throw JsonMappingException.from(jp, \"Unresolved forward reference but no identity info.\", reference); } Referring referring = accumulator.handleUnresolvedReference(reference, key); reference.getRoid().appendReferring(referring); } private final static class MapReferringAccumulator {"
+      },
+      {
+        "txt": "private final Class<?> _valueType; private Map<Object,Object> _result; private List<MapReferring> _accumulator = new ArrayList<MapReferring>(); public MapReferringAccumulator(Class<?> valueType, Map<Object, Object> result) { _valueType = valueType; _result = result; } public void put(Object key, Object value) { if (_accumulator.isEmpty()) {"
+      },
+      {
+        "txt": "_result.put(key, value); } else { MapReferring ref = _accumulator.get(_accumulator.size() - 1); ref.next.put(key, value); } } public Referring handleUnresolvedReference(UnresolvedForwardReference reference, Object key) { MapReferring id = new MapReferring(this, reference, _valueType, key); _accumulator.add(id);"
+      },
+      {
+        "txt": "return id; } public void resolveForwardReference(Object id, Object value) throws IOException { Iterator<MapReferring> iterator = _accumulator.iterator(); Map<Object,Object> previous = _result; while (iterator.hasNext()) { MapReferring ref = iterator.next(); if (ref.hasId(id)) { iterator.remove();"
+      },
+      {
+        "txt": "previous.put(ref.key, value); previous.putAll(ref.next); return; } previous = ref.next; } throw new IllegalArgumentException(\"Trying to resolve a forward reference with id [\" + id + \"] that wasn't previously seen as unresolved.\"); } }"
+      },
+      {
+        "txt": "private final static class MapReferring extends Referring { private final MapReferringAccumulator _parent; public final Map<Object, Object> next = new LinkedHashMap<Object, Object>(); public final Object key; protected MapReferring(MapReferringAccumulator parent, UnresolvedForwardReference ref, Class<?> valueType, Object key) { super(ref, valueType); _parent = parent; this.key = key;"
+      },
+      {
+        "txt": "} @Override public void handleResolvedForwardReference(Object id, Object value) throws IOException { _parent.resolveForwardReference(id, value); } }"
+      }
+    ]
+  }
+]

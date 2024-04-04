@@ -1,0 +1,2003 @@
+[
+  {
+    "id": 2610,
+    "file_path": "src/main/java/org/apache/commons/math/optimization/general/LevenbergMarquardtOptimizer.java",
+    "start-bug-line": 258,
+    "end-bug-line": 258,
+    "bug": "",
+    "fix": "double[] oldObj  = new double[rows]; double[] qtf     = new double[rows];",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.math.optimization.general; import java.util.Arrays;"
+      },
+      {
+        "txt": "import org.apache.commons.math.FunctionEvaluationException; import org.apache.commons.math.exception.util.LocalizedFormats; import org.apache.commons.math.optimization.OptimizationException; import org.apache.commons.math.optimization.VectorialPointValuePair; import org.apache.commons.math.util.MathUtils; public class LevenbergMarquardtOptimizer extends AbstractLeastSquaresOptimizer { private int solvedCols; private double[] diagR; private double[] jacNorm; private double[] beta;"
+      },
+      {
+        "txt": "private int[] permutation; private int rank; private double lmPar; private double[] lmDir; private double initialStepBoundFactor; private double costRelativeTolerance; private double parRelativeTolerance; private double orthoTolerance; private double qrRankingThreshold; public LevenbergMarquardtOptimizer() {"
+      },
+      {
+        "txt": "setMaxIterations(1000); setConvergenceChecker(null); setInitialStepBoundFactor(100.0); setCostRelativeTolerance(1.0e-10); setParRelativeTolerance(1.0e-10); setOrthoTolerance(1.0e-10); setQRRankingThreshold(MathUtils.SAFE_MIN); } public void setInitialStepBoundFactor(double initialStepBoundFactor) { this.initialStepBoundFactor = initialStepBoundFactor;"
+      },
+      {
+        "txt": "} public void setCostRelativeTolerance(double costRelativeTolerance) { this.costRelativeTolerance = costRelativeTolerance; } public void setParRelativeTolerance(double parRelativeTolerance) { this.parRelativeTolerance = parRelativeTolerance; } public void setOrthoTolerance(double orthoTolerance) { this.orthoTolerance = orthoTolerance; }"
+      },
+      {
+        "txt": "public void setQRRankingThreshold(final double threshold) { this.qrRankingThreshold = threshold; } @Override protected VectorialPointValuePair doOptimize() throws FunctionEvaluationException, OptimizationException, IllegalArgumentException { solvedCols = Math.min(rows, cols); diagR = new double[cols]; jacNorm = new double[cols]; beta = new double[cols];"
+      },
+      {
+        "txt": "lmDir = new double[cols]; double delta = 0; double xNorm = 0; double[] diag = new double[cols]; double[] oldX = new double[cols]; double[] oldRes = new double[rows]; <extra_id_0> double[] work2 = new double[cols]; double[] work3 = new double[cols]; updateResidualsAndCost(); lmPar = 0; boolean firstIteration = true; VectorialPointValuePair current = new VectorialPointValuePair(point, objective);"
+      },
+      {
+        "txt": "boolean firstIteration = true; VectorialPointValuePair current = new VectorialPointValuePair(point, objective); while (true) { incrementIterationsCounter(); VectorialPointValuePair previous = current; updateJacobian(); qrDecomposition(); qTy(residuals); for (int k = 0; k < solvedCols; ++k) { int pk = permutation[k];"
+      },
+      {
+        "txt": "jacobian[k][pk] = diagR[pk]; } if (firstIteration) { xNorm = 0; for (int k = 0; k < cols; ++k) { double dk = jacNorm[k]; if (dk == 0) { dk = 1.0; } double xk = dk * point[k];"
+      },
+      {
+        "txt": "xNorm += xk * xk; diag[k] = dk; } xNorm = Math.sqrt(xNorm); delta = (xNorm == 0) ? initialStepBoundFactor : (initialStepBoundFactor * xNorm); } double maxCosine = 0; if (cost != 0) { for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j];"
+      },
+      {
+        "txt": "double s = jacNorm[pj]; if (s != 0) { double sum = 0; for (int i = 0; i <= j; ++i) { sum += jacobian[i][pj] * residuals[i]; } maxCosine = Math.max(maxCosine, Math.abs(sum) / (s * cost)); } } }"
+      },
+      {
+        "txt": "if (maxCosine <= orthoTolerance) { return current; } for (int j = 0; j < cols; ++j) { diag[j] = Math.max(diag[j], jacNorm[j]); } for (double ratio = 0; ratio < 1.0e-4;) { for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; oldX[pj] = point[pj];"
+      },
+      {
+        "txt": "} double previousCost = cost; double[] tmpVec = residuals; residuals = oldRes; oldRes = tmpVec; determineLMParameter(oldRes, delta, diag, work1, work2, work3); double lmNorm = 0; for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; lmDir[pj] = -lmDir[pj];"
+      },
+      {
+        "txt": "point[pj] = oldX[pj] + lmDir[pj]; double s = diag[pj] * lmDir[pj]; lmNorm += s * s; } lmNorm = Math.sqrt(lmNorm); if (firstIteration) { delta = Math.min(delta, lmNorm); } updateResidualsAndCost(); current = new VectorialPointValuePair(point, objective);"
+      },
+      {
+        "txt": "double actRed = -1.0; if (0.1 * cost < previousCost) { double r = cost / previousCost; actRed = 1.0 - r * r; } for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; double dirJ = lmDir[pj]; work1[j] = 0; for (int i = 0; i <= j; ++i) {"
+      },
+      {
+        "txt": "work1[i] += jacobian[i][pj] * dirJ; } } double coeff1 = 0; for (int j = 0; j < solvedCols; ++j) { coeff1 += work1[j] * work1[j]; } double pc2 = previousCost * previousCost; coeff1 = coeff1 / pc2; double coeff2 = lmPar * lmNorm * lmNorm / pc2;"
+      },
+      {
+        "txt": "double preRed = coeff1 + 2 * coeff2; double dirDer = -(coeff1 + coeff2); ratio = (preRed == 0) ? 0 : (actRed / preRed); if (ratio <= 0.25) { double tmp = (actRed < 0) ? (0.5 * dirDer / (dirDer + 0.5 * actRed)) : 0.5; if ((0.1 * cost >= previousCost) || (tmp < 0.1)) { tmp = 0.1; } delta = tmp * Math.min(delta, 10.0 * lmNorm);"
+      },
+      {
+        "txt": "lmPar /= tmp; } else if ((lmPar == 0) || (ratio >= 0.75)) { delta = 2 * lmNorm; lmPar *= 0.5; } if (ratio >= 1.0e-4) { firstIteration = false; xNorm = 0; for (int k = 0; k < cols; ++k) { double xK = diag[k] * point[k];"
+      },
+      {
+        "txt": "xNorm += xK * xK; } xNorm = Math.sqrt(xNorm); } else { cost = previousCost; for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; point[pj] = oldX[pj]; } tmpVec = residuals;"
+      },
+      {
+        "txt": "residuals = oldRes; oldRes = tmpVec; } if (checker==null) { if (((Math.abs(actRed) <= costRelativeTolerance) && (preRed <= costRelativeTolerance) && (ratio <= 2.0)) || (delta <= parRelativeTolerance * xNorm)) { return current; }"
+      },
+      {
+        "txt": "} else { if (checker.converged(getIterations(), previous, current)) { return current; } } if ((Math.abs(actRed) <= 2.2204e-16) && (preRed <= 2.2204e-16) && (ratio <= 2.0)) { throw new OptimizationException(LocalizedFormats.TOO_SMALL_COST_RELATIVE_TOLERANCE, costRelativeTolerance); } else if (delta <= 2.2204e-16 * xNorm) { throw new OptimizationException(LocalizedFormats.TOO_SMALL_PARAMETERS_RELATIVE_TOLERANCE,"
+      },
+      {
+        "txt": "parRelativeTolerance); } else if (maxCosine <= 2.2204e-16) { throw new OptimizationException(LocalizedFormats.TOO_SMALL_ORTHOGONALITY_TOLERANCE, orthoTolerance); } } } } private void determineLMParameter(double[] qy, double delta, double[] diag, double[] work1, double[] work2, double[] work3) {"
+      },
+      {
+        "txt": "for (int j = 0; j < rank; ++j) { lmDir[permutation[j]] = qy[j]; } for (int j = rank; j < cols; ++j) { lmDir[permutation[j]] = 0; } for (int k = rank - 1; k >= 0; --k) { int pk = permutation[k]; double ypk = lmDir[pk] / diagR[pk]; for (int i = 0; i < k; ++i) {"
+      },
+      {
+        "txt": "lmDir[permutation[i]] -= ypk * jacobian[i][pk]; } lmDir[pk] = ypk; } double dxNorm = 0; for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; double s = diag[pj] * lmDir[pj]; work1[pj] = s; dxNorm += s * s;"
+      },
+      {
+        "txt": "} dxNorm = Math.sqrt(dxNorm); double fp = dxNorm - delta; if (fp <= 0.1 * delta) { lmPar = 0; return; } double sum2; double parl = 0; if (rank == solvedCols) {"
+      },
+      {
+        "txt": "for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; work1[pj] *= diag[pj] / dxNorm; } sum2 = 0; for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; double sum = 0; for (int i = 0; i < j; ++i) { sum += jacobian[i][pj] * work1[permutation[i]];"
+      },
+      {
+        "txt": "} double s = (work1[pj] - sum) / diagR[pj]; work1[pj] = s; sum2 += s * s; } parl = fp / (delta * sum2); } sum2 = 0; for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j];"
+      },
+      {
+        "txt": "double sum = 0; for (int i = 0; i <= j; ++i) { sum += jacobian[i][pj] * qy[i]; } sum /= diag[pj]; sum2 += sum * sum; } double gNorm = Math.sqrt(sum2); double paru = gNorm / delta; if (paru == 0) {"
+      },
+      {
+        "txt": "paru = 2.2251e-308 / Math.min(delta, 0.1); } lmPar = Math.min(paru, Math.max(lmPar, parl)); if (lmPar == 0) { lmPar = gNorm / dxNorm; } for (int countdown = 10; countdown >= 0; --countdown) { if (lmPar == 0) { lmPar = Math.max(2.2251e-308, 0.001 * paru); }"
+      },
+      {
+        "txt": "double sPar = Math.sqrt(lmPar); for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; work1[pj] = sPar * diag[pj]; } determineLMDirection(qy, work1, work2, work3); dxNorm = 0; for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; double s = diag[pj] * lmDir[pj];"
+      },
+      {
+        "txt": "work3[pj] = s; dxNorm += s * s; } dxNorm = Math.sqrt(dxNorm); double previousFP = fp; fp = dxNorm - delta; if ((Math.abs(fp) <= 0.1 * delta) || ((parl == 0) && (fp <= previousFP) && (previousFP < 0))) { return; }"
+      },
+      {
+        "txt": "for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; work1[pj] = work3[pj] * diag[pj] / dxNorm; } for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; work1[pj] /= work2[j]; double tmp = work1[pj]; for (int i = j + 1; i < solvedCols; ++i) { work1[permutation[i]] -= jacobian[i][pj] * tmp;"
+      },
+      {
+        "txt": "} } sum2 = 0; for (int j = 0; j < solvedCols; ++j) { double s = work1[permutation[j]]; sum2 += s * s; } double correction = fp / (delta * sum2); if (fp > 0) { parl = Math.max(parl, lmPar);"
+      },
+      {
+        "txt": "} else if (fp < 0) { paru = Math.min(paru, lmPar); } lmPar = Math.max(parl, lmPar + correction); } } private void determineLMDirection(double[] qy, double[] diag, double[] lmDiag, double[] work) { for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j];"
+      },
+      {
+        "txt": "for (int i = j + 1; i < solvedCols; ++i) { jacobian[i][pj] = jacobian[j][permutation[i]]; } lmDir[j] = diagR[pj]; work[j] = qy[j]; } for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; double dpj = diag[pj]; if (dpj != 0) {"
+      },
+      {
+        "txt": "Arrays.fill(lmDiag, j + 1, lmDiag.length, 0); } lmDiag[j] = dpj; double qtbpj = 0; for (int k = j; k < solvedCols; ++k) { int pk = permutation[k]; if (lmDiag[k] != 0) { final double sin; final double cos; double rkk = jacobian[k][pk];"
+      },
+      {
+        "txt": "if (Math.abs(rkk) < Math.abs(lmDiag[k])) { final double cotan = rkk / lmDiag[k]; sin = 1.0 / Math.sqrt(1.0 + cotan * cotan); cos = sin * cotan; } else { final double tan = lmDiag[k] / rkk; cos = 1.0 / Math.sqrt(1.0 + tan * tan); sin = cos * tan; } jacobian[k][pk] = cos * rkk + sin * lmDiag[k];"
+      },
+      {
+        "txt": "final double temp = cos * work[k] + sin * qtbpj; qtbpj = -sin * work[k] + cos * qtbpj; work[k] = temp; for (int i = k + 1; i < solvedCols; ++i) { double rik = jacobian[i][pk]; final double temp2 = cos * rik + sin * lmDiag[i]; lmDiag[i] = -sin * rik + cos * lmDiag[i]; jacobian[i][pk] = temp2; } }"
+      },
+      {
+        "txt": "} lmDiag[j] = jacobian[j][permutation[j]]; jacobian[j][permutation[j]] = lmDir[j]; } int nSing = solvedCols; for (int j = 0; j < solvedCols; ++j) { if ((lmDiag[j] == 0) && (nSing == solvedCols)) { nSing = j; } if (nSing < solvedCols) {"
+      },
+      {
+        "txt": "work[j] = 0; } } if (nSing > 0) { for (int j = nSing - 1; j >= 0; --j) { int pj = permutation[j]; double sum = 0; for (int i = j + 1; i < nSing; ++i) { sum += jacobian[i][pj] * work[i]; }"
+      },
+      {
+        "txt": "work[j] = (work[j] - sum) / lmDiag[j]; } } for (int j = 0; j < lmDir.length; ++j) { lmDir[permutation[j]] = work[j]; } } private void qrDecomposition() throws OptimizationException { for (int k = 0; k < cols; ++k) { permutation[k] = k;"
+      },
+      {
+        "txt": "double norm2 = 0; for (int i = 0; i < jacobian.length; ++i) { double akk = jacobian[i][k]; norm2 += akk * akk; } jacNorm[k] = Math.sqrt(norm2); } for (int k = 0; k < cols; ++k) { int nextColumn = -1; double ak2 = Double.NEGATIVE_INFINITY;"
+      },
+      {
+        "txt": "for (int i = k; i < cols; ++i) { double norm2 = 0; for (int j = k; j < jacobian.length; ++j) { double aki = jacobian[j][permutation[i]]; norm2 += aki * aki; } if (Double.isInfinite(norm2) || Double.isNaN(norm2)) { throw new OptimizationException(LocalizedFormats.UNABLE_TO_PERFORM_QR_DECOMPOSITION_ON_JACOBIAN, rows, cols); }"
+      },
+      {
+        "txt": "if (norm2 > ak2) { nextColumn = i; ak2 = norm2; } } if (ak2 <= qrRankingThreshold) { rank = k; return; } int pk = permutation[nextColumn];"
+      },
+      {
+        "txt": "permutation[nextColumn] = permutation[k]; permutation[k] = pk; double akk = jacobian[k][pk]; double alpha = (akk > 0) ? -Math.sqrt(ak2) : Math.sqrt(ak2); double betak = 1.0 / (ak2 - akk * alpha); beta[pk] = betak; diagR[pk] = alpha; jacobian[k][pk] -= alpha; for (int dk = cols - 1 - k; dk > 0; --dk) { double gamma = 0;"
+      },
+      {
+        "txt": "for (int j = k; j < jacobian.length; ++j) { gamma += jacobian[j][pk] * jacobian[j][permutation[k + dk]]; } gamma *= betak; for (int j = k; j < jacobian.length; ++j) { jacobian[j][permutation[k + dk]] -= gamma * jacobian[j][pk]; } } } rank = solvedCols;"
+      },
+      {
+        "txt": "} private void qTy(double[] y) { for (int k = 0; k < cols; ++k) { int pk = permutation[k]; double gamma = 0; for (int i = k; i < rows; ++i) { gamma += jacobian[i][pk] * y[i]; } gamma *= beta[pk]; for (int i = k; i < rows; ++i) {"
+      },
+      {
+        "txt": "y[i] -= gamma * jacobian[i][pk]; } } }"
+      }
+    ]
+  },
+  {
+    "id": 2611,
+    "file_path": "src/main/java/org/apache/commons/math/optimization/general/LevenbergMarquardtOptimizer.java",
+    "start-bug-line": 270,
+    "end-bug-line": 270,
+    "bug": "",
+    "fix": "for (int i=0;i<rows;i++) { qtf[i]=residuals[i]; }",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.math.optimization.general; import java.util.Arrays; import org.apache.commons.math.FunctionEvaluationException; import org.apache.commons.math.exception.util.LocalizedFormats; import org.apache.commons.math.optimization.OptimizationException; import org.apache.commons.math.optimization.VectorialPointValuePair; import org.apache.commons.math.util.MathUtils; public class LevenbergMarquardtOptimizer extends AbstractLeastSquaresOptimizer { private int solvedCols; private double[] diagR;"
+      },
+      {
+        "txt": "private double[] jacNorm; private double[] beta; private int[] permutation; private int rank; private double lmPar; private double[] lmDir; private double initialStepBoundFactor; private double costRelativeTolerance; private double parRelativeTolerance; private double orthoTolerance;"
+      },
+      {
+        "txt": "private double qrRankingThreshold; public LevenbergMarquardtOptimizer() { setMaxIterations(1000); setConvergenceChecker(null); setInitialStepBoundFactor(100.0); setCostRelativeTolerance(1.0e-10); setParRelativeTolerance(1.0e-10); setOrthoTolerance(1.0e-10); setQRRankingThreshold(MathUtils.SAFE_MIN); }"
+      },
+      {
+        "txt": "public void setInitialStepBoundFactor(double initialStepBoundFactor) { this.initialStepBoundFactor = initialStepBoundFactor; } public void setCostRelativeTolerance(double costRelativeTolerance) { this.costRelativeTolerance = costRelativeTolerance; } public void setParRelativeTolerance(double parRelativeTolerance) { this.parRelativeTolerance = parRelativeTolerance; } public void setOrthoTolerance(double orthoTolerance) {"
+      },
+      {
+        "txt": "this.orthoTolerance = orthoTolerance; } public void setQRRankingThreshold(final double threshold) { this.qrRankingThreshold = threshold; } @Override protected VectorialPointValuePair doOptimize() throws FunctionEvaluationException, OptimizationException, IllegalArgumentException { solvedCols = Math.min(rows, cols); diagR = new double[cols];"
+      },
+      {
+        "txt": "jacNorm = new double[cols]; beta = new double[cols]; permutation = new int[cols]; lmDir = new double[cols]; double delta = 0; double xNorm = 0; double[] diag = new double[cols]; double[] oldX = new double[cols]; double[] oldRes = new double[rows]; double[] work1 = new double[cols];"
+      },
+      {
+        "txt": "double[] work3 = new double[cols]; updateResidualsAndCost(); lmPar = 0; boolean firstIteration = true; VectorialPointValuePair current = new VectorialPointValuePair(point, objective); while (true) { <extra_id_0> VectorialPointValuePair previous = current; updateJacobian(); qrDecomposition(); qTy(residuals); for (int k = 0; k < solvedCols; ++k) { int pk = permutation[k];"
+      },
+      {
+        "txt": "for (int k = 0; k < solvedCols; ++k) { int pk = permutation[k]; jacobian[k][pk] = diagR[pk]; } if (firstIteration) { xNorm = 0; for (int k = 0; k < cols; ++k) { double dk = jacNorm[k]; if (dk == 0) { dk = 1.0;"
+      },
+      {
+        "txt": "} double xk = dk * point[k]; xNorm += xk * xk; diag[k] = dk; } xNorm = Math.sqrt(xNorm); delta = (xNorm == 0) ? initialStepBoundFactor : (initialStepBoundFactor * xNorm); } double maxCosine = 0; if (cost != 0) {"
+      },
+      {
+        "txt": "for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; double s = jacNorm[pj]; if (s != 0) { double sum = 0; for (int i = 0; i <= j; ++i) { sum += jacobian[i][pj] * residuals[i]; } maxCosine = Math.max(maxCosine, Math.abs(sum) / (s * cost)); }"
+      },
+      {
+        "txt": "} } if (maxCosine <= orthoTolerance) { return current; } for (int j = 0; j < cols; ++j) { diag[j] = Math.max(diag[j], jacNorm[j]); } for (double ratio = 0; ratio < 1.0e-4;) { for (int j = 0; j < solvedCols; ++j) {"
+      },
+      {
+        "txt": "int pj = permutation[j]; oldX[pj] = point[pj]; } double previousCost = cost; double[] tmpVec = residuals; residuals = oldRes; oldRes = tmpVec; determineLMParameter(oldRes, delta, diag, work1, work2, work3); double lmNorm = 0; for (int j = 0; j < solvedCols; ++j) {"
+      },
+      {
+        "txt": "int pj = permutation[j]; lmDir[pj] = -lmDir[pj]; point[pj] = oldX[pj] + lmDir[pj]; double s = diag[pj] * lmDir[pj]; lmNorm += s * s; } lmNorm = Math.sqrt(lmNorm); if (firstIteration) { delta = Math.min(delta, lmNorm); }"
+      },
+      {
+        "txt": "updateResidualsAndCost(); current = new VectorialPointValuePair(point, objective); double actRed = -1.0; if (0.1 * cost < previousCost) { double r = cost / previousCost; actRed = 1.0 - r * r; } for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; double dirJ = lmDir[pj];"
+      },
+      {
+        "txt": "work1[j] = 0; for (int i = 0; i <= j; ++i) { work1[i] += jacobian[i][pj] * dirJ; } } double coeff1 = 0; for (int j = 0; j < solvedCols; ++j) { coeff1 += work1[j] * work1[j]; } double pc2 = previousCost * previousCost;"
+      },
+      {
+        "txt": "coeff1 = coeff1 / pc2; double coeff2 = lmPar * lmNorm * lmNorm / pc2; double preRed = coeff1 + 2 * coeff2; double dirDer = -(coeff1 + coeff2); ratio = (preRed == 0) ? 0 : (actRed / preRed); if (ratio <= 0.25) { double tmp = (actRed < 0) ? (0.5 * dirDer / (dirDer + 0.5 * actRed)) : 0.5; if ((0.1 * cost >= previousCost) || (tmp < 0.1)) { tmp = 0.1;"
+      },
+      {
+        "txt": "} delta = tmp * Math.min(delta, 10.0 * lmNorm); lmPar /= tmp; } else if ((lmPar == 0) || (ratio >= 0.75)) { delta = 2 * lmNorm; lmPar *= 0.5; } if (ratio >= 1.0e-4) { firstIteration = false; xNorm = 0;"
+      },
+      {
+        "txt": "for (int k = 0; k < cols; ++k) { double xK = diag[k] * point[k]; xNorm += xK * xK; } xNorm = Math.sqrt(xNorm); } else { cost = previousCost; for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; point[pj] = oldX[pj];"
+      },
+      {
+        "txt": "} tmpVec = residuals; residuals = oldRes; oldRes = tmpVec; } if (checker==null) { if (((Math.abs(actRed) <= costRelativeTolerance) && (preRed <= costRelativeTolerance) && (ratio <= 2.0)) || (delta <= parRelativeTolerance * xNorm)) {"
+      },
+      {
+        "txt": "return current; } } else { if (checker.converged(getIterations(), previous, current)) { return current; } } if ((Math.abs(actRed) <= 2.2204e-16) && (preRed <= 2.2204e-16) && (ratio <= 2.0)) { throw new OptimizationException(LocalizedFormats.TOO_SMALL_COST_RELATIVE_TOLERANCE, costRelativeTolerance);"
+      },
+      {
+        "txt": "} else if (delta <= 2.2204e-16 * xNorm) { throw new OptimizationException(LocalizedFormats.TOO_SMALL_PARAMETERS_RELATIVE_TOLERANCE, parRelativeTolerance); } else if (maxCosine <= 2.2204e-16) { throw new OptimizationException(LocalizedFormats.TOO_SMALL_ORTHOGONALITY_TOLERANCE, orthoTolerance); } } } }"
+      },
+      {
+        "txt": "private void determineLMParameter(double[] qy, double delta, double[] diag, double[] work1, double[] work2, double[] work3) { for (int j = 0; j < rank; ++j) { lmDir[permutation[j]] = qy[j]; } for (int j = rank; j < cols; ++j) { lmDir[permutation[j]] = 0; } for (int k = rank - 1; k >= 0; --k) { int pk = permutation[k];"
+      },
+      {
+        "txt": "double ypk = lmDir[pk] / diagR[pk]; for (int i = 0; i < k; ++i) { lmDir[permutation[i]] -= ypk * jacobian[i][pk]; } lmDir[pk] = ypk; } double dxNorm = 0; for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; double s = diag[pj] * lmDir[pj];"
+      },
+      {
+        "txt": "work1[pj] = s; dxNorm += s * s; } dxNorm = Math.sqrt(dxNorm); double fp = dxNorm - delta; if (fp <= 0.1 * delta) { lmPar = 0; return; } double sum2;"
+      },
+      {
+        "txt": "double parl = 0; if (rank == solvedCols) { for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; work1[pj] *= diag[pj] / dxNorm; } sum2 = 0; for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; double sum = 0;"
+      },
+      {
+        "txt": "for (int i = 0; i < j; ++i) { sum += jacobian[i][pj] * work1[permutation[i]]; } double s = (work1[pj] - sum) / diagR[pj]; work1[pj] = s; sum2 += s * s; } parl = fp / (delta * sum2); } sum2 = 0;"
+      },
+      {
+        "txt": "for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; double sum = 0; for (int i = 0; i <= j; ++i) { sum += jacobian[i][pj] * qy[i]; } sum /= diag[pj]; sum2 += sum * sum; } double gNorm = Math.sqrt(sum2);"
+      },
+      {
+        "txt": "double paru = gNorm / delta; if (paru == 0) { paru = 2.2251e-308 / Math.min(delta, 0.1); } lmPar = Math.min(paru, Math.max(lmPar, parl)); if (lmPar == 0) { lmPar = gNorm / dxNorm; } for (int countdown = 10; countdown >= 0; --countdown) { if (lmPar == 0) {"
+      },
+      {
+        "txt": "lmPar = Math.max(2.2251e-308, 0.001 * paru); } double sPar = Math.sqrt(lmPar); for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; work1[pj] = sPar * diag[pj]; } determineLMDirection(qy, work1, work2, work3); dxNorm = 0; for (int j = 0; j < solvedCols; ++j) {"
+      },
+      {
+        "txt": "int pj = permutation[j]; double s = diag[pj] * lmDir[pj]; work3[pj] = s; dxNorm += s * s; } dxNorm = Math.sqrt(dxNorm); double previousFP = fp; fp = dxNorm - delta; if ((Math.abs(fp) <= 0.1 * delta) || ((parl == 0) && (fp <= previousFP) && (previousFP < 0))) {"
+      },
+      {
+        "txt": "return; } for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; work1[pj] = work3[pj] * diag[pj] / dxNorm; } for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; work1[pj] /= work2[j]; double tmp = work1[pj];"
+      },
+      {
+        "txt": "for (int i = j + 1; i < solvedCols; ++i) { work1[permutation[i]] -= jacobian[i][pj] * tmp; } } sum2 = 0; for (int j = 0; j < solvedCols; ++j) { double s = work1[permutation[j]]; sum2 += s * s; } double correction = fp / (delta * sum2);"
+      },
+      {
+        "txt": "if (fp > 0) { parl = Math.max(parl, lmPar); } else if (fp < 0) { paru = Math.min(paru, lmPar); } lmPar = Math.max(parl, lmPar + correction); } } private void determineLMDirection(double[] qy, double[] diag, double[] lmDiag, double[] work) {"
+      },
+      {
+        "txt": "for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; for (int i = j + 1; i < solvedCols; ++i) { jacobian[i][pj] = jacobian[j][permutation[i]]; } lmDir[j] = diagR[pj]; work[j] = qy[j]; } for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j];"
+      },
+      {
+        "txt": "double dpj = diag[pj]; if (dpj != 0) { Arrays.fill(lmDiag, j + 1, lmDiag.length, 0); } lmDiag[j] = dpj; double qtbpj = 0; for (int k = j; k < solvedCols; ++k) { int pk = permutation[k]; if (lmDiag[k] != 0) { final double sin;"
+      },
+      {
+        "txt": "final double cos; double rkk = jacobian[k][pk]; if (Math.abs(rkk) < Math.abs(lmDiag[k])) { final double cotan = rkk / lmDiag[k]; sin = 1.0 / Math.sqrt(1.0 + cotan * cotan); cos = sin * cotan; } else { final double tan = lmDiag[k] / rkk; cos = 1.0 / Math.sqrt(1.0 + tan * tan); sin = cos * tan;"
+      },
+      {
+        "txt": "} jacobian[k][pk] = cos * rkk + sin * lmDiag[k]; final double temp = cos * work[k] + sin * qtbpj; qtbpj = -sin * work[k] + cos * qtbpj; work[k] = temp; for (int i = k + 1; i < solvedCols; ++i) { double rik = jacobian[i][pk]; final double temp2 = cos * rik + sin * lmDiag[i]; lmDiag[i] = -sin * rik + cos * lmDiag[i]; jacobian[i][pk] = temp2;"
+      },
+      {
+        "txt": "} } } lmDiag[j] = jacobian[j][permutation[j]]; jacobian[j][permutation[j]] = lmDir[j]; } int nSing = solvedCols; for (int j = 0; j < solvedCols; ++j) { if ((lmDiag[j] == 0) && (nSing == solvedCols)) { nSing = j;"
+      },
+      {
+        "txt": "} if (nSing < solvedCols) { work[j] = 0; } } if (nSing > 0) { for (int j = nSing - 1; j >= 0; --j) { int pj = permutation[j]; double sum = 0; for (int i = j + 1; i < nSing; ++i) {"
+      },
+      {
+        "txt": "sum += jacobian[i][pj] * work[i]; } work[j] = (work[j] - sum) / lmDiag[j]; } } for (int j = 0; j < lmDir.length; ++j) { lmDir[permutation[j]] = work[j]; } } private void qrDecomposition() throws OptimizationException {"
+      },
+      {
+        "txt": "for (int k = 0; k < cols; ++k) { permutation[k] = k; double norm2 = 0; for (int i = 0; i < jacobian.length; ++i) { double akk = jacobian[i][k]; norm2 += akk * akk; } jacNorm[k] = Math.sqrt(norm2); } for (int k = 0; k < cols; ++k) {"
+      },
+      {
+        "txt": "int nextColumn = -1; double ak2 = Double.NEGATIVE_INFINITY; for (int i = k; i < cols; ++i) { double norm2 = 0; for (int j = k; j < jacobian.length; ++j) { double aki = jacobian[j][permutation[i]]; norm2 += aki * aki; } if (Double.isInfinite(norm2) || Double.isNaN(norm2)) { throw new OptimizationException(LocalizedFormats.UNABLE_TO_PERFORM_QR_DECOMPOSITION_ON_JACOBIAN,"
+      },
+      {
+        "txt": "rows, cols); } if (norm2 > ak2) { nextColumn = i; ak2 = norm2; } } if (ak2 <= qrRankingThreshold) { rank = k; return;"
+      },
+      {
+        "txt": "} int pk = permutation[nextColumn]; permutation[nextColumn] = permutation[k]; permutation[k] = pk; double akk = jacobian[k][pk]; double alpha = (akk > 0) ? -Math.sqrt(ak2) : Math.sqrt(ak2); double betak = 1.0 / (ak2 - akk * alpha); beta[pk] = betak; diagR[pk] = alpha; jacobian[k][pk] -= alpha;"
+      },
+      {
+        "txt": "for (int dk = cols - 1 - k; dk > 0; --dk) { double gamma = 0; for (int j = k; j < jacobian.length; ++j) { gamma += jacobian[j][pk] * jacobian[j][permutation[k + dk]]; } gamma *= betak; for (int j = k; j < jacobian.length; ++j) { jacobian[j][permutation[k + dk]] -= gamma * jacobian[j][pk]; } }"
+      },
+      {
+        "txt": "} rank = solvedCols; } private void qTy(double[] y) { for (int k = 0; k < cols; ++k) { int pk = permutation[k]; double gamma = 0; for (int i = k; i < rows; ++i) { gamma += jacobian[i][pk] * y[i]; }"
+      },
+      {
+        "txt": "gamma *= beta[pk]; for (int i = k; i < rows; ++i) { y[i] -= gamma * jacobian[i][pk]; } } }"
+      }
+    ]
+  },
+  {
+    "id": 2612,
+    "file_path": "src/main/java/org/apache/commons/math/optimization/general/LevenbergMarquardtOptimizer.java",
+    "start-bug-line": 278,
+    "end-bug-line": 278,
+    "bug": "qTy(residuals);",
+    "fix": "qTy(qtf);",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.math.optimization.general; import java.util.Arrays; import org.apache.commons.math.FunctionEvaluationException; import org.apache.commons.math.exception.util.LocalizedFormats;"
+      },
+      {
+        "txt": "import org.apache.commons.math.optimization.OptimizationException; import org.apache.commons.math.optimization.VectorialPointValuePair; import org.apache.commons.math.util.MathUtils; public class LevenbergMarquardtOptimizer extends AbstractLeastSquaresOptimizer { private int solvedCols; private double[] diagR; private double[] jacNorm; private double[] beta; private int[] permutation; private int rank;"
+      },
+      {
+        "txt": "private double lmPar; private double[] lmDir; private double initialStepBoundFactor; private double costRelativeTolerance; private double parRelativeTolerance; private double orthoTolerance; private double qrRankingThreshold; public LevenbergMarquardtOptimizer() { setMaxIterations(1000); setConvergenceChecker(null);"
+      },
+      {
+        "txt": "setInitialStepBoundFactor(100.0); setCostRelativeTolerance(1.0e-10); setParRelativeTolerance(1.0e-10); setOrthoTolerance(1.0e-10); setQRRankingThreshold(MathUtils.SAFE_MIN); } public void setInitialStepBoundFactor(double initialStepBoundFactor) { this.initialStepBoundFactor = initialStepBoundFactor; } public void setCostRelativeTolerance(double costRelativeTolerance) {"
+      },
+      {
+        "txt": "this.costRelativeTolerance = costRelativeTolerance; } public void setParRelativeTolerance(double parRelativeTolerance) { this.parRelativeTolerance = parRelativeTolerance; } public void setOrthoTolerance(double orthoTolerance) { this.orthoTolerance = orthoTolerance; } public void setQRRankingThreshold(final double threshold) { this.qrRankingThreshold = threshold;"
+      },
+      {
+        "txt": "} @Override protected VectorialPointValuePair doOptimize() throws FunctionEvaluationException, OptimizationException, IllegalArgumentException { solvedCols = Math.min(rows, cols); diagR = new double[cols]; jacNorm = new double[cols]; beta = new double[cols]; permutation = new int[cols]; lmDir = new double[cols];"
+      },
+      {
+        "txt": "double delta = 0; double xNorm = 0; double[] diag = new double[cols]; double[] oldX = new double[cols]; double[] oldRes = new double[rows]; double[] work1 = new double[cols]; double[] work2 = new double[cols]; double[] work3 = new double[cols]; updateResidualsAndCost(); lmPar = 0;"
+      },
+      {
+        "txt": "VectorialPointValuePair current = new VectorialPointValuePair(point, objective); while (true) { incrementIterationsCounter(); VectorialPointValuePair previous = current; updateJacobian(); qrDecomposition(); <extra_id_0> for (int k = 0; k < solvedCols; ++k) { int pk = permutation[k]; jacobian[k][pk] = diagR[pk]; } if (firstIteration) { xNorm = 0;"
+      },
+      {
+        "txt": "if (firstIteration) { xNorm = 0; for (int k = 0; k < cols; ++k) { double dk = jacNorm[k]; if (dk == 0) { dk = 1.0; } double xk = dk * point[k]; xNorm += xk * xk; diag[k] = dk;"
+      },
+      {
+        "txt": "} xNorm = Math.sqrt(xNorm); delta = (xNorm == 0) ? initialStepBoundFactor : (initialStepBoundFactor * xNorm); } double maxCosine = 0; if (cost != 0) { for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; double s = jacNorm[pj]; if (s != 0) {"
+      },
+      {
+        "txt": "double sum = 0; for (int i = 0; i <= j; ++i) { sum += jacobian[i][pj] * residuals[i]; } maxCosine = Math.max(maxCosine, Math.abs(sum) / (s * cost)); } } } if (maxCosine <= orthoTolerance) { return current;"
+      },
+      {
+        "txt": "} for (int j = 0; j < cols; ++j) { diag[j] = Math.max(diag[j], jacNorm[j]); } for (double ratio = 0; ratio < 1.0e-4;) { for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; oldX[pj] = point[pj]; } double previousCost = cost;"
+      },
+      {
+        "txt": "double[] tmpVec = residuals; residuals = oldRes; oldRes = tmpVec; determineLMParameter(oldRes, delta, diag, work1, work2, work3); double lmNorm = 0; for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; lmDir[pj] = -lmDir[pj]; point[pj] = oldX[pj] + lmDir[pj]; double s = diag[pj] * lmDir[pj];"
+      },
+      {
+        "txt": "lmNorm += s * s; } lmNorm = Math.sqrt(lmNorm); if (firstIteration) { delta = Math.min(delta, lmNorm); } updateResidualsAndCost(); current = new VectorialPointValuePair(point, objective); double actRed = -1.0; if (0.1 * cost < previousCost) {"
+      },
+      {
+        "txt": "double r = cost / previousCost; actRed = 1.0 - r * r; } for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; double dirJ = lmDir[pj]; work1[j] = 0; for (int i = 0; i <= j; ++i) { work1[i] += jacobian[i][pj] * dirJ; }"
+      },
+      {
+        "txt": "} double coeff1 = 0; for (int j = 0; j < solvedCols; ++j) { coeff1 += work1[j] * work1[j]; } double pc2 = previousCost * previousCost; coeff1 = coeff1 / pc2; double coeff2 = lmPar * lmNorm * lmNorm / pc2; double preRed = coeff1 + 2 * coeff2; double dirDer = -(coeff1 + coeff2);"
+      },
+      {
+        "txt": "ratio = (preRed == 0) ? 0 : (actRed / preRed); if (ratio <= 0.25) { double tmp = (actRed < 0) ? (0.5 * dirDer / (dirDer + 0.5 * actRed)) : 0.5; if ((0.1 * cost >= previousCost) || (tmp < 0.1)) { tmp = 0.1; } delta = tmp * Math.min(delta, 10.0 * lmNorm); lmPar /= tmp; } else if ((lmPar == 0) || (ratio >= 0.75)) {"
+      },
+      {
+        "txt": "delta = 2 * lmNorm; lmPar *= 0.5; } if (ratio >= 1.0e-4) { firstIteration = false; xNorm = 0; for (int k = 0; k < cols; ++k) { double xK = diag[k] * point[k]; xNorm += xK * xK; }"
+      },
+      {
+        "txt": "xNorm = Math.sqrt(xNorm); } else { cost = previousCost; for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; point[pj] = oldX[pj]; } tmpVec = residuals; residuals = oldRes; oldRes = tmpVec;"
+      },
+      {
+        "txt": "} if (checker==null) { if (((Math.abs(actRed) <= costRelativeTolerance) && (preRed <= costRelativeTolerance) && (ratio <= 2.0)) || (delta <= parRelativeTolerance * xNorm)) { return current; } } else { if (checker.converged(getIterations(), previous, current)) {"
+      },
+      {
+        "txt": "return current; } } if ((Math.abs(actRed) <= 2.2204e-16) && (preRed <= 2.2204e-16) && (ratio <= 2.0)) { throw new OptimizationException(LocalizedFormats.TOO_SMALL_COST_RELATIVE_TOLERANCE, costRelativeTolerance); } else if (delta <= 2.2204e-16 * xNorm) { throw new OptimizationException(LocalizedFormats.TOO_SMALL_PARAMETERS_RELATIVE_TOLERANCE, parRelativeTolerance); } else if (maxCosine <= 2.2204e-16) {"
+      },
+      {
+        "txt": "throw new OptimizationException(LocalizedFormats.TOO_SMALL_ORTHOGONALITY_TOLERANCE, orthoTolerance); } } } } private void determineLMParameter(double[] qy, double delta, double[] diag, double[] work1, double[] work2, double[] work3) { for (int j = 0; j < rank; ++j) { lmDir[permutation[j]] = qy[j];"
+      },
+      {
+        "txt": "} for (int j = rank; j < cols; ++j) { lmDir[permutation[j]] = 0; } for (int k = rank - 1; k >= 0; --k) { int pk = permutation[k]; double ypk = lmDir[pk] / diagR[pk]; for (int i = 0; i < k; ++i) { lmDir[permutation[i]] -= ypk * jacobian[i][pk]; }"
+      },
+      {
+        "txt": "lmDir[pk] = ypk; } double dxNorm = 0; for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; double s = diag[pj] * lmDir[pj]; work1[pj] = s; dxNorm += s * s; } dxNorm = Math.sqrt(dxNorm);"
+      },
+      {
+        "txt": "double fp = dxNorm - delta; if (fp <= 0.1 * delta) { lmPar = 0; return; } double sum2; double parl = 0; if (rank == solvedCols) { for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j];"
+      },
+      {
+        "txt": "work1[pj] *= diag[pj] / dxNorm; } sum2 = 0; for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; double sum = 0; for (int i = 0; i < j; ++i) { sum += jacobian[i][pj] * work1[permutation[i]]; } double s = (work1[pj] - sum) / diagR[pj];"
+      },
+      {
+        "txt": "work1[pj] = s; sum2 += s * s; } parl = fp / (delta * sum2); } sum2 = 0; for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; double sum = 0; for (int i = 0; i <= j; ++i) {"
+      },
+      {
+        "txt": "sum += jacobian[i][pj] * qy[i]; } sum /= diag[pj]; sum2 += sum * sum; } double gNorm = Math.sqrt(sum2); double paru = gNorm / delta; if (paru == 0) { paru = 2.2251e-308 / Math.min(delta, 0.1); }"
+      },
+      {
+        "txt": "lmPar = Math.min(paru, Math.max(lmPar, parl)); if (lmPar == 0) { lmPar = gNorm / dxNorm; } for (int countdown = 10; countdown >= 0; --countdown) { if (lmPar == 0) { lmPar = Math.max(2.2251e-308, 0.001 * paru); } double sPar = Math.sqrt(lmPar); for (int j = 0; j < solvedCols; ++j) {"
+      },
+      {
+        "txt": "int pj = permutation[j]; work1[pj] = sPar * diag[pj]; } determineLMDirection(qy, work1, work2, work3); dxNorm = 0; for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; double s = diag[pj] * lmDir[pj]; work3[pj] = s; dxNorm += s * s;"
+      },
+      {
+        "txt": "} dxNorm = Math.sqrt(dxNorm); double previousFP = fp; fp = dxNorm - delta; if ((Math.abs(fp) <= 0.1 * delta) || ((parl == 0) && (fp <= previousFP) && (previousFP < 0))) { return; } for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j];"
+      },
+      {
+        "txt": "work1[pj] = work3[pj] * diag[pj] / dxNorm; } for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; work1[pj] /= work2[j]; double tmp = work1[pj]; for (int i = j + 1; i < solvedCols; ++i) { work1[permutation[i]] -= jacobian[i][pj] * tmp; } }"
+      },
+      {
+        "txt": "sum2 = 0; for (int j = 0; j < solvedCols; ++j) { double s = work1[permutation[j]]; sum2 += s * s; } double correction = fp / (delta * sum2); if (fp > 0) { parl = Math.max(parl, lmPar); } else if (fp < 0) { paru = Math.min(paru, lmPar);"
+      },
+      {
+        "txt": "} lmPar = Math.max(parl, lmPar + correction); } } private void determineLMDirection(double[] qy, double[] diag, double[] lmDiag, double[] work) { for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; for (int i = j + 1; i < solvedCols; ++i) { jacobian[i][pj] = jacobian[j][permutation[i]];"
+      },
+      {
+        "txt": "} lmDir[j] = diagR[pj]; work[j] = qy[j]; } for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; double dpj = diag[pj]; if (dpj != 0) { Arrays.fill(lmDiag, j + 1, lmDiag.length, 0); }"
+      },
+      {
+        "txt": "lmDiag[j] = dpj; double qtbpj = 0; for (int k = j; k < solvedCols; ++k) { int pk = permutation[k]; if (lmDiag[k] != 0) { final double sin; final double cos; double rkk = jacobian[k][pk]; if (Math.abs(rkk) < Math.abs(lmDiag[k])) { final double cotan = rkk / lmDiag[k];"
+      },
+      {
+        "txt": "sin = 1.0 / Math.sqrt(1.0 + cotan * cotan); cos = sin * cotan; } else { final double tan = lmDiag[k] / rkk; cos = 1.0 / Math.sqrt(1.0 + tan * tan); sin = cos * tan; } jacobian[k][pk] = cos * rkk + sin * lmDiag[k]; final double temp = cos * work[k] + sin * qtbpj; qtbpj = -sin * work[k] + cos * qtbpj;"
+      },
+      {
+        "txt": "work[k] = temp; for (int i = k + 1; i < solvedCols; ++i) { double rik = jacobian[i][pk]; final double temp2 = cos * rik + sin * lmDiag[i]; lmDiag[i] = -sin * rik + cos * lmDiag[i]; jacobian[i][pk] = temp2; } } } lmDiag[j] = jacobian[j][permutation[j]];"
+      },
+      {
+        "txt": "jacobian[j][permutation[j]] = lmDir[j]; } int nSing = solvedCols; for (int j = 0; j < solvedCols; ++j) { if ((lmDiag[j] == 0) && (nSing == solvedCols)) { nSing = j; } if (nSing < solvedCols) { work[j] = 0; }"
+      },
+      {
+        "txt": "} if (nSing > 0) { for (int j = nSing - 1; j >= 0; --j) { int pj = permutation[j]; double sum = 0; for (int i = j + 1; i < nSing; ++i) { sum += jacobian[i][pj] * work[i]; } work[j] = (work[j] - sum) / lmDiag[j]; }"
+      },
+      {
+        "txt": "} for (int j = 0; j < lmDir.length; ++j) { lmDir[permutation[j]] = work[j]; } } private void qrDecomposition() throws OptimizationException { for (int k = 0; k < cols; ++k) { permutation[k] = k; double norm2 = 0; for (int i = 0; i < jacobian.length; ++i) {"
+      },
+      {
+        "txt": "double akk = jacobian[i][k]; norm2 += akk * akk; } jacNorm[k] = Math.sqrt(norm2); } for (int k = 0; k < cols; ++k) { int nextColumn = -1; double ak2 = Double.NEGATIVE_INFINITY; for (int i = k; i < cols; ++i) { double norm2 = 0;"
+      },
+      {
+        "txt": "for (int j = k; j < jacobian.length; ++j) { double aki = jacobian[j][permutation[i]]; norm2 += aki * aki; } if (Double.isInfinite(norm2) || Double.isNaN(norm2)) { throw new OptimizationException(LocalizedFormats.UNABLE_TO_PERFORM_QR_DECOMPOSITION_ON_JACOBIAN, rows, cols); } if (norm2 > ak2) { nextColumn = i;"
+      },
+      {
+        "txt": "ak2 = norm2; } } if (ak2 <= qrRankingThreshold) { rank = k; return; } int pk = permutation[nextColumn]; permutation[nextColumn] = permutation[k]; permutation[k] = pk;"
+      },
+      {
+        "txt": "double akk = jacobian[k][pk]; double alpha = (akk > 0) ? -Math.sqrt(ak2) : Math.sqrt(ak2); double betak = 1.0 / (ak2 - akk * alpha); beta[pk] = betak; diagR[pk] = alpha; jacobian[k][pk] -= alpha; for (int dk = cols - 1 - k; dk > 0; --dk) { double gamma = 0; for (int j = k; j < jacobian.length; ++j) { gamma += jacobian[j][pk] * jacobian[j][permutation[k + dk]];"
+      },
+      {
+        "txt": "} gamma *= betak; for (int j = k; j < jacobian.length; ++j) { jacobian[j][permutation[k + dk]] -= gamma * jacobian[j][pk]; } } } rank = solvedCols; } private void qTy(double[] y) {"
+      },
+      {
+        "txt": "for (int k = 0; k < cols; ++k) { int pk = permutation[k]; double gamma = 0; for (int i = k; i < rows; ++i) { gamma += jacobian[i][pk] * y[i]; } gamma *= beta[pk]; for (int i = k; i < rows; ++i) { y[i] -= gamma * jacobian[i][pk]; }"
+      },
+      {
+        "txt": "} }"
+      }
+    ]
+  },
+  {
+    "id": 2613,
+    "file_path": "src/main/java/org/apache/commons/math/optimization/general/LevenbergMarquardtOptimizer.java",
+    "start-bug-line": 316,
+    "end-bug-line": 316,
+    "bug": "sum += jacobian[i][pj] * residuals[i];",
+    "fix": "sum += jacobian[i][pj] * qtf[i];",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "import java.util.Arrays; import org.apache.commons.math.FunctionEvaluationException; import org.apache.commons.math.exception.util.LocalizedFormats; import org.apache.commons.math.optimization.OptimizationException; import org.apache.commons.math.optimization.VectorialPointValuePair; import org.apache.commons.math.util.MathUtils; public class LevenbergMarquardtOptimizer extends AbstractLeastSquaresOptimizer { private int solvedCols; private double[] diagR; private double[] jacNorm;"
+      },
+      {
+        "txt": "private double[] beta; private int[] permutation; private int rank; private double lmPar; private double[] lmDir; private double initialStepBoundFactor; private double costRelativeTolerance; private double parRelativeTolerance; private double orthoTolerance; private double qrRankingThreshold;"
+      },
+      {
+        "txt": "public LevenbergMarquardtOptimizer() { setMaxIterations(1000); setConvergenceChecker(null); setInitialStepBoundFactor(100.0); setCostRelativeTolerance(1.0e-10); setParRelativeTolerance(1.0e-10); setOrthoTolerance(1.0e-10); setQRRankingThreshold(MathUtils.SAFE_MIN); } public void setInitialStepBoundFactor(double initialStepBoundFactor) {"
+      },
+      {
+        "txt": "this.initialStepBoundFactor = initialStepBoundFactor; } public void setCostRelativeTolerance(double costRelativeTolerance) { this.costRelativeTolerance = costRelativeTolerance; } public void setParRelativeTolerance(double parRelativeTolerance) { this.parRelativeTolerance = parRelativeTolerance; } public void setOrthoTolerance(double orthoTolerance) { this.orthoTolerance = orthoTolerance;"
+      },
+      {
+        "txt": "} public void setQRRankingThreshold(final double threshold) { this.qrRankingThreshold = threshold; } @Override protected VectorialPointValuePair doOptimize() throws FunctionEvaluationException, OptimizationException, IllegalArgumentException { solvedCols = Math.min(rows, cols); diagR = new double[cols]; jacNorm = new double[cols];"
+      },
+      {
+        "txt": "beta = new double[cols]; permutation = new int[cols]; lmDir = new double[cols]; double delta = 0; double xNorm = 0; double[] diag = new double[cols]; double[] oldX = new double[cols]; double[] oldRes = new double[rows]; double[] work1 = new double[cols]; double[] work2 = new double[cols];"
+      },
+      {
+        "txt": "double[] work3 = new double[cols]; updateResidualsAndCost(); lmPar = 0; boolean firstIteration = true; VectorialPointValuePair current = new VectorialPointValuePair(point, objective); while (true) { incrementIterationsCounter(); VectorialPointValuePair previous = current; updateJacobian(); qrDecomposition();"
+      },
+      {
+        "txt": "qTy(residuals); for (int k = 0; k < solvedCols; ++k) { int pk = permutation[k]; jacobian[k][pk] = diagR[pk]; } if (firstIteration) { xNorm = 0; for (int k = 0; k < cols; ++k) { double dk = jacNorm[k]; if (dk == 0) {"
+      },
+      {
+        "txt": "dk = 1.0; } double xk = dk * point[k]; xNorm += xk * xk; diag[k] = dk; } xNorm = Math.sqrt(xNorm); delta = (xNorm == 0) ? initialStepBoundFactor : (initialStepBoundFactor * xNorm); } double maxCosine = 0;"
+      },
+      {
+        "txt": "for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; double s = jacNorm[pj]; if (s != 0) { double sum = 0; for (int i = 0; i <= j; ++i) { <extra_id_0> } maxCosine = Math.max(maxCosine, Math.abs(sum) / (s * cost)); } } } if (maxCosine <= orthoTolerance) {"
+      },
+      {
+        "txt": "} if (maxCosine <= orthoTolerance) { return current; } for (int j = 0; j < cols; ++j) { diag[j] = Math.max(diag[j], jacNorm[j]); } for (double ratio = 0; ratio < 1.0e-4;) { for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j];"
+      },
+      {
+        "txt": "oldX[pj] = point[pj]; } double previousCost = cost; double[] tmpVec = residuals; residuals = oldRes; oldRes = tmpVec; determineLMParameter(oldRes, delta, diag, work1, work2, work3); double lmNorm = 0; for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j];"
+      },
+      {
+        "txt": "lmDir[pj] = -lmDir[pj]; point[pj] = oldX[pj] + lmDir[pj]; double s = diag[pj] * lmDir[pj]; lmNorm += s * s; } lmNorm = Math.sqrt(lmNorm); if (firstIteration) { delta = Math.min(delta, lmNorm); } updateResidualsAndCost();"
+      },
+      {
+        "txt": "current = new VectorialPointValuePair(point, objective); double actRed = -1.0; if (0.1 * cost < previousCost) { double r = cost / previousCost; actRed = 1.0 - r * r; } for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; double dirJ = lmDir[pj]; work1[j] = 0;"
+      },
+      {
+        "txt": "for (int i = 0; i <= j; ++i) { work1[i] += jacobian[i][pj] * dirJ; } } double coeff1 = 0; for (int j = 0; j < solvedCols; ++j) { coeff1 += work1[j] * work1[j]; } double pc2 = previousCost * previousCost; coeff1 = coeff1 / pc2;"
+      },
+      {
+        "txt": "double coeff2 = lmPar * lmNorm * lmNorm / pc2; double preRed = coeff1 + 2 * coeff2; double dirDer = -(coeff1 + coeff2); ratio = (preRed == 0) ? 0 : (actRed / preRed); if (ratio <= 0.25) { double tmp = (actRed < 0) ? (0.5 * dirDer / (dirDer + 0.5 * actRed)) : 0.5; if ((0.1 * cost >= previousCost) || (tmp < 0.1)) { tmp = 0.1; }"
+      },
+      {
+        "txt": "delta = tmp * Math.min(delta, 10.0 * lmNorm); lmPar /= tmp; } else if ((lmPar == 0) || (ratio >= 0.75)) { delta = 2 * lmNorm; lmPar *= 0.5; } if (ratio >= 1.0e-4) { firstIteration = false; xNorm = 0; for (int k = 0; k < cols; ++k) {"
+      },
+      {
+        "txt": "double xK = diag[k] * point[k]; xNorm += xK * xK; } xNorm = Math.sqrt(xNorm); } else { cost = previousCost; for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; point[pj] = oldX[pj]; }"
+      },
+      {
+        "txt": "tmpVec = residuals; residuals = oldRes; oldRes = tmpVec; } if (checker==null) { if (((Math.abs(actRed) <= costRelativeTolerance) && (preRed <= costRelativeTolerance) && (ratio <= 2.0)) || (delta <= parRelativeTolerance * xNorm)) { return current;"
+      },
+      {
+        "txt": "} } else { if (checker.converged(getIterations(), previous, current)) { return current; } } if ((Math.abs(actRed) <= 2.2204e-16) && (preRed <= 2.2204e-16) && (ratio <= 2.0)) { throw new OptimizationException(LocalizedFormats.TOO_SMALL_COST_RELATIVE_TOLERANCE, costRelativeTolerance); } else if (delta <= 2.2204e-16 * xNorm) {"
+      },
+      {
+        "txt": "throw new OptimizationException(LocalizedFormats.TOO_SMALL_PARAMETERS_RELATIVE_TOLERANCE, parRelativeTolerance); } else if (maxCosine <= 2.2204e-16) { throw new OptimizationException(LocalizedFormats.TOO_SMALL_ORTHOGONALITY_TOLERANCE, orthoTolerance); } } } } private void determineLMParameter(double[] qy, double delta, double[] diag,"
+      },
+      {
+        "txt": "double[] work1, double[] work2, double[] work3) { for (int j = 0; j < rank; ++j) { lmDir[permutation[j]] = qy[j]; } for (int j = rank; j < cols; ++j) { lmDir[permutation[j]] = 0; } for (int k = rank - 1; k >= 0; --k) { int pk = permutation[k]; double ypk = lmDir[pk] / diagR[pk];"
+      },
+      {
+        "txt": "for (int i = 0; i < k; ++i) { lmDir[permutation[i]] -= ypk * jacobian[i][pk]; } lmDir[pk] = ypk; } double dxNorm = 0; for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; double s = diag[pj] * lmDir[pj]; work1[pj] = s;"
+      },
+      {
+        "txt": "dxNorm += s * s; } dxNorm = Math.sqrt(dxNorm); double fp = dxNorm - delta; if (fp <= 0.1 * delta) { lmPar = 0; return; } double sum2; double parl = 0;"
+      },
+      {
+        "txt": "if (rank == solvedCols) { for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; work1[pj] *= diag[pj] / dxNorm; } sum2 = 0; for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; double sum = 0; for (int i = 0; i < j; ++i) {"
+      },
+      {
+        "txt": "sum += jacobian[i][pj] * work1[permutation[i]]; } double s = (work1[pj] - sum) / diagR[pj]; work1[pj] = s; sum2 += s * s; } parl = fp / (delta * sum2); } sum2 = 0; for (int j = 0; j < solvedCols; ++j) {"
+      },
+      {
+        "txt": "int pj = permutation[j]; double sum = 0; for (int i = 0; i <= j; ++i) { sum += jacobian[i][pj] * qy[i]; } sum /= diag[pj]; sum2 += sum * sum; } double gNorm = Math.sqrt(sum2); double paru = gNorm / delta;"
+      },
+      {
+        "txt": "if (paru == 0) { paru = 2.2251e-308 / Math.min(delta, 0.1); } lmPar = Math.min(paru, Math.max(lmPar, parl)); if (lmPar == 0) { lmPar = gNorm / dxNorm; } for (int countdown = 10; countdown >= 0; --countdown) { if (lmPar == 0) { lmPar = Math.max(2.2251e-308, 0.001 * paru);"
+      },
+      {
+        "txt": "} double sPar = Math.sqrt(lmPar); for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; work1[pj] = sPar * diag[pj]; } determineLMDirection(qy, work1, work2, work3); dxNorm = 0; for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j];"
+      },
+      {
+        "txt": "double s = diag[pj] * lmDir[pj]; work3[pj] = s; dxNorm += s * s; } dxNorm = Math.sqrt(dxNorm); double previousFP = fp; fp = dxNorm - delta; if ((Math.abs(fp) <= 0.1 * delta) || ((parl == 0) && (fp <= previousFP) && (previousFP < 0))) { return;"
+      },
+      {
+        "txt": "} for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; work1[pj] = work3[pj] * diag[pj] / dxNorm; } for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; work1[pj] /= work2[j]; double tmp = work1[pj]; for (int i = j + 1; i < solvedCols; ++i) {"
+      },
+      {
+        "txt": "work1[permutation[i]] -= jacobian[i][pj] * tmp; } } sum2 = 0; for (int j = 0; j < solvedCols; ++j) { double s = work1[permutation[j]]; sum2 += s * s; } double correction = fp / (delta * sum2); if (fp > 0) {"
+      },
+      {
+        "txt": "parl = Math.max(parl, lmPar); } else if (fp < 0) { paru = Math.min(paru, lmPar); } lmPar = Math.max(parl, lmPar + correction); } } private void determineLMDirection(double[] qy, double[] diag, double[] lmDiag, double[] work) { for (int j = 0; j < solvedCols; ++j) {"
+      },
+      {
+        "txt": "int pj = permutation[j]; for (int i = j + 1; i < solvedCols; ++i) { jacobian[i][pj] = jacobian[j][permutation[i]]; } lmDir[j] = diagR[pj]; work[j] = qy[j]; } for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; double dpj = diag[pj];"
+      },
+      {
+        "txt": "if (dpj != 0) { Arrays.fill(lmDiag, j + 1, lmDiag.length, 0); } lmDiag[j] = dpj; double qtbpj = 0; for (int k = j; k < solvedCols; ++k) { int pk = permutation[k]; if (lmDiag[k] != 0) { final double sin; final double cos;"
+      },
+      {
+        "txt": "double rkk = jacobian[k][pk]; if (Math.abs(rkk) < Math.abs(lmDiag[k])) { final double cotan = rkk / lmDiag[k]; sin = 1.0 / Math.sqrt(1.0 + cotan * cotan); cos = sin * cotan; } else { final double tan = lmDiag[k] / rkk; cos = 1.0 / Math.sqrt(1.0 + tan * tan); sin = cos * tan; }"
+      },
+      {
+        "txt": "jacobian[k][pk] = cos * rkk + sin * lmDiag[k]; final double temp = cos * work[k] + sin * qtbpj; qtbpj = -sin * work[k] + cos * qtbpj; work[k] = temp; for (int i = k + 1; i < solvedCols; ++i) { double rik = jacobian[i][pk]; final double temp2 = cos * rik + sin * lmDiag[i]; lmDiag[i] = -sin * rik + cos * lmDiag[i]; jacobian[i][pk] = temp2; }"
+      },
+      {
+        "txt": "} } lmDiag[j] = jacobian[j][permutation[j]]; jacobian[j][permutation[j]] = lmDir[j]; } int nSing = solvedCols; for (int j = 0; j < solvedCols; ++j) { if ((lmDiag[j] == 0) && (nSing == solvedCols)) { nSing = j; }"
+      },
+      {
+        "txt": "if (nSing < solvedCols) { work[j] = 0; } } if (nSing > 0) { for (int j = nSing - 1; j >= 0; --j) { int pj = permutation[j]; double sum = 0; for (int i = j + 1; i < nSing; ++i) { sum += jacobian[i][pj] * work[i];"
+      },
+      {
+        "txt": "} work[j] = (work[j] - sum) / lmDiag[j]; } } for (int j = 0; j < lmDir.length; ++j) { lmDir[permutation[j]] = work[j]; } } private void qrDecomposition() throws OptimizationException { for (int k = 0; k < cols; ++k) {"
+      },
+      {
+        "txt": "permutation[k] = k; double norm2 = 0; for (int i = 0; i < jacobian.length; ++i) { double akk = jacobian[i][k]; norm2 += akk * akk; } jacNorm[k] = Math.sqrt(norm2); } for (int k = 0; k < cols; ++k) { int nextColumn = -1;"
+      },
+      {
+        "txt": "double ak2 = Double.NEGATIVE_INFINITY; for (int i = k; i < cols; ++i) { double norm2 = 0; for (int j = k; j < jacobian.length; ++j) { double aki = jacobian[j][permutation[i]]; norm2 += aki * aki; } if (Double.isInfinite(norm2) || Double.isNaN(norm2)) { throw new OptimizationException(LocalizedFormats.UNABLE_TO_PERFORM_QR_DECOMPOSITION_ON_JACOBIAN, rows, cols);"
+      },
+      {
+        "txt": "} if (norm2 > ak2) { nextColumn = i; ak2 = norm2; } } if (ak2 <= qrRankingThreshold) { rank = k; return; }"
+      },
+      {
+        "txt": "int pk = permutation[nextColumn]; permutation[nextColumn] = permutation[k]; permutation[k] = pk; double akk = jacobian[k][pk]; double alpha = (akk > 0) ? -Math.sqrt(ak2) : Math.sqrt(ak2); double betak = 1.0 / (ak2 - akk * alpha); beta[pk] = betak; diagR[pk] = alpha; jacobian[k][pk] -= alpha; for (int dk = cols - 1 - k; dk > 0; --dk) {"
+      },
+      {
+        "txt": "double gamma = 0; for (int j = k; j < jacobian.length; ++j) { gamma += jacobian[j][pk] * jacobian[j][permutation[k + dk]]; } gamma *= betak; for (int j = k; j < jacobian.length; ++j) { jacobian[j][permutation[k + dk]] -= gamma * jacobian[j][pk]; } } }"
+      },
+      {
+        "txt": "rank = solvedCols; } private void qTy(double[] y) { for (int k = 0; k < cols; ++k) { int pk = permutation[k]; double gamma = 0; for (int i = k; i < rows; ++i) { gamma += jacobian[i][pk] * y[i]; } gamma *= beta[pk];"
+      },
+      {
+        "txt": "for (int i = k; i < rows; ++i) { y[i] -= gamma * jacobian[i][pk]; } } }"
+      }
+    ]
+  },
+  {
+    "id": 2614,
+    "file_path": "src/main/java/org/apache/commons/math/optimization/general/LevenbergMarquardtOptimizer.java",
+    "start-bug-line": 324,
+    "end-bug-line": 324,
+    "bug": "",
+    "fix": "updateResidualsAndCost(); current = new VectorialPointValuePair(point, objective);",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.math.optimization.general; import java.util.Arrays; import org.apache.commons.math.FunctionEvaluationException; import org.apache.commons.math.exception.util.LocalizedFormats; import org.apache.commons.math.optimization.OptimizationException; import org.apache.commons.math.optimization.VectorialPointValuePair; import org.apache.commons.math.util.MathUtils; public class LevenbergMarquardtOptimizer extends AbstractLeastSquaresOptimizer {"
+      },
+      {
+        "txt": "private int solvedCols; private double[] diagR; private double[] jacNorm; private double[] beta; private int[] permutation; private int rank; private double lmPar; private double[] lmDir; private double initialStepBoundFactor; private double costRelativeTolerance;"
+      },
+      {
+        "txt": "private double parRelativeTolerance; private double orthoTolerance; private double qrRankingThreshold; public LevenbergMarquardtOptimizer() { setMaxIterations(1000); setConvergenceChecker(null); setInitialStepBoundFactor(100.0); setCostRelativeTolerance(1.0e-10); setParRelativeTolerance(1.0e-10); setOrthoTolerance(1.0e-10);"
+      },
+      {
+        "txt": "setQRRankingThreshold(MathUtils.SAFE_MIN); } public void setInitialStepBoundFactor(double initialStepBoundFactor) { this.initialStepBoundFactor = initialStepBoundFactor; } public void setCostRelativeTolerance(double costRelativeTolerance) { this.costRelativeTolerance = costRelativeTolerance; } public void setParRelativeTolerance(double parRelativeTolerance) { this.parRelativeTolerance = parRelativeTolerance;"
+      },
+      {
+        "txt": "} public void setOrthoTolerance(double orthoTolerance) { this.orthoTolerance = orthoTolerance; } public void setQRRankingThreshold(final double threshold) { this.qrRankingThreshold = threshold; } @Override protected VectorialPointValuePair doOptimize() throws FunctionEvaluationException, OptimizationException, IllegalArgumentException {"
+      },
+      {
+        "txt": "solvedCols = Math.min(rows, cols); diagR = new double[cols]; jacNorm = new double[cols]; beta = new double[cols]; permutation = new int[cols]; lmDir = new double[cols]; double delta = 0; double xNorm = 0; double[] diag = new double[cols]; double[] oldX = new double[cols];"
+      },
+      {
+        "txt": "double[] oldRes = new double[rows]; double[] work1 = new double[cols]; double[] work2 = new double[cols]; double[] work3 = new double[cols]; updateResidualsAndCost(); lmPar = 0; boolean firstIteration = true; VectorialPointValuePair current = new VectorialPointValuePair(point, objective); while (true) { incrementIterationsCounter();"
+      },
+      {
+        "txt": "VectorialPointValuePair previous = current; updateJacobian(); qrDecomposition(); qTy(residuals); for (int k = 0; k < solvedCols; ++k) { int pk = permutation[k]; jacobian[k][pk] = diagR[pk]; } if (firstIteration) { xNorm = 0;"
+      },
+      {
+        "txt": "for (int k = 0; k < cols; ++k) { double dk = jacNorm[k]; if (dk == 0) { dk = 1.0; } double xk = dk * point[k]; xNorm += xk * xk; diag[k] = dk; } xNorm = Math.sqrt(xNorm);"
+      },
+      {
+        "txt": "delta = (xNorm == 0) ? initialStepBoundFactor : (initialStepBoundFactor * xNorm); } double maxCosine = 0; if (cost != 0) { for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; double s = jacNorm[pj]; if (s != 0) { double sum = 0; for (int i = 0; i <= j; ++i) {"
+      },
+      {
+        "txt": "} maxCosine = Math.max(maxCosine, Math.abs(sum) / (s * cost)); } } } if (maxCosine <= orthoTolerance) { <extra_id_0> } for (int j = 0; j < cols; ++j) { diag[j] = Math.max(diag[j], jacNorm[j]); } for (double ratio = 0; ratio < 1.0e-4;) { for (int j = 0; j < solvedCols; ++j) {"
+      },
+      {
+        "txt": "for (double ratio = 0; ratio < 1.0e-4;) { for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; oldX[pj] = point[pj]; } double previousCost = cost; double[] tmpVec = residuals; residuals = oldRes; oldRes = tmpVec; determineLMParameter(oldRes, delta, diag, work1, work2, work3);"
+      },
+      {
+        "txt": "double lmNorm = 0; for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; lmDir[pj] = -lmDir[pj]; point[pj] = oldX[pj] + lmDir[pj]; double s = diag[pj] * lmDir[pj]; lmNorm += s * s; } lmNorm = Math.sqrt(lmNorm); if (firstIteration) {"
+      },
+      {
+        "txt": "delta = Math.min(delta, lmNorm); } updateResidualsAndCost(); current = new VectorialPointValuePair(point, objective); double actRed = -1.0; if (0.1 * cost < previousCost) { double r = cost / previousCost; actRed = 1.0 - r * r; } for (int j = 0; j < solvedCols; ++j) {"
+      },
+      {
+        "txt": "int pj = permutation[j]; double dirJ = lmDir[pj]; work1[j] = 0; for (int i = 0; i <= j; ++i) { work1[i] += jacobian[i][pj] * dirJ; } } double coeff1 = 0; for (int j = 0; j < solvedCols; ++j) { coeff1 += work1[j] * work1[j];"
+      },
+      {
+        "txt": "} double pc2 = previousCost * previousCost; coeff1 = coeff1 / pc2; double coeff2 = lmPar * lmNorm * lmNorm / pc2; double preRed = coeff1 + 2 * coeff2; double dirDer = -(coeff1 + coeff2); ratio = (preRed == 0) ? 0 : (actRed / preRed); if (ratio <= 0.25) { double tmp = (actRed < 0) ? (0.5 * dirDer / (dirDer + 0.5 * actRed)) : 0.5;"
+      },
+      {
+        "txt": "if ((0.1 * cost >= previousCost) || (tmp < 0.1)) { tmp = 0.1; } delta = tmp * Math.min(delta, 10.0 * lmNorm); lmPar /= tmp; } else if ((lmPar == 0) || (ratio >= 0.75)) { delta = 2 * lmNorm; lmPar *= 0.5; } if (ratio >= 1.0e-4) {"
+      },
+      {
+        "txt": "firstIteration = false; xNorm = 0; for (int k = 0; k < cols; ++k) { double xK = diag[k] * point[k]; xNorm += xK * xK; } xNorm = Math.sqrt(xNorm); } else { cost = previousCost; for (int j = 0; j < solvedCols; ++j) {"
+      },
+      {
+        "txt": "int pj = permutation[j]; point[pj] = oldX[pj]; } tmpVec = residuals; residuals = oldRes; oldRes = tmpVec; } if (checker==null) { if (((Math.abs(actRed) <= costRelativeTolerance) && (preRed <= costRelativeTolerance) &&"
+      },
+      {
+        "txt": "(ratio <= 2.0)) || (delta <= parRelativeTolerance * xNorm)) { return current; } } else { if (checker.converged(getIterations(), previous, current)) { return current; } } if ((Math.abs(actRed) <= 2.2204e-16) && (preRed <= 2.2204e-16) && (ratio <= 2.0)) {"
+      },
+      {
+        "txt": "throw new OptimizationException(LocalizedFormats.TOO_SMALL_COST_RELATIVE_TOLERANCE, costRelativeTolerance); } else if (delta <= 2.2204e-16 * xNorm) { throw new OptimizationException(LocalizedFormats.TOO_SMALL_PARAMETERS_RELATIVE_TOLERANCE, parRelativeTolerance); } else if (maxCosine <= 2.2204e-16) { throw new OptimizationException(LocalizedFormats.TOO_SMALL_ORTHOGONALITY_TOLERANCE, orthoTolerance); } }"
+      },
+      {
+        "txt": "} } private void determineLMParameter(double[] qy, double delta, double[] diag, double[] work1, double[] work2, double[] work3) { for (int j = 0; j < rank; ++j) { lmDir[permutation[j]] = qy[j]; } for (int j = rank; j < cols; ++j) { lmDir[permutation[j]] = 0; }"
+      },
+      {
+        "txt": "for (int k = rank - 1; k >= 0; --k) { int pk = permutation[k]; double ypk = lmDir[pk] / diagR[pk]; for (int i = 0; i < k; ++i) { lmDir[permutation[i]] -= ypk * jacobian[i][pk]; } lmDir[pk] = ypk; } double dxNorm = 0; for (int j = 0; j < solvedCols; ++j) {"
+      },
+      {
+        "txt": "int pj = permutation[j]; double s = diag[pj] * lmDir[pj]; work1[pj] = s; dxNorm += s * s; } dxNorm = Math.sqrt(dxNorm); double fp = dxNorm - delta; if (fp <= 0.1 * delta) { lmPar = 0; return;"
+      },
+      {
+        "txt": "} double sum2; double parl = 0; if (rank == solvedCols) { for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; work1[pj] *= diag[pj] / dxNorm; } sum2 = 0; for (int j = 0; j < solvedCols; ++j) {"
+      },
+      {
+        "txt": "int pj = permutation[j]; double sum = 0; for (int i = 0; i < j; ++i) { sum += jacobian[i][pj] * work1[permutation[i]]; } double s = (work1[pj] - sum) / diagR[pj]; work1[pj] = s; sum2 += s * s; } parl = fp / (delta * sum2);"
+      },
+      {
+        "txt": "} sum2 = 0; for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; double sum = 0; for (int i = 0; i <= j; ++i) { sum += jacobian[i][pj] * qy[i]; } sum /= diag[pj]; sum2 += sum * sum;"
+      },
+      {
+        "txt": "} double gNorm = Math.sqrt(sum2); double paru = gNorm / delta; if (paru == 0) { paru = 2.2251e-308 / Math.min(delta, 0.1); } lmPar = Math.min(paru, Math.max(lmPar, parl)); if (lmPar == 0) { lmPar = gNorm / dxNorm; }"
+      },
+      {
+        "txt": "for (int countdown = 10; countdown >= 0; --countdown) { if (lmPar == 0) { lmPar = Math.max(2.2251e-308, 0.001 * paru); } double sPar = Math.sqrt(lmPar); for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; work1[pj] = sPar * diag[pj]; } determineLMDirection(qy, work1, work2, work3);"
+      },
+      {
+        "txt": "dxNorm = 0; for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; double s = diag[pj] * lmDir[pj]; work3[pj] = s; dxNorm += s * s; } dxNorm = Math.sqrt(dxNorm); double previousFP = fp; fp = dxNorm - delta;"
+      },
+      {
+        "txt": "if ((Math.abs(fp) <= 0.1 * delta) || ((parl == 0) && (fp <= previousFP) && (previousFP < 0))) { return; } for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; work1[pj] = work3[pj] * diag[pj] / dxNorm; } for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j];"
+      },
+      {
+        "txt": "work1[pj] /= work2[j]; double tmp = work1[pj]; for (int i = j + 1; i < solvedCols; ++i) { work1[permutation[i]] -= jacobian[i][pj] * tmp; } } sum2 = 0; for (int j = 0; j < solvedCols; ++j) { double s = work1[permutation[j]]; sum2 += s * s;"
+      },
+      {
+        "txt": "} double correction = fp / (delta * sum2); if (fp > 0) { parl = Math.max(parl, lmPar); } else if (fp < 0) { paru = Math.min(paru, lmPar); } lmPar = Math.max(parl, lmPar + correction); } }"
+      },
+      {
+        "txt": "private void determineLMDirection(double[] qy, double[] diag, double[] lmDiag, double[] work) { for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; for (int i = j + 1; i < solvedCols; ++i) { jacobian[i][pj] = jacobian[j][permutation[i]]; } lmDir[j] = diagR[pj]; work[j] = qy[j]; }"
+      },
+      {
+        "txt": "for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; double dpj = diag[pj]; if (dpj != 0) { Arrays.fill(lmDiag, j + 1, lmDiag.length, 0); } lmDiag[j] = dpj; double qtbpj = 0; for (int k = j; k < solvedCols; ++k) { int pk = permutation[k];"
+      },
+      {
+        "txt": "if (lmDiag[k] != 0) { final double sin; final double cos; double rkk = jacobian[k][pk]; if (Math.abs(rkk) < Math.abs(lmDiag[k])) { final double cotan = rkk / lmDiag[k]; sin = 1.0 / Math.sqrt(1.0 + cotan * cotan); cos = sin * cotan; } else { final double tan = lmDiag[k] / rkk;"
+      },
+      {
+        "txt": "cos = 1.0 / Math.sqrt(1.0 + tan * tan); sin = cos * tan; } jacobian[k][pk] = cos * rkk + sin * lmDiag[k]; final double temp = cos * work[k] + sin * qtbpj; qtbpj = -sin * work[k] + cos * qtbpj; work[k] = temp; for (int i = k + 1; i < solvedCols; ++i) { double rik = jacobian[i][pk]; final double temp2 = cos * rik + sin * lmDiag[i];"
+      },
+      {
+        "txt": "lmDiag[i] = -sin * rik + cos * lmDiag[i]; jacobian[i][pk] = temp2; } } } lmDiag[j] = jacobian[j][permutation[j]]; jacobian[j][permutation[j]] = lmDir[j]; } int nSing = solvedCols; for (int j = 0; j < solvedCols; ++j) {"
+      },
+      {
+        "txt": "if ((lmDiag[j] == 0) && (nSing == solvedCols)) { nSing = j; } if (nSing < solvedCols) { work[j] = 0; } } if (nSing > 0) { for (int j = nSing - 1; j >= 0; --j) { int pj = permutation[j];"
+      },
+      {
+        "txt": "double sum = 0; for (int i = j + 1; i < nSing; ++i) { sum += jacobian[i][pj] * work[i]; } work[j] = (work[j] - sum) / lmDiag[j]; } } for (int j = 0; j < lmDir.length; ++j) { lmDir[permutation[j]] = work[j]; }"
+      },
+      {
+        "txt": "} private void qrDecomposition() throws OptimizationException { for (int k = 0; k < cols; ++k) { permutation[k] = k; double norm2 = 0; for (int i = 0; i < jacobian.length; ++i) { double akk = jacobian[i][k]; norm2 += akk * akk; } jacNorm[k] = Math.sqrt(norm2);"
+      },
+      {
+        "txt": "} for (int k = 0; k < cols; ++k) { int nextColumn = -1; double ak2 = Double.NEGATIVE_INFINITY; for (int i = k; i < cols; ++i) { double norm2 = 0; for (int j = k; j < jacobian.length; ++j) { double aki = jacobian[j][permutation[i]]; norm2 += aki * aki; }"
+      },
+      {
+        "txt": "if (Double.isInfinite(norm2) || Double.isNaN(norm2)) { throw new OptimizationException(LocalizedFormats.UNABLE_TO_PERFORM_QR_DECOMPOSITION_ON_JACOBIAN, rows, cols); } if (norm2 > ak2) { nextColumn = i; ak2 = norm2; } } if (ak2 <= qrRankingThreshold) {"
+      },
+      {
+        "txt": "rank = k; return; } int pk = permutation[nextColumn]; permutation[nextColumn] = permutation[k]; permutation[k] = pk; double akk = jacobian[k][pk]; double alpha = (akk > 0) ? -Math.sqrt(ak2) : Math.sqrt(ak2); double betak = 1.0 / (ak2 - akk * alpha); beta[pk] = betak;"
+      },
+      {
+        "txt": "diagR[pk] = alpha; jacobian[k][pk] -= alpha; for (int dk = cols - 1 - k; dk > 0; --dk) { double gamma = 0; for (int j = k; j < jacobian.length; ++j) { gamma += jacobian[j][pk] * jacobian[j][permutation[k + dk]]; } gamma *= betak; for (int j = k; j < jacobian.length; ++j) { jacobian[j][permutation[k + dk]] -= gamma * jacobian[j][pk];"
+      },
+      {
+        "txt": "} } } rank = solvedCols; } private void qTy(double[] y) { for (int k = 0; k < cols; ++k) { int pk = permutation[k]; double gamma = 0; for (int i = k; i < rows; ++i) {"
+      },
+      {
+        "txt": "gamma += jacobian[i][pk] * y[i]; } gamma *= beta[pk]; for (int i = k; i < rows; ++i) { y[i] -= gamma * jacobian[i][pk]; } } }"
+      }
+    ]
+  },
+  {
+    "id": 2615,
+    "file_path": "src/main/java/org/apache/commons/math/optimization/general/LevenbergMarquardtOptimizer.java",
+    "start-bug-line": 344,
+    "end-bug-line": 344,
+    "bug": "",
+    "fix": "tmpVec    = objective; objective = oldObj; oldObj    = tmpVec;",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.math.optimization.general; import java.util.Arrays;"
+      },
+      {
+        "txt": "import org.apache.commons.math.FunctionEvaluationException; import org.apache.commons.math.exception.util.LocalizedFormats; import org.apache.commons.math.optimization.OptimizationException; import org.apache.commons.math.optimization.VectorialPointValuePair; import org.apache.commons.math.util.MathUtils; public class LevenbergMarquardtOptimizer extends AbstractLeastSquaresOptimizer { private int solvedCols; private double[] diagR; private double[] jacNorm; private double[] beta;"
+      },
+      {
+        "txt": "private int[] permutation; private int rank; private double lmPar; private double[] lmDir; private double initialStepBoundFactor; private double costRelativeTolerance; private double parRelativeTolerance; private double orthoTolerance; private double qrRankingThreshold; public LevenbergMarquardtOptimizer() {"
+      },
+      {
+        "txt": "setMaxIterations(1000); setConvergenceChecker(null); setInitialStepBoundFactor(100.0); setCostRelativeTolerance(1.0e-10); setParRelativeTolerance(1.0e-10); setOrthoTolerance(1.0e-10); setQRRankingThreshold(MathUtils.SAFE_MIN); } public void setInitialStepBoundFactor(double initialStepBoundFactor) { this.initialStepBoundFactor = initialStepBoundFactor;"
+      },
+      {
+        "txt": "} public void setCostRelativeTolerance(double costRelativeTolerance) { this.costRelativeTolerance = costRelativeTolerance; } public void setParRelativeTolerance(double parRelativeTolerance) { this.parRelativeTolerance = parRelativeTolerance; } public void setOrthoTolerance(double orthoTolerance) { this.orthoTolerance = orthoTolerance; }"
+      },
+      {
+        "txt": "public void setQRRankingThreshold(final double threshold) { this.qrRankingThreshold = threshold; } @Override protected VectorialPointValuePair doOptimize() throws FunctionEvaluationException, OptimizationException, IllegalArgumentException { solvedCols = Math.min(rows, cols); diagR = new double[cols]; jacNorm = new double[cols]; beta = new double[cols];"
+      },
+      {
+        "txt": "permutation = new int[cols]; lmDir = new double[cols]; double delta = 0; double xNorm = 0; double[] diag = new double[cols]; double[] oldX = new double[cols]; double[] oldRes = new double[rows]; double[] work1 = new double[cols]; double[] work2 = new double[cols]; double[] work3 = new double[cols];"
+      },
+      {
+        "txt": "updateResidualsAndCost(); lmPar = 0; boolean firstIteration = true; VectorialPointValuePair current = new VectorialPointValuePair(point, objective); while (true) { incrementIterationsCounter(); VectorialPointValuePair previous = current; updateJacobian(); qrDecomposition(); qTy(residuals);"
+      },
+      {
+        "txt": "for (int k = 0; k < solvedCols; ++k) { int pk = permutation[k]; jacobian[k][pk] = diagR[pk]; } if (firstIteration) { xNorm = 0; for (int k = 0; k < cols; ++k) { double dk = jacNorm[k]; if (dk == 0) { dk = 1.0;"
+      },
+      {
+        "txt": "} double xk = dk * point[k]; xNorm += xk * xk; diag[k] = dk; } xNorm = Math.sqrt(xNorm); delta = (xNorm == 0) ? initialStepBoundFactor : (initialStepBoundFactor * xNorm); } double maxCosine = 0; if (cost != 0) {"
+      },
+      {
+        "txt": "for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; double s = jacNorm[pj]; if (s != 0) { double sum = 0; for (int i = 0; i <= j; ++i) { sum += jacobian[i][pj] * residuals[i]; } maxCosine = Math.max(maxCosine, Math.abs(sum) / (s * cost)); }"
+      },
+      {
+        "txt": "} } if (maxCosine <= orthoTolerance) { return current; } for (int j = 0; j < cols; ++j) { diag[j] = Math.max(diag[j], jacNorm[j]); } for (double ratio = 0; ratio < 1.0e-4;) { for (int j = 0; j < solvedCols; ++j) {"
+      },
+      {
+        "txt": "oldX[pj] = point[pj]; } double previousCost = cost; double[] tmpVec = residuals; residuals = oldRes; oldRes = tmpVec; <extra_id_0> determineLMParameter(oldRes, delta, diag, work1, work2, work3); double lmNorm = 0; for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; lmDir[pj] = -lmDir[pj]; point[pj] = oldX[pj] + lmDir[pj];"
+      },
+      {
+        "txt": "lmDir[pj] = -lmDir[pj]; point[pj] = oldX[pj] + lmDir[pj]; double s = diag[pj] * lmDir[pj]; lmNorm += s * s; } lmNorm = Math.sqrt(lmNorm); if (firstIteration) { delta = Math.min(delta, lmNorm); } updateResidualsAndCost();"
+      },
+      {
+        "txt": "current = new VectorialPointValuePair(point, objective); double actRed = -1.0; if (0.1 * cost < previousCost) { double r = cost / previousCost; actRed = 1.0 - r * r; } for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; double dirJ = lmDir[pj]; work1[j] = 0;"
+      },
+      {
+        "txt": "for (int i = 0; i <= j; ++i) { work1[i] += jacobian[i][pj] * dirJ; } } double coeff1 = 0; for (int j = 0; j < solvedCols; ++j) { coeff1 += work1[j] * work1[j]; } double pc2 = previousCost * previousCost; coeff1 = coeff1 / pc2;"
+      },
+      {
+        "txt": "double coeff2 = lmPar * lmNorm * lmNorm / pc2; double preRed = coeff1 + 2 * coeff2; double dirDer = -(coeff1 + coeff2); ratio = (preRed == 0) ? 0 : (actRed / preRed); if (ratio <= 0.25) { double tmp = (actRed < 0) ? (0.5 * dirDer / (dirDer + 0.5 * actRed)) : 0.5; if ((0.1 * cost >= previousCost) || (tmp < 0.1)) { tmp = 0.1; }"
+      },
+      {
+        "txt": "delta = tmp * Math.min(delta, 10.0 * lmNorm); lmPar /= tmp; } else if ((lmPar == 0) || (ratio >= 0.75)) { delta = 2 * lmNorm; lmPar *= 0.5; } if (ratio >= 1.0e-4) { firstIteration = false; xNorm = 0; for (int k = 0; k < cols; ++k) {"
+      },
+      {
+        "txt": "double xK = diag[k] * point[k]; xNorm += xK * xK; } xNorm = Math.sqrt(xNorm); } else { cost = previousCost; for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; point[pj] = oldX[pj]; }"
+      },
+      {
+        "txt": "tmpVec = residuals; residuals = oldRes; oldRes = tmpVec; } if (checker==null) { if (((Math.abs(actRed) <= costRelativeTolerance) && (preRed <= costRelativeTolerance) && (ratio <= 2.0)) || (delta <= parRelativeTolerance * xNorm)) { return current;"
+      },
+      {
+        "txt": "} } else { if (checker.converged(getIterations(), previous, current)) { return current; } } if ((Math.abs(actRed) <= 2.2204e-16) && (preRed <= 2.2204e-16) && (ratio <= 2.0)) { throw new OptimizationException(LocalizedFormats.TOO_SMALL_COST_RELATIVE_TOLERANCE, costRelativeTolerance); } else if (delta <= 2.2204e-16 * xNorm) {"
+      },
+      {
+        "txt": "throw new OptimizationException(LocalizedFormats.TOO_SMALL_PARAMETERS_RELATIVE_TOLERANCE, parRelativeTolerance); } else if (maxCosine <= 2.2204e-16) { throw new OptimizationException(LocalizedFormats.TOO_SMALL_ORTHOGONALITY_TOLERANCE, orthoTolerance); } } } } private void determineLMParameter(double[] qy, double delta, double[] diag,"
+      },
+      {
+        "txt": "double[] work1, double[] work2, double[] work3) { for (int j = 0; j < rank; ++j) { lmDir[permutation[j]] = qy[j]; } for (int j = rank; j < cols; ++j) { lmDir[permutation[j]] = 0; } for (int k = rank - 1; k >= 0; --k) { int pk = permutation[k]; double ypk = lmDir[pk] / diagR[pk];"
+      },
+      {
+        "txt": "for (int i = 0; i < k; ++i) { lmDir[permutation[i]] -= ypk * jacobian[i][pk]; } lmDir[pk] = ypk; } double dxNorm = 0; for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; double s = diag[pj] * lmDir[pj]; work1[pj] = s;"
+      },
+      {
+        "txt": "dxNorm += s * s; } dxNorm = Math.sqrt(dxNorm); double fp = dxNorm - delta; if (fp <= 0.1 * delta) { lmPar = 0; return; } double sum2; double parl = 0;"
+      },
+      {
+        "txt": "if (rank == solvedCols) { for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; work1[pj] *= diag[pj] / dxNorm; } sum2 = 0; for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; double sum = 0; for (int i = 0; i < j; ++i) {"
+      },
+      {
+        "txt": "sum += jacobian[i][pj] * work1[permutation[i]]; } double s = (work1[pj] - sum) / diagR[pj]; work1[pj] = s; sum2 += s * s; } parl = fp / (delta * sum2); } sum2 = 0; for (int j = 0; j < solvedCols; ++j) {"
+      },
+      {
+        "txt": "int pj = permutation[j]; double sum = 0; for (int i = 0; i <= j; ++i) { sum += jacobian[i][pj] * qy[i]; } sum /= diag[pj]; sum2 += sum * sum; } double gNorm = Math.sqrt(sum2); double paru = gNorm / delta;"
+      },
+      {
+        "txt": "if (paru == 0) { paru = 2.2251e-308 / Math.min(delta, 0.1); } lmPar = Math.min(paru, Math.max(lmPar, parl)); if (lmPar == 0) { lmPar = gNorm / dxNorm; } for (int countdown = 10; countdown >= 0; --countdown) { if (lmPar == 0) { lmPar = Math.max(2.2251e-308, 0.001 * paru);"
+      },
+      {
+        "txt": "} double sPar = Math.sqrt(lmPar); for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; work1[pj] = sPar * diag[pj]; } determineLMDirection(qy, work1, work2, work3); dxNorm = 0; for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j];"
+      },
+      {
+        "txt": "double s = diag[pj] * lmDir[pj]; work3[pj] = s; dxNorm += s * s; } dxNorm = Math.sqrt(dxNorm); double previousFP = fp; fp = dxNorm - delta; if ((Math.abs(fp) <= 0.1 * delta) || ((parl == 0) && (fp <= previousFP) && (previousFP < 0))) { return;"
+      },
+      {
+        "txt": "} for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; work1[pj] = work3[pj] * diag[pj] / dxNorm; } for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; work1[pj] /= work2[j]; double tmp = work1[pj]; for (int i = j + 1; i < solvedCols; ++i) {"
+      },
+      {
+        "txt": "work1[permutation[i]] -= jacobian[i][pj] * tmp; } } sum2 = 0; for (int j = 0; j < solvedCols; ++j) { double s = work1[permutation[j]]; sum2 += s * s; } double correction = fp / (delta * sum2); if (fp > 0) {"
+      },
+      {
+        "txt": "parl = Math.max(parl, lmPar); } else if (fp < 0) { paru = Math.min(paru, lmPar); } lmPar = Math.max(parl, lmPar + correction); } } private void determineLMDirection(double[] qy, double[] diag, double[] lmDiag, double[] work) { for (int j = 0; j < solvedCols; ++j) {"
+      },
+      {
+        "txt": "int pj = permutation[j]; for (int i = j + 1; i < solvedCols; ++i) { jacobian[i][pj] = jacobian[j][permutation[i]]; } lmDir[j] = diagR[pj]; work[j] = qy[j]; } for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; double dpj = diag[pj];"
+      },
+      {
+        "txt": "if (dpj != 0) { Arrays.fill(lmDiag, j + 1, lmDiag.length, 0); } lmDiag[j] = dpj; double qtbpj = 0; for (int k = j; k < solvedCols; ++k) { int pk = permutation[k]; if (lmDiag[k] != 0) { final double sin; final double cos;"
+      },
+      {
+        "txt": "double rkk = jacobian[k][pk]; if (Math.abs(rkk) < Math.abs(lmDiag[k])) { final double cotan = rkk / lmDiag[k]; sin = 1.0 / Math.sqrt(1.0 + cotan * cotan); cos = sin * cotan; } else { final double tan = lmDiag[k] / rkk; cos = 1.0 / Math.sqrt(1.0 + tan * tan); sin = cos * tan; }"
+      },
+      {
+        "txt": "jacobian[k][pk] = cos * rkk + sin * lmDiag[k]; final double temp = cos * work[k] + sin * qtbpj; qtbpj = -sin * work[k] + cos * qtbpj; work[k] = temp; for (int i = k + 1; i < solvedCols; ++i) { double rik = jacobian[i][pk]; final double temp2 = cos * rik + sin * lmDiag[i]; lmDiag[i] = -sin * rik + cos * lmDiag[i]; jacobian[i][pk] = temp2; }"
+      },
+      {
+        "txt": "} } lmDiag[j] = jacobian[j][permutation[j]]; jacobian[j][permutation[j]] = lmDir[j]; } int nSing = solvedCols; for (int j = 0; j < solvedCols; ++j) { if ((lmDiag[j] == 0) && (nSing == solvedCols)) { nSing = j; }"
+      },
+      {
+        "txt": "if (nSing < solvedCols) { work[j] = 0; } } if (nSing > 0) { for (int j = nSing - 1; j >= 0; --j) { int pj = permutation[j]; double sum = 0; for (int i = j + 1; i < nSing; ++i) { sum += jacobian[i][pj] * work[i];"
+      },
+      {
+        "txt": "} work[j] = (work[j] - sum) / lmDiag[j]; } } for (int j = 0; j < lmDir.length; ++j) { lmDir[permutation[j]] = work[j]; } } private void qrDecomposition() throws OptimizationException { for (int k = 0; k < cols; ++k) {"
+      },
+      {
+        "txt": "permutation[k] = k; double norm2 = 0; for (int i = 0; i < jacobian.length; ++i) { double akk = jacobian[i][k]; norm2 += akk * akk; } jacNorm[k] = Math.sqrt(norm2); } for (int k = 0; k < cols; ++k) { int nextColumn = -1;"
+      },
+      {
+        "txt": "double ak2 = Double.NEGATIVE_INFINITY; for (int i = k; i < cols; ++i) { double norm2 = 0; for (int j = k; j < jacobian.length; ++j) { double aki = jacobian[j][permutation[i]]; norm2 += aki * aki; } if (Double.isInfinite(norm2) || Double.isNaN(norm2)) { throw new OptimizationException(LocalizedFormats.UNABLE_TO_PERFORM_QR_DECOMPOSITION_ON_JACOBIAN, rows, cols);"
+      },
+      {
+        "txt": "} if (norm2 > ak2) { nextColumn = i; ak2 = norm2; } } if (ak2 <= qrRankingThreshold) { rank = k; return; }"
+      },
+      {
+        "txt": "int pk = permutation[nextColumn]; permutation[nextColumn] = permutation[k]; permutation[k] = pk; double akk = jacobian[k][pk]; double alpha = (akk > 0) ? -Math.sqrt(ak2) : Math.sqrt(ak2); double betak = 1.0 / (ak2 - akk * alpha); beta[pk] = betak; diagR[pk] = alpha; jacobian[k][pk] -= alpha; for (int dk = cols - 1 - k; dk > 0; --dk) {"
+      },
+      {
+        "txt": "double gamma = 0; for (int j = k; j < jacobian.length; ++j) { gamma += jacobian[j][pk] * jacobian[j][permutation[k + dk]]; } gamma *= betak; for (int j = k; j < jacobian.length; ++j) { jacobian[j][permutation[k + dk]] -= gamma * jacobian[j][pk]; } } }"
+      },
+      {
+        "txt": "rank = solvedCols; } private void qTy(double[] y) { for (int k = 0; k < cols; ++k) { int pk = permutation[k]; double gamma = 0; for (int i = k; i < rows; ++i) { gamma += jacobian[i][pk] * y[i]; } gamma *= beta[pk];"
+      },
+      {
+        "txt": "for (int i = k; i < rows; ++i) { y[i] -= gamma * jacobian[i][pk]; } } }"
+      }
+    ]
+  },
+  {
+    "id": 2616,
+    "file_path": "src/main/java/org/apache/commons/math/optimization/general/LevenbergMarquardtOptimizer.java",
+    "start-bug-line": 346,
+    "end-bug-line": 346,
+    "bug": "determineLMParameter(oldRes, delta, diag, work1, work2, work3);",
+    "fix": "determineLMParameter(qtf, delta, diag, work1, work2, work3);",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.math.optimization.general; import java.util.Arrays;"
+      },
+      {
+        "txt": "import org.apache.commons.math.FunctionEvaluationException; import org.apache.commons.math.exception.util.LocalizedFormats; import org.apache.commons.math.optimization.OptimizationException; import org.apache.commons.math.optimization.VectorialPointValuePair; import org.apache.commons.math.util.MathUtils; public class LevenbergMarquardtOptimizer extends AbstractLeastSquaresOptimizer { private int solvedCols; private double[] diagR; private double[] jacNorm; private double[] beta;"
+      },
+      {
+        "txt": "private int[] permutation; private int rank; private double lmPar; private double[] lmDir; private double initialStepBoundFactor; private double costRelativeTolerance; private double parRelativeTolerance; private double orthoTolerance; private double qrRankingThreshold; public LevenbergMarquardtOptimizer() {"
+      },
+      {
+        "txt": "setMaxIterations(1000); setConvergenceChecker(null); setInitialStepBoundFactor(100.0); setCostRelativeTolerance(1.0e-10); setParRelativeTolerance(1.0e-10); setOrthoTolerance(1.0e-10); setQRRankingThreshold(MathUtils.SAFE_MIN); } public void setInitialStepBoundFactor(double initialStepBoundFactor) { this.initialStepBoundFactor = initialStepBoundFactor;"
+      },
+      {
+        "txt": "} public void setCostRelativeTolerance(double costRelativeTolerance) { this.costRelativeTolerance = costRelativeTolerance; } public void setParRelativeTolerance(double parRelativeTolerance) { this.parRelativeTolerance = parRelativeTolerance; } public void setOrthoTolerance(double orthoTolerance) { this.orthoTolerance = orthoTolerance; }"
+      },
+      {
+        "txt": "public void setQRRankingThreshold(final double threshold) { this.qrRankingThreshold = threshold; } @Override protected VectorialPointValuePair doOptimize() throws FunctionEvaluationException, OptimizationException, IllegalArgumentException { solvedCols = Math.min(rows, cols); diagR = new double[cols]; jacNorm = new double[cols]; beta = new double[cols];"
+      },
+      {
+        "txt": "permutation = new int[cols]; lmDir = new double[cols]; double delta = 0; double xNorm = 0; double[] diag = new double[cols]; double[] oldX = new double[cols]; double[] oldRes = new double[rows]; double[] work1 = new double[cols]; double[] work2 = new double[cols]; double[] work3 = new double[cols];"
+      },
+      {
+        "txt": "updateResidualsAndCost(); lmPar = 0; boolean firstIteration = true; VectorialPointValuePair current = new VectorialPointValuePair(point, objective); while (true) { incrementIterationsCounter(); VectorialPointValuePair previous = current; updateJacobian(); qrDecomposition(); qTy(residuals);"
+      },
+      {
+        "txt": "for (int k = 0; k < solvedCols; ++k) { int pk = permutation[k]; jacobian[k][pk] = diagR[pk]; } if (firstIteration) { xNorm = 0; for (int k = 0; k < cols; ++k) { double dk = jacNorm[k]; if (dk == 0) { dk = 1.0;"
+      },
+      {
+        "txt": "} double xk = dk * point[k]; xNorm += xk * xk; diag[k] = dk; } xNorm = Math.sqrt(xNorm); delta = (xNorm == 0) ? initialStepBoundFactor : (initialStepBoundFactor * xNorm); } double maxCosine = 0; if (cost != 0) {"
+      },
+      {
+        "txt": "for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; double s = jacNorm[pj]; if (s != 0) { double sum = 0; for (int i = 0; i <= j; ++i) { sum += jacobian[i][pj] * residuals[i]; } maxCosine = Math.max(maxCosine, Math.abs(sum) / (s * cost)); }"
+      },
+      {
+        "txt": "} } if (maxCosine <= orthoTolerance) { return current; } for (int j = 0; j < cols; ++j) { diag[j] = Math.max(diag[j], jacNorm[j]); } for (double ratio = 0; ratio < 1.0e-4;) { for (int j = 0; j < solvedCols; ++j) {"
+      },
+      {
+        "txt": "oldX[pj] = point[pj]; } double previousCost = cost; double[] tmpVec = residuals; residuals = oldRes; oldRes = tmpVec; <extra_id_0> double lmNorm = 0; for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; lmDir[pj] = -lmDir[pj]; point[pj] = oldX[pj] + lmDir[pj]; double s = diag[pj] * lmDir[pj];"
+      },
+      {
+        "txt": "point[pj] = oldX[pj] + lmDir[pj]; double s = diag[pj] * lmDir[pj]; lmNorm += s * s; } lmNorm = Math.sqrt(lmNorm); if (firstIteration) { delta = Math.min(delta, lmNorm); } updateResidualsAndCost(); current = new VectorialPointValuePair(point, objective);"
+      },
+      {
+        "txt": "double actRed = -1.0; if (0.1 * cost < previousCost) { double r = cost / previousCost; actRed = 1.0 - r * r; } for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; double dirJ = lmDir[pj]; work1[j] = 0; for (int i = 0; i <= j; ++i) {"
+      },
+      {
+        "txt": "work1[i] += jacobian[i][pj] * dirJ; } } double coeff1 = 0; for (int j = 0; j < solvedCols; ++j) { coeff1 += work1[j] * work1[j]; } double pc2 = previousCost * previousCost; coeff1 = coeff1 / pc2; double coeff2 = lmPar * lmNorm * lmNorm / pc2;"
+      },
+      {
+        "txt": "double preRed = coeff1 + 2 * coeff2; double dirDer = -(coeff1 + coeff2); ratio = (preRed == 0) ? 0 : (actRed / preRed); if (ratio <= 0.25) { double tmp = (actRed < 0) ? (0.5 * dirDer / (dirDer + 0.5 * actRed)) : 0.5; if ((0.1 * cost >= previousCost) || (tmp < 0.1)) { tmp = 0.1; } delta = tmp * Math.min(delta, 10.0 * lmNorm);"
+      },
+      {
+        "txt": "lmPar /= tmp; } else if ((lmPar == 0) || (ratio >= 0.75)) { delta = 2 * lmNorm; lmPar *= 0.5; } if (ratio >= 1.0e-4) { firstIteration = false; xNorm = 0; for (int k = 0; k < cols; ++k) { double xK = diag[k] * point[k];"
+      },
+      {
+        "txt": "xNorm += xK * xK; } xNorm = Math.sqrt(xNorm); } else { cost = previousCost; for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; point[pj] = oldX[pj]; } tmpVec = residuals;"
+      },
+      {
+        "txt": "residuals = oldRes; oldRes = tmpVec; } if (checker==null) { if (((Math.abs(actRed) <= costRelativeTolerance) && (preRed <= costRelativeTolerance) && (ratio <= 2.0)) || (delta <= parRelativeTolerance * xNorm)) { return current; }"
+      },
+      {
+        "txt": "} else { if (checker.converged(getIterations(), previous, current)) { return current; } } if ((Math.abs(actRed) <= 2.2204e-16) && (preRed <= 2.2204e-16) && (ratio <= 2.0)) { throw new OptimizationException(LocalizedFormats.TOO_SMALL_COST_RELATIVE_TOLERANCE, costRelativeTolerance); } else if (delta <= 2.2204e-16 * xNorm) { throw new OptimizationException(LocalizedFormats.TOO_SMALL_PARAMETERS_RELATIVE_TOLERANCE,"
+      },
+      {
+        "txt": "parRelativeTolerance); } else if (maxCosine <= 2.2204e-16) { throw new OptimizationException(LocalizedFormats.TOO_SMALL_ORTHOGONALITY_TOLERANCE, orthoTolerance); } } } } private void determineLMParameter(double[] qy, double delta, double[] diag, double[] work1, double[] work2, double[] work3) {"
+      },
+      {
+        "txt": "for (int j = 0; j < rank; ++j) { lmDir[permutation[j]] = qy[j]; } for (int j = rank; j < cols; ++j) { lmDir[permutation[j]] = 0; } for (int k = rank - 1; k >= 0; --k) { int pk = permutation[k]; double ypk = lmDir[pk] / diagR[pk]; for (int i = 0; i < k; ++i) {"
+      },
+      {
+        "txt": "lmDir[permutation[i]] -= ypk * jacobian[i][pk]; } lmDir[pk] = ypk; } double dxNorm = 0; for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; double s = diag[pj] * lmDir[pj]; work1[pj] = s; dxNorm += s * s;"
+      },
+      {
+        "txt": "} dxNorm = Math.sqrt(dxNorm); double fp = dxNorm - delta; if (fp <= 0.1 * delta) { lmPar = 0; return; } double sum2; double parl = 0; if (rank == solvedCols) {"
+      },
+      {
+        "txt": "for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; work1[pj] *= diag[pj] / dxNorm; } sum2 = 0; for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; double sum = 0; for (int i = 0; i < j; ++i) { sum += jacobian[i][pj] * work1[permutation[i]];"
+      },
+      {
+        "txt": "} double s = (work1[pj] - sum) / diagR[pj]; work1[pj] = s; sum2 += s * s; } parl = fp / (delta * sum2); } sum2 = 0; for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j];"
+      },
+      {
+        "txt": "double sum = 0; for (int i = 0; i <= j; ++i) { sum += jacobian[i][pj] * qy[i]; } sum /= diag[pj]; sum2 += sum * sum; } double gNorm = Math.sqrt(sum2); double paru = gNorm / delta; if (paru == 0) {"
+      },
+      {
+        "txt": "paru = 2.2251e-308 / Math.min(delta, 0.1); } lmPar = Math.min(paru, Math.max(lmPar, parl)); if (lmPar == 0) { lmPar = gNorm / dxNorm; } for (int countdown = 10; countdown >= 0; --countdown) { if (lmPar == 0) { lmPar = Math.max(2.2251e-308, 0.001 * paru); }"
+      },
+      {
+        "txt": "double sPar = Math.sqrt(lmPar); for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; work1[pj] = sPar * diag[pj]; } determineLMDirection(qy, work1, work2, work3); dxNorm = 0; for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; double s = diag[pj] * lmDir[pj];"
+      },
+      {
+        "txt": "work3[pj] = s; dxNorm += s * s; } dxNorm = Math.sqrt(dxNorm); double previousFP = fp; fp = dxNorm - delta; if ((Math.abs(fp) <= 0.1 * delta) || ((parl == 0) && (fp <= previousFP) && (previousFP < 0))) { return; }"
+      },
+      {
+        "txt": "for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; work1[pj] = work3[pj] * diag[pj] / dxNorm; } for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; work1[pj] /= work2[j]; double tmp = work1[pj]; for (int i = j + 1; i < solvedCols; ++i) { work1[permutation[i]] -= jacobian[i][pj] * tmp;"
+      },
+      {
+        "txt": "} } sum2 = 0; for (int j = 0; j < solvedCols; ++j) { double s = work1[permutation[j]]; sum2 += s * s; } double correction = fp / (delta * sum2); if (fp > 0) { parl = Math.max(parl, lmPar);"
+      },
+      {
+        "txt": "} else if (fp < 0) { paru = Math.min(paru, lmPar); } lmPar = Math.max(parl, lmPar + correction); } } private void determineLMDirection(double[] qy, double[] diag, double[] lmDiag, double[] work) { for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j];"
+      },
+      {
+        "txt": "for (int i = j + 1; i < solvedCols; ++i) { jacobian[i][pj] = jacobian[j][permutation[i]]; } lmDir[j] = diagR[pj]; work[j] = qy[j]; } for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; double dpj = diag[pj]; if (dpj != 0) {"
+      },
+      {
+        "txt": "Arrays.fill(lmDiag, j + 1, lmDiag.length, 0); } lmDiag[j] = dpj; double qtbpj = 0; for (int k = j; k < solvedCols; ++k) { int pk = permutation[k]; if (lmDiag[k] != 0) { final double sin; final double cos; double rkk = jacobian[k][pk];"
+      },
+      {
+        "txt": "if (Math.abs(rkk) < Math.abs(lmDiag[k])) { final double cotan = rkk / lmDiag[k]; sin = 1.0 / Math.sqrt(1.0 + cotan * cotan); cos = sin * cotan; } else { final double tan = lmDiag[k] / rkk; cos = 1.0 / Math.sqrt(1.0 + tan * tan); sin = cos * tan; } jacobian[k][pk] = cos * rkk + sin * lmDiag[k];"
+      },
+      {
+        "txt": "final double temp = cos * work[k] + sin * qtbpj; qtbpj = -sin * work[k] + cos * qtbpj; work[k] = temp; for (int i = k + 1; i < solvedCols; ++i) { double rik = jacobian[i][pk]; final double temp2 = cos * rik + sin * lmDiag[i]; lmDiag[i] = -sin * rik + cos * lmDiag[i]; jacobian[i][pk] = temp2; } }"
+      },
+      {
+        "txt": "} lmDiag[j] = jacobian[j][permutation[j]]; jacobian[j][permutation[j]] = lmDir[j]; } int nSing = solvedCols; for (int j = 0; j < solvedCols; ++j) { if ((lmDiag[j] == 0) && (nSing == solvedCols)) { nSing = j; } if (nSing < solvedCols) {"
+      },
+      {
+        "txt": "work[j] = 0; } } if (nSing > 0) { for (int j = nSing - 1; j >= 0; --j) { int pj = permutation[j]; double sum = 0; for (int i = j + 1; i < nSing; ++i) { sum += jacobian[i][pj] * work[i]; }"
+      },
+      {
+        "txt": "work[j] = (work[j] - sum) / lmDiag[j]; } } for (int j = 0; j < lmDir.length; ++j) { lmDir[permutation[j]] = work[j]; } } private void qrDecomposition() throws OptimizationException { for (int k = 0; k < cols; ++k) { permutation[k] = k;"
+      },
+      {
+        "txt": "double norm2 = 0; for (int i = 0; i < jacobian.length; ++i) { double akk = jacobian[i][k]; norm2 += akk * akk; } jacNorm[k] = Math.sqrt(norm2); } for (int k = 0; k < cols; ++k) { int nextColumn = -1; double ak2 = Double.NEGATIVE_INFINITY;"
+      },
+      {
+        "txt": "for (int i = k; i < cols; ++i) { double norm2 = 0; for (int j = k; j < jacobian.length; ++j) { double aki = jacobian[j][permutation[i]]; norm2 += aki * aki; } if (Double.isInfinite(norm2) || Double.isNaN(norm2)) { throw new OptimizationException(LocalizedFormats.UNABLE_TO_PERFORM_QR_DECOMPOSITION_ON_JACOBIAN, rows, cols); }"
+      },
+      {
+        "txt": "if (norm2 > ak2) { nextColumn = i; ak2 = norm2; } } if (ak2 <= qrRankingThreshold) { rank = k; return; } int pk = permutation[nextColumn];"
+      },
+      {
+        "txt": "permutation[nextColumn] = permutation[k]; permutation[k] = pk; double akk = jacobian[k][pk]; double alpha = (akk > 0) ? -Math.sqrt(ak2) : Math.sqrt(ak2); double betak = 1.0 / (ak2 - akk * alpha); beta[pk] = betak; diagR[pk] = alpha; jacobian[k][pk] -= alpha; for (int dk = cols - 1 - k; dk > 0; --dk) { double gamma = 0;"
+      },
+      {
+        "txt": "for (int j = k; j < jacobian.length; ++j) { gamma += jacobian[j][pk] * jacobian[j][permutation[k + dk]]; } gamma *= betak; for (int j = k; j < jacobian.length; ++j) { jacobian[j][permutation[k + dk]] -= gamma * jacobian[j][pk]; } } } rank = solvedCols;"
+      },
+      {
+        "txt": "} private void qTy(double[] y) { for (int k = 0; k < cols; ++k) { int pk = permutation[k]; double gamma = 0; for (int i = k; i < rows; ++i) { gamma += jacobian[i][pk] * y[i]; } gamma *= beta[pk]; for (int i = k; i < rows; ++i) {"
+      },
+      {
+        "txt": "y[i] -= gamma * jacobian[i][pk]; } } }"
+      }
+    ]
+  },
+  {
+    "id": 2617,
+    "file_path": "src/main/java/org/apache/commons/math/optimization/general/LevenbergMarquardtOptimizer.java",
+    "start-bug-line": 365,
+    "end-bug-line": 365,
+    "bug": "current = new VectorialPointValuePair(point, objective);",
+    "fix": "[Delete]",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.math.optimization.general; import java.util.Arrays; import org.apache.commons.math.FunctionEvaluationException; import org.apache.commons.math.exception.util.LocalizedFormats; import org.apache.commons.math.optimization.OptimizationException; import org.apache.commons.math.optimization.VectorialPointValuePair;"
+      },
+      {
+        "txt": "import org.apache.commons.math.util.MathUtils; public class LevenbergMarquardtOptimizer extends AbstractLeastSquaresOptimizer { private int solvedCols; private double[] diagR; private double[] jacNorm; private double[] beta; private int[] permutation; private int rank; private double lmPar; private double[] lmDir;"
+      },
+      {
+        "txt": "private double initialStepBoundFactor; private double costRelativeTolerance; private double parRelativeTolerance; private double orthoTolerance; private double qrRankingThreshold; public LevenbergMarquardtOptimizer() { setMaxIterations(1000); setConvergenceChecker(null); setInitialStepBoundFactor(100.0); setCostRelativeTolerance(1.0e-10);"
+      },
+      {
+        "txt": "setParRelativeTolerance(1.0e-10); setOrthoTolerance(1.0e-10); setQRRankingThreshold(MathUtils.SAFE_MIN); } public void setInitialStepBoundFactor(double initialStepBoundFactor) { this.initialStepBoundFactor = initialStepBoundFactor; } public void setCostRelativeTolerance(double costRelativeTolerance) { this.costRelativeTolerance = costRelativeTolerance; }"
+      },
+      {
+        "txt": "public void setParRelativeTolerance(double parRelativeTolerance) { this.parRelativeTolerance = parRelativeTolerance; } public void setOrthoTolerance(double orthoTolerance) { this.orthoTolerance = orthoTolerance; } public void setQRRankingThreshold(final double threshold) { this.qrRankingThreshold = threshold; } @Override"
+      },
+      {
+        "txt": "protected VectorialPointValuePair doOptimize() throws FunctionEvaluationException, OptimizationException, IllegalArgumentException { solvedCols = Math.min(rows, cols); diagR = new double[cols]; jacNorm = new double[cols]; beta = new double[cols]; permutation = new int[cols]; lmDir = new double[cols]; double delta = 0; double xNorm = 0;"
+      },
+      {
+        "txt": "double[] diag = new double[cols]; double[] oldX = new double[cols]; double[] oldRes = new double[rows]; double[] work1 = new double[cols]; double[] work2 = new double[cols]; double[] work3 = new double[cols]; updateResidualsAndCost(); lmPar = 0; boolean firstIteration = true; VectorialPointValuePair current = new VectorialPointValuePair(point, objective);"
+      },
+      {
+        "txt": "while (true) { incrementIterationsCounter(); VectorialPointValuePair previous = current; updateJacobian(); qrDecomposition(); qTy(residuals); for (int k = 0; k < solvedCols; ++k) { int pk = permutation[k]; jacobian[k][pk] = diagR[pk]; }"
+      },
+      {
+        "txt": "if (firstIteration) { xNorm = 0; for (int k = 0; k < cols; ++k) { double dk = jacNorm[k]; if (dk == 0) { dk = 1.0; } double xk = dk * point[k]; xNorm += xk * xk; diag[k] = dk;"
+      },
+      {
+        "txt": "} xNorm = Math.sqrt(xNorm); delta = (xNorm == 0) ? initialStepBoundFactor : (initialStepBoundFactor * xNorm); } double maxCosine = 0; if (cost != 0) { for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; double s = jacNorm[pj]; if (s != 0) {"
+      },
+      {
+        "txt": "double sum = 0; for (int i = 0; i <= j; ++i) { sum += jacobian[i][pj] * residuals[i]; } maxCosine = Math.max(maxCosine, Math.abs(sum) / (s * cost)); } } } if (maxCosine <= orthoTolerance) { return current;"
+      },
+      {
+        "txt": "} for (int j = 0; j < cols; ++j) { diag[j] = Math.max(diag[j], jacNorm[j]); } for (double ratio = 0; ratio < 1.0e-4;) { for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; oldX[pj] = point[pj]; } double previousCost = cost;"
+      },
+      {
+        "txt": "double[] tmpVec = residuals; residuals = oldRes; oldRes = tmpVec; determineLMParameter(oldRes, delta, diag, work1, work2, work3); double lmNorm = 0; for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; lmDir[pj] = -lmDir[pj]; point[pj] = oldX[pj] + lmDir[pj]; double s = diag[pj] * lmDir[pj];"
+      },
+      {
+        "txt": "} lmNorm = Math.sqrt(lmNorm); if (firstIteration) { delta = Math.min(delta, lmNorm); } updateResidualsAndCost(); <extra_id_0> double actRed = -1.0; if (0.1 * cost < previousCost) { double r = cost / previousCost; actRed = 1.0 - r * r; } for (int j = 0; j < solvedCols; ++j) {"
+      },
+      {
+        "txt": "} for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; double dirJ = lmDir[pj]; work1[j] = 0; for (int i = 0; i <= j; ++i) { work1[i] += jacobian[i][pj] * dirJ; } } double coeff1 = 0;"
+      },
+      {
+        "txt": "for (int j = 0; j < solvedCols; ++j) { coeff1 += work1[j] * work1[j]; } double pc2 = previousCost * previousCost; coeff1 = coeff1 / pc2; double coeff2 = lmPar * lmNorm * lmNorm / pc2; double preRed = coeff1 + 2 * coeff2; double dirDer = -(coeff1 + coeff2); ratio = (preRed == 0) ? 0 : (actRed / preRed); if (ratio <= 0.25) {"
+      },
+      {
+        "txt": "double tmp = (actRed < 0) ? (0.5 * dirDer / (dirDer + 0.5 * actRed)) : 0.5; if ((0.1 * cost >= previousCost) || (tmp < 0.1)) { tmp = 0.1; } delta = tmp * Math.min(delta, 10.0 * lmNorm); lmPar /= tmp; } else if ((lmPar == 0) || (ratio >= 0.75)) { delta = 2 * lmNorm; lmPar *= 0.5;"
+      },
+      {
+        "txt": "} if (ratio >= 1.0e-4) { firstIteration = false; xNorm = 0; for (int k = 0; k < cols; ++k) { double xK = diag[k] * point[k]; xNorm += xK * xK; } xNorm = Math.sqrt(xNorm); } else {"
+      },
+      {
+        "txt": "cost = previousCost; for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; point[pj] = oldX[pj]; } tmpVec = residuals; residuals = oldRes; oldRes = tmpVec; } if (checker==null) {"
+      },
+      {
+        "txt": "if (((Math.abs(actRed) <= costRelativeTolerance) && (preRed <= costRelativeTolerance) && (ratio <= 2.0)) || (delta <= parRelativeTolerance * xNorm)) { return current; } } else { if (checker.converged(getIterations(), previous, current)) { return current; }"
+      },
+      {
+        "txt": "} if ((Math.abs(actRed) <= 2.2204e-16) && (preRed <= 2.2204e-16) && (ratio <= 2.0)) { throw new OptimizationException(LocalizedFormats.TOO_SMALL_COST_RELATIVE_TOLERANCE, costRelativeTolerance); } else if (delta <= 2.2204e-16 * xNorm) { throw new OptimizationException(LocalizedFormats.TOO_SMALL_PARAMETERS_RELATIVE_TOLERANCE, parRelativeTolerance); } else if (maxCosine <= 2.2204e-16) { throw new OptimizationException(LocalizedFormats.TOO_SMALL_ORTHOGONALITY_TOLERANCE, orthoTolerance);"
+      },
+      {
+        "txt": "} } } } private void determineLMParameter(double[] qy, double delta, double[] diag, double[] work1, double[] work2, double[] work3) { for (int j = 0; j < rank; ++j) { lmDir[permutation[j]] = qy[j]; } for (int j = rank; j < cols; ++j) {"
+      },
+      {
+        "txt": "lmDir[permutation[j]] = 0; } for (int k = rank - 1; k >= 0; --k) { int pk = permutation[k]; double ypk = lmDir[pk] / diagR[pk]; for (int i = 0; i < k; ++i) { lmDir[permutation[i]] -= ypk * jacobian[i][pk]; } lmDir[pk] = ypk; }"
+      },
+      {
+        "txt": "double dxNorm = 0; for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; double s = diag[pj] * lmDir[pj]; work1[pj] = s; dxNorm += s * s; } dxNorm = Math.sqrt(dxNorm); double fp = dxNorm - delta; if (fp <= 0.1 * delta) {"
+      },
+      {
+        "txt": "lmPar = 0; return; } double sum2; double parl = 0; if (rank == solvedCols) { for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; work1[pj] *= diag[pj] / dxNorm; }"
+      },
+      {
+        "txt": "sum2 = 0; for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; double sum = 0; for (int i = 0; i < j; ++i) { sum += jacobian[i][pj] * work1[permutation[i]]; } double s = (work1[pj] - sum) / diagR[pj]; work1[pj] = s; sum2 += s * s;"
+      },
+      {
+        "txt": "} parl = fp / (delta * sum2); } sum2 = 0; for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; double sum = 0; for (int i = 0; i <= j; ++i) { sum += jacobian[i][pj] * qy[i]; }"
+      },
+      {
+        "txt": "sum /= diag[pj]; sum2 += sum * sum; } double gNorm = Math.sqrt(sum2); double paru = gNorm / delta; if (paru == 0) { paru = 2.2251e-308 / Math.min(delta, 0.1); } lmPar = Math.min(paru, Math.max(lmPar, parl)); if (lmPar == 0) {"
+      },
+      {
+        "txt": "lmPar = gNorm / dxNorm; } for (int countdown = 10; countdown >= 0; --countdown) { if (lmPar == 0) { lmPar = Math.max(2.2251e-308, 0.001 * paru); } double sPar = Math.sqrt(lmPar); for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; work1[pj] = sPar * diag[pj];"
+      },
+      {
+        "txt": "} determineLMDirection(qy, work1, work2, work3); dxNorm = 0; for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; double s = diag[pj] * lmDir[pj]; work3[pj] = s; dxNorm += s * s; } dxNorm = Math.sqrt(dxNorm);"
+      },
+      {
+        "txt": "double previousFP = fp; fp = dxNorm - delta; if ((Math.abs(fp) <= 0.1 * delta) || ((parl == 0) && (fp <= previousFP) && (previousFP < 0))) { return; } for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; work1[pj] = work3[pj] * diag[pj] / dxNorm; }"
+      },
+      {
+        "txt": "for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; work1[pj] /= work2[j]; double tmp = work1[pj]; for (int i = j + 1; i < solvedCols; ++i) { work1[permutation[i]] -= jacobian[i][pj] * tmp; } } sum2 = 0; for (int j = 0; j < solvedCols; ++j) {"
+      },
+      {
+        "txt": "double s = work1[permutation[j]]; sum2 += s * s; } double correction = fp / (delta * sum2); if (fp > 0) { parl = Math.max(parl, lmPar); } else if (fp < 0) { paru = Math.min(paru, lmPar); } lmPar = Math.max(parl, lmPar + correction);"
+      },
+      {
+        "txt": "} } private void determineLMDirection(double[] qy, double[] diag, double[] lmDiag, double[] work) { for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; for (int i = j + 1; i < solvedCols; ++i) { jacobian[i][pj] = jacobian[j][permutation[i]]; } lmDir[j] = diagR[pj];"
+      },
+      {
+        "txt": "work[j] = qy[j]; } for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; double dpj = diag[pj]; if (dpj != 0) { Arrays.fill(lmDiag, j + 1, lmDiag.length, 0); } lmDiag[j] = dpj; double qtbpj = 0;"
+      },
+      {
+        "txt": "for (int k = j; k < solvedCols; ++k) { int pk = permutation[k]; if (lmDiag[k] != 0) { final double sin; final double cos; double rkk = jacobian[k][pk]; if (Math.abs(rkk) < Math.abs(lmDiag[k])) { final double cotan = rkk / lmDiag[k]; sin = 1.0 / Math.sqrt(1.0 + cotan * cotan); cos = sin * cotan;"
+      },
+      {
+        "txt": "} else { final double tan = lmDiag[k] / rkk; cos = 1.0 / Math.sqrt(1.0 + tan * tan); sin = cos * tan; } jacobian[k][pk] = cos * rkk + sin * lmDiag[k]; final double temp = cos * work[k] + sin * qtbpj; qtbpj = -sin * work[k] + cos * qtbpj; work[k] = temp; for (int i = k + 1; i < solvedCols; ++i) {"
+      },
+      {
+        "txt": "double rik = jacobian[i][pk]; final double temp2 = cos * rik + sin * lmDiag[i]; lmDiag[i] = -sin * rik + cos * lmDiag[i]; jacobian[i][pk] = temp2; } } } lmDiag[j] = jacobian[j][permutation[j]]; jacobian[j][permutation[j]] = lmDir[j]; }"
+      },
+      {
+        "txt": "int nSing = solvedCols; for (int j = 0; j < solvedCols; ++j) { if ((lmDiag[j] == 0) && (nSing == solvedCols)) { nSing = j; } if (nSing < solvedCols) { work[j] = 0; } } if (nSing > 0) {"
+      },
+      {
+        "txt": "for (int j = nSing - 1; j >= 0; --j) { int pj = permutation[j]; double sum = 0; for (int i = j + 1; i < nSing; ++i) { sum += jacobian[i][pj] * work[i]; } work[j] = (work[j] - sum) / lmDiag[j]; } } for (int j = 0; j < lmDir.length; ++j) {"
+      },
+      {
+        "txt": "lmDir[permutation[j]] = work[j]; } } private void qrDecomposition() throws OptimizationException { for (int k = 0; k < cols; ++k) { permutation[k] = k; double norm2 = 0; for (int i = 0; i < jacobian.length; ++i) { double akk = jacobian[i][k]; norm2 += akk * akk;"
+      },
+      {
+        "txt": "} jacNorm[k] = Math.sqrt(norm2); } for (int k = 0; k < cols; ++k) { int nextColumn = -1; double ak2 = Double.NEGATIVE_INFINITY; for (int i = k; i < cols; ++i) { double norm2 = 0; for (int j = k; j < jacobian.length; ++j) { double aki = jacobian[j][permutation[i]];"
+      },
+      {
+        "txt": "norm2 += aki * aki; } if (Double.isInfinite(norm2) || Double.isNaN(norm2)) { throw new OptimizationException(LocalizedFormats.UNABLE_TO_PERFORM_QR_DECOMPOSITION_ON_JACOBIAN, rows, cols); } if (norm2 > ak2) { nextColumn = i; ak2 = norm2; }"
+      },
+      {
+        "txt": "} if (ak2 <= qrRankingThreshold) { rank = k; return; } int pk = permutation[nextColumn]; permutation[nextColumn] = permutation[k]; permutation[k] = pk; double akk = jacobian[k][pk]; double alpha = (akk > 0) ? -Math.sqrt(ak2) : Math.sqrt(ak2);"
+      },
+      {
+        "txt": "double betak = 1.0 / (ak2 - akk * alpha); beta[pk] = betak; diagR[pk] = alpha; jacobian[k][pk] -= alpha; for (int dk = cols - 1 - k; dk > 0; --dk) { double gamma = 0; for (int j = k; j < jacobian.length; ++j) { gamma += jacobian[j][pk] * jacobian[j][permutation[k + dk]]; } gamma *= betak;"
+      },
+      {
+        "txt": "for (int j = k; j < jacobian.length; ++j) { jacobian[j][permutation[k + dk]] -= gamma * jacobian[j][pk]; } } } rank = solvedCols; } private void qTy(double[] y) { for (int k = 0; k < cols; ++k) { int pk = permutation[k];"
+      },
+      {
+        "txt": "double gamma = 0; for (int i = k; i < rows; ++i) { gamma += jacobian[i][pk] * y[i]; } gamma *= beta[pk]; for (int i = k; i < rows; ++i) { y[i] -= gamma * jacobian[i][pk]; } } }"
+      }
+    ]
+  },
+  {
+    "id": 2618,
+    "file_path": "src/main/java/org/apache/commons/math/optimization/general/LevenbergMarquardtOptimizer.java",
+    "start-bug-line": 421,
+    "end-bug-line": 421,
+    "bug": "",
+    "fix": "current = new VectorialPointValuePair(point, objective);",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.math.optimization.general; import java.util.Arrays; import org.apache.commons.math.FunctionEvaluationException; import org.apache.commons.math.exception.util.LocalizedFormats; import org.apache.commons.math.optimization.OptimizationException; import org.apache.commons.math.optimization.VectorialPointValuePair; import org.apache.commons.math.util.MathUtils; public class LevenbergMarquardtOptimizer extends AbstractLeastSquaresOptimizer { private int solvedCols; private double[] diagR;"
+      },
+      {
+        "txt": "private double[] jacNorm; private double[] beta; private int[] permutation; private int rank; private double lmPar; private double[] lmDir; private double initialStepBoundFactor; private double costRelativeTolerance; private double parRelativeTolerance; private double orthoTolerance;"
+      },
+      {
+        "txt": "private double qrRankingThreshold; public LevenbergMarquardtOptimizer() { setMaxIterations(1000); setConvergenceChecker(null); setInitialStepBoundFactor(100.0); setCostRelativeTolerance(1.0e-10); setParRelativeTolerance(1.0e-10); setOrthoTolerance(1.0e-10); setQRRankingThreshold(MathUtils.SAFE_MIN); }"
+      },
+      {
+        "txt": "public void setInitialStepBoundFactor(double initialStepBoundFactor) { this.initialStepBoundFactor = initialStepBoundFactor; } public void setCostRelativeTolerance(double costRelativeTolerance) { this.costRelativeTolerance = costRelativeTolerance; } public void setParRelativeTolerance(double parRelativeTolerance) { this.parRelativeTolerance = parRelativeTolerance; } public void setOrthoTolerance(double orthoTolerance) {"
+      },
+      {
+        "txt": "this.orthoTolerance = orthoTolerance; } public void setQRRankingThreshold(final double threshold) { this.qrRankingThreshold = threshold; } @Override protected VectorialPointValuePair doOptimize() throws FunctionEvaluationException, OptimizationException, IllegalArgumentException { solvedCols = Math.min(rows, cols); diagR = new double[cols];"
+      },
+      {
+        "txt": "jacNorm = new double[cols]; beta = new double[cols]; permutation = new int[cols]; lmDir = new double[cols]; double delta = 0; double xNorm = 0; double[] diag = new double[cols]; double[] oldX = new double[cols]; double[] oldRes = new double[rows]; double[] work1 = new double[cols];"
+      },
+      {
+        "txt": "double[] work2 = new double[cols]; double[] work3 = new double[cols]; updateResidualsAndCost(); lmPar = 0; boolean firstIteration = true; VectorialPointValuePair current = new VectorialPointValuePair(point, objective); while (true) { incrementIterationsCounter(); VectorialPointValuePair previous = current; updateJacobian();"
+      },
+      {
+        "txt": "qrDecomposition(); qTy(residuals); for (int k = 0; k < solvedCols; ++k) { int pk = permutation[k]; jacobian[k][pk] = diagR[pk]; } if (firstIteration) { xNorm = 0; for (int k = 0; k < cols; ++k) { double dk = jacNorm[k];"
+      },
+      {
+        "txt": "if (dk == 0) { dk = 1.0; } double xk = dk * point[k]; xNorm += xk * xk; diag[k] = dk; } xNorm = Math.sqrt(xNorm); delta = (xNorm == 0) ? initialStepBoundFactor : (initialStepBoundFactor * xNorm); }"
+      },
+      {
+        "txt": "double maxCosine = 0; if (cost != 0) { for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; double s = jacNorm[pj]; if (s != 0) { double sum = 0; for (int i = 0; i <= j; ++i) { sum += jacobian[i][pj] * residuals[i]; }"
+      },
+      {
+        "txt": "maxCosine = Math.max(maxCosine, Math.abs(sum) / (s * cost)); } } } if (maxCosine <= orthoTolerance) { return current; } for (int j = 0; j < cols; ++j) { diag[j] = Math.max(diag[j], jacNorm[j]); }"
+      },
+      {
+        "txt": "for (double ratio = 0; ratio < 1.0e-4;) { for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; oldX[pj] = point[pj]; } double previousCost = cost; double[] tmpVec = residuals; residuals = oldRes; oldRes = tmpVec; determineLMParameter(oldRes, delta, diag, work1, work2, work3);"
+      },
+      {
+        "txt": "double lmNorm = 0; for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; lmDir[pj] = -lmDir[pj]; point[pj] = oldX[pj] + lmDir[pj]; double s = diag[pj] * lmDir[pj]; lmNorm += s * s; } lmNorm = Math.sqrt(lmNorm); if (firstIteration) {"
+      },
+      {
+        "txt": "delta = Math.min(delta, lmNorm); } updateResidualsAndCost(); current = new VectorialPointValuePair(point, objective); double actRed = -1.0; if (0.1 * cost < previousCost) { double r = cost / previousCost; actRed = 1.0 - r * r; } for (int j = 0; j < solvedCols; ++j) {"
+      },
+      {
+        "txt": "int pj = permutation[j]; double dirJ = lmDir[pj]; work1[j] = 0; for (int i = 0; i <= j; ++i) { work1[i] += jacobian[i][pj] * dirJ; } } double coeff1 = 0; for (int j = 0; j < solvedCols; ++j) { coeff1 += work1[j] * work1[j];"
+      },
+      {
+        "txt": "} double pc2 = previousCost * previousCost; coeff1 = coeff1 / pc2; double coeff2 = lmPar * lmNorm * lmNorm / pc2; double preRed = coeff1 + 2 * coeff2; double dirDer = -(coeff1 + coeff2); ratio = (preRed == 0) ? 0 : (actRed / preRed); if (ratio <= 0.25) { double tmp = (actRed < 0) ? (0.5 * dirDer / (dirDer + 0.5 * actRed)) : 0.5;"
+      },
+      {
+        "txt": "if ((0.1 * cost >= previousCost) || (tmp < 0.1)) { tmp = 0.1; } delta = tmp * Math.min(delta, 10.0 * lmNorm); lmPar /= tmp; } else if ((lmPar == 0) || (ratio >= 0.75)) { delta = 2 * lmNorm; lmPar *= 0.5; } if (ratio >= 1.0e-4) {"
+      },
+      {
+        "txt": "xNorm = 0; for (int k = 0; k < cols; ++k) { double xK = diag[k] * point[k]; xNorm += xK * xK; } xNorm = Math.sqrt(xNorm); <extra_id_0> } else { cost = previousCost; for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; point[pj] = oldX[pj]; }"
+      },
+      {
+        "txt": "point[pj] = oldX[pj]; } tmpVec = residuals; residuals = oldRes; oldRes = tmpVec; } if (checker==null) { if (((Math.abs(actRed) <= costRelativeTolerance) && (preRed <= costRelativeTolerance) && (ratio <= 2.0)) ||"
+      },
+      {
+        "txt": "(delta <= parRelativeTolerance * xNorm)) { return current; } } else { if (checker.converged(getIterations(), previous, current)) { return current; } } if ((Math.abs(actRed) <= 2.2204e-16) && (preRed <= 2.2204e-16) && (ratio <= 2.0)) { throw new OptimizationException(LocalizedFormats.TOO_SMALL_COST_RELATIVE_TOLERANCE,"
+      },
+      {
+        "txt": "costRelativeTolerance); } else if (delta <= 2.2204e-16 * xNorm) { throw new OptimizationException(LocalizedFormats.TOO_SMALL_PARAMETERS_RELATIVE_TOLERANCE, parRelativeTolerance); } else if (maxCosine <= 2.2204e-16) { throw new OptimizationException(LocalizedFormats.TOO_SMALL_ORTHOGONALITY_TOLERANCE, orthoTolerance); } } }"
+      },
+      {
+        "txt": "} private void determineLMParameter(double[] qy, double delta, double[] diag, double[] work1, double[] work2, double[] work3) { for (int j = 0; j < rank; ++j) { lmDir[permutation[j]] = qy[j]; } for (int j = rank; j < cols; ++j) { lmDir[permutation[j]] = 0; } for (int k = rank - 1; k >= 0; --k) {"
+      },
+      {
+        "txt": "int pk = permutation[k]; double ypk = lmDir[pk] / diagR[pk]; for (int i = 0; i < k; ++i) { lmDir[permutation[i]] -= ypk * jacobian[i][pk]; } lmDir[pk] = ypk; } double dxNorm = 0; for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j];"
+      },
+      {
+        "txt": "double s = diag[pj] * lmDir[pj]; work1[pj] = s; dxNorm += s * s; } dxNorm = Math.sqrt(dxNorm); double fp = dxNorm - delta; if (fp <= 0.1 * delta) { lmPar = 0; return; }"
+      },
+      {
+        "txt": "double sum2; double parl = 0; if (rank == solvedCols) { for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; work1[pj] *= diag[pj] / dxNorm; } sum2 = 0; for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j];"
+      },
+      {
+        "txt": "double sum = 0; for (int i = 0; i < j; ++i) { sum += jacobian[i][pj] * work1[permutation[i]]; } double s = (work1[pj] - sum) / diagR[pj]; work1[pj] = s; sum2 += s * s; } parl = fp / (delta * sum2); }"
+      },
+      {
+        "txt": "sum2 = 0; for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; double sum = 0; for (int i = 0; i <= j; ++i) { sum += jacobian[i][pj] * qy[i]; } sum /= diag[pj]; sum2 += sum * sum; }"
+      },
+      {
+        "txt": "double gNorm = Math.sqrt(sum2); double paru = gNorm / delta; if (paru == 0) { paru = 2.2251e-308 / Math.min(delta, 0.1); } lmPar = Math.min(paru, Math.max(lmPar, parl)); if (lmPar == 0) { lmPar = gNorm / dxNorm; } for (int countdown = 10; countdown >= 0; --countdown) {"
+      },
+      {
+        "txt": "if (lmPar == 0) { lmPar = Math.max(2.2251e-308, 0.001 * paru); } double sPar = Math.sqrt(lmPar); for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; work1[pj] = sPar * diag[pj]; } determineLMDirection(qy, work1, work2, work3); dxNorm = 0;"
+      },
+      {
+        "txt": "for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; double s = diag[pj] * lmDir[pj]; work3[pj] = s; dxNorm += s * s; } dxNorm = Math.sqrt(dxNorm); double previousFP = fp; fp = dxNorm - delta; if ((Math.abs(fp) <= 0.1 * delta) ||"
+      },
+      {
+        "txt": "((parl == 0) && (fp <= previousFP) && (previousFP < 0))) { return; } for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; work1[pj] = work3[pj] * diag[pj] / dxNorm; } for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; work1[pj] /= work2[j];"
+      },
+      {
+        "txt": "double tmp = work1[pj]; for (int i = j + 1; i < solvedCols; ++i) { work1[permutation[i]] -= jacobian[i][pj] * tmp; } } sum2 = 0; for (int j = 0; j < solvedCols; ++j) { double s = work1[permutation[j]]; sum2 += s * s; }"
+      },
+      {
+        "txt": "double correction = fp / (delta * sum2); if (fp > 0) { parl = Math.max(parl, lmPar); } else if (fp < 0) { paru = Math.min(paru, lmPar); } lmPar = Math.max(parl, lmPar + correction); } } private void determineLMDirection(double[] qy, double[] diag,"
+      },
+      {
+        "txt": "double[] lmDiag, double[] work) { for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; for (int i = j + 1; i < solvedCols; ++i) { jacobian[i][pj] = jacobian[j][permutation[i]]; } lmDir[j] = diagR[pj]; work[j] = qy[j]; } for (int j = 0; j < solvedCols; ++j) {"
+      },
+      {
+        "txt": "int pj = permutation[j]; double dpj = diag[pj]; if (dpj != 0) { Arrays.fill(lmDiag, j + 1, lmDiag.length, 0); } lmDiag[j] = dpj; double qtbpj = 0; for (int k = j; k < solvedCols; ++k) { int pk = permutation[k]; if (lmDiag[k] != 0) {"
+      },
+      {
+        "txt": "final double sin; final double cos; double rkk = jacobian[k][pk]; if (Math.abs(rkk) < Math.abs(lmDiag[k])) { final double cotan = rkk / lmDiag[k]; sin = 1.0 / Math.sqrt(1.0 + cotan * cotan); cos = sin * cotan; } else { final double tan = lmDiag[k] / rkk; cos = 1.0 / Math.sqrt(1.0 + tan * tan);"
+      },
+      {
+        "txt": "sin = cos * tan; } jacobian[k][pk] = cos * rkk + sin * lmDiag[k]; final double temp = cos * work[k] + sin * qtbpj; qtbpj = -sin * work[k] + cos * qtbpj; work[k] = temp; for (int i = k + 1; i < solvedCols; ++i) { double rik = jacobian[i][pk]; final double temp2 = cos * rik + sin * lmDiag[i]; lmDiag[i] = -sin * rik + cos * lmDiag[i];"
+      },
+      {
+        "txt": "jacobian[i][pk] = temp2; } } } lmDiag[j] = jacobian[j][permutation[j]]; jacobian[j][permutation[j]] = lmDir[j]; } int nSing = solvedCols; for (int j = 0; j < solvedCols; ++j) { if ((lmDiag[j] == 0) && (nSing == solvedCols)) {"
+      },
+      {
+        "txt": "nSing = j; } if (nSing < solvedCols) { work[j] = 0; } } if (nSing > 0) { for (int j = nSing - 1; j >= 0; --j) { int pj = permutation[j]; double sum = 0;"
+      },
+      {
+        "txt": "for (int i = j + 1; i < nSing; ++i) { sum += jacobian[i][pj] * work[i]; } work[j] = (work[j] - sum) / lmDiag[j]; } } for (int j = 0; j < lmDir.length; ++j) { lmDir[permutation[j]] = work[j]; } }"
+      },
+      {
+        "txt": "private void qrDecomposition() throws OptimizationException { for (int k = 0; k < cols; ++k) { permutation[k] = k; double norm2 = 0; for (int i = 0; i < jacobian.length; ++i) { double akk = jacobian[i][k]; norm2 += akk * akk; } jacNorm[k] = Math.sqrt(norm2); }"
+      },
+      {
+        "txt": "for (int k = 0; k < cols; ++k) { int nextColumn = -1; double ak2 = Double.NEGATIVE_INFINITY; for (int i = k; i < cols; ++i) { double norm2 = 0; for (int j = k; j < jacobian.length; ++j) { double aki = jacobian[j][permutation[i]]; norm2 += aki * aki; } if (Double.isInfinite(norm2) || Double.isNaN(norm2)) {"
+      },
+      {
+        "txt": "throw new OptimizationException(LocalizedFormats.UNABLE_TO_PERFORM_QR_DECOMPOSITION_ON_JACOBIAN, rows, cols); } if (norm2 > ak2) { nextColumn = i; ak2 = norm2; } } if (ak2 <= qrRankingThreshold) { rank = k;"
+      },
+      {
+        "txt": "return; } int pk = permutation[nextColumn]; permutation[nextColumn] = permutation[k]; permutation[k] = pk; double akk = jacobian[k][pk]; double alpha = (akk > 0) ? -Math.sqrt(ak2) : Math.sqrt(ak2); double betak = 1.0 / (ak2 - akk * alpha); beta[pk] = betak; diagR[pk] = alpha;"
+      },
+      {
+        "txt": "jacobian[k][pk] -= alpha; for (int dk = cols - 1 - k; dk > 0; --dk) { double gamma = 0; for (int j = k; j < jacobian.length; ++j) { gamma += jacobian[j][pk] * jacobian[j][permutation[k + dk]]; } gamma *= betak; for (int j = k; j < jacobian.length; ++j) { jacobian[j][permutation[k + dk]] -= gamma * jacobian[j][pk]; }"
+      },
+      {
+        "txt": "} } rank = solvedCols; } private void qTy(double[] y) { for (int k = 0; k < cols; ++k) { int pk = permutation[k]; double gamma = 0; for (int i = k; i < rows; ++i) { gamma += jacobian[i][pk] * y[i];"
+      },
+      {
+        "txt": "} gamma *= beta[pk]; for (int i = k; i < rows; ++i) { y[i] -= gamma * jacobian[i][pk]; } } }"
+      }
+    ]
+  },
+  {
+    "id": 2619,
+    "file_path": "src/main/java/org/apache/commons/math/optimization/general/LevenbergMarquardtOptimizer.java",
+    "start-bug-line": 423,
+    "end-bug-line": 423,
+    "bug": "",
+    "fix": "if (checker != null) {",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.math.optimization.general; import java.util.Arrays; import org.apache.commons.math.FunctionEvaluationException; import org.apache.commons.math.exception.util.LocalizedFormats; import org.apache.commons.math.optimization.OptimizationException; import org.apache.commons.math.optimization.VectorialPointValuePair; import org.apache.commons.math.util.MathUtils; public class LevenbergMarquardtOptimizer extends AbstractLeastSquaresOptimizer { private int solvedCols; private double[] diagR;"
+      },
+      {
+        "txt": "private double[] jacNorm; private double[] beta; private int[] permutation; private int rank; private double lmPar; private double[] lmDir; private double initialStepBoundFactor; private double costRelativeTolerance; private double parRelativeTolerance; private double orthoTolerance;"
+      },
+      {
+        "txt": "private double qrRankingThreshold; public LevenbergMarquardtOptimizer() { setMaxIterations(1000); setConvergenceChecker(null); setInitialStepBoundFactor(100.0); setCostRelativeTolerance(1.0e-10); setParRelativeTolerance(1.0e-10); setOrthoTolerance(1.0e-10); setQRRankingThreshold(MathUtils.SAFE_MIN); }"
+      },
+      {
+        "txt": "public void setInitialStepBoundFactor(double initialStepBoundFactor) { this.initialStepBoundFactor = initialStepBoundFactor; } public void setCostRelativeTolerance(double costRelativeTolerance) { this.costRelativeTolerance = costRelativeTolerance; } public void setParRelativeTolerance(double parRelativeTolerance) { this.parRelativeTolerance = parRelativeTolerance; } public void setOrthoTolerance(double orthoTolerance) {"
+      },
+      {
+        "txt": "this.orthoTolerance = orthoTolerance; } public void setQRRankingThreshold(final double threshold) { this.qrRankingThreshold = threshold; } @Override protected VectorialPointValuePair doOptimize() throws FunctionEvaluationException, OptimizationException, IllegalArgumentException { solvedCols = Math.min(rows, cols); diagR = new double[cols];"
+      },
+      {
+        "txt": "jacNorm = new double[cols]; beta = new double[cols]; permutation = new int[cols]; lmDir = new double[cols]; double delta = 0; double xNorm = 0; double[] diag = new double[cols]; double[] oldX = new double[cols]; double[] oldRes = new double[rows]; double[] work1 = new double[cols];"
+      },
+      {
+        "txt": "double[] work2 = new double[cols]; double[] work3 = new double[cols]; updateResidualsAndCost(); lmPar = 0; boolean firstIteration = true; VectorialPointValuePair current = new VectorialPointValuePair(point, objective); while (true) { incrementIterationsCounter(); VectorialPointValuePair previous = current; updateJacobian();"
+      },
+      {
+        "txt": "qrDecomposition(); qTy(residuals); for (int k = 0; k < solvedCols; ++k) { int pk = permutation[k]; jacobian[k][pk] = diagR[pk]; } if (firstIteration) { xNorm = 0; for (int k = 0; k < cols; ++k) { double dk = jacNorm[k];"
+      },
+      {
+        "txt": "if (dk == 0) { dk = 1.0; } double xk = dk * point[k]; xNorm += xk * xk; diag[k] = dk; } xNorm = Math.sqrt(xNorm); delta = (xNorm == 0) ? initialStepBoundFactor : (initialStepBoundFactor * xNorm); }"
+      },
+      {
+        "txt": "double maxCosine = 0; if (cost != 0) { for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; double s = jacNorm[pj]; if (s != 0) { double sum = 0; for (int i = 0; i <= j; ++i) { sum += jacobian[i][pj] * residuals[i]; }"
+      },
+      {
+        "txt": "maxCosine = Math.max(maxCosine, Math.abs(sum) / (s * cost)); } } } if (maxCosine <= orthoTolerance) { return current; } for (int j = 0; j < cols; ++j) { diag[j] = Math.max(diag[j], jacNorm[j]); }"
+      },
+      {
+        "txt": "for (double ratio = 0; ratio < 1.0e-4;) { for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; oldX[pj] = point[pj]; } double previousCost = cost; double[] tmpVec = residuals; residuals = oldRes; oldRes = tmpVec; determineLMParameter(oldRes, delta, diag, work1, work2, work3);"
+      },
+      {
+        "txt": "double lmNorm = 0; for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; lmDir[pj] = -lmDir[pj]; point[pj] = oldX[pj] + lmDir[pj]; double s = diag[pj] * lmDir[pj]; lmNorm += s * s; } lmNorm = Math.sqrt(lmNorm); if (firstIteration) {"
+      },
+      {
+        "txt": "delta = Math.min(delta, lmNorm); } updateResidualsAndCost(); current = new VectorialPointValuePair(point, objective); double actRed = -1.0; if (0.1 * cost < previousCost) { double r = cost / previousCost; actRed = 1.0 - r * r; } for (int j = 0; j < solvedCols; ++j) {"
+      },
+      {
+        "txt": "int pj = permutation[j]; double dirJ = lmDir[pj]; work1[j] = 0; for (int i = 0; i <= j; ++i) { work1[i] += jacobian[i][pj] * dirJ; } } double coeff1 = 0; for (int j = 0; j < solvedCols; ++j) { coeff1 += work1[j] * work1[j];"
+      },
+      {
+        "txt": "} double pc2 = previousCost * previousCost; coeff1 = coeff1 / pc2; double coeff2 = lmPar * lmNorm * lmNorm / pc2; double preRed = coeff1 + 2 * coeff2; double dirDer = -(coeff1 + coeff2); ratio = (preRed == 0) ? 0 : (actRed / preRed); if (ratio <= 0.25) { double tmp = (actRed < 0) ? (0.5 * dirDer / (dirDer + 0.5 * actRed)) : 0.5;"
+      },
+      {
+        "txt": "if ((0.1 * cost >= previousCost) || (tmp < 0.1)) { tmp = 0.1; } delta = tmp * Math.min(delta, 10.0 * lmNorm); lmPar /= tmp; } else if ((lmPar == 0) || (ratio >= 0.75)) { delta = 2 * lmNorm; lmPar *= 0.5; } if (ratio >= 1.0e-4) {"
+      },
+      {
+        "txt": "xNorm = 0; for (int k = 0; k < cols; ++k) { double xK = diag[k] * point[k]; xNorm += xK * xK; } xNorm = Math.sqrt(xNorm); <extra_id_0> } else { cost = previousCost; for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; point[pj] = oldX[pj]; }"
+      },
+      {
+        "txt": "point[pj] = oldX[pj]; } tmpVec = residuals; residuals = oldRes; oldRes = tmpVec; } if (checker==null) { if (((Math.abs(actRed) <= costRelativeTolerance) && (preRed <= costRelativeTolerance) && (ratio <= 2.0)) ||"
+      },
+      {
+        "txt": "(delta <= parRelativeTolerance * xNorm)) { return current; } } else { if (checker.converged(getIterations(), previous, current)) { return current; } } if ((Math.abs(actRed) <= 2.2204e-16) && (preRed <= 2.2204e-16) && (ratio <= 2.0)) { throw new OptimizationException(LocalizedFormats.TOO_SMALL_COST_RELATIVE_TOLERANCE,"
+      },
+      {
+        "txt": "costRelativeTolerance); } else if (delta <= 2.2204e-16 * xNorm) { throw new OptimizationException(LocalizedFormats.TOO_SMALL_PARAMETERS_RELATIVE_TOLERANCE, parRelativeTolerance); } else if (maxCosine <= 2.2204e-16) { throw new OptimizationException(LocalizedFormats.TOO_SMALL_ORTHOGONALITY_TOLERANCE, orthoTolerance); } } }"
+      },
+      {
+        "txt": "} private void determineLMParameter(double[] qy, double delta, double[] diag, double[] work1, double[] work2, double[] work3) { for (int j = 0; j < rank; ++j) { lmDir[permutation[j]] = qy[j]; } for (int j = rank; j < cols; ++j) { lmDir[permutation[j]] = 0; } for (int k = rank - 1; k >= 0; --k) {"
+      },
+      {
+        "txt": "int pk = permutation[k]; double ypk = lmDir[pk] / diagR[pk]; for (int i = 0; i < k; ++i) { lmDir[permutation[i]] -= ypk * jacobian[i][pk]; } lmDir[pk] = ypk; } double dxNorm = 0; for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j];"
+      },
+      {
+        "txt": "double s = diag[pj] * lmDir[pj]; work1[pj] = s; dxNorm += s * s; } dxNorm = Math.sqrt(dxNorm); double fp = dxNorm - delta; if (fp <= 0.1 * delta) { lmPar = 0; return; }"
+      },
+      {
+        "txt": "double sum2; double parl = 0; if (rank == solvedCols) { for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; work1[pj] *= diag[pj] / dxNorm; } sum2 = 0; for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j];"
+      },
+      {
+        "txt": "double sum = 0; for (int i = 0; i < j; ++i) { sum += jacobian[i][pj] * work1[permutation[i]]; } double s = (work1[pj] - sum) / diagR[pj]; work1[pj] = s; sum2 += s * s; } parl = fp / (delta * sum2); }"
+      },
+      {
+        "txt": "sum2 = 0; for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; double sum = 0; for (int i = 0; i <= j; ++i) { sum += jacobian[i][pj] * qy[i]; } sum /= diag[pj]; sum2 += sum * sum; }"
+      },
+      {
+        "txt": "double gNorm = Math.sqrt(sum2); double paru = gNorm / delta; if (paru == 0) { paru = 2.2251e-308 / Math.min(delta, 0.1); } lmPar = Math.min(paru, Math.max(lmPar, parl)); if (lmPar == 0) { lmPar = gNorm / dxNorm; } for (int countdown = 10; countdown >= 0; --countdown) {"
+      },
+      {
+        "txt": "if (lmPar == 0) { lmPar = Math.max(2.2251e-308, 0.001 * paru); } double sPar = Math.sqrt(lmPar); for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; work1[pj] = sPar * diag[pj]; } determineLMDirection(qy, work1, work2, work3); dxNorm = 0;"
+      },
+      {
+        "txt": "for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; double s = diag[pj] * lmDir[pj]; work3[pj] = s; dxNorm += s * s; } dxNorm = Math.sqrt(dxNorm); double previousFP = fp; fp = dxNorm - delta; if ((Math.abs(fp) <= 0.1 * delta) ||"
+      },
+      {
+        "txt": "((parl == 0) && (fp <= previousFP) && (previousFP < 0))) { return; } for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; work1[pj] = work3[pj] * diag[pj] / dxNorm; } for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; work1[pj] /= work2[j];"
+      },
+      {
+        "txt": "double tmp = work1[pj]; for (int i = j + 1; i < solvedCols; ++i) { work1[permutation[i]] -= jacobian[i][pj] * tmp; } } sum2 = 0; for (int j = 0; j < solvedCols; ++j) { double s = work1[permutation[j]]; sum2 += s * s; }"
+      },
+      {
+        "txt": "double correction = fp / (delta * sum2); if (fp > 0) { parl = Math.max(parl, lmPar); } else if (fp < 0) { paru = Math.min(paru, lmPar); } lmPar = Math.max(parl, lmPar + correction); } } private void determineLMDirection(double[] qy, double[] diag,"
+      },
+      {
+        "txt": "double[] lmDiag, double[] work) { for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; for (int i = j + 1; i < solvedCols; ++i) { jacobian[i][pj] = jacobian[j][permutation[i]]; } lmDir[j] = diagR[pj]; work[j] = qy[j]; } for (int j = 0; j < solvedCols; ++j) {"
+      },
+      {
+        "txt": "int pj = permutation[j]; double dpj = diag[pj]; if (dpj != 0) { Arrays.fill(lmDiag, j + 1, lmDiag.length, 0); } lmDiag[j] = dpj; double qtbpj = 0; for (int k = j; k < solvedCols; ++k) { int pk = permutation[k]; if (lmDiag[k] != 0) {"
+      },
+      {
+        "txt": "final double sin; final double cos; double rkk = jacobian[k][pk]; if (Math.abs(rkk) < Math.abs(lmDiag[k])) { final double cotan = rkk / lmDiag[k]; sin = 1.0 / Math.sqrt(1.0 + cotan * cotan); cos = sin * cotan; } else { final double tan = lmDiag[k] / rkk; cos = 1.0 / Math.sqrt(1.0 + tan * tan);"
+      },
+      {
+        "txt": "sin = cos * tan; } jacobian[k][pk] = cos * rkk + sin * lmDiag[k]; final double temp = cos * work[k] + sin * qtbpj; qtbpj = -sin * work[k] + cos * qtbpj; work[k] = temp; for (int i = k + 1; i < solvedCols; ++i) { double rik = jacobian[i][pk]; final double temp2 = cos * rik + sin * lmDiag[i]; lmDiag[i] = -sin * rik + cos * lmDiag[i];"
+      },
+      {
+        "txt": "jacobian[i][pk] = temp2; } } } lmDiag[j] = jacobian[j][permutation[j]]; jacobian[j][permutation[j]] = lmDir[j]; } int nSing = solvedCols; for (int j = 0; j < solvedCols; ++j) { if ((lmDiag[j] == 0) && (nSing == solvedCols)) {"
+      },
+      {
+        "txt": "nSing = j; } if (nSing < solvedCols) { work[j] = 0; } } if (nSing > 0) { for (int j = nSing - 1; j >= 0; --j) { int pj = permutation[j]; double sum = 0;"
+      },
+      {
+        "txt": "for (int i = j + 1; i < nSing; ++i) { sum += jacobian[i][pj] * work[i]; } work[j] = (work[j] - sum) / lmDiag[j]; } } for (int j = 0; j < lmDir.length; ++j) { lmDir[permutation[j]] = work[j]; } }"
+      },
+      {
+        "txt": "private void qrDecomposition() throws OptimizationException { for (int k = 0; k < cols; ++k) { permutation[k] = k; double norm2 = 0; for (int i = 0; i < jacobian.length; ++i) { double akk = jacobian[i][k]; norm2 += akk * akk; } jacNorm[k] = Math.sqrt(norm2); }"
+      },
+      {
+        "txt": "for (int k = 0; k < cols; ++k) { int nextColumn = -1; double ak2 = Double.NEGATIVE_INFINITY; for (int i = k; i < cols; ++i) { double norm2 = 0; for (int j = k; j < jacobian.length; ++j) { double aki = jacobian[j][permutation[i]]; norm2 += aki * aki; } if (Double.isInfinite(norm2) || Double.isNaN(norm2)) {"
+      },
+      {
+        "txt": "throw new OptimizationException(LocalizedFormats.UNABLE_TO_PERFORM_QR_DECOMPOSITION_ON_JACOBIAN, rows, cols); } if (norm2 > ak2) { nextColumn = i; ak2 = norm2; } } if (ak2 <= qrRankingThreshold) { rank = k;"
+      },
+      {
+        "txt": "return; } int pk = permutation[nextColumn]; permutation[nextColumn] = permutation[k]; permutation[k] = pk; double akk = jacobian[k][pk]; double alpha = (akk > 0) ? -Math.sqrt(ak2) : Math.sqrt(ak2); double betak = 1.0 / (ak2 - akk * alpha); beta[pk] = betak; diagR[pk] = alpha;"
+      },
+      {
+        "txt": "jacobian[k][pk] -= alpha; for (int dk = cols - 1 - k; dk > 0; --dk) { double gamma = 0; for (int j = k; j < jacobian.length; ++j) { gamma += jacobian[j][pk] * jacobian[j][permutation[k + dk]]; } gamma *= betak; for (int j = k; j < jacobian.length; ++j) { jacobian[j][permutation[k + dk]] -= gamma * jacobian[j][pk]; }"
+      },
+      {
+        "txt": "} } rank = solvedCols; } private void qTy(double[] y) { for (int k = 0; k < cols; ++k) { int pk = permutation[k]; double gamma = 0; for (int i = k; i < rows; ++i) { gamma += jacobian[i][pk] * y[i];"
+      },
+      {
+        "txt": "} gamma *= beta[pk]; for (int i = k; i < rows; ++i) { y[i] -= gamma * jacobian[i][pk]; } } }"
+      }
+    ]
+  },
+  {
+    "id": 2620,
+    "file_path": "src/main/java/org/apache/commons/math/optimization/general/LevenbergMarquardtOptimizer.java",
+    "start-bug-line": 424,
+    "end-bug-line": 424,
+    "bug": "",
+    "fix": "if (checker.converged(getIterations(), previous, current)) { return current; } }",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.math.optimization.general; import java.util.Arrays; import org.apache.commons.math.FunctionEvaluationException; import org.apache.commons.math.exception.util.LocalizedFormats; import org.apache.commons.math.optimization.OptimizationException; import org.apache.commons.math.optimization.VectorialPointValuePair; import org.apache.commons.math.util.MathUtils; public class LevenbergMarquardtOptimizer extends AbstractLeastSquaresOptimizer { private int solvedCols; private double[] diagR;"
+      },
+      {
+        "txt": "private double[] jacNorm; private double[] beta; private int[] permutation; private int rank; private double lmPar; private double[] lmDir; private double initialStepBoundFactor; private double costRelativeTolerance; private double parRelativeTolerance; private double orthoTolerance;"
+      },
+      {
+        "txt": "private double qrRankingThreshold; public LevenbergMarquardtOptimizer() { setMaxIterations(1000); setConvergenceChecker(null); setInitialStepBoundFactor(100.0); setCostRelativeTolerance(1.0e-10); setParRelativeTolerance(1.0e-10); setOrthoTolerance(1.0e-10); setQRRankingThreshold(MathUtils.SAFE_MIN); }"
+      },
+      {
+        "txt": "public void setInitialStepBoundFactor(double initialStepBoundFactor) { this.initialStepBoundFactor = initialStepBoundFactor; } public void setCostRelativeTolerance(double costRelativeTolerance) { this.costRelativeTolerance = costRelativeTolerance; } public void setParRelativeTolerance(double parRelativeTolerance) { this.parRelativeTolerance = parRelativeTolerance; } public void setOrthoTolerance(double orthoTolerance) {"
+      },
+      {
+        "txt": "this.orthoTolerance = orthoTolerance; } public void setQRRankingThreshold(final double threshold) { this.qrRankingThreshold = threshold; } @Override protected VectorialPointValuePair doOptimize() throws FunctionEvaluationException, OptimizationException, IllegalArgumentException { solvedCols = Math.min(rows, cols); diagR = new double[cols];"
+      },
+      {
+        "txt": "jacNorm = new double[cols]; beta = new double[cols]; permutation = new int[cols]; lmDir = new double[cols]; double delta = 0; double xNorm = 0; double[] diag = new double[cols]; double[] oldX = new double[cols]; double[] oldRes = new double[rows]; double[] work1 = new double[cols];"
+      },
+      {
+        "txt": "double[] work2 = new double[cols]; double[] work3 = new double[cols]; updateResidualsAndCost(); lmPar = 0; boolean firstIteration = true; VectorialPointValuePair current = new VectorialPointValuePair(point, objective); while (true) { incrementIterationsCounter(); VectorialPointValuePair previous = current; updateJacobian();"
+      },
+      {
+        "txt": "qrDecomposition(); qTy(residuals); for (int k = 0; k < solvedCols; ++k) { int pk = permutation[k]; jacobian[k][pk] = diagR[pk]; } if (firstIteration) { xNorm = 0; for (int k = 0; k < cols; ++k) { double dk = jacNorm[k];"
+      },
+      {
+        "txt": "if (dk == 0) { dk = 1.0; } double xk = dk * point[k]; xNorm += xk * xk; diag[k] = dk; } xNorm = Math.sqrt(xNorm); delta = (xNorm == 0) ? initialStepBoundFactor : (initialStepBoundFactor * xNorm); }"
+      },
+      {
+        "txt": "double maxCosine = 0; if (cost != 0) { for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; double s = jacNorm[pj]; if (s != 0) { double sum = 0; for (int i = 0; i <= j; ++i) { sum += jacobian[i][pj] * residuals[i]; }"
+      },
+      {
+        "txt": "maxCosine = Math.max(maxCosine, Math.abs(sum) / (s * cost)); } } } if (maxCosine <= orthoTolerance) { return current; } for (int j = 0; j < cols; ++j) { diag[j] = Math.max(diag[j], jacNorm[j]); }"
+      },
+      {
+        "txt": "for (double ratio = 0; ratio < 1.0e-4;) { for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; oldX[pj] = point[pj]; } double previousCost = cost; double[] tmpVec = residuals; residuals = oldRes; oldRes = tmpVec; determineLMParameter(oldRes, delta, diag, work1, work2, work3);"
+      },
+      {
+        "txt": "double lmNorm = 0; for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; lmDir[pj] = -lmDir[pj]; point[pj] = oldX[pj] + lmDir[pj]; double s = diag[pj] * lmDir[pj]; lmNorm += s * s; } lmNorm = Math.sqrt(lmNorm); if (firstIteration) {"
+      },
+      {
+        "txt": "delta = Math.min(delta, lmNorm); } updateResidualsAndCost(); current = new VectorialPointValuePair(point, objective); double actRed = -1.0; if (0.1 * cost < previousCost) { double r = cost / previousCost; actRed = 1.0 - r * r; } for (int j = 0; j < solvedCols; ++j) {"
+      },
+      {
+        "txt": "int pj = permutation[j]; double dirJ = lmDir[pj]; work1[j] = 0; for (int i = 0; i <= j; ++i) { work1[i] += jacobian[i][pj] * dirJ; } } double coeff1 = 0; for (int j = 0; j < solvedCols; ++j) { coeff1 += work1[j] * work1[j];"
+      },
+      {
+        "txt": "} double pc2 = previousCost * previousCost; coeff1 = coeff1 / pc2; double coeff2 = lmPar * lmNorm * lmNorm / pc2; double preRed = coeff1 + 2 * coeff2; double dirDer = -(coeff1 + coeff2); ratio = (preRed == 0) ? 0 : (actRed / preRed); if (ratio <= 0.25) { double tmp = (actRed < 0) ? (0.5 * dirDer / (dirDer + 0.5 * actRed)) : 0.5;"
+      },
+      {
+        "txt": "if ((0.1 * cost >= previousCost) || (tmp < 0.1)) { tmp = 0.1; } delta = tmp * Math.min(delta, 10.0 * lmNorm); lmPar /= tmp; } else if ((lmPar == 0) || (ratio >= 0.75)) { delta = 2 * lmNorm; lmPar *= 0.5; } if (ratio >= 1.0e-4) {"
+      },
+      {
+        "txt": "xNorm = 0; for (int k = 0; k < cols; ++k) { double xK = diag[k] * point[k]; xNorm += xK * xK; } xNorm = Math.sqrt(xNorm); <extra_id_0> cost = previousCost; for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; point[pj] = oldX[pj]; } tmpVec = residuals;"
+      },
+      {
+        "txt": "} tmpVec = residuals; residuals = oldRes; oldRes = tmpVec; } if (checker==null) { if (((Math.abs(actRed) <= costRelativeTolerance) && (preRed <= costRelativeTolerance) && (ratio <= 2.0)) || (delta <= parRelativeTolerance * xNorm)) {"
+      },
+      {
+        "txt": "return current; } } else { if (checker.converged(getIterations(), previous, current)) { return current; } } if ((Math.abs(actRed) <= 2.2204e-16) && (preRed <= 2.2204e-16) && (ratio <= 2.0)) { throw new OptimizationException(LocalizedFormats.TOO_SMALL_COST_RELATIVE_TOLERANCE, costRelativeTolerance);"
+      },
+      {
+        "txt": "} else if (delta <= 2.2204e-16 * xNorm) { throw new OptimizationException(LocalizedFormats.TOO_SMALL_PARAMETERS_RELATIVE_TOLERANCE, parRelativeTolerance); } else if (maxCosine <= 2.2204e-16) { throw new OptimizationException(LocalizedFormats.TOO_SMALL_ORTHOGONALITY_TOLERANCE, orthoTolerance); } } } }"
+      },
+      {
+        "txt": "private void determineLMParameter(double[] qy, double delta, double[] diag, double[] work1, double[] work2, double[] work3) { for (int j = 0; j < rank; ++j) { lmDir[permutation[j]] = qy[j]; } for (int j = rank; j < cols; ++j) { lmDir[permutation[j]] = 0; } for (int k = rank - 1; k >= 0; --k) { int pk = permutation[k];"
+      },
+      {
+        "txt": "double ypk = lmDir[pk] / diagR[pk]; for (int i = 0; i < k; ++i) { lmDir[permutation[i]] -= ypk * jacobian[i][pk]; } lmDir[pk] = ypk; } double dxNorm = 0; for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; double s = diag[pj] * lmDir[pj];"
+      },
+      {
+        "txt": "work1[pj] = s; dxNorm += s * s; } dxNorm = Math.sqrt(dxNorm); double fp = dxNorm - delta; if (fp <= 0.1 * delta) { lmPar = 0; return; } double sum2;"
+      },
+      {
+        "txt": "double parl = 0; if (rank == solvedCols) { for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; work1[pj] *= diag[pj] / dxNorm; } sum2 = 0; for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; double sum = 0;"
+      },
+      {
+        "txt": "for (int i = 0; i < j; ++i) { sum += jacobian[i][pj] * work1[permutation[i]]; } double s = (work1[pj] - sum) / diagR[pj]; work1[pj] = s; sum2 += s * s; } parl = fp / (delta * sum2); } sum2 = 0;"
+      },
+      {
+        "txt": "for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; double sum = 0; for (int i = 0; i <= j; ++i) { sum += jacobian[i][pj] * qy[i]; } sum /= diag[pj]; sum2 += sum * sum; } double gNorm = Math.sqrt(sum2);"
+      },
+      {
+        "txt": "double paru = gNorm / delta; if (paru == 0) { paru = 2.2251e-308 / Math.min(delta, 0.1); } lmPar = Math.min(paru, Math.max(lmPar, parl)); if (lmPar == 0) { lmPar = gNorm / dxNorm; } for (int countdown = 10; countdown >= 0; --countdown) { if (lmPar == 0) {"
+      },
+      {
+        "txt": "lmPar = Math.max(2.2251e-308, 0.001 * paru); } double sPar = Math.sqrt(lmPar); for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; work1[pj] = sPar * diag[pj]; } determineLMDirection(qy, work1, work2, work3); dxNorm = 0; for (int j = 0; j < solvedCols; ++j) {"
+      },
+      {
+        "txt": "int pj = permutation[j]; double s = diag[pj] * lmDir[pj]; work3[pj] = s; dxNorm += s * s; } dxNorm = Math.sqrt(dxNorm); double previousFP = fp; fp = dxNorm - delta; if ((Math.abs(fp) <= 0.1 * delta) || ((parl == 0) && (fp <= previousFP) && (previousFP < 0))) {"
+      },
+      {
+        "txt": "return; } for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; work1[pj] = work3[pj] * diag[pj] / dxNorm; } for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; work1[pj] /= work2[j]; double tmp = work1[pj];"
+      },
+      {
+        "txt": "for (int i = j + 1; i < solvedCols; ++i) { work1[permutation[i]] -= jacobian[i][pj] * tmp; } } sum2 = 0; for (int j = 0; j < solvedCols; ++j) { double s = work1[permutation[j]]; sum2 += s * s; } double correction = fp / (delta * sum2);"
+      },
+      {
+        "txt": "if (fp > 0) { parl = Math.max(parl, lmPar); } else if (fp < 0) { paru = Math.min(paru, lmPar); } lmPar = Math.max(parl, lmPar + correction); } } private void determineLMDirection(double[] qy, double[] diag, double[] lmDiag, double[] work) {"
+      },
+      {
+        "txt": "for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; for (int i = j + 1; i < solvedCols; ++i) { jacobian[i][pj] = jacobian[j][permutation[i]]; } lmDir[j] = diagR[pj]; work[j] = qy[j]; } for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j];"
+      },
+      {
+        "txt": "double dpj = diag[pj]; if (dpj != 0) { Arrays.fill(lmDiag, j + 1, lmDiag.length, 0); } lmDiag[j] = dpj; double qtbpj = 0; for (int k = j; k < solvedCols; ++k) { int pk = permutation[k]; if (lmDiag[k] != 0) { final double sin;"
+      },
+      {
+        "txt": "final double cos; double rkk = jacobian[k][pk]; if (Math.abs(rkk) < Math.abs(lmDiag[k])) { final double cotan = rkk / lmDiag[k]; sin = 1.0 / Math.sqrt(1.0 + cotan * cotan); cos = sin * cotan; } else { final double tan = lmDiag[k] / rkk; cos = 1.0 / Math.sqrt(1.0 + tan * tan); sin = cos * tan;"
+      },
+      {
+        "txt": "} jacobian[k][pk] = cos * rkk + sin * lmDiag[k]; final double temp = cos * work[k] + sin * qtbpj; qtbpj = -sin * work[k] + cos * qtbpj; work[k] = temp; for (int i = k + 1; i < solvedCols; ++i) { double rik = jacobian[i][pk]; final double temp2 = cos * rik + sin * lmDiag[i]; lmDiag[i] = -sin * rik + cos * lmDiag[i]; jacobian[i][pk] = temp2;"
+      },
+      {
+        "txt": "} } } lmDiag[j] = jacobian[j][permutation[j]]; jacobian[j][permutation[j]] = lmDir[j]; } int nSing = solvedCols; for (int j = 0; j < solvedCols; ++j) { if ((lmDiag[j] == 0) && (nSing == solvedCols)) { nSing = j;"
+      },
+      {
+        "txt": "} if (nSing < solvedCols) { work[j] = 0; } } if (nSing > 0) { for (int j = nSing - 1; j >= 0; --j) { int pj = permutation[j]; double sum = 0; for (int i = j + 1; i < nSing; ++i) {"
+      },
+      {
+        "txt": "sum += jacobian[i][pj] * work[i]; } work[j] = (work[j] - sum) / lmDiag[j]; } } for (int j = 0; j < lmDir.length; ++j) { lmDir[permutation[j]] = work[j]; } } private void qrDecomposition() throws OptimizationException {"
+      },
+      {
+        "txt": "for (int k = 0; k < cols; ++k) { permutation[k] = k; double norm2 = 0; for (int i = 0; i < jacobian.length; ++i) { double akk = jacobian[i][k]; norm2 += akk * akk; } jacNorm[k] = Math.sqrt(norm2); } for (int k = 0; k < cols; ++k) {"
+      },
+      {
+        "txt": "int nextColumn = -1; double ak2 = Double.NEGATIVE_INFINITY; for (int i = k; i < cols; ++i) { double norm2 = 0; for (int j = k; j < jacobian.length; ++j) { double aki = jacobian[j][permutation[i]]; norm2 += aki * aki; } if (Double.isInfinite(norm2) || Double.isNaN(norm2)) { throw new OptimizationException(LocalizedFormats.UNABLE_TO_PERFORM_QR_DECOMPOSITION_ON_JACOBIAN,"
+      },
+      {
+        "txt": "rows, cols); } if (norm2 > ak2) { nextColumn = i; ak2 = norm2; } } if (ak2 <= qrRankingThreshold) { rank = k; return;"
+      },
+      {
+        "txt": "} int pk = permutation[nextColumn]; permutation[nextColumn] = permutation[k]; permutation[k] = pk; double akk = jacobian[k][pk]; double alpha = (akk > 0) ? -Math.sqrt(ak2) : Math.sqrt(ak2); double betak = 1.0 / (ak2 - akk * alpha); beta[pk] = betak; diagR[pk] = alpha; jacobian[k][pk] -= alpha;"
+      },
+      {
+        "txt": "for (int dk = cols - 1 - k; dk > 0; --dk) { double gamma = 0; for (int j = k; j < jacobian.length; ++j) { gamma += jacobian[j][pk] * jacobian[j][permutation[k + dk]]; } gamma *= betak; for (int j = k; j < jacobian.length; ++j) { jacobian[j][permutation[k + dk]] -= gamma * jacobian[j][pk]; } }"
+      },
+      {
+        "txt": "} rank = solvedCols; } private void qTy(double[] y) { for (int k = 0; k < cols; ++k) { int pk = permutation[k]; double gamma = 0; for (int i = k; i < rows; ++i) { gamma += jacobian[i][pk] * y[i]; }"
+      },
+      {
+        "txt": "gamma *= beta[pk]; for (int i = k; i < rows; ++i) { y[i] -= gamma * jacobian[i][pk]; } } }"
+      }
+    ]
+  },
+  {
+    "id": 2621,
+    "file_path": "src/main/java/org/apache/commons/math/optimization/general/LevenbergMarquardtOptimizer.java",
+    "start-bug-line": 434,
+    "end-bug-line": 434,
+    "bug": "",
+    "fix": "tmpVec    = objective; objective = oldObj; oldObj    = tmpVec;",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.math.optimization.general; import java.util.Arrays; import org.apache.commons.math.FunctionEvaluationException; import org.apache.commons.math.exception.util.LocalizedFormats; import org.apache.commons.math.optimization.OptimizationException; import org.apache.commons.math.optimization.VectorialPointValuePair; import org.apache.commons.math.util.MathUtils; public class LevenbergMarquardtOptimizer extends AbstractLeastSquaresOptimizer { private int solvedCols;"
+      },
+      {
+        "txt": "private double[] diagR; private double[] jacNorm; private double[] beta; private int[] permutation; private int rank; private double lmPar; private double[] lmDir; private double initialStepBoundFactor; private double costRelativeTolerance; private double parRelativeTolerance;"
+      },
+      {
+        "txt": "private double orthoTolerance; private double qrRankingThreshold; public LevenbergMarquardtOptimizer() { setMaxIterations(1000); setConvergenceChecker(null); setInitialStepBoundFactor(100.0); setCostRelativeTolerance(1.0e-10); setParRelativeTolerance(1.0e-10); setOrthoTolerance(1.0e-10); setQRRankingThreshold(MathUtils.SAFE_MIN);"
+      },
+      {
+        "txt": "} public void setInitialStepBoundFactor(double initialStepBoundFactor) { this.initialStepBoundFactor = initialStepBoundFactor; } public void setCostRelativeTolerance(double costRelativeTolerance) { this.costRelativeTolerance = costRelativeTolerance; } public void setParRelativeTolerance(double parRelativeTolerance) { this.parRelativeTolerance = parRelativeTolerance; }"
+      },
+      {
+        "txt": "public void setOrthoTolerance(double orthoTolerance) { this.orthoTolerance = orthoTolerance; } public void setQRRankingThreshold(final double threshold) { this.qrRankingThreshold = threshold; } @Override protected VectorialPointValuePair doOptimize() throws FunctionEvaluationException, OptimizationException, IllegalArgumentException { solvedCols = Math.min(rows, cols);"
+      },
+      {
+        "txt": "diagR = new double[cols]; jacNorm = new double[cols]; beta = new double[cols]; permutation = new int[cols]; lmDir = new double[cols]; double delta = 0; double xNorm = 0; double[] diag = new double[cols]; double[] oldX = new double[cols]; double[] oldRes = new double[rows];"
+      },
+      {
+        "txt": "double[] work1 = new double[cols]; double[] work2 = new double[cols]; double[] work3 = new double[cols]; updateResidualsAndCost(); lmPar = 0; boolean firstIteration = true; VectorialPointValuePair current = new VectorialPointValuePair(point, objective); while (true) { incrementIterationsCounter(); VectorialPointValuePair previous = current;"
+      },
+      {
+        "txt": "updateJacobian(); qrDecomposition(); qTy(residuals); for (int k = 0; k < solvedCols; ++k) { int pk = permutation[k]; jacobian[k][pk] = diagR[pk]; } if (firstIteration) { xNorm = 0; for (int k = 0; k < cols; ++k) {"
+      },
+      {
+        "txt": "double dk = jacNorm[k]; if (dk == 0) { dk = 1.0; } double xk = dk * point[k]; xNorm += xk * xk; diag[k] = dk; } xNorm = Math.sqrt(xNorm); delta = (xNorm == 0) ? initialStepBoundFactor : (initialStepBoundFactor * xNorm);"
+      },
+      {
+        "txt": "} double maxCosine = 0; if (cost != 0) { for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; double s = jacNorm[pj]; if (s != 0) { double sum = 0; for (int i = 0; i <= j; ++i) { sum += jacobian[i][pj] * residuals[i];"
+      },
+      {
+        "txt": "} maxCosine = Math.max(maxCosine, Math.abs(sum) / (s * cost)); } } } if (maxCosine <= orthoTolerance) { return current; } for (int j = 0; j < cols; ++j) { diag[j] = Math.max(diag[j], jacNorm[j]);"
+      },
+      {
+        "txt": "} for (double ratio = 0; ratio < 1.0e-4;) { for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; oldX[pj] = point[pj]; } double previousCost = cost; double[] tmpVec = residuals; residuals = oldRes; oldRes = tmpVec;"
+      },
+      {
+        "txt": "determineLMParameter(oldRes, delta, diag, work1, work2, work3); double lmNorm = 0; for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; lmDir[pj] = -lmDir[pj]; point[pj] = oldX[pj] + lmDir[pj]; double s = diag[pj] * lmDir[pj]; lmNorm += s * s; } lmNorm = Math.sqrt(lmNorm);"
+      },
+      {
+        "txt": "if (firstIteration) { delta = Math.min(delta, lmNorm); } updateResidualsAndCost(); current = new VectorialPointValuePair(point, objective); double actRed = -1.0; if (0.1 * cost < previousCost) { double r = cost / previousCost; actRed = 1.0 - r * r; }"
+      },
+      {
+        "txt": "for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; double dirJ = lmDir[pj]; work1[j] = 0; for (int i = 0; i <= j; ++i) { work1[i] += jacobian[i][pj] * dirJ; } } double coeff1 = 0; for (int j = 0; j < solvedCols; ++j) {"
+      },
+      {
+        "txt": "coeff1 += work1[j] * work1[j]; } double pc2 = previousCost * previousCost; coeff1 = coeff1 / pc2; double coeff2 = lmPar * lmNorm * lmNorm / pc2; double preRed = coeff1 + 2 * coeff2; double dirDer = -(coeff1 + coeff2); ratio = (preRed == 0) ? 0 : (actRed / preRed); if (ratio <= 0.25) { double tmp ="
+      },
+      {
+        "txt": "(actRed < 0) ? (0.5 * dirDer / (dirDer + 0.5 * actRed)) : 0.5; if ((0.1 * cost >= previousCost) || (tmp < 0.1)) { tmp = 0.1; } delta = tmp * Math.min(delta, 10.0 * lmNorm); lmPar /= tmp; } else if ((lmPar == 0) || (ratio >= 0.75)) { delta = 2 * lmNorm; lmPar *= 0.5; }"
+      },
+      {
+        "txt": "if (ratio >= 1.0e-4) { firstIteration = false; xNorm = 0; for (int k = 0; k < cols; ++k) { double xK = diag[k] * point[k]; xNorm += xK * xK; } xNorm = Math.sqrt(xNorm); } else { cost = previousCost;"
+      },
+      {
+        "txt": "int pj = permutation[j]; point[pj] = oldX[pj]; } tmpVec = residuals; residuals = oldRes; oldRes = tmpVec; <extra_id_0> if (checker==null) { if (((Math.abs(actRed) <= costRelativeTolerance) && (preRed <= costRelativeTolerance) && (ratio <= 2.0)) || (delta <= parRelativeTolerance * xNorm)) { return current;"
+      },
+      {
+        "txt": "(delta <= parRelativeTolerance * xNorm)) { return current; } } else { if (checker.converged(getIterations(), previous, current)) { return current; } } if ((Math.abs(actRed) <= 2.2204e-16) && (preRed <= 2.2204e-16) && (ratio <= 2.0)) { throw new OptimizationException(LocalizedFormats.TOO_SMALL_COST_RELATIVE_TOLERANCE,"
+      },
+      {
+        "txt": "costRelativeTolerance); } else if (delta <= 2.2204e-16 * xNorm) { throw new OptimizationException(LocalizedFormats.TOO_SMALL_PARAMETERS_RELATIVE_TOLERANCE, parRelativeTolerance); } else if (maxCosine <= 2.2204e-16) { throw new OptimizationException(LocalizedFormats.TOO_SMALL_ORTHOGONALITY_TOLERANCE, orthoTolerance); } } }"
+      },
+      {
+        "txt": "} private void determineLMParameter(double[] qy, double delta, double[] diag, double[] work1, double[] work2, double[] work3) { for (int j = 0; j < rank; ++j) { lmDir[permutation[j]] = qy[j]; } for (int j = rank; j < cols; ++j) { lmDir[permutation[j]] = 0; } for (int k = rank - 1; k >= 0; --k) {"
+      },
+      {
+        "txt": "int pk = permutation[k]; double ypk = lmDir[pk] / diagR[pk]; for (int i = 0; i < k; ++i) { lmDir[permutation[i]] -= ypk * jacobian[i][pk]; } lmDir[pk] = ypk; } double dxNorm = 0; for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j];"
+      },
+      {
+        "txt": "double s = diag[pj] * lmDir[pj]; work1[pj] = s; dxNorm += s * s; } dxNorm = Math.sqrt(dxNorm); double fp = dxNorm - delta; if (fp <= 0.1 * delta) { lmPar = 0; return; }"
+      },
+      {
+        "txt": "double sum2; double parl = 0; if (rank == solvedCols) { for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; work1[pj] *= diag[pj] / dxNorm; } sum2 = 0; for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j];"
+      },
+      {
+        "txt": "double sum = 0; for (int i = 0; i < j; ++i) { sum += jacobian[i][pj] * work1[permutation[i]]; } double s = (work1[pj] - sum) / diagR[pj]; work1[pj] = s; sum2 += s * s; } parl = fp / (delta * sum2); }"
+      },
+      {
+        "txt": "sum2 = 0; for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; double sum = 0; for (int i = 0; i <= j; ++i) { sum += jacobian[i][pj] * qy[i]; } sum /= diag[pj]; sum2 += sum * sum; }"
+      },
+      {
+        "txt": "double gNorm = Math.sqrt(sum2); double paru = gNorm / delta; if (paru == 0) { paru = 2.2251e-308 / Math.min(delta, 0.1); } lmPar = Math.min(paru, Math.max(lmPar, parl)); if (lmPar == 0) { lmPar = gNorm / dxNorm; } for (int countdown = 10; countdown >= 0; --countdown) {"
+      },
+      {
+        "txt": "if (lmPar == 0) { lmPar = Math.max(2.2251e-308, 0.001 * paru); } double sPar = Math.sqrt(lmPar); for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; work1[pj] = sPar * diag[pj]; } determineLMDirection(qy, work1, work2, work3); dxNorm = 0;"
+      },
+      {
+        "txt": "for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; double s = diag[pj] * lmDir[pj]; work3[pj] = s; dxNorm += s * s; } dxNorm = Math.sqrt(dxNorm); double previousFP = fp; fp = dxNorm - delta; if ((Math.abs(fp) <= 0.1 * delta) ||"
+      },
+      {
+        "txt": "((parl == 0) && (fp <= previousFP) && (previousFP < 0))) { return; } for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; work1[pj] = work3[pj] * diag[pj] / dxNorm; } for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; work1[pj] /= work2[j];"
+      },
+      {
+        "txt": "double tmp = work1[pj]; for (int i = j + 1; i < solvedCols; ++i) { work1[permutation[i]] -= jacobian[i][pj] * tmp; } } sum2 = 0; for (int j = 0; j < solvedCols; ++j) { double s = work1[permutation[j]]; sum2 += s * s; }"
+      },
+      {
+        "txt": "double correction = fp / (delta * sum2); if (fp > 0) { parl = Math.max(parl, lmPar); } else if (fp < 0) { paru = Math.min(paru, lmPar); } lmPar = Math.max(parl, lmPar + correction); } } private void determineLMDirection(double[] qy, double[] diag,"
+      },
+      {
+        "txt": "double[] lmDiag, double[] work) { for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; for (int i = j + 1; i < solvedCols; ++i) { jacobian[i][pj] = jacobian[j][permutation[i]]; } lmDir[j] = diagR[pj]; work[j] = qy[j]; } for (int j = 0; j < solvedCols; ++j) {"
+      },
+      {
+        "txt": "int pj = permutation[j]; double dpj = diag[pj]; if (dpj != 0) { Arrays.fill(lmDiag, j + 1, lmDiag.length, 0); } lmDiag[j] = dpj; double qtbpj = 0; for (int k = j; k < solvedCols; ++k) { int pk = permutation[k]; if (lmDiag[k] != 0) {"
+      },
+      {
+        "txt": "final double sin; final double cos; double rkk = jacobian[k][pk]; if (Math.abs(rkk) < Math.abs(lmDiag[k])) { final double cotan = rkk / lmDiag[k]; sin = 1.0 / Math.sqrt(1.0 + cotan * cotan); cos = sin * cotan; } else { final double tan = lmDiag[k] / rkk; cos = 1.0 / Math.sqrt(1.0 + tan * tan);"
+      },
+      {
+        "txt": "sin = cos * tan; } jacobian[k][pk] = cos * rkk + sin * lmDiag[k]; final double temp = cos * work[k] + sin * qtbpj; qtbpj = -sin * work[k] + cos * qtbpj; work[k] = temp; for (int i = k + 1; i < solvedCols; ++i) { double rik = jacobian[i][pk]; final double temp2 = cos * rik + sin * lmDiag[i]; lmDiag[i] = -sin * rik + cos * lmDiag[i];"
+      },
+      {
+        "txt": "jacobian[i][pk] = temp2; } } } lmDiag[j] = jacobian[j][permutation[j]]; jacobian[j][permutation[j]] = lmDir[j]; } int nSing = solvedCols; for (int j = 0; j < solvedCols; ++j) { if ((lmDiag[j] == 0) && (nSing == solvedCols)) {"
+      },
+      {
+        "txt": "nSing = j; } if (nSing < solvedCols) { work[j] = 0; } } if (nSing > 0) { for (int j = nSing - 1; j >= 0; --j) { int pj = permutation[j]; double sum = 0;"
+      },
+      {
+        "txt": "for (int i = j + 1; i < nSing; ++i) { sum += jacobian[i][pj] * work[i]; } work[j] = (work[j] - sum) / lmDiag[j]; } } for (int j = 0; j < lmDir.length; ++j) { lmDir[permutation[j]] = work[j]; } }"
+      },
+      {
+        "txt": "private void qrDecomposition() throws OptimizationException { for (int k = 0; k < cols; ++k) { permutation[k] = k; double norm2 = 0; for (int i = 0; i < jacobian.length; ++i) { double akk = jacobian[i][k]; norm2 += akk * akk; } jacNorm[k] = Math.sqrt(norm2); }"
+      },
+      {
+        "txt": "for (int k = 0; k < cols; ++k) { int nextColumn = -1; double ak2 = Double.NEGATIVE_INFINITY; for (int i = k; i < cols; ++i) { double norm2 = 0; for (int j = k; j < jacobian.length; ++j) { double aki = jacobian[j][permutation[i]]; norm2 += aki * aki; } if (Double.isInfinite(norm2) || Double.isNaN(norm2)) {"
+      },
+      {
+        "txt": "throw new OptimizationException(LocalizedFormats.UNABLE_TO_PERFORM_QR_DECOMPOSITION_ON_JACOBIAN, rows, cols); } if (norm2 > ak2) { nextColumn = i; ak2 = norm2; } } if (ak2 <= qrRankingThreshold) { rank = k;"
+      },
+      {
+        "txt": "return; } int pk = permutation[nextColumn]; permutation[nextColumn] = permutation[k]; permutation[k] = pk; double akk = jacobian[k][pk]; double alpha = (akk > 0) ? -Math.sqrt(ak2) : Math.sqrt(ak2); double betak = 1.0 / (ak2 - akk * alpha); beta[pk] = betak; diagR[pk] = alpha;"
+      },
+      {
+        "txt": "jacobian[k][pk] -= alpha; for (int dk = cols - 1 - k; dk > 0; --dk) { double gamma = 0; for (int j = k; j < jacobian.length; ++j) { gamma += jacobian[j][pk] * jacobian[j][permutation[k + dk]]; } gamma *= betak; for (int j = k; j < jacobian.length; ++j) { jacobian[j][permutation[k + dk]] -= gamma * jacobian[j][pk]; }"
+      },
+      {
+        "txt": "} } rank = solvedCols; } private void qTy(double[] y) { for (int k = 0; k < cols; ++k) { int pk = permutation[k]; double gamma = 0; for (int i = k; i < rows; ++i) { gamma += jacobian[i][pk] * y[i];"
+      },
+      {
+        "txt": "} gamma *= beta[pk]; for (int i = k; i < rows; ++i) { y[i] -= gamma * jacobian[i][pk]; } } }"
+      }
+    ]
+  },
+  {
+    "id": 2622,
+    "file_path": "src/main/java/org/apache/commons/math/optimization/general/LevenbergMarquardtOptimizer.java",
+    "start-bug-line": 442,
+    "end-bug-line": 445,
+    "bug": "} else { if (checker.converged(getIterations(), previous, current)) { return current; }",
+    "fix": "[Delete]",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.math.optimization.general; import java.util.Arrays; import org.apache.commons.math.FunctionEvaluationException; import org.apache.commons.math.exception.util.LocalizedFormats; import org.apache.commons.math.optimization.OptimizationException; import org.apache.commons.math.optimization.VectorialPointValuePair; import org.apache.commons.math.util.MathUtils;"
+      },
+      {
+        "txt": "public class LevenbergMarquardtOptimizer extends AbstractLeastSquaresOptimizer { private int solvedCols; private double[] diagR; private double[] jacNorm; private double[] beta; private int[] permutation; private int rank; private double lmPar; private double[] lmDir; private double initialStepBoundFactor;"
+      },
+      {
+        "txt": "private double costRelativeTolerance; private double parRelativeTolerance; private double orthoTolerance; private double qrRankingThreshold; public LevenbergMarquardtOptimizer() { setMaxIterations(1000); setConvergenceChecker(null); setInitialStepBoundFactor(100.0); setCostRelativeTolerance(1.0e-10); setParRelativeTolerance(1.0e-10);"
+      },
+      {
+        "txt": "setOrthoTolerance(1.0e-10); setQRRankingThreshold(MathUtils.SAFE_MIN); } public void setInitialStepBoundFactor(double initialStepBoundFactor) { this.initialStepBoundFactor = initialStepBoundFactor; } public void setCostRelativeTolerance(double costRelativeTolerance) { this.costRelativeTolerance = costRelativeTolerance; } public void setParRelativeTolerance(double parRelativeTolerance) {"
+      },
+      {
+        "txt": "this.parRelativeTolerance = parRelativeTolerance; } public void setOrthoTolerance(double orthoTolerance) { this.orthoTolerance = orthoTolerance; } public void setQRRankingThreshold(final double threshold) { this.qrRankingThreshold = threshold; } @Override protected VectorialPointValuePair doOptimize()"
+      },
+      {
+        "txt": "throws FunctionEvaluationException, OptimizationException, IllegalArgumentException { solvedCols = Math.min(rows, cols); diagR = new double[cols]; jacNorm = new double[cols]; beta = new double[cols]; permutation = new int[cols]; lmDir = new double[cols]; double delta = 0; double xNorm = 0; double[] diag = new double[cols];"
+      },
+      {
+        "txt": "double[] oldX = new double[cols]; double[] oldRes = new double[rows]; double[] work1 = new double[cols]; double[] work2 = new double[cols]; double[] work3 = new double[cols]; updateResidualsAndCost(); lmPar = 0; boolean firstIteration = true; VectorialPointValuePair current = new VectorialPointValuePair(point, objective); while (true) {"
+      },
+      {
+        "txt": "incrementIterationsCounter(); VectorialPointValuePair previous = current; updateJacobian(); qrDecomposition(); qTy(residuals); for (int k = 0; k < solvedCols; ++k) { int pk = permutation[k]; jacobian[k][pk] = diagR[pk]; } if (firstIteration) {"
+      },
+      {
+        "txt": "xNorm = 0; for (int k = 0; k < cols; ++k) { double dk = jacNorm[k]; if (dk == 0) { dk = 1.0; } double xk = dk * point[k]; xNorm += xk * xk; diag[k] = dk; }"
+      },
+      {
+        "txt": "xNorm = Math.sqrt(xNorm); delta = (xNorm == 0) ? initialStepBoundFactor : (initialStepBoundFactor * xNorm); } double maxCosine = 0; if (cost != 0) { for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; double s = jacNorm[pj]; if (s != 0) { double sum = 0;"
+      },
+      {
+        "txt": "for (int i = 0; i <= j; ++i) { sum += jacobian[i][pj] * residuals[i]; } maxCosine = Math.max(maxCosine, Math.abs(sum) / (s * cost)); } } } if (maxCosine <= orthoTolerance) { return current; }"
+      },
+      {
+        "txt": "for (int j = 0; j < cols; ++j) { diag[j] = Math.max(diag[j], jacNorm[j]); } for (double ratio = 0; ratio < 1.0e-4;) { for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; oldX[pj] = point[pj]; } double previousCost = cost; double[] tmpVec = residuals;"
+      },
+      {
+        "txt": "residuals = oldRes; oldRes = tmpVec; determineLMParameter(oldRes, delta, diag, work1, work2, work3); double lmNorm = 0; for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; lmDir[pj] = -lmDir[pj]; point[pj] = oldX[pj] + lmDir[pj]; double s = diag[pj] * lmDir[pj]; lmNorm += s * s;"
+      },
+      {
+        "txt": "} lmNorm = Math.sqrt(lmNorm); if (firstIteration) { delta = Math.min(delta, lmNorm); } updateResidualsAndCost(); current = new VectorialPointValuePair(point, objective); double actRed = -1.0; if (0.1 * cost < previousCost) { double r = cost / previousCost;"
+      },
+      {
+        "txt": "actRed = 1.0 - r * r; } for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; double dirJ = lmDir[pj]; work1[j] = 0; for (int i = 0; i <= j; ++i) { work1[i] += jacobian[i][pj] * dirJ; } }"
+      },
+      {
+        "txt": "double coeff1 = 0; for (int j = 0; j < solvedCols; ++j) { coeff1 += work1[j] * work1[j]; } double pc2 = previousCost * previousCost; coeff1 = coeff1 / pc2; double coeff2 = lmPar * lmNorm * lmNorm / pc2; double preRed = coeff1 + 2 * coeff2; double dirDer = -(coeff1 + coeff2); ratio = (preRed == 0) ? 0 : (actRed / preRed);"
+      },
+      {
+        "txt": "if (ratio <= 0.25) { double tmp = (actRed < 0) ? (0.5 * dirDer / (dirDer + 0.5 * actRed)) : 0.5; if ((0.1 * cost >= previousCost) || (tmp < 0.1)) { tmp = 0.1; } delta = tmp * Math.min(delta, 10.0 * lmNorm); lmPar /= tmp; } else if ((lmPar == 0) || (ratio >= 0.75)) { delta = 2 * lmNorm;"
+      },
+      {
+        "txt": "lmPar *= 0.5; } if (ratio >= 1.0e-4) { firstIteration = false; xNorm = 0; for (int k = 0; k < cols; ++k) { double xK = diag[k] * point[k]; xNorm += xK * xK; } xNorm = Math.sqrt(xNorm);"
+      },
+      {
+        "txt": "} else { cost = previousCost; for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; point[pj] = oldX[pj]; } tmpVec = residuals; residuals = oldRes; oldRes = tmpVec; }"
+      },
+      {
+        "txt": "if (((Math.abs(actRed) <= costRelativeTolerance) && (preRed <= costRelativeTolerance) && (ratio <= 2.0)) || (delta <= parRelativeTolerance * xNorm)) { return current; } <extra_id_0> } if ((Math.abs(actRed) <= 2.2204e-16) && (preRed <= 2.2204e-16) && (ratio <= 2.0)) { throw new OptimizationException(LocalizedFormats.TOO_SMALL_COST_RELATIVE_TOLERANCE, costRelativeTolerance); } else if (delta <= 2.2204e-16 * xNorm) { throw new OptimizationException(LocalizedFormats.TOO_SMALL_PARAMETERS_RELATIVE_TOLERANCE,"
+      },
+      {
+        "txt": "} else if (delta <= 2.2204e-16 * xNorm) { throw new OptimizationException(LocalizedFormats.TOO_SMALL_PARAMETERS_RELATIVE_TOLERANCE, parRelativeTolerance); } else if (maxCosine <= 2.2204e-16) { throw new OptimizationException(LocalizedFormats.TOO_SMALL_ORTHOGONALITY_TOLERANCE, orthoTolerance); } } } }"
+      },
+      {
+        "txt": "private void determineLMParameter(double[] qy, double delta, double[] diag, double[] work1, double[] work2, double[] work3) { for (int j = 0; j < rank; ++j) { lmDir[permutation[j]] = qy[j]; } for (int j = rank; j < cols; ++j) { lmDir[permutation[j]] = 0; } for (int k = rank - 1; k >= 0; --k) { int pk = permutation[k];"
+      },
+      {
+        "txt": "double ypk = lmDir[pk] / diagR[pk]; for (int i = 0; i < k; ++i) { lmDir[permutation[i]] -= ypk * jacobian[i][pk]; } lmDir[pk] = ypk; } double dxNorm = 0; for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; double s = diag[pj] * lmDir[pj];"
+      },
+      {
+        "txt": "work1[pj] = s; dxNorm += s * s; } dxNorm = Math.sqrt(dxNorm); double fp = dxNorm - delta; if (fp <= 0.1 * delta) { lmPar = 0; return; } double sum2;"
+      },
+      {
+        "txt": "double parl = 0; if (rank == solvedCols) { for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; work1[pj] *= diag[pj] / dxNorm; } sum2 = 0; for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; double sum = 0;"
+      },
+      {
+        "txt": "for (int i = 0; i < j; ++i) { sum += jacobian[i][pj] * work1[permutation[i]]; } double s = (work1[pj] - sum) / diagR[pj]; work1[pj] = s; sum2 += s * s; } parl = fp / (delta * sum2); } sum2 = 0;"
+      },
+      {
+        "txt": "for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; double sum = 0; for (int i = 0; i <= j; ++i) { sum += jacobian[i][pj] * qy[i]; } sum /= diag[pj]; sum2 += sum * sum; } double gNorm = Math.sqrt(sum2);"
+      },
+      {
+        "txt": "double paru = gNorm / delta; if (paru == 0) { paru = 2.2251e-308 / Math.min(delta, 0.1); } lmPar = Math.min(paru, Math.max(lmPar, parl)); if (lmPar == 0) { lmPar = gNorm / dxNorm; } for (int countdown = 10; countdown >= 0; --countdown) { if (lmPar == 0) {"
+      },
+      {
+        "txt": "lmPar = Math.max(2.2251e-308, 0.001 * paru); } double sPar = Math.sqrt(lmPar); for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; work1[pj] = sPar * diag[pj]; } determineLMDirection(qy, work1, work2, work3); dxNorm = 0; for (int j = 0; j < solvedCols; ++j) {"
+      },
+      {
+        "txt": "int pj = permutation[j]; double s = diag[pj] * lmDir[pj]; work3[pj] = s; dxNorm += s * s; } dxNorm = Math.sqrt(dxNorm); double previousFP = fp; fp = dxNorm - delta; if ((Math.abs(fp) <= 0.1 * delta) || ((parl == 0) && (fp <= previousFP) && (previousFP < 0))) {"
+      },
+      {
+        "txt": "return; } for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; work1[pj] = work3[pj] * diag[pj] / dxNorm; } for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; work1[pj] /= work2[j]; double tmp = work1[pj];"
+      },
+      {
+        "txt": "for (int i = j + 1; i < solvedCols; ++i) { work1[permutation[i]] -= jacobian[i][pj] * tmp; } } sum2 = 0; for (int j = 0; j < solvedCols; ++j) { double s = work1[permutation[j]]; sum2 += s * s; } double correction = fp / (delta * sum2);"
+      },
+      {
+        "txt": "if (fp > 0) { parl = Math.max(parl, lmPar); } else if (fp < 0) { paru = Math.min(paru, lmPar); } lmPar = Math.max(parl, lmPar + correction); } } private void determineLMDirection(double[] qy, double[] diag, double[] lmDiag, double[] work) {"
+      },
+      {
+        "txt": "for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; for (int i = j + 1; i < solvedCols; ++i) { jacobian[i][pj] = jacobian[j][permutation[i]]; } lmDir[j] = diagR[pj]; work[j] = qy[j]; } for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j];"
+      },
+      {
+        "txt": "double dpj = diag[pj]; if (dpj != 0) { Arrays.fill(lmDiag, j + 1, lmDiag.length, 0); } lmDiag[j] = dpj; double qtbpj = 0; for (int k = j; k < solvedCols; ++k) { int pk = permutation[k]; if (lmDiag[k] != 0) { final double sin;"
+      },
+      {
+        "txt": "final double cos; double rkk = jacobian[k][pk]; if (Math.abs(rkk) < Math.abs(lmDiag[k])) { final double cotan = rkk / lmDiag[k]; sin = 1.0 / Math.sqrt(1.0 + cotan * cotan); cos = sin * cotan; } else { final double tan = lmDiag[k] / rkk; cos = 1.0 / Math.sqrt(1.0 + tan * tan); sin = cos * tan;"
+      },
+      {
+        "txt": "} jacobian[k][pk] = cos * rkk + sin * lmDiag[k]; final double temp = cos * work[k] + sin * qtbpj; qtbpj = -sin * work[k] + cos * qtbpj; work[k] = temp; for (int i = k + 1; i < solvedCols; ++i) { double rik = jacobian[i][pk]; final double temp2 = cos * rik + sin * lmDiag[i]; lmDiag[i] = -sin * rik + cos * lmDiag[i]; jacobian[i][pk] = temp2;"
+      },
+      {
+        "txt": "} } } lmDiag[j] = jacobian[j][permutation[j]]; jacobian[j][permutation[j]] = lmDir[j]; } int nSing = solvedCols; for (int j = 0; j < solvedCols; ++j) { if ((lmDiag[j] == 0) && (nSing == solvedCols)) { nSing = j;"
+      },
+      {
+        "txt": "} if (nSing < solvedCols) { work[j] = 0; } } if (nSing > 0) { for (int j = nSing - 1; j >= 0; --j) { int pj = permutation[j]; double sum = 0; for (int i = j + 1; i < nSing; ++i) {"
+      },
+      {
+        "txt": "sum += jacobian[i][pj] * work[i]; } work[j] = (work[j] - sum) / lmDiag[j]; } } for (int j = 0; j < lmDir.length; ++j) { lmDir[permutation[j]] = work[j]; } } private void qrDecomposition() throws OptimizationException {"
+      },
+      {
+        "txt": "for (int k = 0; k < cols; ++k) { permutation[k] = k; double norm2 = 0; for (int i = 0; i < jacobian.length; ++i) { double akk = jacobian[i][k]; norm2 += akk * akk; } jacNorm[k] = Math.sqrt(norm2); } for (int k = 0; k < cols; ++k) {"
+      },
+      {
+        "txt": "int nextColumn = -1; double ak2 = Double.NEGATIVE_INFINITY; for (int i = k; i < cols; ++i) { double norm2 = 0; for (int j = k; j < jacobian.length; ++j) { double aki = jacobian[j][permutation[i]]; norm2 += aki * aki; } if (Double.isInfinite(norm2) || Double.isNaN(norm2)) { throw new OptimizationException(LocalizedFormats.UNABLE_TO_PERFORM_QR_DECOMPOSITION_ON_JACOBIAN,"
+      },
+      {
+        "txt": "rows, cols); } if (norm2 > ak2) { nextColumn = i; ak2 = norm2; } } if (ak2 <= qrRankingThreshold) { rank = k; return;"
+      },
+      {
+        "txt": "} int pk = permutation[nextColumn]; permutation[nextColumn] = permutation[k]; permutation[k] = pk; double akk = jacobian[k][pk]; double alpha = (akk > 0) ? -Math.sqrt(ak2) : Math.sqrt(ak2); double betak = 1.0 / (ak2 - akk * alpha); beta[pk] = betak; diagR[pk] = alpha; jacobian[k][pk] -= alpha;"
+      },
+      {
+        "txt": "for (int dk = cols - 1 - k; dk > 0; --dk) { double gamma = 0; for (int j = k; j < jacobian.length; ++j) { gamma += jacobian[j][pk] * jacobian[j][permutation[k + dk]]; } gamma *= betak; for (int j = k; j < jacobian.length; ++j) { jacobian[j][permutation[k + dk]] -= gamma * jacobian[j][pk]; } }"
+      },
+      {
+        "txt": "} rank = solvedCols; } private void qTy(double[] y) { for (int k = 0; k < cols; ++k) { int pk = permutation[k]; double gamma = 0; for (int i = k; i < rows; ++i) { gamma += jacobian[i][pk] * y[i]; }"
+      },
+      {
+        "txt": "gamma *= beta[pk]; for (int i = k; i < rows; ++i) { y[i] -= gamma * jacobian[i][pk]; } } }"
+      }
+    ]
+  }
+]

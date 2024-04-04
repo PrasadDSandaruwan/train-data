@@ -1,0 +1,113 @@
+[
+  {
+    "id": 1089,
+    "file_path": "src/main/java/org/apache/commons/compress/compressors/CompressorStreamFactory.java",
+    "start-bug-line": 240,
+    "end-bug-line": 240,
+    "bug": "",
+    "fix": "if (DeflateCompressorInputStream.matches(signature, signatureLength)) { return new DeflateCompressorInputStream(in); }",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.compress.compressors; import java.io.IOException; import java.io.InputStream; import java.io.OutputStream; import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream; import org.apache.commons.compress.compressors.bzip2.BZip2CompressorOutputStream; import org.apache.commons.compress.compressors.deflate.DeflateCompressorInputStream; import org.apache.commons.compress.compressors.deflate.DeflateCompressorOutputStream;"
+      },
+      {
+        "txt": "import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream; import org.apache.commons.compress.compressors.gzip.GzipCompressorOutputStream; import org.apache.commons.compress.compressors.lzma.LZMACompressorInputStream; import org.apache.commons.compress.compressors.lzma.LZMAUtils; import org.apache.commons.compress.compressors.xz.XZCompressorInputStream; import org.apache.commons.compress.compressors.xz.XZCompressorOutputStream; import org.apache.commons.compress.compressors.xz.XZUtils; import org.apache.commons.compress.compressors.pack200.Pack200CompressorInputStream; import org.apache.commons.compress.compressors.pack200.Pack200CompressorOutputStream; import org.apache.commons.compress.compressors.snappy.FramedSnappyCompressorInputStream;"
+      },
+      {
+        "txt": "import org.apache.commons.compress.compressors.snappy.SnappyCompressorInputStream; import org.apache.commons.compress.compressors.z.ZCompressorInputStream; import org.apache.commons.compress.utils.IOUtils; public class CompressorStreamFactory { public static final String BZIP2 = \"bzip2\"; public static final String GZIP = \"gz\"; public static final String PACK200 = \"pack200\"; public static final String XZ = \"xz\"; public static final String LZMA = \"lzma\"; public static final String SNAPPY_FRAMED = \"snappy-framed\";"
+      },
+      {
+        "txt": "public static final String SNAPPY_RAW = \"snappy-raw\"; public static final String Z = \"z\"; public static final String DEFLATE = \"deflate\"; private final Boolean decompressUntilEOF; private volatile boolean decompressConcatenated = false; public CompressorStreamFactory() { this.decompressUntilEOF = null; } public CompressorStreamFactory(boolean decompressUntilEOF) { this.decompressUntilEOF = Boolean.valueOf(decompressUntilEOF);"
+      },
+      {
+        "txt": "this.decompressConcatenated = decompressUntilEOF; } @Deprecated public void setDecompressConcatenated(boolean decompressConcatenated) { if (this.decompressUntilEOF != null) { throw new IllegalStateException(\"Cannot override the setting defined by the constructor\"); } this.decompressConcatenated = decompressConcatenated; } public CompressorInputStream createCompressorInputStream(final InputStream in)"
+      },
+      {
+        "txt": "throws CompressorException { if (in == null) { throw new IllegalArgumentException(\"Stream must not be null.\"); } if (!in.markSupported()) { throw new IllegalArgumentException(\"Mark is not supported.\"); } final byte[] signature = new byte[12]; in.mark(signature.length); try {"
+      },
+      {
+        "txt": "int signatureLength = IOUtils.readFully(in, signature); in.reset(); if (BZip2CompressorInputStream.matches(signature, signatureLength)) { return new BZip2CompressorInputStream(in, decompressConcatenated); } if (GzipCompressorInputStream.matches(signature, signatureLength)) { return new GzipCompressorInputStream(in, decompressConcatenated); } if (Pack200CompressorInputStream.matches(signature, signatureLength)) { return new Pack200CompressorInputStream(in);"
+      },
+      {
+        "txt": "if (FramedSnappyCompressorInputStream.matches(signature, signatureLength)) { return new FramedSnappyCompressorInputStream(in); } if (ZCompressorInputStream.matches(signature, signatureLength)) { return new ZCompressorInputStream(in); } <extra_id_0> if (XZUtils.matches(signature, signatureLength) && XZUtils.isXZCompressionAvailable()) { return new XZCompressorInputStream(in, decompressConcatenated); } if (LZMAUtils.matches(signature, signatureLength) && LZMAUtils.isLZMACompressionAvailable()) {"
+      },
+      {
+        "txt": "if (LZMAUtils.matches(signature, signatureLength) && LZMAUtils.isLZMACompressionAvailable()) { return new LZMACompressorInputStream(in); } } catch (IOException e) { throw new CompressorException(\"Failed to detect Compressor from InputStream.\", e); } throw new CompressorException(\"No Compressor found for the stream signature.\"); } public CompressorInputStream createCompressorInputStream(final String name,"
+      },
+      {
+        "txt": "final InputStream in) throws CompressorException { if (name == null || in == null) { throw new IllegalArgumentException( \"Compressor name and stream must not be null.\"); } try { if (GZIP.equalsIgnoreCase(name)) { return new GzipCompressorInputStream(in, decompressConcatenated); } if (BZIP2.equalsIgnoreCase(name)) {"
+      },
+      {
+        "txt": "return new BZip2CompressorInputStream(in, decompressConcatenated); } if (XZ.equalsIgnoreCase(name)) { return new XZCompressorInputStream(in, decompressConcatenated); } if (LZMA.equalsIgnoreCase(name)) { return new LZMACompressorInputStream(in); } if (PACK200.equalsIgnoreCase(name)) { return new Pack200CompressorInputStream(in);"
+      },
+      {
+        "txt": "} if (SNAPPY_RAW.equalsIgnoreCase(name)) { return new SnappyCompressorInputStream(in); } if (SNAPPY_FRAMED.equalsIgnoreCase(name)) { return new FramedSnappyCompressorInputStream(in); } if (Z.equalsIgnoreCase(name)) { return new ZCompressorInputStream(in); }"
+      },
+      {
+        "txt": "if (DEFLATE.equalsIgnoreCase(name)) { return new DeflateCompressorInputStream(in); } } catch (IOException e) { throw new CompressorException( \"Could not create CompressorInputStream.\", e); } throw new CompressorException(\"Compressor: \" + name + \" not found.\"); } public CompressorOutputStream createCompressorOutputStream("
+      },
+      {
+        "txt": "final String name, final OutputStream out) throws CompressorException { if (name == null || out == null) { throw new IllegalArgumentException( \"Compressor name and stream must not be null.\"); } try { if (GZIP.equalsIgnoreCase(name)) { return new GzipCompressorOutputStream(out); }"
+      },
+      {
+        "txt": "if (BZIP2.equalsIgnoreCase(name)) { return new BZip2CompressorOutputStream(out); } if (XZ.equalsIgnoreCase(name)) { return new XZCompressorOutputStream(out); } if (PACK200.equalsIgnoreCase(name)) { return new Pack200CompressorOutputStream(out); } if (DEFLATE.equalsIgnoreCase(name)) {"
+      },
+      {
+        "txt": "return new DeflateCompressorOutputStream(out); } } catch (IOException e) { throw new CompressorException( \"Could not create CompressorOutputStream\", e); } throw new CompressorException(\"Compressor: \" + name + \" not found.\"); } boolean getDecompressConcatenated() { return decompressConcatenated;"
+      }
+    ]
+  },
+  {
+    "id": 1090,
+    "file_path": "src/main/java/org/apache/commons/compress/compressors/deflate/DeflateCompressorInputStream.java",
+    "start-bug-line": 33,
+    "end-bug-line": 33,
+    "bug": "",
+    "fix": "private static final int MAGIC_1 = 0x78; private static final int MAGIC_2a = 0x01; private static final int MAGIC_2b = 0x5e; private static final int MAGIC_2c = 0x9c; private static final int MAGIC_2d = 0xda;",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "import java.io.IOException; import java.io.InputStream; import java.util.zip.Inflater; import java.util.zip.InflaterInputStream; import org.apache.commons.compress.compressors.CompressorInputStream; public class DeflateCompressorInputStream extends CompressorInputStream { <extra_id_0> private final InputStream in; public DeflateCompressorInputStream(InputStream inputStream) { this(inputStream, new DeflateParameters()); } public DeflateCompressorInputStream(InputStream inputStream, DeflateParameters parameters) {"
+      },
+      {
+        "txt": "public DeflateCompressorInputStream(InputStream inputStream, DeflateParameters parameters) { in = new InflaterInputStream(inputStream, new Inflater(!parameters.withZlibHeader())); } @Override public int read() throws IOException { int ret = in.read(); count(ret == -1 ? 0 : 1); return ret; }"
+      },
+      {
+        "txt": "@Override public int read(byte[] buf, int off, int len) throws IOException { int ret = in.read(buf, off, len); count(ret); return ret; } @Override public long skip(long n) throws IOException { return in.skip(n); }"
+      },
+      {
+        "txt": "@Override public int available() throws IOException { return in.available(); } @Override public void close() throws IOException { in.close(); }"
+      }
+    ]
+  },
+  {
+    "id": 1091,
+    "file_path": "src/main/java/org/apache/commons/compress/compressors/deflate/DeflateCompressorInputStream.java",
+    "start-bug-line": 106,
+    "end-bug-line": 106,
+    "bug": "",
+    "fix": "public static boolean matches(byte[] signature, int length) { return length > 3 && signature[0] == MAGIC_1 && ( signature[1] == (byte) MAGIC_2a || signature[1] == (byte) MAGIC_2b || signature[1] == (byte) MAGIC_2c || signature[1] == (byte) MAGIC_2d); }",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.compress.compressors.deflate; import java.io.IOException;"
+      },
+      {
+        "txt": "import java.io.InputStream; import java.util.zip.Inflater; import java.util.zip.InflaterInputStream; import org.apache.commons.compress.compressors.CompressorInputStream; public class DeflateCompressorInputStream extends CompressorInputStream { private final InputStream in; public DeflateCompressorInputStream(InputStream inputStream) { this(inputStream, new DeflateParameters()); } public DeflateCompressorInputStream(InputStream inputStream,"
+      },
+      {
+        "txt": "DeflateParameters parameters) { in = new InflaterInputStream(inputStream, new Inflater(!parameters.withZlibHeader())); } @Override public int read() throws IOException { int ret = in.read(); count(ret == -1 ? 0 : 1); return ret; } @Override"
+      },
+      {
+        "txt": "public int read(byte[] buf, int off, int len) throws IOException { int ret = in.read(buf, off, len); count(ret); return ret; } @Override public long skip(long n) throws IOException { return in.skip(n); } @Override"
+      },
+      {
+        "txt": "return in.available(); } @Override public void close() throws IOException { in.close(); } <extra_id_0>"
+      }
+    ]
+  }
+]

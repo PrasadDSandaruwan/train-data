@@ -1,0 +1,713 @@
+[
+  {
+    "id": 1303,
+    "file_path": "src/main/java/com/fasterxml/jackson/core/json/async/NonBlockingJsonParser.java",
+    "start-bug-line": 108,
+    "end-bug-line": 108,
+    "bug": "",
+    "fix": "_currBufferStart = start;",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.core.json.async; import java.io.IOException; import java.io.OutputStream; import com.fasterxml.jackson.core.*; import com.fasterxml.jackson.core.async.ByteArrayFeeder; import com.fasterxml.jackson.core.async.NonBlockingInputFeeder; import com.fasterxml.jackson.core.io.CharTypes; import com.fasterxml.jackson.core.io.IOContext;"
+      },
+      {
+        "txt": "import com.fasterxml.jackson.core.sym.ByteQuadsCanonicalizer; import com.fasterxml.jackson.core.util.VersionUtil; public class NonBlockingJsonParser extends NonBlockingJsonParserBase implements ByteArrayFeeder { @SuppressWarnings(\"deprecation\") private final static int FEAT_MASK_TRAILING_COMMA = Feature.ALLOW_TRAILING_COMMA.getMask(); @SuppressWarnings(\"deprecation\") private final static int FEAT_MASK_LEADING_ZEROS = Feature.ALLOW_NUMERIC_LEADING_ZEROS.getMask();"
+      },
+      {
+        "txt": "@SuppressWarnings(\"deprecation\") private final static int FEAT_MASK_ALLOW_MISSING = Feature.ALLOW_MISSING_VALUES.getMask(); private final static int FEAT_MASK_ALLOW_SINGLE_QUOTES = Feature.ALLOW_SINGLE_QUOTES.getMask(); private final static int FEAT_MASK_ALLOW_UNQUOTED_NAMES = Feature.ALLOW_UNQUOTED_FIELD_NAMES.getMask(); private final static int FEAT_MASK_ALLOW_JAVA_COMMENTS = Feature.ALLOW_COMMENTS.getMask(); private final static int FEAT_MASK_ALLOW_YAML_COMMENTS = Feature.ALLOW_YAML_COMMENTS.getMask(); private final static int[] _icUTF8 = CharTypes.getInputCodeUtf8(); protected final static int[] _icLatin1 = CharTypes.getInputCodeLatin1(); protected byte[] _inputBuffer = NO_BYTES; protected int _origBufferLen;"
+      },
+      {
+        "txt": "public NonBlockingJsonParser(IOContext ctxt, int parserFeatures, ByteQuadsCanonicalizer sym) { super(ctxt, parserFeatures, sym); } @Override public ByteArrayFeeder getNonBlockingInputFeeder() { return this; } @Override"
+      },
+      {
+        "txt": "public final boolean needMoreInput() { return (_inputPtr >=_inputEnd) && !_endOfInput; } @Override public void feedInput(byte[] buf, int start, int end) throws IOException { if (_inputPtr < _inputEnd) { _reportError(\"Still have %d undecoded bytes, should not call 'feedInput'\", _inputEnd - _inputPtr); } if (end < start) {"
+      },
+      {
+        "txt": "} if (_endOfInput) { _reportError(\"Already closed, can not feed more input\"); } _currInputProcessed += _origBufferLen; _currInputRowStart = start - (_inputEnd - _currInputRowStart); <extra_id_0> _inputPtr = start; _inputEnd = end; _origBufferLen = end - start; } @Override public void endOfInput() {"
+      },
+      {
+        "txt": "@Override public void endOfInput() { _endOfInput = true; } @Override public int releaseBuffered(OutputStream out) throws IOException { int avail = _inputEnd - _inputPtr; if (avail > 0) { out.write(_inputBuffer, _inputPtr, avail); }"
+      },
+      {
+        "txt": "return avail; } @Override protected char _decodeEscaped() throws IOException { VersionUtil.throwInternal(); return ' '; } @Override public JsonToken nextToken() throws IOException {"
+      },
+      {
+        "txt": "if (_inputPtr >= _inputEnd) { if (_closed) { return null; } if (_endOfInput) { // except for this special case if (_currToken == JsonToken.NOT_AVAILABLE) { return _finishTokenWithEOF(); } return _eofAsNextToken(); }"
+      },
+      {
+        "txt": "return JsonToken.NOT_AVAILABLE; } if (_currToken == JsonToken.NOT_AVAILABLE) { return _finishToken(); } _numTypesValid = NR_UNKNOWN; _tokenInputTotal = _currInputProcessed + _inputPtr; _binaryValue = null; int ch = _inputBuffer[_inputPtr++] & 0xFF; switch (_majorState) {"
+      },
+      {
+        "txt": "case MAJOR_INITIAL: return _startDocument(ch); case MAJOR_ROOT: return _startValue(ch); case MAJOR_OBJECT_FIELD_FIRST: // expect field-name or end-object return _startFieldName(ch); case MAJOR_OBJECT_FIELD_NEXT: // expect comma + field-name or end-object return _startFieldNameAfterComma(ch); case MAJOR_OBJECT_VALUE: // expect colon, followed by value return _startValueExpectColon(ch);"
+      },
+      {
+        "txt": "case MAJOR_ARRAY_ELEMENT_FIRST: // expect value or end-array return _startValue(ch); case MAJOR_ARRAY_ELEMENT_NEXT: // expect leading comma + value or end-array return _startValueExpectComma(ch); default: } VersionUtil.throwInternal(); return null; } protected final JsonToken _finishToken() throws IOException"
+      },
+      {
+        "txt": "{ switch (_minorState) { case MINOR_ROOT_BOM: return _finishBOM(_pending32); case MINOR_FIELD_LEADING_WS: return _startFieldName(_inputBuffer[_inputPtr++] & 0xFF); case MINOR_FIELD_LEADING_COMMA: return _startFieldNameAfterComma(_inputBuffer[_inputPtr++] & 0xFF); case MINOR_FIELD_NAME: return _parseEscapedName(_quadLength, _pending32, _pendingBytes);"
+      },
+      {
+        "txt": "case MINOR_FIELD_NAME_ESCAPE: return _finishFieldWithEscape(); case MINOR_FIELD_APOS_NAME: return _finishAposName(_quadLength, _pending32, _pendingBytes); case MINOR_FIELD_UNQUOTED_NAME: return _finishUnquotedName(_quadLength, _pending32, _pendingBytes); case MINOR_VALUE_LEADING_WS: return _startValue(_inputBuffer[_inputPtr++] & 0xFF); case MINOR_VALUE_WS_AFTER_COMMA: return _startValueAfterComma(_inputBuffer[_inputPtr++] & 0xFF);"
+      },
+      {
+        "txt": "case MINOR_VALUE_EXPECTING_COMMA: return _startValueExpectComma(_inputBuffer[_inputPtr++] & 0xFF); case MINOR_VALUE_EXPECTING_COLON: return _startValueExpectColon(_inputBuffer[_inputPtr++] & 0xFF); case MINOR_VALUE_TOKEN_NULL: return _finishKeywordToken(\"null\", _pending32, JsonToken.VALUE_NULL); case MINOR_VALUE_TOKEN_TRUE: return _finishKeywordToken(\"true\", _pending32, JsonToken.VALUE_TRUE); case MINOR_VALUE_TOKEN_FALSE: return _finishKeywordToken(\"false\", _pending32, JsonToken.VALUE_FALSE);"
+      },
+      {
+        "txt": "case MINOR_VALUE_TOKEN_NON_STD: return _finishNonStdToken(_nonStdTokenType, _pending32); case MINOR_NUMBER_MINUS: return _finishNumberMinus(_inputBuffer[_inputPtr++] & 0xFF); case MINOR_NUMBER_ZERO: return _finishNumberLeadingZeroes(); case MINOR_NUMBER_MINUSZERO: return _finishNumberLeadingNegZeroes(); case MINOR_NUMBER_INTEGER_DIGITS: return _finishNumberIntegralPart(_textBuffer.getBufferWithoutReset(),"
+      },
+      {
+        "txt": "_textBuffer.getCurrentSegmentSize()); case MINOR_NUMBER_FRACTION_DIGITS: return _finishFloatFraction(); case MINOR_NUMBER_EXPONENT_MARKER: return _finishFloatExponent(true, _inputBuffer[_inputPtr++] & 0xFF); case MINOR_NUMBER_EXPONENT_DIGITS: return _finishFloatExponent(false, _inputBuffer[_inputPtr++] & 0xFF); case MINOR_VALUE_STRING: return _finishRegularString(); case MINOR_VALUE_STRING_UTF8_2:"
+      },
+      {
+        "txt": "_textBuffer.append((char) _decodeUTF8_2(_pending32, _inputBuffer[_inputPtr++])); if (_minorStateAfterSplit == MINOR_VALUE_APOS_STRING) { return _finishAposString(); } return _finishRegularString(); case MINOR_VALUE_STRING_UTF8_3: if (!_decodeSplitUTF8_3(_pending32, _pendingBytes, _inputBuffer[_inputPtr++])) { return JsonToken.NOT_AVAILABLE; } if (_minorStateAfterSplit == MINOR_VALUE_APOS_STRING) {"
+      },
+      {
+        "txt": "return _finishAposString(); } return _finishRegularString(); case MINOR_VALUE_STRING_UTF8_4: if (!_decodeSplitUTF8_4(_pending32, _pendingBytes, _inputBuffer[_inputPtr++])) { return JsonToken.NOT_AVAILABLE; } if (_minorStateAfterSplit == MINOR_VALUE_APOS_STRING) { return _finishAposString(); }"
+      },
+      {
+        "txt": "return _finishRegularString(); case MINOR_VALUE_STRING_ESCAPE: { int c = _decodeSplitEscaped(_quoted32, _quotedDigits); if (c < 0) { return JsonToken.NOT_AVAILABLE; } _textBuffer.append((char) c); } if (_minorStateAfterSplit == MINOR_VALUE_APOS_STRING) {"
+      },
+      {
+        "txt": "return _finishAposString(); } return _finishRegularString(); case MINOR_VALUE_APOS_STRING: return _finishAposString(); case MINOR_VALUE_TOKEN_ERROR: // case of \"almost token\", just need tokenize for error return _finishErrorToken(); case MINOR_COMMENT_LEADING_SLASH: return _startSlashComment(_pending32); case MINOR_COMMENT_CLOSING_ASTERISK:"
+      },
+      {
+        "txt": "return _finishCComment(_pending32, true); case MINOR_COMMENT_C: return _finishCComment(_pending32, false); case MINOR_COMMENT_CPP: return _finishCppComment(_pending32); case MINOR_COMMENT_YAML: return _finishHashComment(_pending32); } VersionUtil.throwInternal(); return null;"
+      },
+      {
+        "txt": "} protected final JsonToken _finishTokenWithEOF() throws IOException { JsonToken t = _currToken; switch (_minorState) { case MINOR_ROOT_GOT_SEPARATOR: // fine, just skip some trailing space return _eofAsNextToken(); case MINOR_VALUE_LEADING_WS: // finished at token boundary; probably fine return _eofAsNextToken(); case MINOR_VALUE_TOKEN_NULL:"
+      },
+      {
+        "txt": "return _finishKeywordTokenWithEOF(\"null\", _pending32, JsonToken.VALUE_NULL); case MINOR_VALUE_TOKEN_TRUE: return _finishKeywordTokenWithEOF(\"true\", _pending32, JsonToken.VALUE_TRUE); case MINOR_VALUE_TOKEN_FALSE: return _finishKeywordTokenWithEOF(\"false\", _pending32, JsonToken.VALUE_FALSE); case MINOR_VALUE_TOKEN_NON_STD: return _finishNonStdTokenWithEOF(_nonStdTokenType, _pending32); case MINOR_VALUE_TOKEN_ERROR: // case of \"almost token\", just need tokenize for error return _finishErrorTokenWithEOF(); case MINOR_NUMBER_ZERO:"
+      },
+      {
+        "txt": "case MINOR_NUMBER_MINUSZERO: return _valueCompleteInt(0, \"0\"); case MINOR_NUMBER_INTEGER_DIGITS: { int len = _textBuffer.getCurrentSegmentSize(); if (_numberNegative) { --len; } _intLength = len; }"
+      },
+      {
+        "txt": "return _valueComplete(JsonToken.VALUE_NUMBER_INT); case MINOR_NUMBER_FRACTION_DIGITS: _expLength = 0; case MINOR_NUMBER_EXPONENT_DIGITS: return _valueComplete(JsonToken.VALUE_NUMBER_FLOAT); case MINOR_NUMBER_EXPONENT_MARKER: _reportInvalidEOF(\": was expecting fraction after exponent marker\", JsonToken.VALUE_NUMBER_FLOAT); case MINOR_COMMENT_CLOSING_ASTERISK: case MINOR_COMMENT_C: _reportInvalidEOF(\": was expecting closing '*/' for comment\", JsonToken.NOT_AVAILABLE);"
+      },
+      {
+        "txt": "case MINOR_COMMENT_CPP: case MINOR_COMMENT_YAML: return _eofAsNextToken(); default: } _reportInvalidEOF(\": was expecting rest of token (internal state: \"+_minorState+\")\", _currToken); return t; // never gets here } private final JsonToken _startDocument(int ch) throws IOException {"
+      },
+      {
+        "txt": "ch &= 0xFF; if ((ch == 0xEF) && (_minorState != MINOR_ROOT_BOM)) { return _finishBOM(1); } while (ch <= 0x020) { if (ch != INT_SPACE) { if (ch == INT_LF) { ++_currInputRow; _currInputRowStart = _inputPtr; } else if (ch == INT_CR) {"
+      },
+      {
+        "txt": "++_currInputRowAlt; _currInputRowStart = _inputPtr; } else if (ch != INT_TAB) { _throwInvalidSpace(ch); } } if (_inputPtr >= _inputEnd) { _minorState = MINOR_ROOT_GOT_SEPARATOR; if (_closed) { return null;"
+      },
+      {
+        "txt": "} if (_endOfInput) { // except for this special case return _eofAsNextToken(); } return JsonToken.NOT_AVAILABLE; } ch = _inputBuffer[_inputPtr++] & 0xFF; } return _startValue(ch); }"
+      },
+      {
+        "txt": "private final JsonToken _finishBOM(int bytesHandled) throws IOException { while (_inputPtr < _inputEnd) { int ch = _inputBuffer[_inputPtr++] & 0xFF; switch (bytesHandled) { case 3: _currInputProcessed -= 3; return _startDocument(ch); case 2: if (ch != 0xBF) {"
+      },
+      {
+        "txt": "_reportError(\"Unexpected byte 0x%02x following 0xEF 0xBB; should get 0xBF as third byte of UTF-8 BOM\", ch); } break; case 1: if (ch != 0xBB) { _reportError(\"Unexpected byte 0x%02x following 0xEF; should get 0xBB as second byte UTF-8 BOM\", ch); } break; } ++bytesHandled;"
+      },
+      {
+        "txt": "} _pending32 = bytesHandled; _minorState = MINOR_ROOT_BOM; return (_currToken = JsonToken.NOT_AVAILABLE); } private final JsonToken _startFieldName(int ch) throws IOException { if (ch <= 0x0020) { ch = _skipWS(ch); if (ch <= 0) {"
+      },
+      {
+        "txt": "_minorState = MINOR_FIELD_LEADING_WS; return _currToken; } } _updateTokenLocation(); if (ch != INT_QUOTE) { if (ch == INT_RCURLY) { return _closeObjectScope(); } return _handleOddName(ch);"
+      },
+      {
+        "txt": "} if ((_inputPtr + 13) <= _inputEnd) { // Need up to 12 chars, plus one trailing (quote) String n = _fastParseName(); if (n != null) { return _fieldComplete(n); } } return _parseEscapedName(0, 0, 0); } private final JsonToken _startFieldNameAfterComma(int ch) throws IOException"
+      },
+      {
+        "txt": "{ if (ch <= 0x0020) { ch = _skipWS(ch); // will skip through all available ws (and comments) if (ch <= 0) { _minorState = MINOR_FIELD_LEADING_COMMA; return _currToken; } } if (ch != INT_COMMA) { // either comma, separating entries, or closing right curly if (ch == INT_RCURLY) {"
+      },
+      {
+        "txt": "return _closeObjectScope(); } if (ch == INT_HASH) { return _finishHashComment(MINOR_FIELD_LEADING_COMMA); } if (ch == INT_SLASH) { return _startSlashComment(MINOR_FIELD_LEADING_COMMA); } _reportUnexpectedChar(ch, \"was expecting comma to separate \"+_parsingContext.typeDesc()+\" entries\"); }"
+      },
+      {
+        "txt": "int ptr = _inputPtr; if (ptr >= _inputEnd) { _minorState = MINOR_FIELD_LEADING_WS; return (_currToken = JsonToken.NOT_AVAILABLE); } ch = _inputBuffer[ptr]; _inputPtr = ptr+1; if (ch <= 0x0020) { ch = _skipWS(ch); if (ch <= 0) {"
+      },
+      {
+        "txt": "_minorState = MINOR_FIELD_LEADING_WS; return _currToken; } } _updateTokenLocation(); if (ch != INT_QUOTE) { if (ch == INT_RCURLY) { if ((_features & FEAT_MASK_TRAILING_COMMA) != 0) { return _closeObjectScope(); }"
+      },
+      {
+        "txt": "} return _handleOddName(ch); } if ((_inputPtr + 13) <= _inputEnd) { // Need up to 12 chars, plus one trailing (quote) String n = _fastParseName(); if (n != null) { return _fieldComplete(n); } } return _parseEscapedName(0, 0, 0);"
+      },
+      {
+        "txt": "} private final JsonToken _startValue(int ch) throws IOException { if (ch <= 0x0020) { ch = _skipWS(ch); if (ch <= 0) { _minorState = MINOR_VALUE_LEADING_WS; return _currToken; } }"
+      },
+      {
+        "txt": "_updateTokenLocation(); if (ch == INT_QUOTE) { return _startString(); } switch (ch) { case '#': return _finishHashComment(MINOR_VALUE_LEADING_WS); case '-': return _startNegativeNumber(); case '/': // c/c++ comments"
+      },
+      {
+        "txt": "return _startSlashComment(MINOR_VALUE_LEADING_WS); case '0': return _startNumberLeadingZero(); case '1': case '2': case '3': case '4': case '5': case '6': case '7':"
+      },
+      {
+        "txt": "case '8': case '9': return _startPositiveNumber(ch); case 'f': return _startFalseToken(); case 'n': return _startNullToken(); case 't': return _startTrueToken(); case '[':"
+      },
+      {
+        "txt": "return _startArrayScope(); case ']': return _closeArrayScope(); case '{': return _startObjectScope(); case '}': return _closeObjectScope(); default: } return _startUnexpectedValue(false, ch);"
+      },
+      {
+        "txt": "} private final JsonToken _startValueExpectComma(int ch) throws IOException { if (ch <= 0x0020) { ch = _skipWS(ch); // will skip through all available ws (and comments) if (ch <= 0) { _minorState = MINOR_VALUE_EXPECTING_COMMA; return _currToken; } }"
+      },
+      {
+        "txt": "if (ch != INT_COMMA) { if (ch == INT_RBRACKET) { return _closeArrayScope(); } if (ch == INT_RCURLY){ return _closeObjectScope(); } if (ch == INT_SLASH) { return _startSlashComment(MINOR_VALUE_EXPECTING_COMMA); }"
+      },
+      {
+        "txt": "if (ch == INT_HASH) { return _finishHashComment(MINOR_VALUE_EXPECTING_COMMA); } _reportUnexpectedChar(ch, \"was expecting comma to separate \"+_parsingContext.typeDesc()+\" entries\"); } int ptr = _inputPtr; if (ptr >= _inputEnd) { _minorState = MINOR_VALUE_WS_AFTER_COMMA; return (_currToken = JsonToken.NOT_AVAILABLE); }"
+      },
+      {
+        "txt": "ch = _inputBuffer[ptr]; _inputPtr = ptr+1; if (ch <= 0x0020) { ch = _skipWS(ch); if (ch <= 0) { _minorState = MINOR_VALUE_WS_AFTER_COMMA; return _currToken; } } _updateTokenLocation();"
+      },
+      {
+        "txt": "if (ch == INT_QUOTE) { return _startString(); } switch (ch) { case '#': return _finishHashComment(MINOR_VALUE_WS_AFTER_COMMA); case '-': return _startNegativeNumber(); case '/': return _startSlashComment(MINOR_VALUE_WS_AFTER_COMMA);"
+      },
+      {
+        "txt": "case '0': return _startNumberLeadingZero(); case '1': case '2': case '3': case '4': case '5': case '6': case '7': case '8': case '9': return _startPositiveNumber(ch); case 'f': return _startFalseToken();"
+      },
+      {
+        "txt": "case 'n': return _startNullToken(); case 't': return _startTrueToken(); case '[': return _startArrayScope(); case ']': if ((_features & FEAT_MASK_TRAILING_COMMA) != 0) { return _closeArrayScope(); }"
+      },
+      {
+        "txt": "break; case '{': return _startObjectScope(); case '}': if ((_features & FEAT_MASK_TRAILING_COMMA) != 0) { return _closeObjectScope(); } break; default: }"
+      },
+      {
+        "txt": "return _startUnexpectedValue(true, ch); } private final JsonToken _startValueExpectColon(int ch) throws IOException { if (ch <= 0x0020) { ch = _skipWS(ch); // will skip through all available ws (and comments) if (ch <= 0) { _minorState = MINOR_VALUE_EXPECTING_COLON; return _currToken; }"
+      },
+      {
+        "txt": "} if (ch != INT_COLON) { if (ch == INT_SLASH) { return _startSlashComment(MINOR_VALUE_EXPECTING_COLON); } if (ch == INT_HASH) { return _finishHashComment(MINOR_VALUE_EXPECTING_COLON); } _reportUnexpectedChar(ch, \"was expecting a colon to separate field name and value\"); }"
+      },
+      {
+        "txt": "int ptr = _inputPtr; if (ptr >= _inputEnd) { _minorState = MINOR_VALUE_LEADING_WS; return (_currToken = JsonToken.NOT_AVAILABLE); } ch = _inputBuffer[ptr]; _inputPtr = ptr+1; if (ch <= 0x0020) { ch = _skipWS(ch); // will skip through all available ws (and comments) if (ch <= 0) {"
+      },
+      {
+        "txt": "_minorState = MINOR_VALUE_LEADING_WS; return _currToken; } } _updateTokenLocation(); if (ch == INT_QUOTE) { return _startString(); } switch (ch) { case '#':"
+      },
+      {
+        "txt": "return _finishHashComment(MINOR_VALUE_LEADING_WS); case '-': return _startNegativeNumber(); case '/': return _startSlashComment(MINOR_VALUE_LEADING_WS); case '0': return _startNumberLeadingZero(); case '1': case '2': case '3': case '4': case '5':"
+      },
+      {
+        "txt": "case '6': case '7': case '8': case '9': return _startPositiveNumber(ch); case 'f': return _startFalseToken(); case 'n': return _startNullToken(); case 't': return _startTrueToken(); case '[':"
+      },
+      {
+        "txt": "return _startArrayScope(); case '{': return _startObjectScope(); default: } return _startUnexpectedValue(false, ch); } private final JsonToken _startValueAfterComma(int ch) throws IOException { if (ch <= 0x0020) {"
+      },
+      {
+        "txt": "ch = _skipWS(ch); if (ch <= 0) { _minorState = MINOR_VALUE_WS_AFTER_COMMA; return _currToken; } } _updateTokenLocation(); if (ch == INT_QUOTE) { return _startString(); }"
+      },
+      {
+        "txt": "switch (ch) { case '#': return _finishHashComment(MINOR_VALUE_WS_AFTER_COMMA); case '-': return _startNegativeNumber(); case '/': return _startSlashComment(MINOR_VALUE_WS_AFTER_COMMA); case '0': return _startNumberLeadingZero(); case '1':"
+      },
+      {
+        "txt": "case '2': case '3': case '4': case '5': case '6': case '7': case '8': case '9': return _startPositiveNumber(ch); case 'f':"
+      },
+      {
+        "txt": "return _startFalseToken(); case 'n': return _startNullToken(); case 't': return _startTrueToken(); case '[': return _startArrayScope(); case ']': if ((_features & FEAT_MASK_TRAILING_COMMA) != 0) { return _closeArrayScope();"
+      },
+      {
+        "txt": "} break; case '{': return _startObjectScope(); case '}': if ((_features & FEAT_MASK_TRAILING_COMMA) != 0) { return _closeObjectScope(); } break; default:"
+      },
+      {
+        "txt": "} return _startUnexpectedValue(true, ch); } protected JsonToken _startUnexpectedValue(boolean leadingComma, int ch) throws IOException { switch (ch) { case ']': if (!_parsingContext.inArray()) { break; }"
+      },
+      {
+        "txt": "case ',': if ((_features & FEAT_MASK_ALLOW_MISSING) != 0) { --_inputPtr; return _valueComplete(JsonToken.VALUE_NULL); } case '}': break; case '\\'': if ((_features & FEAT_MASK_ALLOW_SINGLE_QUOTES) != 0) { return _startAposString();"
+      },
+      {
+        "txt": "} break; case '+': return _finishNonStdToken(NON_STD_TOKEN_PLUS_INFINITY, 1); case 'N': return _finishNonStdToken(NON_STD_TOKEN_NAN, 1); case 'I': return _finishNonStdToken(NON_STD_TOKEN_INFINITY, 1); } _reportUnexpectedChar(ch, \"expected a valid value (number, String, array, object, 'true', 'false' or 'null')\");"
+      },
+      {
+        "txt": "return null; } private final int _skipWS(int ch) throws IOException { do { if (ch != INT_SPACE) { if (ch == INT_LF) { ++_currInputRow; _currInputRowStart = _inputPtr; } else if (ch == INT_CR) {"
+      },
+      {
+        "txt": "++_currInputRowAlt; _currInputRowStart = _inputPtr; } else if (ch != INT_TAB) { _throwInvalidSpace(ch); } } if (_inputPtr >= _inputEnd) { _currToken = JsonToken.NOT_AVAILABLE; return 0; }"
+      },
+      {
+        "txt": "ch = _inputBuffer[_inputPtr++] & 0xFF; } while (ch <= 0x0020); return ch; } private final JsonToken _startSlashComment(int fromMinorState) throws IOException { if ((_features & FEAT_MASK_ALLOW_JAVA_COMMENTS) == 0) { _reportUnexpectedChar('/', \"maybe a (non-standard) comment? (not recognized as one since Feature 'ALLOW_COMMENTS' not enabled for parser)\"); } if (_inputPtr >= _inputEnd) {"
+      },
+      {
+        "txt": "_pending32 = fromMinorState; _minorState = MINOR_COMMENT_LEADING_SLASH; return (_currToken = JsonToken.NOT_AVAILABLE); } int ch = _inputBuffer[_inputPtr++]; if (ch == INT_ASTERISK) { // c-style return _finishCComment(fromMinorState, false); } if (ch == INT_SLASH) { // c++-style return _finishCppComment(fromMinorState);"
+      },
+      {
+        "txt": "} _reportUnexpectedChar(ch & 0xFF, \"was expecting either '*' or '/' for a comment\"); return null; } private final JsonToken _finishHashComment(int fromMinorState) throws IOException { if ((_features & FEAT_MASK_ALLOW_YAML_COMMENTS) == 0) { _reportUnexpectedChar('#', \"maybe a (non-standard) comment? (not recognized as one since Feature 'ALLOW_YAML_COMMENTS' not enabled for parser)\"); } while (true) {"
+      },
+      {
+        "txt": "if (_inputPtr >= _inputEnd) { _minorState = MINOR_COMMENT_YAML; _pending32 = fromMinorState; return (_currToken = JsonToken.NOT_AVAILABLE); } int ch = _inputBuffer[_inputPtr++] & 0xFF; if (ch < 0x020) { if (ch == INT_LF) { ++_currInputRow; _currInputRowStart = _inputPtr;"
+      },
+      {
+        "txt": "break; } else if (ch == INT_CR) { ++_currInputRowAlt; _currInputRowStart = _inputPtr; break; } else if (ch != INT_TAB) { _throwInvalidSpace(ch); } } }"
+      },
+      {
+        "txt": "return _startAfterComment(fromMinorState); } private final JsonToken _finishCppComment(int fromMinorState) throws IOException { while (true) { if (_inputPtr >= _inputEnd) { _minorState = MINOR_COMMENT_CPP; _pending32 = fromMinorState; return (_currToken = JsonToken.NOT_AVAILABLE); }"
+      },
+      {
+        "txt": "int ch = _inputBuffer[_inputPtr++] & 0xFF; if (ch < 0x020) { if (ch == INT_LF) { ++_currInputRow; _currInputRowStart = _inputPtr; break; } else if (ch == INT_CR) { ++_currInputRowAlt; _currInputRowStart = _inputPtr; break;"
+      },
+      {
+        "txt": "} else if (ch != INT_TAB) { _throwInvalidSpace(ch); } } } return _startAfterComment(fromMinorState); } private final JsonToken _finishCComment(int fromMinorState, boolean gotStar) throws IOException { while (true) {"
+      },
+      {
+        "txt": "if (_inputPtr >= _inputEnd) { _minorState = gotStar ? MINOR_COMMENT_CLOSING_ASTERISK : MINOR_COMMENT_C; _pending32 = fromMinorState; return (_currToken = JsonToken.NOT_AVAILABLE); } int ch = _inputBuffer[_inputPtr++] & 0xFF; if (ch < 0x020) { if (ch == INT_LF) { ++_currInputRow; _currInputRowStart = _inputPtr;"
+      },
+      {
+        "txt": "} else if (ch == INT_CR) { ++_currInputRowAlt; _currInputRowStart = _inputPtr; } else if (ch != INT_TAB) { _throwInvalidSpace(ch); } } else if (ch == INT_ASTERISK) { gotStar = true; continue; } else if (ch == INT_SLASH) {"
+      },
+      {
+        "txt": "if (gotStar) { break; } } gotStar = false; } return _startAfterComment(fromMinorState); } private final JsonToken _startAfterComment(int fromMinorState) throws IOException {"
+      },
+      {
+        "txt": "if (_inputPtr >= _inputEnd) { _minorState = fromMinorState; return (_currToken = JsonToken.NOT_AVAILABLE); } int ch = _inputBuffer[_inputPtr++] & 0xFF; switch (fromMinorState) { case MINOR_FIELD_LEADING_WS: return _startFieldName(ch); case MINOR_FIELD_LEADING_COMMA: return _startFieldNameAfterComma(ch);"
+      },
+      {
+        "txt": "case MINOR_VALUE_LEADING_WS: return _startValue(ch); case MINOR_VALUE_EXPECTING_COMMA: return _startValueExpectComma(ch); case MINOR_VALUE_EXPECTING_COLON: return _startValueExpectColon(ch); case MINOR_VALUE_WS_AFTER_COMMA: return _startValueAfterComma(ch); default: }"
+      },
+      {
+        "txt": "VersionUtil.throwInternal(); return null; } protected JsonToken _startFalseToken() throws IOException { int ptr = _inputPtr; if ((ptr + 4) < _inputEnd) { // yes, can determine efficiently byte[] buf = _inputBuffer; if ((buf[ptr++] == 'a') && (buf[ptr++] == 'l')"
+      },
+      {
+        "txt": "&& (buf[ptr++] == 's') && (buf[ptr++] == 'e')) { int ch = buf[ptr] & 0xFF; if (ch < INT_0 || (ch == INT_RBRACKET) || (ch == INT_RCURLY)) { // expected/allowed chars _inputPtr = ptr; return _valueComplete(JsonToken.VALUE_FALSE); } } } _minorState = MINOR_VALUE_TOKEN_FALSE;"
+      },
+      {
+        "txt": "return _finishKeywordToken(\"false\", 1, JsonToken.VALUE_FALSE); } protected JsonToken _startTrueToken() throws IOException { int ptr = _inputPtr; if ((ptr + 3) < _inputEnd) { // yes, can determine efficiently byte[] buf = _inputBuffer; if ((buf[ptr++] == 'r') && (buf[ptr++] == 'u') && (buf[ptr++] == 'e')) {"
+      },
+      {
+        "txt": "int ch = buf[ptr] & 0xFF; if (ch < INT_0 || (ch == INT_RBRACKET) || (ch == INT_RCURLY)) { // expected/allowed chars _inputPtr = ptr; return _valueComplete(JsonToken.VALUE_TRUE); } } } _minorState = MINOR_VALUE_TOKEN_TRUE; return _finishKeywordToken(\"true\", 1, JsonToken.VALUE_TRUE); }"
+      },
+      {
+        "txt": "protected JsonToken _startNullToken() throws IOException { int ptr = _inputPtr; if ((ptr + 3) < _inputEnd) { // yes, can determine efficiently byte[] buf = _inputBuffer; if ((buf[ptr++] == 'u') && (buf[ptr++] == 'l') && (buf[ptr++] == 'l')) { int ch = buf[ptr] & 0xFF; if (ch < INT_0 || (ch == INT_RBRACKET) || (ch == INT_RCURLY)) { // expected/allowed chars"
+      },
+      {
+        "txt": "_inputPtr = ptr; return _valueComplete(JsonToken.VALUE_NULL); } } } _minorState = MINOR_VALUE_TOKEN_NULL; return _finishKeywordToken(\"null\", 1, JsonToken.VALUE_NULL); } protected JsonToken _finishKeywordToken(String expToken, int matched, JsonToken result) throws IOException"
+      },
+      {
+        "txt": "{ final int end = expToken.length(); while (true) { if (_inputPtr >= _inputEnd) { _pending32 = matched; return (_currToken = JsonToken.NOT_AVAILABLE); } int ch = _inputBuffer[_inputPtr]; if (matched == end) { // need to verify trailing separator if (ch < INT_0 || (ch == INT_RBRACKET) || (ch == INT_RCURLY)) { // expected/allowed chars"
+      },
+      {
+        "txt": "return _valueComplete(result); } break; } if (ch != expToken.charAt(matched)) { break; } ++matched; ++_inputPtr; }"
+      },
+      {
+        "txt": "_minorState = MINOR_VALUE_TOKEN_ERROR; _textBuffer.resetWithCopy(expToken, 0, matched); return _finishErrorToken(); } protected JsonToken _finishKeywordTokenWithEOF(String expToken, int matched, JsonToken result) throws IOException { if (matched == expToken.length()) { return (_currToken = result); }"
+      },
+      {
+        "txt": "_textBuffer.resetWithCopy(expToken, 0, matched); return _finishErrorTokenWithEOF(); } protected JsonToken _finishNonStdToken(int type, int matched) throws IOException { final String expToken = _nonStdToken(type); final int end = expToken.length(); while (true) { if (_inputPtr >= _inputEnd) { _nonStdTokenType = type;"
+      },
+      {
+        "txt": "_pending32 = matched; _minorState = MINOR_VALUE_TOKEN_NON_STD; return (_currToken = JsonToken.NOT_AVAILABLE); } int ch = _inputBuffer[_inputPtr]; if (matched == end) { // need to verify trailing separator if (ch < INT_0 || (ch == INT_RBRACKET) || (ch == INT_RCURLY)) { // expected/allowed chars return _valueNonStdNumberComplete(type); } break;"
+      },
+      {
+        "txt": "} if (ch != expToken.charAt(matched)) { break; } ++matched; ++_inputPtr; } _minorState = MINOR_VALUE_TOKEN_ERROR; _textBuffer.resetWithCopy(expToken, 0, matched); return _finishErrorToken();"
+      },
+      {
+        "txt": "} protected JsonToken _finishNonStdTokenWithEOF(int type, int matched) throws IOException { final String expToken = _nonStdToken(type); if (matched == expToken.length()) { return _valueNonStdNumberComplete(type); } _textBuffer.resetWithCopy(expToken, 0, matched); return _finishErrorTokenWithEOF(); }"
+      },
+      {
+        "txt": "protected JsonToken _finishErrorToken() throws IOException { while (_inputPtr < _inputEnd) { int i = (int) _inputBuffer[_inputPtr++]; char ch = (char) i; if (Character.isJavaIdentifierPart(ch)) { _textBuffer.append(ch); if (_textBuffer.size() < MAX_ERROR_TOKEN_LENGTH) { continue; }"
+      },
+      {
+        "txt": "} return _reportErrorToken(_textBuffer.contentsAsString()); } return (_currToken = JsonToken.NOT_AVAILABLE); } protected JsonToken _finishErrorTokenWithEOF() throws IOException { return _reportErrorToken(_textBuffer.contentsAsString()); } protected JsonToken _reportErrorToken(String actualToken) throws IOException"
+      },
+      {
+        "txt": "{ _reportError(\"Unrecognized token '%s': was expecting %s\", _textBuffer.contentsAsString(), \"'null', 'true' or 'false'\"); return JsonToken.NOT_AVAILABLE; // never gets here } protected JsonToken _startPositiveNumber(int ch) throws IOException { _numberNegative = false; char[] outBuf = _textBuffer.emptyAndGetCurrentSegment(); outBuf[0] = (char) ch;"
+      },
+      {
+        "txt": "if (_inputPtr >= _inputEnd) { _minorState = MINOR_NUMBER_INTEGER_DIGITS; _textBuffer.setCurrentLength(1); return (_currToken = JsonToken.NOT_AVAILABLE); } int outPtr = 1; ch = _inputBuffer[_inputPtr] & 0xFF; while (true) { if (ch < INT_0) { if (ch == INT_PERIOD) {"
+      },
+      {
+        "txt": "_intLength = outPtr; ++_inputPtr; return _startFloat(outBuf, outPtr, ch); } break; } if (ch > INT_9) { if (ch == INT_e || ch == INT_E) { _intLength = outPtr; ++_inputPtr;"
+      },
+      {
+        "txt": "return _startFloat(outBuf, outPtr, ch); } break; } if (outPtr >= outBuf.length) { outBuf = _textBuffer.expandCurrentSegment(); } outBuf[outPtr++] = (char) ch; if (++_inputPtr >= _inputEnd) { _minorState = MINOR_NUMBER_INTEGER_DIGITS;"
+      },
+      {
+        "txt": "_textBuffer.setCurrentLength(outPtr); return (_currToken = JsonToken.NOT_AVAILABLE); } ch = _inputBuffer[_inputPtr] & 0xFF; } _intLength = outPtr; _textBuffer.setCurrentLength(outPtr); return _valueComplete(JsonToken.VALUE_NUMBER_INT); } protected JsonToken _startNegativeNumber() throws IOException"
+      },
+      {
+        "txt": "{ _numberNegative = true; if (_inputPtr >= _inputEnd) { _minorState = MINOR_NUMBER_MINUS; return (_currToken = JsonToken.NOT_AVAILABLE); } int ch = _inputBuffer[_inputPtr++] & 0xFF; if (ch <= INT_0) { if (ch == INT_0) { return _finishNumberLeadingNegZeroes();"
+      },
+      {
+        "txt": "} reportUnexpectedNumberChar(ch, \"expected digit (0-9) to follow minus sign, for valid numeric value\"); } else if (ch > INT_9) { if (ch == 'I') { return _finishNonStdToken(NON_STD_TOKEN_MINUS_INFINITY, 2); } reportUnexpectedNumberChar(ch, \"expected digit (0-9) to follow minus sign, for valid numeric value\"); } char[] outBuf = _textBuffer.emptyAndGetCurrentSegment(); outBuf[0] = '-';"
+      },
+      {
+        "txt": "outBuf[1] = (char) ch; if (_inputPtr >= _inputEnd) { _minorState = MINOR_NUMBER_INTEGER_DIGITS; _textBuffer.setCurrentLength(2); _intLength = 1; return (_currToken = JsonToken.NOT_AVAILABLE); } ch = _inputBuffer[_inputPtr]; int outPtr = 2; while (true) {"
+      },
+      {
+        "txt": "if (ch < INT_0) { if (ch == INT_PERIOD) { _intLength = outPtr-1; ++_inputPtr; return _startFloat(outBuf, outPtr, ch); } break; } if (ch > INT_9) { if (ch == INT_e || ch == INT_E) {"
+      },
+      {
+        "txt": "_intLength = outPtr-1; ++_inputPtr; return _startFloat(outBuf, outPtr, ch); } break; } if (outPtr >= outBuf.length) { outBuf = _textBuffer.expandCurrentSegment(); } outBuf[outPtr++] = (char) ch;"
+      },
+      {
+        "txt": "if (++_inputPtr >= _inputEnd) { _minorState = MINOR_NUMBER_INTEGER_DIGITS; _textBuffer.setCurrentLength(outPtr); return (_currToken = JsonToken.NOT_AVAILABLE); } ch = _inputBuffer[_inputPtr] & 0xFF; } _intLength = outPtr-1; _textBuffer.setCurrentLength(outPtr); return _valueComplete(JsonToken.VALUE_NUMBER_INT);"
+      },
+      {
+        "txt": "} protected JsonToken _startNumberLeadingZero() throws IOException { int ptr = _inputPtr; if (ptr >= _inputEnd) { _minorState = MINOR_NUMBER_ZERO; return (_currToken = JsonToken.NOT_AVAILABLE); } int ch = _inputBuffer[ptr++] & 0xFF; if (ch < INT_0) {"
+      },
+      {
+        "txt": "if (ch == INT_PERIOD) { _inputPtr = ptr; _intLength = 1; char[] outBuf = _textBuffer.emptyAndGetCurrentSegment(); outBuf[0] = '0'; return _startFloat(outBuf, 1, ch); } } else if (ch > INT_9) { if (ch == INT_e || ch == INT_E) { _inputPtr = ptr;"
+      },
+      {
+        "txt": "_intLength = 1; char[] outBuf = _textBuffer.emptyAndGetCurrentSegment(); outBuf[0] = '0'; return _startFloat(outBuf, 1, ch); } if ((ch != INT_RBRACKET) && (ch != INT_RCURLY)) { reportUnexpectedNumberChar(ch, \"expected digit (0-9), decimal point (.) or exponent indicator (e/E) to follow '0'\"); } } else { // leading zero case (zero followed by a digit)"
+      },
+      {
+        "txt": "return _finishNumberLeadingZeroes(); } return _valueCompleteInt(0, \"0\"); } protected JsonToken _finishNumberMinus(int ch) throws IOException { if (ch <= INT_0) { if (ch == INT_0) { return _finishNumberLeadingNegZeroes(); }"
+      },
+      {
+        "txt": "reportUnexpectedNumberChar(ch, \"expected digit (0-9) to follow minus sign, for valid numeric value\"); } else if (ch > INT_9) { if (ch == 'I') { return _finishNonStdToken(NON_STD_TOKEN_MINUS_INFINITY, 2); } reportUnexpectedNumberChar(ch, \"expected digit (0-9) to follow minus sign, for valid numeric value\"); } char[] outBuf = _textBuffer.emptyAndGetCurrentSegment(); outBuf[0] = '-'; outBuf[1] = (char) ch;"
+      },
+      {
+        "txt": "_intLength = 1; return _finishNumberIntegralPart(outBuf, 2); } protected JsonToken _finishNumberLeadingZeroes() throws IOException { while (true) { if (_inputPtr >= _inputEnd) { _minorState = MINOR_NUMBER_ZERO; return (_currToken = JsonToken.NOT_AVAILABLE); }"
+      },
+      {
+        "txt": "int ch = _inputBuffer[_inputPtr++] & 0xFF; if (ch < INT_0) { if (ch == INT_PERIOD) { char[] outBuf = _textBuffer.emptyAndGetCurrentSegment(); outBuf[0] = '0'; _intLength = 1; return _startFloat(outBuf, 1, ch); } } else if (ch > INT_9) { if (ch == INT_e || ch == INT_E) {"
+      },
+      {
+        "txt": "char[] outBuf = _textBuffer.emptyAndGetCurrentSegment(); outBuf[0] = '0'; _intLength = 1; return _startFloat(outBuf, 1, ch); } if ((ch != INT_RBRACKET) && (ch != INT_RCURLY)) { reportUnexpectedNumberChar(ch, \"expected digit (0-9), decimal point (.) or exponent indicator (e/E) to follow '0'\"); } } else { // Number between 0 and 9"
+      },
+      {
+        "txt": "if ((_features & FEAT_MASK_LEADING_ZEROS) == 0) { reportInvalidNumber(\"Leading zeroes not allowed\"); } if (ch == INT_0) { // coalesce multiple leading zeroes into just one continue; } char[] outBuf = _textBuffer.emptyAndGetCurrentSegment(); outBuf[0] = (char) ch; _intLength = 1; return _finishNumberIntegralPart(outBuf, 1);"
+      },
+      {
+        "txt": "} --_inputPtr; return _valueCompleteInt(0, \"0\"); } } protected JsonToken _finishNumberLeadingNegZeroes() throws IOException { while (true) { if (_inputPtr >= _inputEnd) { _minorState = MINOR_NUMBER_MINUSZERO;"
+      },
+      {
+        "txt": "return (_currToken = JsonToken.NOT_AVAILABLE); } int ch = _inputBuffer[_inputPtr++] & 0xFF; if (ch < INT_0) { if (ch == INT_PERIOD) { char[] outBuf = _textBuffer.emptyAndGetCurrentSegment(); outBuf[0] = '-'; outBuf[1] = '0'; _intLength = 1; return _startFloat(outBuf, 2, ch);"
+      },
+      {
+        "txt": "} } else if (ch > INT_9) { if (ch == INT_e || ch == INT_E) { char[] outBuf = _textBuffer.emptyAndGetCurrentSegment(); outBuf[0] = '-'; outBuf[1] = '0'; _intLength = 1; return _startFloat(outBuf, 2, ch); } if ((ch != INT_RBRACKET) && (ch != INT_RCURLY)) {"
+      },
+      {
+        "txt": "reportUnexpectedNumberChar(ch, \"expected digit (0-9), decimal point (.) or exponent indicator (e/E) to follow '0'\"); } } else { // Number between 1 and 9; go integral if ((_features & FEAT_MASK_LEADING_ZEROS) == 0) { reportInvalidNumber(\"Leading zeroes not allowed\"); } if (ch == INT_0) { // coalesce multiple leading zeroes into just one continue; }"
+      },
+      {
+        "txt": "char[] outBuf = _textBuffer.emptyAndGetCurrentSegment(); outBuf[0] = '-'; outBuf[1] = (char) ch; _intLength = 1; return _finishNumberIntegralPart(outBuf, 2); } --_inputPtr; return _valueCompleteInt(0, \"0\"); } }"
+      },
+      {
+        "txt": "protected JsonToken _finishNumberIntegralPart(char[] outBuf, int outPtr) throws IOException { int negMod = _numberNegative ? -1 : 0; while (true) { if (_inputPtr >= _inputEnd) { _minorState = MINOR_NUMBER_INTEGER_DIGITS; _textBuffer.setCurrentLength(outPtr); return (_currToken = JsonToken.NOT_AVAILABLE); } int ch = _inputBuffer[_inputPtr] & 0xFF;"
+      },
+      {
+        "txt": "if (ch < INT_0) { if (ch == INT_PERIOD) { _intLength = outPtr+negMod; ++_inputPtr; return _startFloat(outBuf, outPtr, ch); } break; } if (ch > INT_9) { if (ch == INT_e || ch == INT_E) {"
+      },
+      {
+        "txt": "_intLength = outPtr+negMod; ++_inputPtr; return _startFloat(outBuf, outPtr, ch); } break; } ++_inputPtr; if (outPtr >= outBuf.length) { outBuf = _textBuffer.expandCurrentSegment(); }"
+      },
+      {
+        "txt": "outBuf[outPtr++] = (char) ch; } _intLength = outPtr+negMod; _textBuffer.setCurrentLength(outPtr); return _valueComplete(JsonToken.VALUE_NUMBER_INT); } protected JsonToken _startFloat(char[] outBuf, int outPtr, int ch) throws IOException { int fractLen = 0; if (ch == INT_PERIOD) {"
+      },
+      {
+        "txt": "if (outPtr >= outBuf.length) { outBuf = _textBuffer.expandCurrentSegment(); } outBuf[outPtr++] = '.'; while (true) { if (_inputPtr >= _inputEnd) { _textBuffer.setCurrentLength(outPtr); _minorState = MINOR_NUMBER_FRACTION_DIGITS; _fractLength = fractLen; return (_currToken = JsonToken.NOT_AVAILABLE);"
+      },
+      {
+        "txt": "} ch = _inputBuffer[_inputPtr++]; // ok to have sign extension for now if (ch < INT_0 || ch > INT_9) { ch &= 0xFF; // but here we'll want to mask it to unsigned 8-bit if (fractLen == 0) { reportUnexpectedNumberChar(ch, \"Decimal point not followed by a digit\"); } break; } if (outPtr >= outBuf.length) {"
+      },
+      {
+        "txt": "outBuf = _textBuffer.expandCurrentSegment(); } outBuf[outPtr++] = (char) ch; ++fractLen; } } _fractLength = fractLen; int expLen = 0; if (ch == INT_e || ch == INT_E) { // exponent? if (outPtr >= outBuf.length) {"
+      },
+      {
+        "txt": "outBuf = _textBuffer.expandCurrentSegment(); } outBuf[outPtr++] = (char) ch; if (_inputPtr >= _inputEnd) { _textBuffer.setCurrentLength(outPtr); _minorState = MINOR_NUMBER_EXPONENT_MARKER; _expLength = 0; return (_currToken = JsonToken.NOT_AVAILABLE); } ch = _inputBuffer[_inputPtr++]; // ok to have sign extension for now"
+      },
+      {
+        "txt": "if (ch == INT_MINUS || ch == INT_PLUS) { if (outPtr >= outBuf.length) { outBuf = _textBuffer.expandCurrentSegment(); } outBuf[outPtr++] = (char) ch; if (_inputPtr >= _inputEnd) { _textBuffer.setCurrentLength(outPtr); _minorState = MINOR_NUMBER_EXPONENT_DIGITS; _expLength = 0; return (_currToken = JsonToken.NOT_AVAILABLE);"
+      },
+      {
+        "txt": "} ch = _inputBuffer[_inputPtr++]; } while (ch >= INT_0 && ch <= INT_9) { ++expLen; if (outPtr >= outBuf.length) { outBuf = _textBuffer.expandCurrentSegment(); } outBuf[outPtr++] = (char) ch; if (_inputPtr >= _inputEnd) {"
+      },
+      {
+        "txt": "_textBuffer.setCurrentLength(outPtr); _minorState = MINOR_NUMBER_EXPONENT_DIGITS; _expLength = expLen; return (_currToken = JsonToken.NOT_AVAILABLE); } ch = _inputBuffer[_inputPtr++]; } ch &= 0xFF; if (expLen == 0) { reportUnexpectedNumberChar(ch, \"Exponent indicator not followed by a digit\");"
+      },
+      {
+        "txt": "} } --_inputPtr; _textBuffer.setCurrentLength(outPtr); _expLength = expLen; return _valueComplete(JsonToken.VALUE_NUMBER_FLOAT); } protected JsonToken _finishFloatFraction() throws IOException { int fractLen = _fractLength;"
+      },
+      {
+        "txt": "char[] outBuf = _textBuffer.getBufferWithoutReset(); int outPtr = _textBuffer.getCurrentSegmentSize(); int ch; while (((ch = _inputBuffer[_inputPtr++]) >= INT_0) && (ch <= INT_9)) { ++fractLen; if (outPtr >= outBuf.length) { outBuf = _textBuffer.expandCurrentSegment(); } outBuf[outPtr++] = (char) ch; if (_inputPtr >= _inputEnd) {"
+      },
+      {
+        "txt": "_textBuffer.setCurrentLength(outPtr); _fractLength = fractLen; return JsonToken.NOT_AVAILABLE; } } if (fractLen == 0) { reportUnexpectedNumberChar(ch, \"Decimal point not followed by a digit\"); } _fractLength = fractLen; _textBuffer.setCurrentLength(outPtr);"
+      },
+      {
+        "txt": "if (ch == INT_e || ch == INT_E) { // exponent? _textBuffer.append((char) ch); _expLength = 0; if (_inputPtr >= _inputEnd) { _minorState = MINOR_NUMBER_EXPONENT_MARKER; return JsonToken.NOT_AVAILABLE; } _minorState = MINOR_NUMBER_EXPONENT_DIGITS; return _finishFloatExponent(true, _inputBuffer[_inputPtr++] & 0xFF); }"
+      },
+      {
+        "txt": "--_inputPtr; _textBuffer.setCurrentLength(outPtr); _expLength = 0; return _valueComplete(JsonToken.VALUE_NUMBER_FLOAT); } protected JsonToken _finishFloatExponent(boolean checkSign, int ch) throws IOException { if (checkSign) { _minorState = MINOR_NUMBER_EXPONENT_DIGITS; if (ch == INT_MINUS || ch == INT_PLUS) {"
+      },
+      {
+        "txt": "_textBuffer.append((char) ch); if (_inputPtr >= _inputEnd) { _minorState = MINOR_NUMBER_EXPONENT_DIGITS; _expLength = 0; return JsonToken.NOT_AVAILABLE; } ch = _inputBuffer[_inputPtr++]; } } char[] outBuf = _textBuffer.getBufferWithoutReset();"
+      },
+      {
+        "txt": "int outPtr = _textBuffer.getCurrentSegmentSize(); int expLen = _expLength; while (ch >= INT_0 && ch <= INT_9) { ++expLen; if (outPtr >= outBuf.length) { outBuf = _textBuffer.expandCurrentSegment(); } outBuf[outPtr++] = (char) ch; if (_inputPtr >= _inputEnd) { _textBuffer.setCurrentLength(outPtr);"
+      },
+      {
+        "txt": "_expLength = expLen; return JsonToken.NOT_AVAILABLE; } ch = _inputBuffer[_inputPtr++]; } ch &= 0xFF; if (expLen == 0) { reportUnexpectedNumberChar(ch, \"Exponent indicator not followed by a digit\"); } --_inputPtr;"
+      },
+      {
+        "txt": "_textBuffer.setCurrentLength(outPtr); _expLength = expLen; return _valueComplete(JsonToken.VALUE_NUMBER_FLOAT); } private final String _fastParseName() throws IOException { final byte[] input = _inputBuffer; final int[] codes = _icLatin1; int ptr = _inputPtr; int q0 = input[ptr++] & 0xFF;"
+      },
+      {
+        "txt": "if (codes[q0] == 0) { int i = input[ptr++] & 0xFF; if (codes[i] == 0) { int q = (q0 << 8) | i; i = input[ptr++] & 0xFF; if (codes[i] == 0) { q = (q << 8) | i; i = input[ptr++] & 0xFF; if (codes[i] == 0) { q = (q << 8) | i;"
+      },
+      {
+        "txt": "i = input[ptr++] & 0xFF; if (codes[i] == 0) { _quad1 = q; return _parseMediumName(ptr, i); } if (i == INT_QUOTE) { // 4 byte/char case or broken _inputPtr = ptr; return _findName(q, 4); } return null;"
+      },
+      {
+        "txt": "} if (i == INT_QUOTE) { // 3 byte/char case or broken _inputPtr = ptr; return _findName(q, 3); } return null; } if (i == INT_QUOTE) { // 2 byte/char case or broken _inputPtr = ptr; return _findName(q, 2);"
+      },
+      {
+        "txt": "} return null; } if (i == INT_QUOTE) { // one byte/char case or broken _inputPtr = ptr; return _findName(q0, 1); } return null; } if (q0 == INT_QUOTE) {"
+      },
+      {
+        "txt": "_inputPtr = ptr; return \"\"; } return null; } private final String _parseMediumName(int ptr, int q2) throws IOException { final byte[] input = _inputBuffer; final int[] codes = _icLatin1; int i = input[ptr++] & 0xFF;"
+      },
+      {
+        "txt": "if (codes[i] == 0) { q2 = (q2 << 8) | i; i = input[ptr++] & 0xFF; if (codes[i] == 0) { q2 = (q2 << 8) | i; i = input[ptr++] & 0xFF; if (codes[i] == 0) { q2 = (q2 << 8) | i; i = input[ptr++] & 0xFF; if (codes[i] == 0) {"
+      },
+      {
+        "txt": "return _parseMediumName2(ptr, i, q2); } if (i == INT_QUOTE) { // 8 bytes _inputPtr = ptr; return _findName(_quad1, q2, 4); } return null; } if (i == INT_QUOTE) { // 7 bytes _inputPtr = ptr;"
+      },
+      {
+        "txt": "return _findName(_quad1, q2, 3); } return null; } if (i == INT_QUOTE) { // 6 bytes _inputPtr = ptr; return _findName(_quad1, q2, 2); } return null; }"
+      },
+      {
+        "txt": "if (i == INT_QUOTE) { // 5 bytes _inputPtr = ptr; return _findName(_quad1, q2, 1); } return null; } private final String _parseMediumName2(int ptr, int q3, final int q2) throws IOException { final byte[] input = _inputBuffer; final int[] codes = _icLatin1;"
+      },
+      {
+        "txt": "int i = input[ptr++] & 0xFF; if (codes[i] != 0) { if (i == INT_QUOTE) { // 9 bytes _inputPtr = ptr; return _findName(_quad1, q2, q3, 1); } return null; } q3 = (q3 << 8) | i; i = input[ptr++] & 0xFF;"
+      },
+      {
+        "txt": "if (codes[i] != 0) { if (i == INT_QUOTE) { // 10 bytes _inputPtr = ptr; return _findName(_quad1, q2, q3, 2); } return null; } q3 = (q3 << 8) | i; i = input[ptr++] & 0xFF; if (codes[i] != 0) {"
+      },
+      {
+        "txt": "if (i == INT_QUOTE) { // 11 bytes _inputPtr = ptr; return _findName(_quad1, q2, q3, 3); } return null; } q3 = (q3 << 8) | i; i = input[ptr++] & 0xFF; if (i == INT_QUOTE) { // 12 bytes _inputPtr = ptr;"
+      },
+      {
+        "txt": "return _findName(_quad1, q2, q3, 4); } return null; } private final JsonToken _parseEscapedName(int qlen, int currQuad, int currQuadBytes) throws IOException { int[] quads = _quadBuffer; final int[] codes = _icLatin1; while (true) {"
+      },
+      {
+        "txt": "if (_inputPtr >= _inputEnd) { _quadLength = qlen; _pending32 = currQuad; _pendingBytes = currQuadBytes; _minorState = MINOR_FIELD_NAME; return (_currToken = JsonToken.NOT_AVAILABLE); } int ch = _inputBuffer[_inputPtr++] & 0xFF; if (codes[ch] == 0) { if (currQuadBytes < 4) {"
+      },
+      {
+        "txt": "++currQuadBytes; currQuad = (currQuad << 8) | ch; continue; } if (qlen >= quads.length) { _quadBuffer = quads = growArrayBy(quads, quads.length); } quads[qlen++] = currQuad; currQuad = ch; currQuadBytes = 1;"
+      },
+      {
+        "txt": "continue; } if (ch == INT_QUOTE) { // we are done break; } if (ch != INT_BACKSLASH) { _throwUnquotedSpace(ch, \"name\"); } else { ch = _decodeCharEscape(); if (ch < 0) { // method has set up state about escape sequence"
+      },
+      {
+        "txt": "_minorState = MINOR_FIELD_NAME_ESCAPE; _minorStateAfterSplit = MINOR_FIELD_NAME; _quadLength = qlen; _pending32 = currQuad; _pendingBytes = currQuadBytes; return (_currToken = JsonToken.NOT_AVAILABLE); } } if (qlen >= quads.length) { _quadBuffer = quads = growArrayBy(quads, quads.length);"
+      },
+      {
+        "txt": "} if (ch > 127) { if (currQuadBytes >= 4) { quads[qlen++] = currQuad; currQuad = 0; currQuadBytes = 0; } if (ch < 0x800) { // 2-byte currQuad = (currQuad << 8) | (0xc0 | (ch >> 6)); ++currQuadBytes;"
+      },
+      {
+        "txt": "} else { // 3 bytes; no need to worry about surrogates here currQuad = (currQuad << 8) | (0xe0 | (ch >> 12)); ++currQuadBytes; if (currQuadBytes >= 4) { quads[qlen++] = currQuad; currQuad = 0; currQuadBytes = 0; } currQuad = (currQuad << 8) | (0x80 | ((ch >> 6) & 0x3f)); ++currQuadBytes;"
+      },
+      {
+        "txt": "} ch = 0x80 | (ch & 0x3f); } if (currQuadBytes < 4) { ++currQuadBytes; currQuad = (currQuad << 8) | ch; continue; } quads[qlen++] = currQuad; currQuad = ch;"
+      },
+      {
+        "txt": "currQuadBytes = 1; } if (currQuadBytes > 0) { if (qlen >= quads.length) { _quadBuffer = quads = growArrayBy(quads, quads.length); } quads[qlen++] = _padLastQuad(currQuad, currQuadBytes); } else if (qlen == 0) { // rare, but may happen return _fieldComplete(\"\"); }"
+      },
+      {
+        "txt": "String name = _symbols.findName(quads, qlen); if (name == null) { name = _addName(quads, qlen, currQuadBytes); } return _fieldComplete(name); } private JsonToken _handleOddName(int ch) throws IOException { switch (ch) { case '#':"
+      },
+      {
+        "txt": "if ((_features & FEAT_MASK_ALLOW_YAML_COMMENTS) != 0) { return _finishHashComment(MINOR_FIELD_LEADING_WS); } break; case '/': return _startSlashComment(MINOR_FIELD_LEADING_WS); case '\\'': if ((_features & FEAT_MASK_ALLOW_SINGLE_QUOTES) != 0) { return _finishAposName(0, 0, 0); }"
+      },
+      {
+        "txt": "break; case ']': // for better error reporting... return _closeArrayScope(); } if ((_features & FEAT_MASK_ALLOW_UNQUOTED_NAMES) == 0) { char c = (char) ch; _reportUnexpectedChar(c, \"was expecting double-quote to start field name\"); } final int[] codes = CharTypes.getInputCodeUtf8JsNames(); if (codes[ch] != 0) {"
+      },
+      {
+        "txt": "_reportUnexpectedChar(ch, \"was expecting either valid name character (for unquoted name) or double-quote (for quoted) to start field name\"); } return _finishUnquotedName(0, ch, 1); } private JsonToken _finishUnquotedName(int qlen, int currQuad, int currQuadBytes) throws IOException { int[] quads = _quadBuffer; final int[] codes = CharTypes.getInputCodeUtf8JsNames(); while (true) {"
+      },
+      {
+        "txt": "if (_inputPtr >= _inputEnd) { _quadLength = qlen; _pending32 = currQuad; _pendingBytes = currQuadBytes; _minorState = MINOR_FIELD_UNQUOTED_NAME; return (_currToken = JsonToken.NOT_AVAILABLE); } int ch = _inputBuffer[_inputPtr] & 0xFF; if (codes[ch] != 0) { break;"
+      },
+      {
+        "txt": "} ++_inputPtr; if (currQuadBytes < 4) { ++currQuadBytes; currQuad = (currQuad << 8) | ch; } else { if (qlen >= quads.length) { _quadBuffer = quads = growArrayBy(quads, quads.length); } quads[qlen++] = currQuad;"
+      },
+      {
+        "txt": "currQuad = ch; currQuadBytes = 1; } } if (currQuadBytes > 0) { if (qlen >= quads.length) { _quadBuffer = quads = growArrayBy(quads, quads.length); } quads[qlen++] = currQuad; }"
+      },
+      {
+        "txt": "String name = _symbols.findName(quads, qlen); if (name == null) { name = _addName(quads, qlen, currQuadBytes); } return _fieldComplete(name); } private JsonToken _finishAposName(int qlen, int currQuad, int currQuadBytes) throws IOException { int[] quads = _quadBuffer;"
+      },
+      {
+        "txt": "final int[] codes = _icLatin1; while (true) { if (_inputPtr >= _inputEnd) { _quadLength = qlen; _pending32 = currQuad; _pendingBytes = currQuadBytes; _minorState = MINOR_FIELD_APOS_NAME; return (_currToken = JsonToken.NOT_AVAILABLE); } int ch = _inputBuffer[_inputPtr++] & 0xFF;"
+      },
+      {
+        "txt": "if (ch == INT_APOS) { break; } if (ch != '\"' && codes[ch] != 0) { if (ch != '\\\\') { _throwUnquotedSpace(ch, \"name\"); } else { ch = _decodeCharEscape(); if (ch < 0) { // method has set up state about escape sequence _minorState = MINOR_FIELD_NAME_ESCAPE;"
+      },
+      {
+        "txt": "_minorStateAfterSplit = MINOR_FIELD_APOS_NAME; _quadLength = qlen; _pending32 = currQuad; _pendingBytes = currQuadBytes; return (_currToken = JsonToken.NOT_AVAILABLE); } } if (ch > 127) { if (currQuadBytes >= 4) { if (qlen >= quads.length) {"
+      },
+      {
+        "txt": "_quadBuffer = quads = growArrayBy(quads, quads.length); } quads[qlen++] = currQuad; currQuad = 0; currQuadBytes = 0; } if (ch < 0x800) { // 2-byte currQuad = (currQuad << 8) | (0xc0 | (ch >> 6)); ++currQuadBytes; } else { // 3 bytes; no need to worry about surrogates here"
+      },
+      {
+        "txt": "currQuad = (currQuad << 8) | (0xe0 | (ch >> 12)); ++currQuadBytes; if (currQuadBytes >= 4) { if (qlen >= quads.length) { _quadBuffer = quads = growArrayBy(quads, quads.length); } quads[qlen++] = currQuad; currQuad = 0; currQuadBytes = 0; }"
+      },
+      {
+        "txt": "currQuad = (currQuad << 8) | (0x80 | ((ch >> 6) & 0x3f)); ++currQuadBytes; } ch = 0x80 | (ch & 0x3f); } } if (currQuadBytes < 4) { ++currQuadBytes; currQuad = (currQuad << 8) | ch; } else {"
+      },
+      {
+        "txt": "if (qlen >= quads.length) { _quadBuffer = quads = growArrayBy(quads, quads.length); } quads[qlen++] = currQuad; currQuad = ch; currQuadBytes = 1; } } if (currQuadBytes > 0) { if (qlen >= quads.length) {"
+      },
+      {
+        "txt": "_quadBuffer = quads = growArrayBy(quads, quads.length); } quads[qlen++] = _padLastQuad(currQuad, currQuadBytes); } else if (qlen == 0) { // rare case but possible return _fieldComplete(\"\"); } String name = _symbols.findName(quads, qlen); if (name == null) { name = _addName(quads, qlen, currQuadBytes); }"
+      },
+      {
+        "txt": "return _fieldComplete(name); } protected final JsonToken _finishFieldWithEscape() throws IOException { int ch = _decodeSplitEscaped(_quoted32, _quotedDigits); if (ch < 0) { // ... if possible _minorState = MINOR_FIELD_NAME_ESCAPE; return JsonToken.NOT_AVAILABLE; } if (_quadLength >= _quadBuffer.length) {"
+      },
+      {
+        "txt": "_quadBuffer = growArrayBy(_quadBuffer, 32); } int currQuad = _pending32; int currQuadBytes = _pendingBytes; if (ch > 127) { if (currQuadBytes >= 4) { _quadBuffer[_quadLength++] = currQuad; currQuad = 0; currQuadBytes = 0; }"
+      },
+      {
+        "txt": "if (ch < 0x800) { // 2-byte currQuad = (currQuad << 8) | (0xc0 | (ch >> 6)); ++currQuadBytes; } else { // 3 bytes; no need to worry about surrogates here currQuad = (currQuad << 8) | (0xe0 | (ch >> 12)); if (++currQuadBytes >= 4) { _quadBuffer[_quadLength++] = currQuad; currQuad = 0; currQuadBytes = 0; }"
+      },
+      {
+        "txt": "currQuad = (currQuad << 8) | (0x80 | ((ch >> 6) & 0x3f)); ++currQuadBytes; } ch = 0x80 | (ch & 0x3f); } if (currQuadBytes < 4) { ++currQuadBytes; currQuad = (currQuad << 8) | ch; } else { _quadBuffer[_quadLength++] = currQuad;"
+      },
+      {
+        "txt": "currQuad = ch; currQuadBytes = 1; } if (_minorStateAfterSplit == MINOR_FIELD_APOS_NAME) { return _finishAposName(_quadLength, currQuad, currQuadBytes); } return _parseEscapedName(_quadLength, currQuad, currQuadBytes); } private int _decodeSplitEscaped(int value, int bytesRead) throws IOException {"
+      },
+      {
+        "txt": "if (_inputPtr >= _inputEnd) { _quoted32 = value; _quotedDigits = bytesRead; return -1; } int c = _inputBuffer[_inputPtr++]; if (bytesRead == -1) { // expecting first char after backslash switch (c) { case 'b': return '\\b';"
+      },
+      {
+        "txt": "case 't': return '\\t'; case 'n': return '\\n'; case 'f': return '\\f'; case 'r': return '\\r'; case '\"': case '/':"
+      },
+      {
+        "txt": "case '\\\\': return c; case 'u': // and finally hex-escaped break; default: { char ch = (char) c; return _handleUnrecognizedCharacterEscape(ch); } }"
+      },
+      {
+        "txt": "if (_inputPtr >= _inputEnd) { _quotedDigits = 0; _quoted32 = 0; return -1; } c = _inputBuffer[_inputPtr++]; bytesRead = 0; } c &= 0xFF; while (true) {"
+      },
+      {
+        "txt": "int digit = CharTypes.charToHex(c); if (digit < 0) { _reportUnexpectedChar(c, \"expected a hex-digit for character escape sequence\"); } value = (value << 4) | digit; if (++bytesRead == 4) { return value; } if (_inputPtr >= _inputEnd) { _quotedDigits = bytesRead;"
+      },
+      {
+        "txt": "_quoted32 = value; return -1; } c = _inputBuffer[_inputPtr++] & 0xFF; } } protected JsonToken _startString() throws IOException { int ptr = _inputPtr; int outPtr = 0;"
+      },
+      {
+        "txt": "char[] outBuf = _textBuffer.emptyAndGetCurrentSegment(); final int[] codes = _icUTF8; final int max = Math.min(_inputEnd, (ptr + outBuf.length)); final byte[] inputBuffer = _inputBuffer; while (ptr < max) { int c = (int) inputBuffer[ptr] & 0xFF; if (codes[c] != 0) { if (c == INT_QUOTE) { _inputPtr = ptr+1; _textBuffer.setCurrentLength(outPtr);"
+      },
+      {
+        "txt": "return _valueComplete(JsonToken.VALUE_STRING); } break; } ++ptr; outBuf[outPtr++] = (char) c; } _textBuffer.setCurrentLength(outPtr); _inputPtr = ptr; return _finishRegularString();"
+      },
+      {
+        "txt": "} private final JsonToken _finishRegularString() throws IOException { int c; final int[] codes = _icUTF8; final byte[] inputBuffer = _inputBuffer; char[] outBuf = _textBuffer.getBufferWithoutReset(); int outPtr = _textBuffer.getCurrentSegmentSize(); int ptr = _inputPtr; final int safeEnd = _inputEnd - 5; // longest escape is 6 chars"
+      },
+      {
+        "txt": "main_loop: while (true) { ascii_loop: while (true) { if (ptr >= _inputEnd) { _inputPtr = ptr; _minorState = MINOR_VALUE_STRING; _textBuffer.setCurrentLength(outPtr); return (_currToken = JsonToken.NOT_AVAILABLE); }"
+      },
+      {
+        "txt": "if (outPtr >= outBuf.length) { outBuf = _textBuffer.finishCurrentSegment(); outPtr = 0; } final int max = Math.min(_inputEnd, (ptr + (outBuf.length - outPtr))); while (ptr < max) { c = inputBuffer[ptr++] & 0xFF; if (codes[c] != 0) { break ascii_loop; }"
+      },
+      {
+        "txt": "outBuf[outPtr++] = (char) c; } } if (c == INT_QUOTE) { _inputPtr = ptr; _textBuffer.setCurrentLength(outPtr); return _valueComplete(JsonToken.VALUE_STRING); } if (ptr >= safeEnd) { _inputPtr = ptr;"
+      },
+      {
+        "txt": "_textBuffer.setCurrentLength(outPtr); if (!_decodeSplitMultiByte(c, codes[c], ptr < _inputEnd)) { _minorStateAfterSplit = MINOR_VALUE_STRING; return (_currToken = JsonToken.NOT_AVAILABLE); } outBuf = _textBuffer.getBufferWithoutReset(); outPtr = _textBuffer.getCurrentSegmentSize(); ptr = _inputPtr; continue main_loop; }"
+      },
+      {
+        "txt": "switch (codes[c]) { case 1: // backslash _inputPtr = ptr; c = _decodeFastCharEscape(); // since we know it's not split ptr = _inputPtr; break; case 2: // 2-byte UTF c = _decodeUTF8_2(c, _inputBuffer[ptr++]); break; case 3: // 3-byte UTF"
+      },
+      {
+        "txt": "c = _decodeUTF8_3(c, _inputBuffer[ptr++], _inputBuffer[ptr++]); break; case 4: // 4-byte UTF c = _decodeUTF8_4(c, _inputBuffer[ptr++], _inputBuffer[ptr++], _inputBuffer[ptr++]); outBuf[outPtr++] = (char) (0xD800 | (c >> 10)); if (outPtr >= outBuf.length) { outBuf = _textBuffer.finishCurrentSegment(); outPtr = 0; }"
+      },
+      {
+        "txt": "c = 0xDC00 | (c & 0x3FF); break; default: if (c < INT_SPACE) { _throwUnquotedSpace(c, \"string value\"); } else { _reportInvalidChar(c); } } if (outPtr >= outBuf.length) {"
+      },
+      {
+        "txt": "outBuf = _textBuffer.finishCurrentSegment(); outPtr = 0; } outBuf[outPtr++] = (char) c; } } protected JsonToken _startAposString() throws IOException { int ptr = _inputPtr; int outPtr = 0;"
+      },
+      {
+        "txt": "char[] outBuf = _textBuffer.emptyAndGetCurrentSegment(); final int[] codes = _icUTF8; final int max = Math.min(_inputEnd, (ptr + outBuf.length)); final byte[] inputBuffer = _inputBuffer; while (ptr < max) { int c = (int) inputBuffer[ptr] & 0xFF; if (c == INT_APOS) { _inputPtr = ptr+1; _textBuffer.setCurrentLength(outPtr); return _valueComplete(JsonToken.VALUE_STRING);"
+      },
+      {
+        "txt": "} if (codes[c] != 0) { break; } ++ptr; outBuf[outPtr++] = (char) c; } _textBuffer.setCurrentLength(outPtr); _inputPtr = ptr; return _finishAposString();"
+      },
+      {
+        "txt": "} private final JsonToken _finishAposString() throws IOException { int c; final int[] codes = _icUTF8; final byte[] inputBuffer = _inputBuffer; char[] outBuf = _textBuffer.getBufferWithoutReset(); int outPtr = _textBuffer.getCurrentSegmentSize(); int ptr = _inputPtr; final int safeEnd = _inputEnd - 5; // longest escape is 6 chars"
+      },
+      {
+        "txt": "main_loop: while (true) { ascii_loop: while (true) { if (ptr >= _inputEnd) { _inputPtr = ptr; _minorState = MINOR_VALUE_APOS_STRING; _textBuffer.setCurrentLength(outPtr); return (_currToken = JsonToken.NOT_AVAILABLE); }"
+      },
+      {
+        "txt": "if (outPtr >= outBuf.length) { outBuf = _textBuffer.finishCurrentSegment(); outPtr = 0; } final int max = Math.min(_inputEnd, (ptr + (outBuf.length - outPtr))); while (ptr < max) { c = inputBuffer[ptr++] & 0xFF; if ((codes[c] != 0) && (c != INT_QUOTE)) { break ascii_loop; }"
+      },
+      {
+        "txt": "if (c == INT_APOS) { _inputPtr = ptr; _textBuffer.setCurrentLength(outPtr); return _valueComplete(JsonToken.VALUE_STRING); } outBuf[outPtr++] = (char) c; } } if (ptr >= safeEnd) { _inputPtr = ptr;"
+      },
+      {
+        "txt": "_textBuffer.setCurrentLength(outPtr); if (!_decodeSplitMultiByte(c, codes[c], ptr < _inputEnd)) { _minorStateAfterSplit = MINOR_VALUE_APOS_STRING; return (_currToken = JsonToken.NOT_AVAILABLE); } outBuf = _textBuffer.getBufferWithoutReset(); outPtr = _textBuffer.getCurrentSegmentSize(); ptr = _inputPtr; continue main_loop; }"
+      },
+      {
+        "txt": "switch (codes[c]) { case 1: // backslash _inputPtr = ptr; c = _decodeFastCharEscape(); // since we know it's not split ptr = _inputPtr; break; case 2: // 2-byte UTF c = _decodeUTF8_2(c, _inputBuffer[ptr++]); break; case 3: // 3-byte UTF"
+      },
+      {
+        "txt": "c = _decodeUTF8_3(c, _inputBuffer[ptr++], _inputBuffer[ptr++]); break; case 4: // 4-byte UTF c = _decodeUTF8_4(c, _inputBuffer[ptr++], _inputBuffer[ptr++], _inputBuffer[ptr++]); outBuf[outPtr++] = (char) (0xD800 | (c >> 10)); if (outPtr >= outBuf.length) { outBuf = _textBuffer.finishCurrentSegment(); outPtr = 0; }"
+      },
+      {
+        "txt": "c = 0xDC00 | (c & 0x3FF); break; default: if (c < INT_SPACE) { _throwUnquotedSpace(c, \"string value\"); } else { _reportInvalidChar(c); } } if (outPtr >= outBuf.length) {"
+      },
+      {
+        "txt": "outBuf = _textBuffer.finishCurrentSegment(); outPtr = 0; } outBuf[outPtr++] = (char) c; } } private final boolean _decodeSplitMultiByte(int c, int type, boolean gotNext) throws IOException { switch (type) {"
+      },
+      {
+        "txt": "case 1: c = _decodeSplitEscaped(0, -1); if (c < 0) { _minorState = MINOR_VALUE_STRING_ESCAPE; return false; } _textBuffer.append((char) c); return true; case 2: // 2-byte UTF; easy, either got both, or just miss one if (gotNext) {"
+      },
+      {
+        "txt": "c = _decodeUTF8_2(c, _inputBuffer[_inputPtr++]); _textBuffer.append((char) c); return true; } _minorState = MINOR_VALUE_STRING_UTF8_2; _pending32 = c; return false; case 3: // 3-byte UTF c &= 0x0F; if (gotNext) {"
+      },
+      {
+        "txt": "return _decodeSplitUTF8_3(c, 1, _inputBuffer[_inputPtr++]); } _minorState = MINOR_VALUE_STRING_UTF8_3; _pending32 = c; _pendingBytes = 1; return false; case 4: // 4-byte UTF c &= 0x07; if (gotNext) { return _decodeSplitUTF8_4(c, 1, _inputBuffer[_inputPtr++]);"
+      },
+      {
+        "txt": "} _pending32 = c; _pendingBytes = 1; _minorState = MINOR_VALUE_STRING_UTF8_4; return false; default: if (c < INT_SPACE) { _throwUnquotedSpace(c, \"string value\"); } else { _reportInvalidChar(c);"
+      },
+      {
+        "txt": "} _textBuffer.append((char) c); return true; } } private final boolean _decodeSplitUTF8_3(int prev, int prevCount, int next) throws IOException { if (prevCount == 1) { if ((next & 0xC0) != 0x080) {"
+      },
+      {
+        "txt": "_reportInvalidOther(next & 0xFF, _inputPtr); } prev = (prev << 6) | (next & 0x3F); if (_inputPtr >= _inputEnd) { _minorState = MINOR_VALUE_STRING_UTF8_3; _pending32 = prev; _pendingBytes = 2; return false; } next = _inputBuffer[_inputPtr++];"
+      },
+      {
+        "txt": "} if ((next & 0xC0) != 0x080) { _reportInvalidOther(next & 0xFF, _inputPtr); } _textBuffer.append((char) ((prev << 6) | (next & 0x3F))); return true; } private final boolean _decodeSplitUTF8_4(int prev, int prevCount, int next) throws IOException {"
+      },
+      {
+        "txt": "if (prevCount == 1) { if ((next & 0xC0) != 0x080) { _reportInvalidOther(next & 0xFF, _inputPtr); } prev = (prev << 6) | (next & 0x3F); if (_inputPtr >= _inputEnd) { _minorState = MINOR_VALUE_STRING_UTF8_4; _pending32 = prev; _pendingBytes = 2; return false;"
+      },
+      {
+        "txt": "} prevCount = 2; next = _inputBuffer[_inputPtr++]; } if (prevCount == 2) { if ((next & 0xC0) != 0x080) { _reportInvalidOther(next & 0xFF, _inputPtr); } prev = (prev << 6) | (next & 0x3F); if (_inputPtr >= _inputEnd) {"
+      },
+      {
+        "txt": "_minorState = MINOR_VALUE_STRING_UTF8_4; _pending32 = prev; _pendingBytes = 3; return false; } next = _inputBuffer[_inputPtr++]; } if ((next & 0xC0) != 0x080) { _reportInvalidOther(next & 0xFF, _inputPtr); }"
+      },
+      {
+        "txt": "int c = ((prev << 6) | (next & 0x3F)) - 0x10000; _textBuffer.append((char) (0xD800 | (c >> 10))); c = 0xDC00 | (c & 0x3FF); _textBuffer.append((char) c); return true; } private final int _decodeCharEscape() throws IOException { int left = _inputEnd - _inputPtr; if (left < 5) { // offline boundary-checking case:"
+      },
+      {
+        "txt": "return _decodeSplitEscaped(0, -1); } return _decodeFastCharEscape(); } private final int _decodeFastCharEscape() throws IOException { int c = (int) _inputBuffer[_inputPtr++]; switch (c) { case 'b': return '\\b';"
+      },
+      {
+        "txt": "case 't': return '\\t'; case 'n': return '\\n'; case 'f': return '\\f'; case 'r': return '\\r'; case '\"': case '/':"
+      },
+      {
+        "txt": "case '\\\\': return (char) c; case 'u': // and finally hex-escaped break; default: { char ch = (char) c; return _handleUnrecognizedCharacterEscape(ch); } }"
+      },
+      {
+        "txt": "int ch = (int) _inputBuffer[_inputPtr++]; int digit = CharTypes.charToHex(ch); int result = digit; if (digit >= 0) { ch = (int) _inputBuffer[_inputPtr++]; digit = CharTypes.charToHex(ch); if (digit >= 0) { result = (result << 4) | digit; ch = (int) _inputBuffer[_inputPtr++]; digit = CharTypes.charToHex(ch);"
+      },
+      {
+        "txt": "if (digit >= 0) { result = (result << 4) | digit; ch = (int) _inputBuffer[_inputPtr++]; digit = CharTypes.charToHex(ch); if (digit >= 0) { return (result << 4) | digit; } } } }"
+      },
+      {
+        "txt": "_reportUnexpectedChar(ch & 0xFF, \"expected a hex-digit for character escape sequence\"); return -1; } private final int _decodeUTF8_2(int c, int d) throws IOException { if ((d & 0xC0) != 0x080) { _reportInvalidOther(d & 0xFF, _inputPtr); } return ((c & 0x1F) << 6) | (d & 0x3F); }"
+      },
+      {
+        "txt": "private final int _decodeUTF8_3(int c, int d, int e) throws IOException { c &= 0x0F; if ((d & 0xC0) != 0x080) { _reportInvalidOther(d & 0xFF, _inputPtr); } c = (c << 6) | (d & 0x3F); if ((e & 0xC0) != 0x080) { _reportInvalidOther(e & 0xFF, _inputPtr); }"
+      },
+      {
+        "txt": "return (c << 6) | (e & 0x3F); } private final int _decodeUTF8_4(int c, int d, int e, int f) throws IOException { if ((d & 0xC0) != 0x080) { _reportInvalidOther(d & 0xFF, _inputPtr); } c = ((c & 0x07) << 6) | (d & 0x3F); if ((e & 0xC0) != 0x080) { _reportInvalidOther(e & 0xFF, _inputPtr);"
+      },
+      {
+        "txt": "} c = (c << 6) | (e & 0x3F); if ((f & 0xC0) != 0x080) { _reportInvalidOther(f & 0xFF, _inputPtr); } return ((c << 6) | (f & 0x3F)) - 0x10000; }"
+      }
+    ]
+  }
+]

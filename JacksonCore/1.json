@@ -1,0 +1,698 @@
+[
+  {
+    "id": 1205,
+    "file_path": "src/main/java/com/fasterxml/jackson/core/io/NumberInput.java",
+    "start-bug-line": 295,
+    "end-bug-line": 295,
+    "bug": "",
+    "fix": "try {",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.core.io; import java.math.BigDecimal; public final class NumberInput {"
+      },
+      {
+        "txt": "public final static String NASTY_SMALL_DOUBLE = \"2.2250738585072012e-308\"; final static long L_BILLION = 1000000000; final static String MIN_LONG_STR_NO_SIGN = String.valueOf(Long.MIN_VALUE).substring(1); final static String MAX_LONG_STR = String.valueOf(Long.MAX_VALUE); public static int parseInt(char[] digitChars, int offset, int len) { int num = digitChars[offset] - '0'; len += offset; if (++offset < len) { num = (num * 10) + (digitChars[offset] - '0');"
+      },
+      {
+        "txt": "if (++offset < len) { num = (num * 10) + (digitChars[offset] - '0'); if (++offset < len) { num = (num * 10) + (digitChars[offset] - '0'); if (++offset < len) { num = (num * 10) + (digitChars[offset] - '0'); if (++offset < len) { num = (num * 10) + (digitChars[offset] - '0'); if (++offset < len) { num = (num * 10) + (digitChars[offset] - '0');"
+      },
+      {
+        "txt": "if (++offset < len) { num = (num * 10) + (digitChars[offset] - '0'); if (++offset < len) { num = (num * 10) + (digitChars[offset] - '0'); } } } } } }"
+      },
+      {
+        "txt": "} } return num; } public static int parseInt(String str) { char c = str.charAt(0); int length = str.length(); boolean negative = (c == '-'); int offset = 1;"
+      },
+      {
+        "txt": "if (negative) { if (length == 1 || length > 10) { return Integer.parseInt(str); } c = str.charAt(offset++); } else { if (length > 9) { return Integer.parseInt(str); } }"
+      },
+      {
+        "txt": "if (c > '9' || c < '0') { return Integer.parseInt(str); } int num = c - '0'; if (offset < length) { c = str.charAt(offset++); if (c > '9' || c < '0') { return Integer.parseInt(str); } num = (num * 10) + (c - '0');"
+      },
+      {
+        "txt": "if (offset < length) { c = str.charAt(offset++); if (c > '9' || c < '0') { return Integer.parseInt(str); } num = (num * 10) + (c - '0'); if (offset < length) { do { c = str.charAt(offset++); if (c > '9' || c < '0') {"
+      },
+      {
+        "txt": "return Integer.parseInt(str); } num = (num * 10) + (c - '0'); } while (offset < length); } } } return negative ? -num : num; } public static long parseLong(char[] digitChars, int offset, int len)"
+      },
+      {
+        "txt": "{ int len1 = len-9; long val = parseInt(digitChars, offset, len1) * L_BILLION; return val + (long) parseInt(digitChars, offset+len1, 9); } public static long parseLong(String str) { int length = str.length(); if (length <= 9) { return (long) parseInt(str);"
+      },
+      {
+        "txt": "} return Long.parseLong(str); } public static boolean inLongRange(char[] digitChars, int offset, int len, boolean negative) { String cmpStr = negative ? MIN_LONG_STR_NO_SIGN : MAX_LONG_STR; int cmpLen = cmpStr.length(); if (len < cmpLen) return true; if (len > cmpLen) return false;"
+      },
+      {
+        "txt": "for (int i = 0; i < cmpLen; ++i) { int diff = digitChars[offset+i] - cmpStr.charAt(i); if (diff != 0) { return (diff < 0); } } return true; } public static boolean inLongRange(String numberStr, boolean negative) {"
+      },
+      {
+        "txt": "String cmpStr = negative ? MIN_LONG_STR_NO_SIGN : MAX_LONG_STR; int cmpLen = cmpStr.length(); int actualLen = numberStr.length(); if (actualLen < cmpLen) return true; if (actualLen > cmpLen) return false; for (int i = 0; i < cmpLen; ++i) { int diff = numberStr.charAt(i) - cmpStr.charAt(i); if (diff != 0) { return (diff < 0); }"
+      },
+      {
+        "txt": "} return true; } public static int parseAsInt(String input, int defaultValue) { if (input == null) { return defaultValue; } input = input.trim(); int len = input.length();"
+      },
+      {
+        "txt": "if (len == 0) { return defaultValue; } int i = 0; if (i < len) { // skip leading sign: char c = input.charAt(0); if (c == '+') { // for plus, actually physically remove input = input.substring(1); len = input.length(); } else if (c == '-') { // minus, just skip for checks, must retain"
+      },
+      {
+        "txt": "++i; } } for (; i < len; ++i) { char c = input.charAt(i); if (c > '9' || c < '0') { try { return (int) parseDouble(input); } catch (NumberFormatException e) { return defaultValue;"
+      },
+      {
+        "txt": "} } } try { return Integer.parseInt(input); } catch (NumberFormatException e) { } return defaultValue; } public static long parseAsLong(String input, long defaultValue) {"
+      },
+      {
+        "txt": "if (input == null) { return defaultValue; } input = input.trim(); int len = input.length(); if (len == 0) { return defaultValue; } int i = 0; if (i < len) { // skip leading sign:"
+      },
+      {
+        "txt": "char c = input.charAt(0); if (c == '+') { // for plus, actually physically remove input = input.substring(1); len = input.length(); } else if (c == '-') { // minus, just skip for checks, must retain ++i; } } for (; i < len; ++i) { char c = input.charAt(i);"
+      },
+      {
+        "txt": "if (c > '9' || c < '0') { try { return (long) parseDouble(input); } catch (NumberFormatException e) { return defaultValue; } } } try { return Long.parseLong(input);"
+      },
+      {
+        "txt": "} catch (NumberFormatException e) { } return defaultValue; } public static double parseAsDouble(String input, double defaultValue) { if (input == null) { return defaultValue; } input = input.trim(); int len = input.length();"
+      },
+      {
+        "txt": "if (len == 0) { return defaultValue; } try { return parseDouble(input); } catch (NumberFormatException e) { } return defaultValue; } public static double parseDouble(String numStr) throws NumberFormatException {"
+      },
+      {
+        "txt": "return Double.MIN_VALUE; } return Double.parseDouble(numStr); } public static BigDecimal parseBigDecimal(String numStr) throws NumberFormatException { <extra_id_0> } public static BigDecimal parseBigDecimal(char[] buffer) throws NumberFormatException { return parseBigDecimal(buffer, 0, buffer.length); } public static BigDecimal parseBigDecimal(char[] buffer, int offset, int len) throws NumberFormatException"
+      },
+      {
+        "txt": "public static BigDecimal parseBigDecimal(char[] buffer, int offset, int len) throws NumberFormatException { return new BigDecimal(buffer, offset, len); }"
+      }
+    ]
+  },
+  {
+    "id": 1206,
+    "file_path": "src/main/java/com/fasterxml/jackson/core/io/NumberInput.java",
+    "start-bug-line": 296,
+    "end-bug-line": 296,
+    "bug": "",
+    "fix": "} catch (NumberFormatException e) { throw _badBigDecimal(numStr); }",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.core.io; import java.math.BigDecimal; public final class NumberInput { public final static String NASTY_SMALL_DOUBLE = \"2.2250738585072012e-308\";"
+      },
+      {
+        "txt": "final static long L_BILLION = 1000000000; final static String MIN_LONG_STR_NO_SIGN = String.valueOf(Long.MIN_VALUE).substring(1); final static String MAX_LONG_STR = String.valueOf(Long.MAX_VALUE); public static int parseInt(char[] digitChars, int offset, int len) { int num = digitChars[offset] - '0'; len += offset; if (++offset < len) { num = (num * 10) + (digitChars[offset] - '0'); if (++offset < len) {"
+      },
+      {
+        "txt": "num = (num * 10) + (digitChars[offset] - '0'); if (++offset < len) { num = (num * 10) + (digitChars[offset] - '0'); if (++offset < len) { num = (num * 10) + (digitChars[offset] - '0'); if (++offset < len) { num = (num * 10) + (digitChars[offset] - '0'); if (++offset < len) { num = (num * 10) + (digitChars[offset] - '0'); if (++offset < len) {"
+      },
+      {
+        "txt": "num = (num * 10) + (digitChars[offset] - '0'); if (++offset < len) { num = (num * 10) + (digitChars[offset] - '0'); } } } } } } }"
+      },
+      {
+        "txt": "} return num; } public static int parseInt(String str) { char c = str.charAt(0); int length = str.length(); boolean negative = (c == '-'); int offset = 1; if (negative) {"
+      },
+      {
+        "txt": "if (length == 1 || length > 10) { return Integer.parseInt(str); } c = str.charAt(offset++); } else { if (length > 9) { return Integer.parseInt(str); } } if (c > '9' || c < '0') {"
+      },
+      {
+        "txt": "return Integer.parseInt(str); } int num = c - '0'; if (offset < length) { c = str.charAt(offset++); if (c > '9' || c < '0') { return Integer.parseInt(str); } num = (num * 10) + (c - '0'); if (offset < length) {"
+      },
+      {
+        "txt": "c = str.charAt(offset++); if (c > '9' || c < '0') { return Integer.parseInt(str); } num = (num * 10) + (c - '0'); if (offset < length) { do { c = str.charAt(offset++); if (c > '9' || c < '0') { return Integer.parseInt(str);"
+      },
+      {
+        "txt": "} num = (num * 10) + (c - '0'); } while (offset < length); } } } return negative ? -num : num; } public static long parseLong(char[] digitChars, int offset, int len) {"
+      },
+      {
+        "txt": "int len1 = len-9; long val = parseInt(digitChars, offset, len1) * L_BILLION; return val + (long) parseInt(digitChars, offset+len1, 9); } public static long parseLong(String str) { int length = str.length(); if (length <= 9) { return (long) parseInt(str); }"
+      },
+      {
+        "txt": "return Long.parseLong(str); } public static boolean inLongRange(char[] digitChars, int offset, int len, boolean negative) { String cmpStr = negative ? MIN_LONG_STR_NO_SIGN : MAX_LONG_STR; int cmpLen = cmpStr.length(); if (len < cmpLen) return true; if (len > cmpLen) return false; for (int i = 0; i < cmpLen; ++i) {"
+      },
+      {
+        "txt": "int diff = digitChars[offset+i] - cmpStr.charAt(i); if (diff != 0) { return (diff < 0); } } return true; } public static boolean inLongRange(String numberStr, boolean negative) { String cmpStr = negative ? MIN_LONG_STR_NO_SIGN : MAX_LONG_STR;"
+      },
+      {
+        "txt": "int cmpLen = cmpStr.length(); int actualLen = numberStr.length(); if (actualLen < cmpLen) return true; if (actualLen > cmpLen) return false; for (int i = 0; i < cmpLen; ++i) { int diff = numberStr.charAt(i) - cmpStr.charAt(i); if (diff != 0) { return (diff < 0); } }"
+      },
+      {
+        "txt": "return true; } public static int parseAsInt(String input, int defaultValue) { if (input == null) { return defaultValue; } input = input.trim(); int len = input.length(); if (len == 0) {"
+      },
+      {
+        "txt": "return defaultValue; } int i = 0; if (i < len) { // skip leading sign: char c = input.charAt(0); if (c == '+') { // for plus, actually physically remove input = input.substring(1); len = input.length(); } else if (c == '-') { // minus, just skip for checks, must retain ++i;"
+      },
+      {
+        "txt": "} } for (; i < len; ++i) { char c = input.charAt(i); if (c > '9' || c < '0') { try { return (int) parseDouble(input); } catch (NumberFormatException e) { return defaultValue; }"
+      },
+      {
+        "txt": "} } try { return Integer.parseInt(input); } catch (NumberFormatException e) { } return defaultValue; } public static long parseAsLong(String input, long defaultValue) { if (input == null) {"
+      },
+      {
+        "txt": "return defaultValue; } input = input.trim(); int len = input.length(); if (len == 0) { return defaultValue; } int i = 0; if (i < len) { // skip leading sign: char c = input.charAt(0);"
+      },
+      {
+        "txt": "if (c == '+') { // for plus, actually physically remove input = input.substring(1); len = input.length(); } else if (c == '-') { // minus, just skip for checks, must retain ++i; } } for (; i < len; ++i) { char c = input.charAt(i); if (c > '9' || c < '0') {"
+      },
+      {
+        "txt": "try { return (long) parseDouble(input); } catch (NumberFormatException e) { return defaultValue; } } } try { return Long.parseLong(input); } catch (NumberFormatException e) { }"
+      },
+      {
+        "txt": "return defaultValue; } public static double parseAsDouble(String input, double defaultValue) { if (input == null) { return defaultValue; } input = input.trim(); int len = input.length(); if (len == 0) {"
+      },
+      {
+        "txt": "return defaultValue; } try { return parseDouble(input); } catch (NumberFormatException e) { } return defaultValue; } public static double parseDouble(String numStr) throws NumberFormatException { if (NASTY_SMALL_DOUBLE.equals(numStr)) {"
+      },
+      {
+        "txt": "} return Double.parseDouble(numStr); } public static BigDecimal parseBigDecimal(String numStr) throws NumberFormatException { return new BigDecimal(numStr); <extra_id_0> public static BigDecimal parseBigDecimal(char[] buffer) throws NumberFormatException { return parseBigDecimal(buffer, 0, buffer.length); } public static BigDecimal parseBigDecimal(char[] buffer, int offset, int len) throws NumberFormatException {"
+      },
+      {
+        "txt": "throws NumberFormatException { return new BigDecimal(buffer, offset, len); }"
+      }
+    ]
+  },
+  {
+    "id": 1207,
+    "file_path": "src/main/java/com/fasterxml/jackson/core/io/NumberInput.java",
+    "start-bug-line": 305,
+    "end-bug-line": 305,
+    "bug": "",
+    "fix": "try {",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.core.io; import java.math.BigDecimal;"
+      },
+      {
+        "txt": "public final class NumberInput { public final static String NASTY_SMALL_DOUBLE = \"2.2250738585072012e-308\"; final static long L_BILLION = 1000000000; final static String MIN_LONG_STR_NO_SIGN = String.valueOf(Long.MIN_VALUE).substring(1); final static String MAX_LONG_STR = String.valueOf(Long.MAX_VALUE); public static int parseInt(char[] digitChars, int offset, int len) { int num = digitChars[offset] - '0'; len += offset;"
+      },
+      {
+        "txt": "if (++offset < len) { num = (num * 10) + (digitChars[offset] - '0'); if (++offset < len) { num = (num * 10) + (digitChars[offset] - '0'); if (++offset < len) { num = (num * 10) + (digitChars[offset] - '0'); if (++offset < len) { num = (num * 10) + (digitChars[offset] - '0'); if (++offset < len) { num = (num * 10) + (digitChars[offset] - '0');"
+      },
+      {
+        "txt": "if (++offset < len) { num = (num * 10) + (digitChars[offset] - '0'); if (++offset < len) { num = (num * 10) + (digitChars[offset] - '0'); if (++offset < len) { num = (num * 10) + (digitChars[offset] - '0'); } } } }"
+      },
+      {
+        "txt": "} } } } return num; } public static int parseInt(String str) { char c = str.charAt(0); int length = str.length();"
+      },
+      {
+        "txt": "boolean negative = (c == '-'); int offset = 1; if (negative) { if (length == 1 || length > 10) { return Integer.parseInt(str); } c = str.charAt(offset++); } else { if (length > 9) { return Integer.parseInt(str);"
+      },
+      {
+        "txt": "} } if (c > '9' || c < '0') { return Integer.parseInt(str); } int num = c - '0'; if (offset < length) { c = str.charAt(offset++); if (c > '9' || c < '0') { return Integer.parseInt(str);"
+      },
+      {
+        "txt": "} num = (num * 10) + (c - '0'); if (offset < length) { c = str.charAt(offset++); if (c > '9' || c < '0') { return Integer.parseInt(str); } num = (num * 10) + (c - '0'); if (offset < length) { do {"
+      },
+      {
+        "txt": "c = str.charAt(offset++); if (c > '9' || c < '0') { return Integer.parseInt(str); } num = (num * 10) + (c - '0'); } while (offset < length); } } } return negative ? -num : num;"
+      },
+      {
+        "txt": "} public static long parseLong(char[] digitChars, int offset, int len) { int len1 = len-9; long val = parseInt(digitChars, offset, len1) * L_BILLION; return val + (long) parseInt(digitChars, offset+len1, 9); } public static long parseLong(String str) { int length = str.length();"
+      },
+      {
+        "txt": "if (length <= 9) { return (long) parseInt(str); } return Long.parseLong(str); } public static boolean inLongRange(char[] digitChars, int offset, int len, boolean negative) { String cmpStr = negative ? MIN_LONG_STR_NO_SIGN : MAX_LONG_STR; int cmpLen = cmpStr.length();"
+      },
+      {
+        "txt": "if (len < cmpLen) return true; if (len > cmpLen) return false; for (int i = 0; i < cmpLen; ++i) { int diff = digitChars[offset+i] - cmpStr.charAt(i); if (diff != 0) { return (diff < 0); } } return true; }"
+      },
+      {
+        "txt": "public static boolean inLongRange(String numberStr, boolean negative) { String cmpStr = negative ? MIN_LONG_STR_NO_SIGN : MAX_LONG_STR; int cmpLen = cmpStr.length(); int actualLen = numberStr.length(); if (actualLen < cmpLen) return true; if (actualLen > cmpLen) return false; for (int i = 0; i < cmpLen; ++i) { int diff = numberStr.charAt(i) - cmpStr.charAt(i); if (diff != 0) {"
+      },
+      {
+        "txt": "return (diff < 0); } } return true; } public static int parseAsInt(String input, int defaultValue) { if (input == null) { return defaultValue; }"
+      },
+      {
+        "txt": "input = input.trim(); int len = input.length(); if (len == 0) { return defaultValue; } int i = 0; if (i < len) { // skip leading sign: char c = input.charAt(0); if (c == '+') { // for plus, actually physically remove input = input.substring(1);"
+      },
+      {
+        "txt": "len = input.length(); } else if (c == '-') { // minus, just skip for checks, must retain ++i; } } for (; i < len; ++i) { char c = input.charAt(i); if (c > '9' || c < '0') { try { return (int) parseDouble(input);"
+      },
+      {
+        "txt": "} catch (NumberFormatException e) { return defaultValue; } } } try { return Integer.parseInt(input); } catch (NumberFormatException e) { } return defaultValue; }"
+      },
+      {
+        "txt": "public static long parseAsLong(String input, long defaultValue) { if (input == null) { return defaultValue; } input = input.trim(); int len = input.length(); if (len == 0) { return defaultValue; }"
+      },
+      {
+        "txt": "int i = 0; if (i < len) { // skip leading sign: char c = input.charAt(0); if (c == '+') { // for plus, actually physically remove input = input.substring(1); len = input.length(); } else if (c == '-') { // minus, just skip for checks, must retain ++i; } }"
+      },
+      {
+        "txt": "for (; i < len; ++i) { char c = input.charAt(i); if (c > '9' || c < '0') { try { return (long) parseDouble(input); } catch (NumberFormatException e) { return defaultValue; } } }"
+      },
+      {
+        "txt": "try { return Long.parseLong(input); } catch (NumberFormatException e) { } return defaultValue; } public static double parseAsDouble(String input, double defaultValue) { if (input == null) { return defaultValue; }"
+      },
+      {
+        "txt": "input = input.trim(); int len = input.length(); if (len == 0) { return defaultValue; } try { return parseDouble(input); } catch (NumberFormatException e) { } return defaultValue; }"
+      },
+      {
+        "txt": "public static double parseDouble(String numStr) throws NumberFormatException { if (NASTY_SMALL_DOUBLE.equals(numStr)) { return Double.MIN_VALUE; } return Double.parseDouble(numStr); } public static BigDecimal parseBigDecimal(String numStr) throws NumberFormatException { return new BigDecimal(numStr);"
+      },
+      {
+        "txt": "public static BigDecimal parseBigDecimal(char[] buffer) throws NumberFormatException { return parseBigDecimal(buffer, 0, buffer.length); } public static BigDecimal parseBigDecimal(char[] buffer, int offset, int len) throws NumberFormatException { <extra_id_0> } }"
+      }
+    ]
+  },
+  {
+    "id": 1208,
+    "file_path": "src/main/java/com/fasterxml/jackson/core/io/NumberInput.java",
+    "start-bug-line": 306,
+    "end-bug-line": 306,
+    "bug": "",
+    "fix": "} catch (NumberFormatException e) { throw _badBigDecimal(new String(buffer, offset, len)); }",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.core.io; import java.math.BigDecimal; public final class NumberInput"
+      },
+      {
+        "txt": "{ public final static String NASTY_SMALL_DOUBLE = \"2.2250738585072012e-308\"; final static long L_BILLION = 1000000000; final static String MIN_LONG_STR_NO_SIGN = String.valueOf(Long.MIN_VALUE).substring(1); final static String MAX_LONG_STR = String.valueOf(Long.MAX_VALUE); public static int parseInt(char[] digitChars, int offset, int len) { int num = digitChars[offset] - '0'; len += offset; if (++offset < len) {"
+      },
+      {
+        "txt": "num = (num * 10) + (digitChars[offset] - '0'); if (++offset < len) { num = (num * 10) + (digitChars[offset] - '0'); if (++offset < len) { num = (num * 10) + (digitChars[offset] - '0'); if (++offset < len) { num = (num * 10) + (digitChars[offset] - '0'); if (++offset < len) { num = (num * 10) + (digitChars[offset] - '0'); if (++offset < len) {"
+      },
+      {
+        "txt": "num = (num * 10) + (digitChars[offset] - '0'); if (++offset < len) { num = (num * 10) + (digitChars[offset] - '0'); if (++offset < len) { num = (num * 10) + (digitChars[offset] - '0'); } } } } }"
+      },
+      {
+        "txt": "} } } return num; } public static int parseInt(String str) { char c = str.charAt(0); int length = str.length(); boolean negative = (c == '-');"
+      },
+      {
+        "txt": "int offset = 1; if (negative) { if (length == 1 || length > 10) { return Integer.parseInt(str); } c = str.charAt(offset++); } else { if (length > 9) { return Integer.parseInt(str); }"
+      },
+      {
+        "txt": "} if (c > '9' || c < '0') { return Integer.parseInt(str); } int num = c - '0'; if (offset < length) { c = str.charAt(offset++); if (c > '9' || c < '0') { return Integer.parseInt(str); }"
+      },
+      {
+        "txt": "num = (num * 10) + (c - '0'); if (offset < length) { c = str.charAt(offset++); if (c > '9' || c < '0') { return Integer.parseInt(str); } num = (num * 10) + (c - '0'); if (offset < length) { do { c = str.charAt(offset++);"
+      },
+      {
+        "txt": "if (c > '9' || c < '0') { return Integer.parseInt(str); } num = (num * 10) + (c - '0'); } while (offset < length); } } } return negative ? -num : num; }"
+      },
+      {
+        "txt": "public static long parseLong(char[] digitChars, int offset, int len) { int len1 = len-9; long val = parseInt(digitChars, offset, len1) * L_BILLION; return val + (long) parseInt(digitChars, offset+len1, 9); } public static long parseLong(String str) { int length = str.length(); if (length <= 9) {"
+      },
+      {
+        "txt": "return (long) parseInt(str); } return Long.parseLong(str); } public static boolean inLongRange(char[] digitChars, int offset, int len, boolean negative) { String cmpStr = negative ? MIN_LONG_STR_NO_SIGN : MAX_LONG_STR; int cmpLen = cmpStr.length(); if (len < cmpLen) return true;"
+      },
+      {
+        "txt": "if (len > cmpLen) return false; for (int i = 0; i < cmpLen; ++i) { int diff = digitChars[offset+i] - cmpStr.charAt(i); if (diff != 0) { return (diff < 0); } } return true; } public static boolean inLongRange(String numberStr, boolean negative)"
+      },
+      {
+        "txt": "{ String cmpStr = negative ? MIN_LONG_STR_NO_SIGN : MAX_LONG_STR; int cmpLen = cmpStr.length(); int actualLen = numberStr.length(); if (actualLen < cmpLen) return true; if (actualLen > cmpLen) return false; for (int i = 0; i < cmpLen; ++i) { int diff = numberStr.charAt(i) - cmpStr.charAt(i); if (diff != 0) { return (diff < 0);"
+      },
+      {
+        "txt": "} } return true; } public static int parseAsInt(String input, int defaultValue) { if (input == null) { return defaultValue; } input = input.trim();"
+      },
+      {
+        "txt": "int len = input.length(); if (len == 0) { return defaultValue; } int i = 0; if (i < len) { // skip leading sign: char c = input.charAt(0); if (c == '+') { // for plus, actually physically remove input = input.substring(1); len = input.length();"
+      },
+      {
+        "txt": "} else if (c == '-') { // minus, just skip for checks, must retain ++i; } } for (; i < len; ++i) { char c = input.charAt(i); if (c > '9' || c < '0') { try { return (int) parseDouble(input); } catch (NumberFormatException e) {"
+      },
+      {
+        "txt": "return defaultValue; } } } try { return Integer.parseInt(input); } catch (NumberFormatException e) { } return defaultValue; } public static long parseAsLong(String input, long defaultValue)"
+      },
+      {
+        "txt": "{ if (input == null) { return defaultValue; } input = input.trim(); int len = input.length(); if (len == 0) { return defaultValue; } int i = 0;"
+      },
+      {
+        "txt": "if (i < len) { // skip leading sign: char c = input.charAt(0); if (c == '+') { // for plus, actually physically remove input = input.substring(1); len = input.length(); } else if (c == '-') { // minus, just skip for checks, must retain ++i; } } for (; i < len; ++i) {"
+      },
+      {
+        "txt": "char c = input.charAt(i); if (c > '9' || c < '0') { try { return (long) parseDouble(input); } catch (NumberFormatException e) { return defaultValue; } } } try {"
+      },
+      {
+        "txt": "return Long.parseLong(input); } catch (NumberFormatException e) { } return defaultValue; } public static double parseAsDouble(String input, double defaultValue) { if (input == null) { return defaultValue; } input = input.trim();"
+      },
+      {
+        "txt": "int len = input.length(); if (len == 0) { return defaultValue; } try { return parseDouble(input); } catch (NumberFormatException e) { } return defaultValue; } public static double parseDouble(String numStr) throws NumberFormatException"
+      },
+      {
+        "txt": "{ if (NASTY_SMALL_DOUBLE.equals(numStr)) { return Double.MIN_VALUE; } return Double.parseDouble(numStr); } public static BigDecimal parseBigDecimal(String numStr) throws NumberFormatException { return new BigDecimal(numStr); }"
+      },
+      {
+        "txt": "return parseBigDecimal(buffer, 0, buffer.length); } public static BigDecimal parseBigDecimal(char[] buffer, int offset, int len) throws NumberFormatException { return new BigDecimal(buffer, offset, len); <extra_id_0> }"
+      }
+    ]
+  },
+  {
+    "id": 1209,
+    "file_path": "src/main/java/com/fasterxml/jackson/core/io/NumberInput.java",
+    "start-bug-line": 308,
+    "end-bug-line": 308,
+    "bug": "",
+    "fix": "private static NumberFormatException _badBigDecimal(String str) { return new NumberFormatException(\"Value \\\"\"+str+\"\\\" can not be represented as BigDecimal\"); }",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.core.io; import java.math.BigDecimal; public final class NumberInput {"
+      },
+      {
+        "txt": "public final static String NASTY_SMALL_DOUBLE = \"2.2250738585072012e-308\"; final static long L_BILLION = 1000000000; final static String MIN_LONG_STR_NO_SIGN = String.valueOf(Long.MIN_VALUE).substring(1); final static String MAX_LONG_STR = String.valueOf(Long.MAX_VALUE); public static int parseInt(char[] digitChars, int offset, int len) { int num = digitChars[offset] - '0'; len += offset; if (++offset < len) { num = (num * 10) + (digitChars[offset] - '0');"
+      },
+      {
+        "txt": "if (++offset < len) { num = (num * 10) + (digitChars[offset] - '0'); if (++offset < len) { num = (num * 10) + (digitChars[offset] - '0'); if (++offset < len) { num = (num * 10) + (digitChars[offset] - '0'); if (++offset < len) { num = (num * 10) + (digitChars[offset] - '0'); if (++offset < len) { num = (num * 10) + (digitChars[offset] - '0');"
+      },
+      {
+        "txt": "if (++offset < len) { num = (num * 10) + (digitChars[offset] - '0'); if (++offset < len) { num = (num * 10) + (digitChars[offset] - '0'); } } } } } }"
+      },
+      {
+        "txt": "} } return num; } public static int parseInt(String str) { char c = str.charAt(0); int length = str.length(); boolean negative = (c == '-'); int offset = 1;"
+      },
+      {
+        "txt": "if (negative) { if (length == 1 || length > 10) { return Integer.parseInt(str); } c = str.charAt(offset++); } else { if (length > 9) { return Integer.parseInt(str); } }"
+      },
+      {
+        "txt": "if (c > '9' || c < '0') { return Integer.parseInt(str); } int num = c - '0'; if (offset < length) { c = str.charAt(offset++); if (c > '9' || c < '0') { return Integer.parseInt(str); } num = (num * 10) + (c - '0');"
+      },
+      {
+        "txt": "if (offset < length) { c = str.charAt(offset++); if (c > '9' || c < '0') { return Integer.parseInt(str); } num = (num * 10) + (c - '0'); if (offset < length) { do { c = str.charAt(offset++); if (c > '9' || c < '0') {"
+      },
+      {
+        "txt": "return Integer.parseInt(str); } num = (num * 10) + (c - '0'); } while (offset < length); } } } return negative ? -num : num; } public static long parseLong(char[] digitChars, int offset, int len)"
+      },
+      {
+        "txt": "{ int len1 = len-9; long val = parseInt(digitChars, offset, len1) * L_BILLION; return val + (long) parseInt(digitChars, offset+len1, 9); } public static long parseLong(String str) { int length = str.length(); if (length <= 9) { return (long) parseInt(str);"
+      },
+      {
+        "txt": "} return Long.parseLong(str); } public static boolean inLongRange(char[] digitChars, int offset, int len, boolean negative) { String cmpStr = negative ? MIN_LONG_STR_NO_SIGN : MAX_LONG_STR; int cmpLen = cmpStr.length(); if (len < cmpLen) return true; if (len > cmpLen) return false;"
+      },
+      {
+        "txt": "for (int i = 0; i < cmpLen; ++i) { int diff = digitChars[offset+i] - cmpStr.charAt(i); if (diff != 0) { return (diff < 0); } } return true; } public static boolean inLongRange(String numberStr, boolean negative) {"
+      },
+      {
+        "txt": "String cmpStr = negative ? MIN_LONG_STR_NO_SIGN : MAX_LONG_STR; int cmpLen = cmpStr.length(); int actualLen = numberStr.length(); if (actualLen < cmpLen) return true; if (actualLen > cmpLen) return false; for (int i = 0; i < cmpLen; ++i) { int diff = numberStr.charAt(i) - cmpStr.charAt(i); if (diff != 0) { return (diff < 0); }"
+      },
+      {
+        "txt": "} return true; } public static int parseAsInt(String input, int defaultValue) { if (input == null) { return defaultValue; } input = input.trim(); int len = input.length();"
+      },
+      {
+        "txt": "if (len == 0) { return defaultValue; } int i = 0; if (i < len) { // skip leading sign: char c = input.charAt(0); if (c == '+') { // for plus, actually physically remove input = input.substring(1); len = input.length(); } else if (c == '-') { // minus, just skip for checks, must retain"
+      },
+      {
+        "txt": "++i; } } for (; i < len; ++i) { char c = input.charAt(i); if (c > '9' || c < '0') { try { return (int) parseDouble(input); } catch (NumberFormatException e) { return defaultValue;"
+      },
+      {
+        "txt": "} } } try { return Integer.parseInt(input); } catch (NumberFormatException e) { } return defaultValue; } public static long parseAsLong(String input, long defaultValue) {"
+      },
+      {
+        "txt": "if (input == null) { return defaultValue; } input = input.trim(); int len = input.length(); if (len == 0) { return defaultValue; } int i = 0; if (i < len) { // skip leading sign:"
+      },
+      {
+        "txt": "char c = input.charAt(0); if (c == '+') { // for plus, actually physically remove input = input.substring(1); len = input.length(); } else if (c == '-') { // minus, just skip for checks, must retain ++i; } } for (; i < len; ++i) { char c = input.charAt(i);"
+      },
+      {
+        "txt": "if (c > '9' || c < '0') { try { return (long) parseDouble(input); } catch (NumberFormatException e) { return defaultValue; } } } try { return Long.parseLong(input);"
+      },
+      {
+        "txt": "} catch (NumberFormatException e) { } return defaultValue; } public static double parseAsDouble(String input, double defaultValue) { if (input == null) { return defaultValue; } input = input.trim(); int len = input.length();"
+      },
+      {
+        "txt": "if (len == 0) { return defaultValue; } try { return parseDouble(input); } catch (NumberFormatException e) { } return defaultValue; } public static double parseDouble(String numStr) throws NumberFormatException {"
+      },
+      {
+        "txt": "if (NASTY_SMALL_DOUBLE.equals(numStr)) { return Double.MIN_VALUE; } return Double.parseDouble(numStr); } public static BigDecimal parseBigDecimal(String numStr) throws NumberFormatException { return new BigDecimal(numStr); } public static BigDecimal parseBigDecimal(char[] buffer) throws NumberFormatException {"
+      },
+      {
+        "txt": "} public static BigDecimal parseBigDecimal(char[] buffer, int offset, int len) throws NumberFormatException { return new BigDecimal(buffer, offset, len); } <extra_id_0>"
+      }
+    ]
+  },
+  {
+    "id": 1210,
+    "file_path": "src/main/java/com/fasterxml/jackson/core/util/TextBuffer.java",
+    "start-bug-line": 390,
+    "end-bug-line": 390,
+    "bug": "if (_inputStart >= 0) {",
+    "fix": "if ((_inputStart >= 0) && (_inputBuffer != null)) {",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.core.util; import java.math.BigDecimal;"
+      },
+      {
+        "txt": "import java.util.ArrayList; import java.util.Arrays; import com.fasterxml.jackson.core.io.NumberInput; public final class TextBuffer { final static char[] NO_CHARS = new char[0]; final static int MIN_SEGMENT_LEN = 1000; final static int MAX_SEGMENT_LEN = 0x40000; private final BufferRecycler _allocator; private char[] _inputBuffer;"
+      },
+      {
+        "txt": "private int _inputStart; private int _inputLen; private ArrayList<char[]> _segments; private boolean _hasSegments = false; private int _segmentSize; private char[] _currentSegment; private int _currentSize; private String _resultString; private char[] _resultArray; public TextBuffer(BufferRecycler allocator)"
+      },
+      {
+        "txt": "{ _allocator = allocator; } public void releaseBuffers() { if (_allocator == null) { resetWithEmpty(); } else { if (_currentSegment != null) { resetWithEmpty();"
+      },
+      {
+        "txt": "char[] buf = _currentSegment; _currentSegment = null; _allocator.releaseCharBuffer(BufferRecycler.CharBufferType.TEXT_BUFFER, buf); } } } public void resetWithEmpty() { _inputStart = -1; // indicates shared buffer not used _currentSize = 0;"
+      },
+      {
+        "txt": "_inputLen = 0; _inputBuffer = null; _resultString = null; _resultArray = null; if (_hasSegments) { clearSegments(); } } public void resetWithShared(char[] buf, int start, int len) {"
+      },
+      {
+        "txt": "_resultString = null; _resultArray = null; _inputBuffer = buf; _inputStart = start; _inputLen = len; if (_hasSegments) { clearSegments(); } } public void resetWithCopy(char[] buf, int start, int len)"
+      },
+      {
+        "txt": "{ _inputBuffer = null; _inputStart = -1; // indicates shared buffer not used _inputLen = 0; _resultString = null; _resultArray = null; if (_hasSegments) { clearSegments(); } else if (_currentSegment == null) { _currentSegment = findBuffer(len);"
+      },
+      {
+        "txt": "} _currentSize = _segmentSize = 0; append(buf, start, len); } public void resetWithString(String value) { _inputBuffer = null; _inputStart = -1; _inputLen = 0; _resultString = value;"
+      },
+      {
+        "txt": "_resultArray = null; if (_hasSegments) { clearSegments(); } _currentSize = 0; } private char[] findBuffer(int needed) { if (_allocator != null) { return _allocator.allocCharBuffer(BufferRecycler.CharBufferType.TEXT_BUFFER, needed);"
+      },
+      {
+        "txt": "} return new char[Math.max(needed, MIN_SEGMENT_LEN)]; } private void clearSegments() { _hasSegments = false; _segments.clear(); _currentSize = _segmentSize = 0; } public int size() {"
+      },
+      {
+        "txt": "if (_inputStart >= 0) { // shared copy from input buf return _inputLen; } if (_resultArray != null) { return _resultArray.length; } if (_resultString != null) { return _resultString.length(); } return _segmentSize + _currentSize;"
+      },
+      {
+        "txt": "} public int getTextOffset() { return (_inputStart >= 0) ? _inputStart : 0; } public boolean hasTextAsCharacters() { if (_inputStart >= 0 || _resultArray != null) { return true; }"
+      },
+      {
+        "txt": "if (_resultString != null) { return false; } return true; } public char[] getTextBuffer() { if (_inputStart >= 0) { return _inputBuffer; }"
+      },
+      {
+        "txt": "if (_resultArray != null) { return _resultArray; } if (_resultString != null) { return (_resultArray = _resultString.toCharArray()); } if (!_hasSegments) { return _currentSegment; } return contentsAsArray();"
+      },
+      {
+        "txt": "} public String contentsAsString() { if (_resultString == null) { if (_resultArray != null) { _resultString = new String(_resultArray); } else { if (_inputStart >= 0) { if (_inputLen < 1) { return (_resultString = \"\");"
+      },
+      {
+        "txt": "} _resultString = new String(_inputBuffer, _inputStart, _inputLen); } else { // nope... need to copy int segLen = _segmentSize; int currLen = _currentSize; if (segLen == 0) { // yup _resultString = (currLen == 0) ? \"\" : new String(_currentSegment, 0, currLen); } else { // no, need to combine StringBuilder sb = new StringBuilder(segLen + currLen); if (_segments != null) {"
+      },
+      {
+        "txt": "for (int i = 0, len = _segments.size(); i < len; ++i) { char[] curr = _segments.get(i); sb.append(curr, 0, curr.length); } } sb.append(_currentSegment, 0, _currentSize); _resultString = sb.toString(); } } }"
+      },
+      {
+        "txt": "} return _resultString; } public char[] contentsAsArray() { char[] result = _resultArray; if (result == null) { _resultArray = result = buildResultArray(); } return result;"
+      },
+      {
+        "txt": "public BigDecimal contentsAsDecimal() throws NumberFormatException { if (_resultArray != null) { return NumberInput.parseBigDecimal(_resultArray); } <extra_id_0> return NumberInput.parseBigDecimal(_inputBuffer, _inputStart, _inputLen); } if (_segmentSize == 0) { return NumberInput.parseBigDecimal(_currentSegment, 0, _currentSize); } return NumberInput.parseBigDecimal(contentsAsArray());"
+      },
+      {
+        "txt": "} return NumberInput.parseBigDecimal(contentsAsArray()); } public double contentsAsDouble() throws NumberFormatException { return NumberInput.parseDouble(contentsAsString()); } public void ensureNotShared() { if (_inputStart >= 0) {"
+      },
+      {
+        "txt": "unshare(16); } } public void append(char c) { if (_inputStart >= 0) { unshare(16); } _resultString = null; _resultArray = null; char[] curr = _currentSegment;"
+      },
+      {
+        "txt": "if (_currentSize >= curr.length) { expand(1); curr = _currentSegment; } curr[_currentSize++] = c; } public void append(char[] c, int start, int len) { if (_inputStart >= 0) { unshare(len);"
+      },
+      {
+        "txt": "} _resultString = null; _resultArray = null; char[] curr = _currentSegment; int max = curr.length - _currentSize; if (max >= len) { System.arraycopy(c, start, curr, _currentSize, len); _currentSize += len; return; }"
+      },
+      {
+        "txt": "if (max > 0) { System.arraycopy(c, start, curr, _currentSize, max); start += max; len -= max; } do { expand(len); int amount = Math.min(_currentSegment.length, len); System.arraycopy(c, start, _currentSegment, 0, amount); _currentSize += amount;"
+      },
+      {
+        "txt": "start += amount; len -= amount; } while (len > 0); } public void append(String str, int offset, int len) { if (_inputStart >= 0) { unshare(len); } _resultString = null;"
+      },
+      {
+        "txt": "_resultArray = null; char[] curr = _currentSegment; int max = curr.length - _currentSize; if (max >= len) { str.getChars(offset, offset+len, curr, _currentSize); _currentSize += len; return; } if (max > 0) { str.getChars(offset, offset+max, curr, _currentSize);"
+      },
+      {
+        "txt": "len -= max; offset += max; } do { expand(len); int amount = Math.min(_currentSegment.length, len); str.getChars(offset, offset+amount, _currentSegment, 0); _currentSize += amount; offset += amount; len -= amount;"
+      },
+      {
+        "txt": "} while (len > 0); } public char[] getCurrentSegment() { if (_inputStart >= 0) { unshare(1); } else { char[] curr = _currentSegment; if (curr == null) { _currentSegment = findBuffer(0);"
+      },
+      {
+        "txt": "} else if (_currentSize >= curr.length) { expand(1); } } return _currentSegment; } public char[] emptyAndGetCurrentSegment() { _inputStart = -1; // indicates shared buffer not used _currentSize = 0;"
+      },
+      {
+        "txt": "_inputLen = 0; _inputBuffer = null; _resultString = null; _resultArray = null; if (_hasSegments) { clearSegments(); } char[] curr = _currentSegment; if (curr == null) { _currentSegment = curr = findBuffer(0);"
+      },
+      {
+        "txt": "} return curr; } public int getCurrentSegmentSize() { return _currentSize; } public void setCurrentLength(int len) { _currentSize = len; } public char[] finishCurrentSegment()"
+      },
+      {
+        "txt": "{ if (_segments == null) { _segments = new ArrayList<char[]>(); } _hasSegments = true; _segments.add(_currentSegment); int oldLen = _currentSegment.length; _segmentSize += oldLen; int newLen = Math.min(oldLen + (oldLen >> 1), MAX_SEGMENT_LEN); char[] curr = _charArray(newLen);"
+      },
+      {
+        "txt": "_currentSize = 0; _currentSegment = curr; return curr; } public char[] expandCurrentSegment() { final char[] curr = _currentSegment; final int len = curr.length; int newLen = (len == MAX_SEGMENT_LEN) ? (MAX_SEGMENT_LEN + 1) : Math.min(MAX_SEGMENT_LEN, len + (len >> 1));"
+      },
+      {
+        "txt": "return (_currentSegment = Arrays.copyOf(curr, newLen)); } @Override public String toString() { return contentsAsString(); } private void unshare(int needExtra) { int sharedLen = _inputLen; _inputLen = 0;"
+      },
+      {
+        "txt": "char[] inputBuf = _inputBuffer; _inputBuffer = null; int start = _inputStart; _inputStart = -1; int needed = sharedLen+needExtra; if (_currentSegment == null || needed > _currentSegment.length) { _currentSegment = findBuffer(needed); } if (sharedLen > 0) { System.arraycopy(inputBuf, start, _currentSegment, 0, sharedLen);"
+      },
+      {
+        "txt": "} _segmentSize = 0; _currentSize = sharedLen; } private void expand(int minNewSegmentSize) { if (_segments == null) { _segments = new ArrayList<char[]>(); } char[] curr = _currentSegment;"
+      },
+      {
+        "txt": "_hasSegments = true; _segments.add(curr); _segmentSize += curr.length; int oldLen = curr.length; int sizeAddition = oldLen >> 1; if (sizeAddition < minNewSegmentSize) { sizeAddition = minNewSegmentSize; } _currentSize = 0; _currentSegment = _charArray(Math.min(MAX_SEGMENT_LEN, oldLen + sizeAddition));"
+      },
+      {
+        "txt": "} private char[] buildResultArray() { if (_resultString != null) { // Can take a shortcut... return _resultString.toCharArray(); } if (_inputStart >= 0) { final int len = _inputLen; if (len < 1) { return NO_CHARS;"
+      },
+      {
+        "txt": "} final int start = _inputStart; if (start == 0) { return Arrays.copyOf(_inputBuffer, len); } return Arrays.copyOfRange(_inputBuffer, start, start+len); } int size = size(); if (size < 1) { return NO_CHARS;"
+      },
+      {
+        "txt": "} int offset = 0; final char[] result = _charArray(size); if (_segments != null) { for (int i = 0, len = _segments.size(); i < len; ++i) { char[] curr = (char[]) _segments.get(i); int currLen = curr.length; System.arraycopy(curr, 0, result, offset, currLen); offset += currLen; }"
+      },
+      {
+        "txt": "} System.arraycopy(_currentSegment, 0, result, offset, _currentSize); return result; } private char[] _charArray(int len) { return new char[len]; }"
+      }
+    ]
+  },
+  {
+    "id": 1211,
+    "file_path": "src/main/java/com/fasterxml/jackson/core/util/TextBuffer.java",
+    "start-bug-line": 394,
+    "end-bug-line": 394,
+    "bug": "if (_segmentSize == 0) {",
+    "fix": "if ((_segmentSize == 0) && (_currentSegment != null)) {",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.core.util; import java.math.BigDecimal; import java.util.ArrayList; import java.util.Arrays; import com.fasterxml.jackson.core.io.NumberInput;"
+      },
+      {
+        "txt": "public final class TextBuffer { final static char[] NO_CHARS = new char[0]; final static int MIN_SEGMENT_LEN = 1000; final static int MAX_SEGMENT_LEN = 0x40000; private final BufferRecycler _allocator; private char[] _inputBuffer; private int _inputStart; private int _inputLen; private ArrayList<char[]> _segments;"
+      },
+      {
+        "txt": "private boolean _hasSegments = false; private int _segmentSize; private char[] _currentSegment; private int _currentSize; private String _resultString; private char[] _resultArray; public TextBuffer(BufferRecycler allocator) { _allocator = allocator; }"
+      },
+      {
+        "txt": "public void releaseBuffers() { if (_allocator == null) { resetWithEmpty(); } else { if (_currentSegment != null) { resetWithEmpty(); char[] buf = _currentSegment; _currentSegment = null; _allocator.releaseCharBuffer(BufferRecycler.CharBufferType.TEXT_BUFFER, buf);"
+      },
+      {
+        "txt": "} } } public void resetWithEmpty() { _inputStart = -1; // indicates shared buffer not used _currentSize = 0; _inputLen = 0; _inputBuffer = null; _resultString = null;"
+      },
+      {
+        "txt": "_resultArray = null; if (_hasSegments) { clearSegments(); } } public void resetWithShared(char[] buf, int start, int len) { _resultString = null; _resultArray = null; _inputBuffer = buf;"
+      },
+      {
+        "txt": "_inputStart = start; _inputLen = len; if (_hasSegments) { clearSegments(); } } public void resetWithCopy(char[] buf, int start, int len) { _inputBuffer = null; _inputStart = -1; // indicates shared buffer not used"
+      },
+      {
+        "txt": "_inputLen = 0; _resultString = null; _resultArray = null; if (_hasSegments) { clearSegments(); } else if (_currentSegment == null) { _currentSegment = findBuffer(len); } _currentSize = _segmentSize = 0; append(buf, start, len);"
+      },
+      {
+        "txt": "} public void resetWithString(String value) { _inputBuffer = null; _inputStart = -1; _inputLen = 0; _resultString = value; _resultArray = null; if (_hasSegments) { clearSegments();"
+      },
+      {
+        "txt": "} _currentSize = 0; } private char[] findBuffer(int needed) { if (_allocator != null) { return _allocator.allocCharBuffer(BufferRecycler.CharBufferType.TEXT_BUFFER, needed); } return new char[Math.max(needed, MIN_SEGMENT_LEN)]; }"
+      },
+      {
+        "txt": "private void clearSegments() { _hasSegments = false; _segments.clear(); _currentSize = _segmentSize = 0; } public int size() { if (_inputStart >= 0) { // shared copy from input buf return _inputLen; }"
+      },
+      {
+        "txt": "if (_resultArray != null) { return _resultArray.length; } if (_resultString != null) { return _resultString.length(); } return _segmentSize + _currentSize; } public int getTextOffset() {"
+      },
+      {
+        "txt": "return (_inputStart >= 0) ? _inputStart : 0; } public boolean hasTextAsCharacters() { if (_inputStart >= 0 || _resultArray != null) { return true; } if (_resultString != null) { return false; }"
+      },
+      {
+        "txt": "return true; } public char[] getTextBuffer() { if (_inputStart >= 0) { return _inputBuffer; } if (_resultArray != null) { return _resultArray; }"
+      },
+      {
+        "txt": "if (_resultString != null) { return (_resultArray = _resultString.toCharArray()); } if (!_hasSegments) { return _currentSegment; } return contentsAsArray(); } public String contentsAsString() {"
+      },
+      {
+        "txt": "if (_resultString == null) { if (_resultArray != null) { _resultString = new String(_resultArray); } else { if (_inputStart >= 0) { if (_inputLen < 1) { return (_resultString = \"\"); } _resultString = new String(_inputBuffer, _inputStart, _inputLen); } else { // nope... need to copy"
+      },
+      {
+        "txt": "int segLen = _segmentSize; int currLen = _currentSize; if (segLen == 0) { // yup _resultString = (currLen == 0) ? \"\" : new String(_currentSegment, 0, currLen); } else { // no, need to combine StringBuilder sb = new StringBuilder(segLen + currLen); if (_segments != null) { for (int i = 0, len = _segments.size(); i < len; ++i) { char[] curr = _segments.get(i); sb.append(curr, 0, curr.length);"
+      },
+      {
+        "txt": "} } sb.append(_currentSegment, 0, _currentSize); _resultString = sb.toString(); } } } } return _resultString; }"
+      },
+      {
+        "txt": "public char[] contentsAsArray() { char[] result = _resultArray; if (result == null) { _resultArray = result = buildResultArray(); } return result; } public BigDecimal contentsAsDecimal() throws NumberFormatException"
+      },
+      {
+        "txt": "if (_resultArray != null) { return NumberInput.parseBigDecimal(_resultArray); } if (_inputStart >= 0) { return NumberInput.parseBigDecimal(_inputBuffer, _inputStart, _inputLen); } <extra_id_0> return NumberInput.parseBigDecimal(_currentSegment, 0, _currentSize); } return NumberInput.parseBigDecimal(contentsAsArray()); } public double contentsAsDouble() throws NumberFormatException"
+      },
+      {
+        "txt": "public double contentsAsDouble() throws NumberFormatException { return NumberInput.parseDouble(contentsAsString()); } public void ensureNotShared() { if (_inputStart >= 0) { unshare(16); } }"
+      },
+      {
+        "txt": "public void append(char c) { if (_inputStart >= 0) { unshare(16); } _resultString = null; _resultArray = null; char[] curr = _currentSegment; if (_currentSize >= curr.length) { expand(1); curr = _currentSegment;"
+      },
+      {
+        "txt": "} curr[_currentSize++] = c; } public void append(char[] c, int start, int len) { if (_inputStart >= 0) { unshare(len); } _resultString = null; _resultArray = null;"
+      },
+      {
+        "txt": "char[] curr = _currentSegment; int max = curr.length - _currentSize; if (max >= len) { System.arraycopy(c, start, curr, _currentSize, len); _currentSize += len; return; } if (max > 0) { System.arraycopy(c, start, curr, _currentSize, max); start += max;"
+      },
+      {
+        "txt": "len -= max; } do { expand(len); int amount = Math.min(_currentSegment.length, len); System.arraycopy(c, start, _currentSegment, 0, amount); _currentSize += amount; start += amount; len -= amount; } while (len > 0);"
+      },
+      {
+        "txt": "} public void append(String str, int offset, int len) { if (_inputStart >= 0) { unshare(len); } _resultString = null; _resultArray = null; char[] curr = _currentSegment; int max = curr.length - _currentSize;"
+      },
+      {
+        "txt": "if (max >= len) { str.getChars(offset, offset+len, curr, _currentSize); _currentSize += len; return; } if (max > 0) { str.getChars(offset, offset+max, curr, _currentSize); len -= max; offset += max; }"
+      },
+      {
+        "txt": "do { expand(len); int amount = Math.min(_currentSegment.length, len); str.getChars(offset, offset+amount, _currentSegment, 0); _currentSize += amount; offset += amount; len -= amount; } while (len > 0); } public char[] getCurrentSegment()"
+      },
+      {
+        "txt": "{ if (_inputStart >= 0) { unshare(1); } else { char[] curr = _currentSegment; if (curr == null) { _currentSegment = findBuffer(0); } else if (_currentSize >= curr.length) { expand(1); }"
+      },
+      {
+        "txt": "} return _currentSegment; } public char[] emptyAndGetCurrentSegment() { _inputStart = -1; // indicates shared buffer not used _currentSize = 0; _inputLen = 0; _inputBuffer = null; _resultString = null;"
+      },
+      {
+        "txt": "_resultArray = null; if (_hasSegments) { clearSegments(); } char[] curr = _currentSegment; if (curr == null) { _currentSegment = curr = findBuffer(0); } return curr; }"
+      },
+      {
+        "txt": "public int getCurrentSegmentSize() { return _currentSize; } public void setCurrentLength(int len) { _currentSize = len; } public char[] finishCurrentSegment() { if (_segments == null) { _segments = new ArrayList<char[]>();"
+      },
+      {
+        "txt": "} _hasSegments = true; _segments.add(_currentSegment); int oldLen = _currentSegment.length; _segmentSize += oldLen; int newLen = Math.min(oldLen + (oldLen >> 1), MAX_SEGMENT_LEN); char[] curr = _charArray(newLen); _currentSize = 0; _currentSegment = curr; return curr;"
+      },
+      {
+        "txt": "} public char[] expandCurrentSegment() { final char[] curr = _currentSegment; final int len = curr.length; int newLen = (len == MAX_SEGMENT_LEN) ? (MAX_SEGMENT_LEN + 1) : Math.min(MAX_SEGMENT_LEN, len + (len >> 1)); return (_currentSegment = Arrays.copyOf(curr, newLen)); } @Override"
+      },
+      {
+        "txt": "public String toString() { return contentsAsString(); } private void unshare(int needExtra) { int sharedLen = _inputLen; _inputLen = 0; char[] inputBuf = _inputBuffer; _inputBuffer = null; int start = _inputStart;"
+      },
+      {
+        "txt": "_inputStart = -1; int needed = sharedLen+needExtra; if (_currentSegment == null || needed > _currentSegment.length) { _currentSegment = findBuffer(needed); } if (sharedLen > 0) { System.arraycopy(inputBuf, start, _currentSegment, 0, sharedLen); } _segmentSize = 0; _currentSize = sharedLen;"
+      },
+      {
+        "txt": "} private void expand(int minNewSegmentSize) { if (_segments == null) { _segments = new ArrayList<char[]>(); } char[] curr = _currentSegment; _hasSegments = true; _segments.add(curr); _segmentSize += curr.length;"
+      },
+      {
+        "txt": "int oldLen = curr.length; int sizeAddition = oldLen >> 1; if (sizeAddition < minNewSegmentSize) { sizeAddition = minNewSegmentSize; } _currentSize = 0; _currentSegment = _charArray(Math.min(MAX_SEGMENT_LEN, oldLen + sizeAddition)); } private char[] buildResultArray() {"
+      },
+      {
+        "txt": "if (_resultString != null) { // Can take a shortcut... return _resultString.toCharArray(); } if (_inputStart >= 0) { final int len = _inputLen; if (len < 1) { return NO_CHARS; } final int start = _inputStart; if (start == 0) {"
+      },
+      {
+        "txt": "return Arrays.copyOf(_inputBuffer, len); } return Arrays.copyOfRange(_inputBuffer, start, start+len); } int size = size(); if (size < 1) { return NO_CHARS; } int offset = 0; final char[] result = _charArray(size);"
+      },
+      {
+        "txt": "if (_segments != null) { for (int i = 0, len = _segments.size(); i < len; ++i) { char[] curr = (char[]) _segments.get(i); int currLen = curr.length; System.arraycopy(curr, 0, result, offset, currLen); offset += currLen; } } System.arraycopy(_currentSegment, 0, result, offset, _currentSize); return result;"
+      },
+      {
+        "txt": "} private char[] _charArray(int len) { return new char[len]; }"
+      }
+    ]
+  }
+]

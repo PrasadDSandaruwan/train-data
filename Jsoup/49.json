@@ -1,0 +1,272 @@
+[
+  {
+    "id": 1973,
+    "file_path": "src/main/java/org/jsoup/nodes/Node.java",
+    "start-bug-line": 445,
+    "end-bug-line": 445,
+    "bug": "",
+    "fix": "reindexChildren(index);",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.jsoup.nodes; import org.jsoup.helper.StringUtil;"
+      },
+      {
+        "txt": "import org.jsoup.helper.Validate; import org.jsoup.parser.Parser; import org.jsoup.select.NodeTraversor; import org.jsoup.select.NodeVisitor; import java.net.MalformedURLException; import java.net.URL; import java.util.ArrayList; import java.util.Collections; import java.util.LinkedList; import java.util.List;"
+      },
+      {
+        "txt": "The base, abstract Node model. Elements, Documents, Comments etc are all Node instances. @author Jonathan Hedley, jonathan@hedley.net */ public abstract class Node implements Cloneable { private static final List<Node> EMPTY_NODES = Collections.emptyList(); Node parentNode; List<Node> childNodes; Attributes attributes; String baseUri; int siblingIndex; Create a new Node."
+      },
+      {
+        "txt": "@param baseUri base URI @param attributes attributes (not null, but may be empty) protected Node(String baseUri, Attributes attributes) { Validate.notNull(baseUri); Validate.notNull(attributes); childNodes = EMPTY_NODES; this.baseUri = baseUri.trim(); this.attributes = attributes; } protected Node(String baseUri) {"
+      },
+      {
+        "txt": "this(baseUri, new Attributes()); } protected Node() { childNodes = EMPTY_NODES; attributes = null; } Get the node name of this node. Use for debugging purposes and not logic switching (for that, use instanceof). @return node name public abstract String nodeName(); public String attr(String attributeKey) {"
+      },
+      {
+        "txt": "Validate.notNull(attributeKey); if (attributes.hasKey(attributeKey)) return attributes.get(attributeKey); else if (attributeKey.toLowerCase().startsWith(\"abs:\")) return absUrl(attributeKey.substring(\"abs:\".length())); else return \"\"; } public Attributes attributes() { return attributes; }"
+      },
+      {
+        "txt": "public Node attr(String attributeKey, String attributeValue) { attributes.put(attributeKey, attributeValue); return this; } public boolean hasAttr(String attributeKey) { Validate.notNull(attributeKey); if (attributeKey.startsWith(\"abs:\")) { String key = attributeKey.substring(\"abs:\".length()); if (attributes.hasKey(key) && !absUrl(key).equals(\"\")) return true;"
+      },
+      {
+        "txt": "} return attributes.hasKey(attributeKey); } public Node removeAttr(String attributeKey) { Validate.notNull(attributeKey); attributes.remove(attributeKey); return this; } Get the base URI of this node. @return base URI"
+      },
+      {
+        "txt": "public String baseUri() { return baseUri; } Update the base URI of this node and all of its descendants. @param baseUri base URI to set public void setBaseUri(final String baseUri) { Validate.notNull(baseUri); traverse(new NodeVisitor() { public void head(Node node, int depth) { node.baseUri = baseUri;"
+      },
+      {
+        "txt": "} public void tail(Node node, int depth) { } }); } public String absUrl(String attributeKey) { Validate.notEmpty(attributeKey); if (!hasAttr(attributeKey)) { return \"\"; // nothing to make absolute with } else {"
+      },
+      {
+        "txt": "return StringUtil.resolve(baseUri, attr(attributeKey)); } } Get a child node by its 0-based index. @param index index of child node @return the child node at this index. Throws a {@code IndexOutOfBoundsException} if the index is out of bounds. public Node childNode(int index) { return childNodes.get(index); } Get this node's children. Presented as an unmodifiable list: new children can not be added, but the child nodes"
+      },
+      {
+        "txt": "themselves can be manipulated. @return list of children. If no children, returns an empty list. public List<Node> childNodes() { return Collections.unmodifiableList(childNodes); } public List<Node> childNodesCopy() { List<Node> children = new ArrayList<Node>(childNodes.size()); for (Node node : childNodes) { children.add(node.clone()); }"
+      },
+      {
+        "txt": "return children; } public final int childNodeSize() { return childNodes.size(); } protected Node[] childNodesAsArray() { return childNodes.toArray(new Node[childNodeSize()]); } Gets this node's parent node. @return parent node; or null if no parent."
+      },
+      {
+        "txt": "public Node parent() { return parentNode; } Gets this node's parent node. Node overridable by extending classes, so useful if you really just need the Node type. @return parent node; or null if no parent. public final Node parentNode() { return parentNode; } public Document ownerDocument() { if (this instanceof Document)"
+      },
+      {
+        "txt": "return (Document) this; else if (parentNode == null) return null; else return parentNode.ownerDocument(); } public void remove() { Validate.notNull(parentNode); parentNode.removeChild(this); }"
+      },
+      {
+        "txt": "public Node before(String html) { addSiblingHtml(siblingIndex, html); return this; } public Node before(Node node) { Validate.notNull(node); Validate.notNull(parentNode); parentNode.addChildren(siblingIndex, node); return this; }"
+      },
+      {
+        "txt": "public Node after(String html) { addSiblingHtml(siblingIndex + 1, html); return this; } public Node after(Node node) { Validate.notNull(node); Validate.notNull(parentNode); parentNode.addChildren(siblingIndex + 1, node); return this; }"
+      },
+      {
+        "txt": "private void addSiblingHtml(int index, String html) { Validate.notNull(html); Validate.notNull(parentNode); Element context = parent() instanceof Element ? (Element) parent() : null; List<Node> nodes = Parser.parseFragment(html, context, baseUri()); parentNode.addChildren(index, nodes.toArray(new Node[nodes.size()])); } Wrap the supplied HTML around this node. @param html HTML to wrap around this element, e.g. {@code <div class=\"head\"></div>}. Can be arbitrarily deep. @return this node, for chaining."
+      },
+      {
+        "txt": "public Node wrap(String html) { Validate.notEmpty(html); Element context = parent() instanceof Element ? (Element) parent() : null; List<Node> wrapChildren = Parser.parseFragment(html, context, baseUri()); Node wrapNode = wrapChildren.get(0); if (wrapNode == null || !(wrapNode instanceof Element)) // nothing to wrap with; noop return null; Element wrap = (Element) wrapNode; Element deepest = getDeepChild(wrap); parentNode.replaceChild(this, wrap);"
+      },
+      {
+        "txt": "deepest.addChildren(this); if (wrapChildren.size() > 0) { for (int i = 0; i < wrapChildren.size(); i++) { Node remainder = wrapChildren.get(i); remainder.parentNode.removeChild(remainder); wrap.appendChild(remainder); } } return this; }"
+      },
+      {
+        "txt": "public Node unwrap() { Validate.notNull(parentNode); Node firstChild = childNodes.size() > 0 ? childNodes.get(0) : null; parentNode.addChildren(siblingIndex, this.childNodesAsArray()); this.remove(); return firstChild; } private Element getDeepChild(Element el) { List<Element> children = el.children(); if (children.size() > 0)"
+      },
+      {
+        "txt": "return getDeepChild(children.get(0)); else return el; } public void replaceWith(Node in) { Validate.notNull(in); Validate.notNull(parentNode); parentNode.replaceChild(this, in); } protected void setParentNode(Node parentNode) {"
+      },
+      {
+        "txt": "if (this.parentNode != null) this.parentNode.removeChild(this); this.parentNode = parentNode; } protected void replaceChild(Node out, Node in) { Validate.isTrue(out.parentNode == this); Validate.notNull(in); if (in.parentNode != null) in.parentNode.removeChild(in); final int index = out.siblingIndex;"
+      },
+      {
+        "txt": "childNodes.set(index, in); in.parentNode = this; in.setSiblingIndex(index); out.parentNode = null; } protected void removeChild(Node out) { Validate.isTrue(out.parentNode == this); final int index = out.siblingIndex; childNodes.remove(index); reindexChildren(index);"
+      },
+      {
+        "txt": "out.parentNode = null; } protected void addChildren(Node... children) { for (Node child: children) { reparentChild(child); ensureChildNodes(); childNodes.add(child); child.setSiblingIndex(childNodes.size()-1); } }"
+      },
+      {
+        "txt": "Validate.noNullElements(children); ensureChildNodes(); for (int i = children.length - 1; i >= 0; i--) { Node in = children[i]; reparentChild(in); childNodes.add(index, in); <extra_id_0> reindexChildren(index); } protected void ensureChildNodes() { if (childNodes == EMPTY_NODES) { childNodes = new ArrayList<Node>(4); }"
+      },
+      {
+        "txt": "childNodes = new ArrayList<Node>(4); } } protected void reparentChild(Node child) { if (child.parentNode != null) child.parentNode.removeChild(child); child.setParentNode(this); } private void reindexChildren(int start) { for (int i = start; i < childNodes.size(); i++) {"
+      },
+      {
+        "txt": "childNodes.get(i).setSiblingIndex(i); } } Retrieves this node's sibling nodes. Similar to {@link #childNodes() node.parent.childNodes()}, but does not include this node (a node is not a sibling of itself). @return node siblings. If the node has no parent, returns an empty list. public List<Node> siblingNodes() { if (parentNode == null) return Collections.emptyList(); List<Node> nodes = parentNode.childNodes;"
+      },
+      {
+        "txt": "List<Node> siblings = new ArrayList<Node>(nodes.size() - 1); for (Node node: nodes) if (node != this) siblings.add(node); return siblings; } Get this node's next sibling. @return next sibling, or null if this is the last sibling public Node nextSibling() { if (parentNode == null)"
+      },
+      {
+        "txt": "return null; // root final List<Node> siblings = parentNode.childNodes; final int index = siblingIndex+1; if (siblings.size() > index) return siblings.get(index); else return null; } Get this node's previous sibling. @return the previous sibling, or null if this is the first sibling"
+      },
+      {
+        "txt": "public Node previousSibling() { if (parentNode == null) return null; // root if (siblingIndex > 0) return parentNode.childNodes.get(siblingIndex-1); else return null; } public int siblingIndex() { return siblingIndex;"
+      },
+      {
+        "txt": "} protected void setSiblingIndex(int siblingIndex) { this.siblingIndex = siblingIndex; } public Node traverse(NodeVisitor nodeVisitor) { Validate.notNull(nodeVisitor); NodeTraversor traversor = new NodeTraversor(nodeVisitor); traversor.traverse(this); return this; }"
+      },
+      {
+        "txt": "Get the outer HTML of this node. @return HTML public String outerHtml() { StringBuilder accum = new StringBuilder(128); outerHtml(accum); return accum.toString(); } protected void outerHtml(StringBuilder accum) { new NodeTraversor(new OuterHtmlVisitor(accum, getOutputSettings())).traverse(this); }"
+      },
+      {
+        "txt": "Document.OutputSettings getOutputSettings() { return ownerDocument() != null ? ownerDocument().outputSettings() : (new Document(\"\")).outputSettings(); } Get the outer HTML of this node. @param accum accumulator to place HTML into abstract void outerHtmlHead(StringBuilder accum, int depth, Document.OutputSettings out); abstract void outerHtmlTail(StringBuilder accum, int depth, Document.OutputSettings out); @Override public String toString() { return outerHtml();"
+      },
+      {
+        "txt": "} protected void indent(StringBuilder accum, int depth, Document.OutputSettings out) { accum.append(\"\\n\").append(StringUtil.padding(depth * out.indentAmount())); } @Override public boolean equals(Object o) { if (this == o) return true; if (o == null || getClass() != o.getClass()) return false; Node node = (Node) o; if (childNodes != null ? !childNodes.equals(node.childNodes) : node.childNodes != null) return false;"
+      },
+      {
+        "txt": "return !(attributes != null ? !attributes.equals(node.attributes) : node.attributes != null); } @Override public int hashCode() { int result = childNodes != null ? childNodes.hashCode() : 0; result = 31 * result + (attributes != null ? attributes.hashCode() : 0); return result; } @Override public Node clone() {"
+      },
+      {
+        "txt": "Node thisClone = doClone(null); // splits for orphan LinkedList<Node> nodesToProcess = new LinkedList<Node>(); nodesToProcess.add(thisClone); while (!nodesToProcess.isEmpty()) { Node currParent = nodesToProcess.remove(); for (int i = 0; i < currParent.childNodes.size(); i++) { Node childClone = currParent.childNodes.get(i).doClone(currParent); currParent.childNodes.set(i, childClone); nodesToProcess.add(childClone); }"
+      },
+      {
+        "txt": "} return thisClone; } protected Node doClone(Node parent) { Node clone; try { clone = (Node) super.clone(); } catch (CloneNotSupportedException e) { throw new RuntimeException(e); }"
+      },
+      {
+        "txt": "clone.parentNode = parent; // can be null, to create an orphan split clone.siblingIndex = parent == null ? 0 : siblingIndex; clone.attributes = attributes != null ? attributes.clone() : null; clone.baseUri = baseUri; clone.childNodes = new ArrayList<Node>(childNodes.size()); for (Node child: childNodes) clone.childNodes.add(child); return clone; } private static class OuterHtmlVisitor implements NodeVisitor {"
+      },
+      {
+        "txt": "private StringBuilder accum; private Document.OutputSettings out; OuterHtmlVisitor(StringBuilder accum, Document.OutputSettings out) { this.accum = accum; this.out = out; } public void head(Node node, int depth) { node.outerHtmlHead(accum, depth, out); } public void tail(Node node, int depth) {"
+      },
+      {
+        "txt": "if (!node.nodeName().equals(\"#text\")) // saves a void hit. node.outerHtmlTail(accum, depth, out); } }"
+      }
+    ]
+  },
+  {
+    "id": 1974,
+    "file_path": "src/main/java/org/jsoup/nodes/Node.java",
+    "start-bug-line": 446,
+    "end-bug-line": 446,
+    "bug": "reindexChildren(index);",
+    "fix": "[Delete]",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.jsoup.nodes; import org.jsoup.helper.StringUtil; import org.jsoup.helper.Validate;"
+      },
+      {
+        "txt": "import org.jsoup.parser.Parser; import org.jsoup.select.NodeTraversor; import org.jsoup.select.NodeVisitor; import java.net.MalformedURLException; import java.net.URL; import java.util.ArrayList; import java.util.Collections; import java.util.LinkedList; import java.util.List; The base, abstract Node model. Elements, Documents, Comments etc are all Node instances."
+      },
+      {
+        "txt": "@author Jonathan Hedley, jonathan@hedley.net */ public abstract class Node implements Cloneable { private static final List<Node> EMPTY_NODES = Collections.emptyList(); Node parentNode; List<Node> childNodes; Attributes attributes; String baseUri; int siblingIndex; Create a new Node. @param baseUri base URI"
+      },
+      {
+        "txt": "@param attributes attributes (not null, but may be empty) protected Node(String baseUri, Attributes attributes) { Validate.notNull(baseUri); Validate.notNull(attributes); childNodes = EMPTY_NODES; this.baseUri = baseUri.trim(); this.attributes = attributes; } protected Node(String baseUri) { this(baseUri, new Attributes());"
+      },
+      {
+        "txt": "} protected Node() { childNodes = EMPTY_NODES; attributes = null; } Get the node name of this node. Use for debugging purposes and not logic switching (for that, use instanceof). @return node name public abstract String nodeName(); public String attr(String attributeKey) { Validate.notNull(attributeKey);"
+      },
+      {
+        "txt": "if (attributes.hasKey(attributeKey)) return attributes.get(attributeKey); else if (attributeKey.toLowerCase().startsWith(\"abs:\")) return absUrl(attributeKey.substring(\"abs:\".length())); else return \"\"; } public Attributes attributes() { return attributes; } public Node attr(String attributeKey, String attributeValue) {"
+      },
+      {
+        "txt": "attributes.put(attributeKey, attributeValue); return this; } public boolean hasAttr(String attributeKey) { Validate.notNull(attributeKey); if (attributeKey.startsWith(\"abs:\")) { String key = attributeKey.substring(\"abs:\".length()); if (attributes.hasKey(key) && !absUrl(key).equals(\"\")) return true; }"
+      },
+      {
+        "txt": "return attributes.hasKey(attributeKey); } public Node removeAttr(String attributeKey) { Validate.notNull(attributeKey); attributes.remove(attributeKey); return this; } Get the base URI of this node. @return base URI public String baseUri() {"
+      },
+      {
+        "txt": "return baseUri; } Update the base URI of this node and all of its descendants. @param baseUri base URI to set public void setBaseUri(final String baseUri) { Validate.notNull(baseUri); traverse(new NodeVisitor() { public void head(Node node, int depth) { node.baseUri = baseUri; }"
+      },
+      {
+        "txt": "public void tail(Node node, int depth) { } }); } public String absUrl(String attributeKey) { Validate.notEmpty(attributeKey); if (!hasAttr(attributeKey)) { return \"\"; // nothing to make absolute with } else { return StringUtil.resolve(baseUri, attr(attributeKey));"
+      },
+      {
+        "txt": "} } Get a child node by its 0-based index. @param index index of child node @return the child node at this index. Throws a {@code IndexOutOfBoundsException} if the index is out of bounds. public Node childNode(int index) { return childNodes.get(index); } Get this node's children. Presented as an unmodifiable list: new children can not be added, but the child nodes themselves can be manipulated."
+      },
+      {
+        "txt": "@return list of children. If no children, returns an empty list. public List<Node> childNodes() { return Collections.unmodifiableList(childNodes); } public List<Node> childNodesCopy() { List<Node> children = new ArrayList<Node>(childNodes.size()); for (Node node : childNodes) { children.add(node.clone()); } return children;"
+      },
+      {
+        "txt": "} public final int childNodeSize() { return childNodes.size(); } protected Node[] childNodesAsArray() { return childNodes.toArray(new Node[childNodeSize()]); } Gets this node's parent node. @return parent node; or null if no parent. public Node parent() {"
+      },
+      {
+        "txt": "return parentNode; } Gets this node's parent node. Node overridable by extending classes, so useful if you really just need the Node type. @return parent node; or null if no parent. public final Node parentNode() { return parentNode; } public Document ownerDocument() { if (this instanceof Document) return (Document) this;"
+      },
+      {
+        "txt": "else if (parentNode == null) return null; else return parentNode.ownerDocument(); } public void remove() { Validate.notNull(parentNode); parentNode.removeChild(this); } public Node before(String html) {"
+      },
+      {
+        "txt": "addSiblingHtml(siblingIndex, html); return this; } public Node before(Node node) { Validate.notNull(node); Validate.notNull(parentNode); parentNode.addChildren(siblingIndex, node); return this; } public Node after(String html) {"
+      },
+      {
+        "txt": "addSiblingHtml(siblingIndex + 1, html); return this; } public Node after(Node node) { Validate.notNull(node); Validate.notNull(parentNode); parentNode.addChildren(siblingIndex + 1, node); return this; } private void addSiblingHtml(int index, String html) {"
+      },
+      {
+        "txt": "Validate.notNull(html); Validate.notNull(parentNode); Element context = parent() instanceof Element ? (Element) parent() : null; List<Node> nodes = Parser.parseFragment(html, context, baseUri()); parentNode.addChildren(index, nodes.toArray(new Node[nodes.size()])); } Wrap the supplied HTML around this node. @param html HTML to wrap around this element, e.g. {@code <div class=\"head\"></div>}. Can be arbitrarily deep. @return this node, for chaining. public Node wrap(String html) {"
+      },
+      {
+        "txt": "Validate.notEmpty(html); Element context = parent() instanceof Element ? (Element) parent() : null; List<Node> wrapChildren = Parser.parseFragment(html, context, baseUri()); Node wrapNode = wrapChildren.get(0); if (wrapNode == null || !(wrapNode instanceof Element)) // nothing to wrap with; noop return null; Element wrap = (Element) wrapNode; Element deepest = getDeepChild(wrap); parentNode.replaceChild(this, wrap); deepest.addChildren(this);"
+      },
+      {
+        "txt": "if (wrapChildren.size() > 0) { for (int i = 0; i < wrapChildren.size(); i++) { Node remainder = wrapChildren.get(i); remainder.parentNode.removeChild(remainder); wrap.appendChild(remainder); } } return this; } public Node unwrap() {"
+      },
+      {
+        "txt": "Validate.notNull(parentNode); Node firstChild = childNodes.size() > 0 ? childNodes.get(0) : null; parentNode.addChildren(siblingIndex, this.childNodesAsArray()); this.remove(); return firstChild; } private Element getDeepChild(Element el) { List<Element> children = el.children(); if (children.size() > 0) return getDeepChild(children.get(0));"
+      },
+      {
+        "txt": "else return el; } public void replaceWith(Node in) { Validate.notNull(in); Validate.notNull(parentNode); parentNode.replaceChild(this, in); } protected void setParentNode(Node parentNode) { if (this.parentNode != null)"
+      },
+      {
+        "txt": "this.parentNode.removeChild(this); this.parentNode = parentNode; } protected void replaceChild(Node out, Node in) { Validate.isTrue(out.parentNode == this); Validate.notNull(in); if (in.parentNode != null) in.parentNode.removeChild(in); final int index = out.siblingIndex; childNodes.set(index, in);"
+      },
+      {
+        "txt": "in.parentNode = this; in.setSiblingIndex(index); out.parentNode = null; } protected void removeChild(Node out) { Validate.isTrue(out.parentNode == this); final int index = out.siblingIndex; childNodes.remove(index); reindexChildren(index); out.parentNode = null;"
+      },
+      {
+        "txt": "} protected void addChildren(Node... children) { for (Node child: children) { reparentChild(child); ensureChildNodes(); childNodes.add(child); child.setSiblingIndex(childNodes.size()-1); } } protected void addChildren(int index, Node... children) {"
+      },
+      {
+        "txt": "ensureChildNodes(); for (int i = children.length - 1; i >= 0; i--) { Node in = children[i]; reparentChild(in); childNodes.add(index, in); } <extra_id_0> } protected void ensureChildNodes() { if (childNodes == EMPTY_NODES) { childNodes = new ArrayList<Node>(4); } }"
+      },
+      {
+        "txt": "} } protected void reparentChild(Node child) { if (child.parentNode != null) child.parentNode.removeChild(child); child.setParentNode(this); } private void reindexChildren(int start) { for (int i = start; i < childNodes.size(); i++) { childNodes.get(i).setSiblingIndex(i);"
+      },
+      {
+        "txt": "} } Retrieves this node's sibling nodes. Similar to {@link #childNodes() node.parent.childNodes()}, but does not include this node (a node is not a sibling of itself). @return node siblings. If the node has no parent, returns an empty list. public List<Node> siblingNodes() { if (parentNode == null) return Collections.emptyList(); List<Node> nodes = parentNode.childNodes; List<Node> siblings = new ArrayList<Node>(nodes.size() - 1);"
+      },
+      {
+        "txt": "for (Node node: nodes) if (node != this) siblings.add(node); return siblings; } Get this node's next sibling. @return next sibling, or null if this is the last sibling public Node nextSibling() { if (parentNode == null) return null; // root"
+      },
+      {
+        "txt": "final List<Node> siblings = parentNode.childNodes; final int index = siblingIndex+1; if (siblings.size() > index) return siblings.get(index); else return null; } Get this node's previous sibling. @return the previous sibling, or null if this is the first sibling public Node previousSibling() {"
+      },
+      {
+        "txt": "if (parentNode == null) return null; // root if (siblingIndex > 0) return parentNode.childNodes.get(siblingIndex-1); else return null; } public int siblingIndex() { return siblingIndex; }"
+      },
+      {
+        "txt": "protected void setSiblingIndex(int siblingIndex) { this.siblingIndex = siblingIndex; } public Node traverse(NodeVisitor nodeVisitor) { Validate.notNull(nodeVisitor); NodeTraversor traversor = new NodeTraversor(nodeVisitor); traversor.traverse(this); return this; } Get the outer HTML of this node."
+      },
+      {
+        "txt": "@return HTML public String outerHtml() { StringBuilder accum = new StringBuilder(128); outerHtml(accum); return accum.toString(); } protected void outerHtml(StringBuilder accum) { new NodeTraversor(new OuterHtmlVisitor(accum, getOutputSettings())).traverse(this); } Document.OutputSettings getOutputSettings() {"
+      },
+      {
+        "txt": "return ownerDocument() != null ? ownerDocument().outputSettings() : (new Document(\"\")).outputSettings(); } Get the outer HTML of this node. @param accum accumulator to place HTML into abstract void outerHtmlHead(StringBuilder accum, int depth, Document.OutputSettings out); abstract void outerHtmlTail(StringBuilder accum, int depth, Document.OutputSettings out); @Override public String toString() { return outerHtml(); }"
+      },
+      {
+        "txt": "protected void indent(StringBuilder accum, int depth, Document.OutputSettings out) { accum.append(\"\\n\").append(StringUtil.padding(depth * out.indentAmount())); } @Override public boolean equals(Object o) { if (this == o) return true; if (o == null || getClass() != o.getClass()) return false; Node node = (Node) o; if (childNodes != null ? !childNodes.equals(node.childNodes) : node.childNodes != null) return false; return !(attributes != null ? !attributes.equals(node.attributes) : node.attributes != null);"
+      },
+      {
+        "txt": "} @Override public int hashCode() { int result = childNodes != null ? childNodes.hashCode() : 0; result = 31 * result + (attributes != null ? attributes.hashCode() : 0); return result; } @Override public Node clone() { Node thisClone = doClone(null); // splits for orphan"
+      },
+      {
+        "txt": "LinkedList<Node> nodesToProcess = new LinkedList<Node>(); nodesToProcess.add(thisClone); while (!nodesToProcess.isEmpty()) { Node currParent = nodesToProcess.remove(); for (int i = 0; i < currParent.childNodes.size(); i++) { Node childClone = currParent.childNodes.get(i).doClone(currParent); currParent.childNodes.set(i, childClone); nodesToProcess.add(childClone); } }"
+      },
+      {
+        "txt": "return thisClone; } protected Node doClone(Node parent) { Node clone; try { clone = (Node) super.clone(); } catch (CloneNotSupportedException e) { throw new RuntimeException(e); } clone.parentNode = parent; // can be null, to create an orphan split"
+      },
+      {
+        "txt": "clone.siblingIndex = parent == null ? 0 : siblingIndex; clone.attributes = attributes != null ? attributes.clone() : null; clone.baseUri = baseUri; clone.childNodes = new ArrayList<Node>(childNodes.size()); for (Node child: childNodes) clone.childNodes.add(child); return clone; } private static class OuterHtmlVisitor implements NodeVisitor { private StringBuilder accum;"
+      },
+      {
+        "txt": "private Document.OutputSettings out; OuterHtmlVisitor(StringBuilder accum, Document.OutputSettings out) { this.accum = accum; this.out = out; } public void head(Node node, int depth) { node.outerHtmlHead(accum, depth, out); } public void tail(Node node, int depth) { if (!node.nodeName().equals(\"#text\")) // saves a void hit."
+      },
+      {
+        "txt": "node.outerHtmlTail(accum, depth, out); } }"
+      }
+    ]
+  }
+]

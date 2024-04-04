@@ -1,0 +1,944 @@
+[
+  {
+    "id": 2038,
+    "file_path": "src/main/java/org/jsoup/select/Evaluator.java",
+    "start-bug-line": 0,
+    "end-bug-line": 0,
+    "bug": "",
+    "fix": "package org.jsoup.nodes;  import org.jsoup.parser.Tag;  import java.io.IOException;  /** * Represents a {@link TextNode} as an {@link Element}, to enable text nodes to be selected with * the {@link org.jsoup.select.Selector} {@code :matchText} syntax. */ public class PseudoTextElement extends Element {  public PseudoTextElement(Tag tag, String baseUri, Attributes attributes) { super(tag, baseUri, attributes); }  @Override void outerHtmlHead(Appendable accum, int depth, Document.OutputSettings out) throws IOException { }  @Override void outerHtmlTail(Appendable accum, int depth, Document.OutputSettings out) throws IOException { } }",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.jsoup.select; import org.jsoup.helper.Validate; import org.jsoup.nodes.Comment; import org.jsoup.nodes.Document; import org.jsoup.nodes.DocumentType; import org.jsoup.nodes.Element;"
+      },
+      {
+        "txt": "import org.jsoup.nodes.DocumentType; import org.jsoup.nodes.Element; import org.jsoup.nodes.Node; import org.jsoup.nodes.XmlDeclaration; import java.util.List; import java.util.regex.Matcher; import java.util.regex.Pattern; import static org.jsoup.internal.Normalizer.lowerCase; import static org.jsoup.internal.Normalizer.normalize; public abstract class Evaluator {"
+      },
+      {
+        "txt": "protected Evaluator() { } public abstract boolean matches(Element root, Element element); public static final class Tag extends Evaluator { private String tagName; public Tag(String tagName) { this.tagName = tagName; } @Override public boolean matches(Element root, Element element) {"
+      },
+      {
+        "txt": "return (element.tagName().equalsIgnoreCase(tagName)); } @Override public String toString() { return String.format(\"%s\", tagName); } } public static final class TagEndsWith extends Evaluator { private String tagName; public TagEndsWith(String tagName) {"
+      },
+      {
+        "txt": "this.tagName = tagName; } @Override public boolean matches(Element root, Element element) { return (element.tagName().endsWith(tagName)); } @Override public String toString() { return String.format(\"%s\", tagName); }"
+      },
+      {
+        "txt": "} public static final class Id extends Evaluator { private String id; public Id(String id) { this.id = id; } @Override public boolean matches(Element root, Element element) { return (id.equals(element.id())); }"
+      },
+      {
+        "txt": "@Override public String toString() { return String.format(\"#%s\", id); } } public static final class Class extends Evaluator { private String className; public Class(String className) { this.className = className; }"
+      },
+      {
+        "txt": "@Override public boolean matches(Element root, Element element) { return (element.hasClass(className)); } @Override public String toString() { return String.format(\".%s\", className); } } public static final class Attribute extends Evaluator {"
+      },
+      {
+        "txt": "private String key; public Attribute(String key) { this.key = key; } @Override public boolean matches(Element root, Element element) { return element.hasAttr(key); } @Override public String toString() {"
+      },
+      {
+        "txt": "return String.format(\"[%s]\", key); } } public static final class AttributeStarting extends Evaluator { private String keyPrefix; public AttributeStarting(String keyPrefix) { Validate.notEmpty(keyPrefix); this.keyPrefix = lowerCase(keyPrefix); } @Override"
+      },
+      {
+        "txt": "public boolean matches(Element root, Element element) { List<org.jsoup.nodes.Attribute> values = element.attributes().asList(); for (org.jsoup.nodes.Attribute attribute : values) { if (lowerCase(attribute.getKey()).startsWith(keyPrefix)) return true; } return false; } @Override public String toString() {"
+      },
+      {
+        "txt": "return String.format(\"[^%s]\", keyPrefix); } } public static final class AttributeWithValue extends AttributeKeyPair { public AttributeWithValue(String key, String value) { super(key, value); } @Override public boolean matches(Element root, Element element) { return element.hasAttr(key) && value.equalsIgnoreCase(element.attr(key).trim());"
+      },
+      {
+        "txt": "} @Override public String toString() { return String.format(\"[%s=%s]\", key, value); } } public static final class AttributeWithValueNot extends AttributeKeyPair { public AttributeWithValueNot(String key, String value) { super(key, value); }"
+      },
+      {
+        "txt": "@Override public boolean matches(Element root, Element element) { return !value.equalsIgnoreCase(element.attr(key)); } @Override public String toString() { return String.format(\"[%s!=%s]\", key, value); } } public static final class AttributeWithValueStarting extends AttributeKeyPair {"
+      },
+      {
+        "txt": "public AttributeWithValueStarting(String key, String value) { super(key, value); } @Override public boolean matches(Element root, Element element) { return element.hasAttr(key) && lowerCase(element.attr(key)).startsWith(value); // value is lower case already } @Override public String toString() { return String.format(\"[%s^=%s]\", key, value);"
+      },
+      {
+        "txt": "} } public static final class AttributeWithValueEnding extends AttributeKeyPair { public AttributeWithValueEnding(String key, String value) { super(key, value); } @Override public boolean matches(Element root, Element element) { return element.hasAttr(key) && lowerCase(element.attr(key)).endsWith(value); // value is lower case }"
+      },
+      {
+        "txt": "@Override public String toString() { return String.format(\"[%s$=%s]\", key, value); } } public static final class AttributeWithValueContaining extends AttributeKeyPair { public AttributeWithValueContaining(String key, String value) { super(key, value); } @Override"
+      },
+      {
+        "txt": "public boolean matches(Element root, Element element) { return element.hasAttr(key) && lowerCase(element.attr(key)).contains(value); // value is lower case } @Override public String toString() { return String.format(\"[%s*=%s]\", key, value); } } public static final class AttributeWithValueMatching extends Evaluator { String key;"
+      },
+      {
+        "txt": "Pattern pattern; public AttributeWithValueMatching(String key, Pattern pattern) { this.key = normalize(key); this.pattern = pattern; } @Override public boolean matches(Element root, Element element) { return element.hasAttr(key) && pattern.matcher(element.attr(key)).find(); } @Override"
+      },
+      {
+        "txt": "public String toString() { return String.format(\"[%s~=%s]\", key, pattern.toString()); } } public abstract static class AttributeKeyPair extends Evaluator { String key; String value; public AttributeKeyPair(String key, String value) { Validate.notEmpty(key); Validate.notEmpty(value);"
+      },
+      {
+        "txt": "this.key = normalize(key); if (value.startsWith(\"\\\"\") && value.endsWith(\"\\\"\") || value.startsWith(\"'\") && value.endsWith(\"'\")) { value = value.substring(1, value.length()-1); } this.value = normalize(value); } } public static final class AllElements extends Evaluator { @Override"
+      },
+      {
+        "txt": "public boolean matches(Element root, Element element) { return true; } @Override public String toString() { return \"*\"; } } public static final class IndexLessThan extends IndexEvaluator { public IndexLessThan(int index) {"
+      },
+      {
+        "txt": "super(index); } @Override public boolean matches(Element root, Element element) { return root != element && element.elementSiblingIndex() < index; } @Override public String toString() { return String.format(\":lt(%d)\", index); }"
+      },
+      {
+        "txt": "} public static final class IndexGreaterThan extends IndexEvaluator { public IndexGreaterThan(int index) { super(index); } @Override public boolean matches(Element root, Element element) { return element.elementSiblingIndex() > index; } @Override"
+      },
+      {
+        "txt": "public String toString() { return String.format(\":gt(%d)\", index); } } public static final class IndexEquals extends IndexEvaluator { public IndexEquals(int index) { super(index); } @Override public boolean matches(Element root, Element element) {"
+      },
+      {
+        "txt": "return element.elementSiblingIndex() == index; } @Override public String toString() { return String.format(\":eq(%d)\", index); } } public static final class IsLastChild extends Evaluator { @Override public boolean matches(Element root, Element element) {"
+      },
+      {
+        "txt": "final Element p = element.parent(); return p != null && !(p instanceof Document) && element.elementSiblingIndex() == p.children().size()-1; } @Override public String toString() { return \":last-child\"; } } public static final class IsFirstOfType extends IsNthOfType { public IsFirstOfType() {"
+      },
+      {
+        "txt": "super(0,1); } @Override public String toString() { return \":first-of-type\"; } } public static final class IsLastOfType extends IsNthLastOfType { public IsLastOfType() { super(0,1);"
+      },
+      {
+        "txt": "} @Override public String toString() { return \":last-of-type\"; } } public static abstract class CssNthEvaluator extends Evaluator { protected final int a, b; public CssNthEvaluator(int a, int b) { this.a = a;"
+      },
+      {
+        "txt": "this.b = b; } public CssNthEvaluator(int b) { this(0,b); } @Override public boolean matches(Element root, Element element) { final Element p = element.parent(); if (p == null || (p instanceof Document)) return false; final int pos = calculatePosition(root, element);"
+      },
+      {
+        "txt": "if (a == 0) return pos == b; return (pos-b)*a >= 0 && (pos-b)%a==0; } @Override public String toString() { if (a == 0) return String.format(\":%s(%d)\",getPseudoClass(), b); if (b == 0) return String.format(\":%s(%dn)\",getPseudoClass(), a); return String.format(\":%s(%dn%+d)\", getPseudoClass(),a, b);"
+      },
+      {
+        "txt": "} protected abstract String getPseudoClass(); protected abstract int calculatePosition(Element root, Element element); } public static final class IsNthChild extends CssNthEvaluator { public IsNthChild(int a, int b) { super(a,b); } protected int calculatePosition(Element root, Element element) { return element.elementSiblingIndex()+1;"
+      },
+      {
+        "txt": "} protected String getPseudoClass() { return \"nth-child\"; } } public static final class IsNthLastChild extends CssNthEvaluator { public IsNthLastChild(int a, int b) { super(a,b); } @Override"
+      },
+      {
+        "txt": "protected int calculatePosition(Element root, Element element) { return element.parent().children().size() - element.elementSiblingIndex(); } @Override protected String getPseudoClass() { return \"nth-last-child\"; } } public static class IsNthOfType extends CssNthEvaluator { public IsNthOfType(int a, int b) {"
+      },
+      {
+        "txt": "super(a,b); } protected int calculatePosition(Element root, Element element) { int pos = 0; Elements family = element.parent().children(); for (Element el : family) { if (el.tag().equals(element.tag())) pos++; if (el == element) break; } return pos;"
+      },
+      {
+        "txt": "} @Override protected String getPseudoClass() { return \"nth-of-type\"; } } public static class IsNthLastOfType extends CssNthEvaluator { public IsNthLastOfType(int a, int b) { super(a, b); }"
+      },
+      {
+        "txt": "@Override protected int calculatePosition(Element root, Element element) { int pos = 0; Elements family = element.parent().children(); for (int i = element.elementSiblingIndex(); i < family.size(); i++) { if (family.get(i).tag().equals(element.tag())) pos++; } return pos; } @Override"
+      },
+      {
+        "txt": "protected String getPseudoClass() { return \"nth-last-of-type\"; } } public static final class IsFirstChild extends Evaluator { @Override public boolean matches(Element root, Element element) { final Element p = element.parent(); return p != null && !(p instanceof Document) && element.elementSiblingIndex() == 0; }"
+      },
+      {
+        "txt": "@Override public String toString() { return \":first-child\"; } } public static final class IsRoot extends Evaluator { @Override public boolean matches(Element root, Element element) { final Element r = root instanceof Document?root.child(0):root; return element == r;"
+      },
+      {
+        "txt": "} @Override public String toString() { return \":root\"; } } public static final class IsOnlyChild extends Evaluator { @Override public boolean matches(Element root, Element element) { final Element p = element.parent();"
+      },
+      {
+        "txt": "return p!=null && !(p instanceof Document) && element.siblingElements().size() == 0; } @Override public String toString() { return \":only-child\"; } } public static final class IsOnlyOfType extends Evaluator { @Override public boolean matches(Element root, Element element) {"
+      },
+      {
+        "txt": "final Element p = element.parent(); if (p==null || p instanceof Document) return false; int pos = 0; Elements family = p.children(); for (Element el : family) { if (el.tag().equals(element.tag())) pos++; } return pos == 1; } @Override"
+      },
+      {
+        "txt": "public String toString() { return \":only-of-type\"; } } public static final class IsEmpty extends Evaluator { @Override public boolean matches(Element root, Element element) { List<Node> family = element.childNodes(); for (Node n : family) { if (!(n instanceof Comment || n instanceof XmlDeclaration || n instanceof DocumentType)) return false;"
+      },
+      {
+        "txt": "} return true; } @Override public String toString() { return \":empty\"; } } public abstract static class IndexEvaluator extends Evaluator { int index;"
+      },
+      {
+        "txt": "public IndexEvaluator(int index) { this.index = index; } } public static final class ContainsText extends Evaluator { private String searchText; public ContainsText(String searchText) { this.searchText = lowerCase(searchText); } @Override"
+      },
+      {
+        "txt": "public boolean matches(Element root, Element element) { return lowerCase(element.text()).contains(searchText); } @Override public String toString() { return String.format(\":contains(%s)\", searchText); } } public static final class ContainsData extends Evaluator { private String searchText;"
+      },
+      {
+        "txt": "public ContainsData(String searchText) { this.searchText = lowerCase(searchText); } @Override public boolean matches(Element root, Element element) { return lowerCase(element.data()).contains(searchText); } @Override public String toString() { return String.format(\":containsData(%s)\", searchText);"
+      },
+      {
+        "txt": "} } public static final class ContainsOwnText extends Evaluator { private String searchText; public ContainsOwnText(String searchText) { this.searchText = lowerCase(searchText); } @Override public boolean matches(Element root, Element element) { return lowerCase(element.ownText()).contains(searchText);"
+      },
+      {
+        "txt": "} @Override public String toString() { return String.format(\":containsOwn(%s)\", searchText); } } public static final class Matches extends Evaluator { private Pattern pattern; public Matches(Pattern pattern) { this.pattern = pattern;"
+      },
+      {
+        "txt": "} @Override public boolean matches(Element root, Element element) { Matcher m = pattern.matcher(element.text()); return m.find(); } @Override public String toString() { return String.format(\":matches(%s)\", pattern); }"
+      },
+      {
+        "txt": "} public static final class MatchesOwn extends Evaluator { private Pattern pattern; public MatchesOwn(Pattern pattern) { this.pattern = pattern; } @Override public boolean matches(Element root, Element element) { Matcher m = pattern.matcher(element.ownText()); return m.find();"
+      },
+      {
+        "txt": "} @Override public String toString() { return String.format(\":matchesOwn(%s)\", pattern); } }"
+      }
+    ]
+  },
+  {
+    "id": 2039,
+    "file_path": "src/main/java/org/jsoup/select/Evaluator.java",
+    "start-bug-line": 9,
+    "end-bug-line": 9,
+    "bug": "",
+    "fix": "import org.jsoup.nodes.PseudoTextElement; import org.jsoup.nodes.TextNode;",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "import org.jsoup.helper.Validate; import org.jsoup.nodes.Comment; import org.jsoup.nodes.Document; import org.jsoup.nodes.DocumentType; import org.jsoup.nodes.Element; import org.jsoup.nodes.Node; <extra_id_0> import java.util.List; import java.util.regex.Matcher; import java.util.regex.Pattern; import static org.jsoup.internal.Normalizer.lowerCase; import static org.jsoup.internal.Normalizer.normalize; public abstract class Evaluator {"
+      },
+      {
+        "txt": "import static org.jsoup.internal.Normalizer.normalize; public abstract class Evaluator { protected Evaluator() { } public abstract boolean matches(Element root, Element element); public static final class Tag extends Evaluator { private String tagName; public Tag(String tagName) { this.tagName = tagName; }"
+      },
+      {
+        "txt": "@Override public boolean matches(Element root, Element element) { return (element.tagName().equalsIgnoreCase(tagName)); } @Override public String toString() { return String.format(\"%s\", tagName); } } public static final class TagEndsWith extends Evaluator {"
+      },
+      {
+        "txt": "private String tagName; public TagEndsWith(String tagName) { this.tagName = tagName; } @Override public boolean matches(Element root, Element element) { return (element.tagName().endsWith(tagName)); } @Override public String toString() {"
+      },
+      {
+        "txt": "return String.format(\"%s\", tagName); } } public static final class Id extends Evaluator { private String id; public Id(String id) { this.id = id; } @Override public boolean matches(Element root, Element element) {"
+      },
+      {
+        "txt": "return (id.equals(element.id())); } @Override public String toString() { return String.format(\"#%s\", id); } } public static final class Class extends Evaluator { private String className; public Class(String className) {"
+      },
+      {
+        "txt": "this.className = className; } @Override public boolean matches(Element root, Element element) { return (element.hasClass(className)); } @Override public String toString() { return String.format(\".%s\", className); }"
+      },
+      {
+        "txt": "} public static final class Attribute extends Evaluator { private String key; public Attribute(String key) { this.key = key; } @Override public boolean matches(Element root, Element element) { return element.hasAttr(key); }"
+      },
+      {
+        "txt": "@Override public String toString() { return String.format(\"[%s]\", key); } } public static final class AttributeStarting extends Evaluator { private String keyPrefix; public AttributeStarting(String keyPrefix) { Validate.notEmpty(keyPrefix); this.keyPrefix = lowerCase(keyPrefix);"
+      },
+      {
+        "txt": "} @Override public boolean matches(Element root, Element element) { List<org.jsoup.nodes.Attribute> values = element.attributes().asList(); for (org.jsoup.nodes.Attribute attribute : values) { if (lowerCase(attribute.getKey()).startsWith(keyPrefix)) return true; } return false; }"
+      },
+      {
+        "txt": "@Override public String toString() { return String.format(\"[^%s]\", keyPrefix); } } public static final class AttributeWithValue extends AttributeKeyPair { public AttributeWithValue(String key, String value) { super(key, value); } @Override"
+      },
+      {
+        "txt": "public boolean matches(Element root, Element element) { return element.hasAttr(key) && value.equalsIgnoreCase(element.attr(key).trim()); } @Override public String toString() { return String.format(\"[%s=%s]\", key, value); } } public static final class AttributeWithValueNot extends AttributeKeyPair { public AttributeWithValueNot(String key, String value) {"
+      },
+      {
+        "txt": "super(key, value); } @Override public boolean matches(Element root, Element element) { return !value.equalsIgnoreCase(element.attr(key)); } @Override public String toString() { return String.format(\"[%s!=%s]\", key, value); }"
+      },
+      {
+        "txt": "} public static final class AttributeWithValueStarting extends AttributeKeyPair { public AttributeWithValueStarting(String key, String value) { super(key, value); } @Override public boolean matches(Element root, Element element) { return element.hasAttr(key) && lowerCase(element.attr(key)).startsWith(value); // value is lower case already } @Override"
+      },
+      {
+        "txt": "public String toString() { return String.format(\"[%s^=%s]\", key, value); } } public static final class AttributeWithValueEnding extends AttributeKeyPair { public AttributeWithValueEnding(String key, String value) { super(key, value); } @Override public boolean matches(Element root, Element element) {"
+      },
+      {
+        "txt": "return element.hasAttr(key) && lowerCase(element.attr(key)).endsWith(value); // value is lower case } @Override public String toString() { return String.format(\"[%s$=%s]\", key, value); } } public static final class AttributeWithValueContaining extends AttributeKeyPair { public AttributeWithValueContaining(String key, String value) { super(key, value);"
+      },
+      {
+        "txt": "} @Override public boolean matches(Element root, Element element) { return element.hasAttr(key) && lowerCase(element.attr(key)).contains(value); // value is lower case } @Override public String toString() { return String.format(\"[%s*=%s]\", key, value); } }"
+      },
+      {
+        "txt": "public static final class AttributeWithValueMatching extends Evaluator { String key; Pattern pattern; public AttributeWithValueMatching(String key, Pattern pattern) { this.key = normalize(key); this.pattern = pattern; } @Override public boolean matches(Element root, Element element) { return element.hasAttr(key) && pattern.matcher(element.attr(key)).find();"
+      },
+      {
+        "txt": "} @Override public String toString() { return String.format(\"[%s~=%s]\", key, pattern.toString()); } } public abstract static class AttributeKeyPair extends Evaluator { String key; String value; public AttributeKeyPair(String key, String value) {"
+      },
+      {
+        "txt": "Validate.notEmpty(key); Validate.notEmpty(value); this.key = normalize(key); if (value.startsWith(\"\\\"\") && value.endsWith(\"\\\"\") || value.startsWith(\"'\") && value.endsWith(\"'\")) { value = value.substring(1, value.length()-1); } this.value = normalize(value); } }"
+      },
+      {
+        "txt": "public static final class AllElements extends Evaluator { @Override public boolean matches(Element root, Element element) { return true; } @Override public String toString() { return \"*\"; } }"
+      },
+      {
+        "txt": "public static final class IndexLessThan extends IndexEvaluator { public IndexLessThan(int index) { super(index); } @Override public boolean matches(Element root, Element element) { return root != element && element.elementSiblingIndex() < index; } @Override public String toString() {"
+      },
+      {
+        "txt": "return String.format(\":lt(%d)\", index); } } public static final class IndexGreaterThan extends IndexEvaluator { public IndexGreaterThan(int index) { super(index); } @Override public boolean matches(Element root, Element element) { return element.elementSiblingIndex() > index;"
+      },
+      {
+        "txt": "} @Override public String toString() { return String.format(\":gt(%d)\", index); } } public static final class IndexEquals extends IndexEvaluator { public IndexEquals(int index) { super(index); }"
+      },
+      {
+        "txt": "@Override public boolean matches(Element root, Element element) { return element.elementSiblingIndex() == index; } @Override public String toString() { return String.format(\":eq(%d)\", index); } } public static final class IsLastChild extends Evaluator {"
+      },
+      {
+        "txt": "@Override public boolean matches(Element root, Element element) { final Element p = element.parent(); return p != null && !(p instanceof Document) && element.elementSiblingIndex() == p.children().size()-1; } @Override public String toString() { return \":last-child\"; } }"
+      },
+      {
+        "txt": "public static final class IsFirstOfType extends IsNthOfType { public IsFirstOfType() { super(0,1); } @Override public String toString() { return \":first-of-type\"; } } public static final class IsLastOfType extends IsNthLastOfType {"
+      },
+      {
+        "txt": "public IsLastOfType() { super(0,1); } @Override public String toString() { return \":last-of-type\"; } } public static abstract class CssNthEvaluator extends Evaluator { protected final int a, b;"
+      },
+      {
+        "txt": "public CssNthEvaluator(int a, int b) { this.a = a; this.b = b; } public CssNthEvaluator(int b) { this(0,b); } @Override public boolean matches(Element root, Element element) { final Element p = element.parent();"
+      },
+      {
+        "txt": "if (p == null || (p instanceof Document)) return false; final int pos = calculatePosition(root, element); if (a == 0) return pos == b; return (pos-b)*a >= 0 && (pos-b)%a==0; } @Override public String toString() { if (a == 0) return String.format(\":%s(%d)\",getPseudoClass(), b); if (b == 0)"
+      },
+      {
+        "txt": "return String.format(\":%s(%dn)\",getPseudoClass(), a); return String.format(\":%s(%dn%+d)\", getPseudoClass(),a, b); } protected abstract String getPseudoClass(); protected abstract int calculatePosition(Element root, Element element); } public static final class IsNthChild extends CssNthEvaluator { public IsNthChild(int a, int b) { super(a,b); }"
+      },
+      {
+        "txt": "protected int calculatePosition(Element root, Element element) { return element.elementSiblingIndex()+1; } protected String getPseudoClass() { return \"nth-child\"; } } public static final class IsNthLastChild extends CssNthEvaluator { public IsNthLastChild(int a, int b) { super(a,b);"
+      },
+      {
+        "txt": "} @Override protected int calculatePosition(Element root, Element element) { return element.parent().children().size() - element.elementSiblingIndex(); } @Override protected String getPseudoClass() { return \"nth-last-child\"; } }"
+      },
+      {
+        "txt": "public static class IsNthOfType extends CssNthEvaluator { public IsNthOfType(int a, int b) { super(a,b); } protected int calculatePosition(Element root, Element element) { int pos = 0; Elements family = element.parent().children(); for (Element el : family) { if (el.tag().equals(element.tag())) pos++; if (el == element) break;"
+      },
+      {
+        "txt": "} return pos; } @Override protected String getPseudoClass() { return \"nth-of-type\"; } } public static class IsNthLastOfType extends CssNthEvaluator { public IsNthLastOfType(int a, int b) {"
+      },
+      {
+        "txt": "super(a, b); } @Override protected int calculatePosition(Element root, Element element) { int pos = 0; Elements family = element.parent().children(); for (int i = element.elementSiblingIndex(); i < family.size(); i++) { if (family.get(i).tag().equals(element.tag())) pos++; } return pos;"
+      },
+      {
+        "txt": "} @Override protected String getPseudoClass() { return \"nth-last-of-type\"; } } public static final class IsFirstChild extends Evaluator { @Override public boolean matches(Element root, Element element) { final Element p = element.parent();"
+      },
+      {
+        "txt": "return p != null && !(p instanceof Document) && element.elementSiblingIndex() == 0; } @Override public String toString() { return \":first-child\"; } } public static final class IsRoot extends Evaluator { @Override public boolean matches(Element root, Element element) {"
+      },
+      {
+        "txt": "final Element r = root instanceof Document?root.child(0):root; return element == r; } @Override public String toString() { return \":root\"; } } public static final class IsOnlyChild extends Evaluator { @Override"
+      },
+      {
+        "txt": "public boolean matches(Element root, Element element) { final Element p = element.parent(); return p!=null && !(p instanceof Document) && element.siblingElements().size() == 0; } @Override public String toString() { return \":only-child\"; } } public static final class IsOnlyOfType extends Evaluator {"
+      },
+      {
+        "txt": "@Override public boolean matches(Element root, Element element) { final Element p = element.parent(); if (p==null || p instanceof Document) return false; int pos = 0; Elements family = p.children(); for (Element el : family) { if (el.tag().equals(element.tag())) pos++; } return pos == 1;"
+      },
+      {
+        "txt": "} @Override public String toString() { return \":only-of-type\"; } } public static final class IsEmpty extends Evaluator { @Override public boolean matches(Element root, Element element) { List<Node> family = element.childNodes();"
+      },
+      {
+        "txt": "for (Node n : family) { if (!(n instanceof Comment || n instanceof XmlDeclaration || n instanceof DocumentType)) return false; } return true; } @Override public String toString() { return \":empty\"; } }"
+      },
+      {
+        "txt": "public abstract static class IndexEvaluator extends Evaluator { int index; public IndexEvaluator(int index) { this.index = index; } } public static final class ContainsText extends Evaluator { private String searchText; public ContainsText(String searchText) { this.searchText = lowerCase(searchText);"
+      },
+      {
+        "txt": "} @Override public boolean matches(Element root, Element element) { return lowerCase(element.text()).contains(searchText); } @Override public String toString() { return String.format(\":contains(%s)\", searchText); } }"
+      },
+      {
+        "txt": "public static final class ContainsData extends Evaluator { private String searchText; public ContainsData(String searchText) { this.searchText = lowerCase(searchText); } @Override public boolean matches(Element root, Element element) { return lowerCase(element.data()).contains(searchText); } @Override"
+      },
+      {
+        "txt": "public String toString() { return String.format(\":containsData(%s)\", searchText); } } public static final class ContainsOwnText extends Evaluator { private String searchText; public ContainsOwnText(String searchText) { this.searchText = lowerCase(searchText); } @Override"
+      },
+      {
+        "txt": "public boolean matches(Element root, Element element) { return lowerCase(element.ownText()).contains(searchText); } @Override public String toString() { return String.format(\":containsOwn(%s)\", searchText); } } public static final class Matches extends Evaluator { private Pattern pattern;"
+      },
+      {
+        "txt": "public Matches(Pattern pattern) { this.pattern = pattern; } @Override public boolean matches(Element root, Element element) { Matcher m = pattern.matcher(element.text()); return m.find(); } @Override public String toString() {"
+      },
+      {
+        "txt": "return String.format(\":matches(%s)\", pattern); } } public static final class MatchesOwn extends Evaluator { private Pattern pattern; public MatchesOwn(Pattern pattern) { this.pattern = pattern; } @Override public boolean matches(Element root, Element element) {"
+      },
+      {
+        "txt": "Matcher m = pattern.matcher(element.ownText()); return m.find(); } @Override public String toString() { return String.format(\":matchesOwn(%s)\", pattern); } }"
+      }
+    ]
+  },
+  {
+    "id": 2040,
+    "file_path": "src/main/java/org/jsoup/select/Evaluator.java",
+    "start-bug-line": 754,
+    "end-bug-line": 754,
+    "bug": "",
+    "fix": "public static final class MatchText extends Evaluator {",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.jsoup.select; import org.jsoup.helper.Validate; import org.jsoup.nodes.Comment;"
+      },
+      {
+        "txt": "import org.jsoup.nodes.Document; import org.jsoup.nodes.DocumentType; import org.jsoup.nodes.Element; import org.jsoup.nodes.Node; import org.jsoup.nodes.XmlDeclaration; import java.util.List; import java.util.regex.Matcher; import java.util.regex.Pattern; import static org.jsoup.internal.Normalizer.lowerCase; import static org.jsoup.internal.Normalizer.normalize;"
+      },
+      {
+        "txt": "public abstract class Evaluator { protected Evaluator() { } public abstract boolean matches(Element root, Element element); public static final class Tag extends Evaluator { private String tagName; public Tag(String tagName) { this.tagName = tagName; } @Override"
+      },
+      {
+        "txt": "public boolean matches(Element root, Element element) { return (element.tagName().equalsIgnoreCase(tagName)); } @Override public String toString() { return String.format(\"%s\", tagName); } } public static final class TagEndsWith extends Evaluator { private String tagName;"
+      },
+      {
+        "txt": "public TagEndsWith(String tagName) { this.tagName = tagName; } @Override public boolean matches(Element root, Element element) { return (element.tagName().endsWith(tagName)); } @Override public String toString() { return String.format(\"%s\", tagName);"
+      },
+      {
+        "txt": "} } public static final class Id extends Evaluator { private String id; public Id(String id) { this.id = id; } @Override public boolean matches(Element root, Element element) { return (id.equals(element.id()));"
+      },
+      {
+        "txt": "} @Override public String toString() { return String.format(\"#%s\", id); } } public static final class Class extends Evaluator { private String className; public Class(String className) { this.className = className;"
+      },
+      {
+        "txt": "} @Override public boolean matches(Element root, Element element) { return (element.hasClass(className)); } @Override public String toString() { return String.format(\".%s\", className); } }"
+      },
+      {
+        "txt": "public static final class Attribute extends Evaluator { private String key; public Attribute(String key) { this.key = key; } @Override public boolean matches(Element root, Element element) { return element.hasAttr(key); } @Override"
+      },
+      {
+        "txt": "public String toString() { return String.format(\"[%s]\", key); } } public static final class AttributeStarting extends Evaluator { private String keyPrefix; public AttributeStarting(String keyPrefix) { Validate.notEmpty(keyPrefix); this.keyPrefix = lowerCase(keyPrefix); }"
+      },
+      {
+        "txt": "@Override public boolean matches(Element root, Element element) { List<org.jsoup.nodes.Attribute> values = element.attributes().asList(); for (org.jsoup.nodes.Attribute attribute : values) { if (lowerCase(attribute.getKey()).startsWith(keyPrefix)) return true; } return false; } @Override"
+      },
+      {
+        "txt": "public String toString() { return String.format(\"[^%s]\", keyPrefix); } } public static final class AttributeWithValue extends AttributeKeyPair { public AttributeWithValue(String key, String value) { super(key, value); } @Override public boolean matches(Element root, Element element) {"
+      },
+      {
+        "txt": "return element.hasAttr(key) && value.equalsIgnoreCase(element.attr(key).trim()); } @Override public String toString() { return String.format(\"[%s=%s]\", key, value); } } public static final class AttributeWithValueNot extends AttributeKeyPair { public AttributeWithValueNot(String key, String value) { super(key, value);"
+      },
+      {
+        "txt": "} @Override public boolean matches(Element root, Element element) { return !value.equalsIgnoreCase(element.attr(key)); } @Override public String toString() { return String.format(\"[%s!=%s]\", key, value); } }"
+      },
+      {
+        "txt": "public static final class AttributeWithValueStarting extends AttributeKeyPair { public AttributeWithValueStarting(String key, String value) { super(key, value); } @Override public boolean matches(Element root, Element element) { return element.hasAttr(key) && lowerCase(element.attr(key)).startsWith(value); // value is lower case already } @Override public String toString() {"
+      },
+      {
+        "txt": "return String.format(\"[%s^=%s]\", key, value); } } public static final class AttributeWithValueEnding extends AttributeKeyPair { public AttributeWithValueEnding(String key, String value) { super(key, value); } @Override public boolean matches(Element root, Element element) { return element.hasAttr(key) && lowerCase(element.attr(key)).endsWith(value); // value is lower case"
+      },
+      {
+        "txt": "} @Override public String toString() { return String.format(\"[%s$=%s]\", key, value); } } public static final class AttributeWithValueContaining extends AttributeKeyPair { public AttributeWithValueContaining(String key, String value) { super(key, value); }"
+      },
+      {
+        "txt": "@Override public boolean matches(Element root, Element element) { return element.hasAttr(key) && lowerCase(element.attr(key)).contains(value); // value is lower case } @Override public String toString() { return String.format(\"[%s*=%s]\", key, value); } } public static final class AttributeWithValueMatching extends Evaluator {"
+      },
+      {
+        "txt": "String key; Pattern pattern; public AttributeWithValueMatching(String key, Pattern pattern) { this.key = normalize(key); this.pattern = pattern; } @Override public boolean matches(Element root, Element element) { return element.hasAttr(key) && pattern.matcher(element.attr(key)).find(); }"
+      },
+      {
+        "txt": "@Override public String toString() { return String.format(\"[%s~=%s]\", key, pattern.toString()); } } public abstract static class AttributeKeyPair extends Evaluator { String key; String value; public AttributeKeyPair(String key, String value) { Validate.notEmpty(key);"
+      },
+      {
+        "txt": "Validate.notEmpty(value); this.key = normalize(key); if (value.startsWith(\"\\\"\") && value.endsWith(\"\\\"\") || value.startsWith(\"'\") && value.endsWith(\"'\")) { value = value.substring(1, value.length()-1); } this.value = normalize(value); } } public static final class AllElements extends Evaluator {"
+      },
+      {
+        "txt": "@Override public boolean matches(Element root, Element element) { return true; } @Override public String toString() { return \"*\"; } } public static final class IndexLessThan extends IndexEvaluator {"
+      },
+      {
+        "txt": "public IndexLessThan(int index) { super(index); } @Override public boolean matches(Element root, Element element) { return root != element && element.elementSiblingIndex() < index; } @Override public String toString() { return String.format(\":lt(%d)\", index);"
+      },
+      {
+        "txt": "} } public static final class IndexGreaterThan extends IndexEvaluator { public IndexGreaterThan(int index) { super(index); } @Override public boolean matches(Element root, Element element) { return element.elementSiblingIndex() > index; }"
+      },
+      {
+        "txt": "@Override public String toString() { return String.format(\":gt(%d)\", index); } } public static final class IndexEquals extends IndexEvaluator { public IndexEquals(int index) { super(index); } @Override"
+      },
+      {
+        "txt": "public boolean matches(Element root, Element element) { return element.elementSiblingIndex() == index; } @Override public String toString() { return String.format(\":eq(%d)\", index); } } public static final class IsLastChild extends Evaluator { @Override"
+      },
+      {
+        "txt": "public boolean matches(Element root, Element element) { final Element p = element.parent(); return p != null && !(p instanceof Document) && element.elementSiblingIndex() == p.children().size()-1; } @Override public String toString() { return \":last-child\"; } } public static final class IsFirstOfType extends IsNthOfType {"
+      },
+      {
+        "txt": "public IsFirstOfType() { super(0,1); } @Override public String toString() { return \":first-of-type\"; } } public static final class IsLastOfType extends IsNthLastOfType { public IsLastOfType() {"
+      },
+      {
+        "txt": "super(0,1); } @Override public String toString() { return \":last-of-type\"; } } public static abstract class CssNthEvaluator extends Evaluator { protected final int a, b; public CssNthEvaluator(int a, int b) {"
+      },
+      {
+        "txt": "this.a = a; this.b = b; } public CssNthEvaluator(int b) { this(0,b); } @Override public boolean matches(Element root, Element element) { final Element p = element.parent(); if (p == null || (p instanceof Document)) return false;"
+      },
+      {
+        "txt": "final int pos = calculatePosition(root, element); if (a == 0) return pos == b; return (pos-b)*a >= 0 && (pos-b)%a==0; } @Override public String toString() { if (a == 0) return String.format(\":%s(%d)\",getPseudoClass(), b); if (b == 0) return String.format(\":%s(%dn)\",getPseudoClass(), a);"
+      },
+      {
+        "txt": "return String.format(\":%s(%dn%+d)\", getPseudoClass(),a, b); } protected abstract String getPseudoClass(); protected abstract int calculatePosition(Element root, Element element); } public static final class IsNthChild extends CssNthEvaluator { public IsNthChild(int a, int b) { super(a,b); } protected int calculatePosition(Element root, Element element) {"
+      },
+      {
+        "txt": "return element.elementSiblingIndex()+1; } protected String getPseudoClass() { return \"nth-child\"; } } public static final class IsNthLastChild extends CssNthEvaluator { public IsNthLastChild(int a, int b) { super(a,b); }"
+      },
+      {
+        "txt": "@Override protected int calculatePosition(Element root, Element element) { return element.parent().children().size() - element.elementSiblingIndex(); } @Override protected String getPseudoClass() { return \"nth-last-child\"; } } public static class IsNthOfType extends CssNthEvaluator {"
+      },
+      {
+        "txt": "public IsNthOfType(int a, int b) { super(a,b); } protected int calculatePosition(Element root, Element element) { int pos = 0; Elements family = element.parent().children(); for (Element el : family) { if (el.tag().equals(element.tag())) pos++; if (el == element) break; }"
+      },
+      {
+        "txt": "return pos; } @Override protected String getPseudoClass() { return \"nth-of-type\"; } } public static class IsNthLastOfType extends CssNthEvaluator { public IsNthLastOfType(int a, int b) { super(a, b);"
+      },
+      {
+        "txt": "} @Override protected int calculatePosition(Element root, Element element) { int pos = 0; Elements family = element.parent().children(); for (int i = element.elementSiblingIndex(); i < family.size(); i++) { if (family.get(i).tag().equals(element.tag())) pos++; } return pos; }"
+      },
+      {
+        "txt": "@Override protected String getPseudoClass() { return \"nth-last-of-type\"; } } public static final class IsFirstChild extends Evaluator { @Override public boolean matches(Element root, Element element) { final Element p = element.parent(); return p != null && !(p instanceof Document) && element.elementSiblingIndex() == 0;"
+      },
+      {
+        "txt": "} @Override public String toString() { return \":first-child\"; } } public static final class IsRoot extends Evaluator { @Override public boolean matches(Element root, Element element) { final Element r = root instanceof Document?root.child(0):root;"
+      },
+      {
+        "txt": "return element == r; } @Override public String toString() { return \":root\"; } } public static final class IsOnlyChild extends Evaluator { @Override public boolean matches(Element root, Element element) {"
+      },
+      {
+        "txt": "final Element p = element.parent(); return p!=null && !(p instanceof Document) && element.siblingElements().size() == 0; } @Override public String toString() { return \":only-child\"; } } public static final class IsOnlyOfType extends Evaluator { @Override"
+      },
+      {
+        "txt": "public boolean matches(Element root, Element element) { final Element p = element.parent(); if (p==null || p instanceof Document) return false; int pos = 0; Elements family = p.children(); for (Element el : family) { if (el.tag().equals(element.tag())) pos++; } return pos == 1; }"
+      },
+      {
+        "txt": "@Override public String toString() { return \":only-of-type\"; } } public static final class IsEmpty extends Evaluator { @Override public boolean matches(Element root, Element element) { List<Node> family = element.childNodes(); for (Node n : family) {"
+      },
+      {
+        "txt": "if (!(n instanceof Comment || n instanceof XmlDeclaration || n instanceof DocumentType)) return false; } return true; } @Override public String toString() { return \":empty\"; } } public abstract static class IndexEvaluator extends Evaluator {"
+      },
+      {
+        "txt": "int index; public IndexEvaluator(int index) { this.index = index; } } public static final class ContainsText extends Evaluator { private String searchText; public ContainsText(String searchText) { this.searchText = lowerCase(searchText); }"
+      },
+      {
+        "txt": "@Override public boolean matches(Element root, Element element) { return lowerCase(element.text()).contains(searchText); } @Override public String toString() { return String.format(\":contains(%s)\", searchText); } } public static final class ContainsData extends Evaluator {"
+      },
+      {
+        "txt": "private String searchText; public ContainsData(String searchText) { this.searchText = lowerCase(searchText); } @Override public boolean matches(Element root, Element element) { return lowerCase(element.data()).contains(searchText); } @Override public String toString() {"
+      },
+      {
+        "txt": "return String.format(\":containsData(%s)\", searchText); } } public static final class ContainsOwnText extends Evaluator { private String searchText; public ContainsOwnText(String searchText) { this.searchText = lowerCase(searchText); } @Override public boolean matches(Element root, Element element) {"
+      },
+      {
+        "txt": "return lowerCase(element.ownText()).contains(searchText); } @Override public String toString() { return String.format(\":containsOwn(%s)\", searchText); } } public static final class Matches extends Evaluator { private Pattern pattern; public Matches(Pattern pattern) {"
+      },
+      {
+        "txt": "this.pattern = pattern; } @Override public boolean matches(Element root, Element element) { Matcher m = pattern.matcher(element.text()); return m.find(); } @Override public String toString() { return String.format(\":matches(%s)\", pattern);"
+      },
+      {
+        "txt": "} } public static final class MatchesOwn extends Evaluator { private Pattern pattern; public MatchesOwn(Pattern pattern) { this.pattern = pattern; } @Override public boolean matches(Element root, Element element) { Matcher m = pattern.matcher(element.ownText());"
+      },
+      {
+        "txt": "} @Override public String toString() { return String.format(\":matchesOwn(%s)\", pattern); } } <extra_id_0> }"
+      }
+    ]
+  },
+  {
+    "id": 2041,
+    "file_path": "src/main/java/org/jsoup/select/Evaluator.java",
+    "start-bug-line": 755,
+    "end-bug-line": 755,
+    "bug": "",
+    "fix": "@Override public boolean matches(Element root, Element element) { if (element instanceof PseudoTextElement) return true;  List<TextNode> textNodes = element.textNodes(); for (TextNode textNode : textNodes) { PseudoTextElement pel = new PseudoTextElement( org.jsoup.parser.Tag.valueOf(element.tagName()), element.baseUri(), element.attributes()); textNode.replaceWith(pel); pel.appendChild(textNode); } return false; }",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.jsoup.select; import org.jsoup.helper.Validate; import org.jsoup.nodes.Comment;"
+      },
+      {
+        "txt": "import org.jsoup.nodes.Document; import org.jsoup.nodes.DocumentType; import org.jsoup.nodes.Element; import org.jsoup.nodes.Node; import org.jsoup.nodes.XmlDeclaration; import java.util.List; import java.util.regex.Matcher; import java.util.regex.Pattern; import static org.jsoup.internal.Normalizer.lowerCase; import static org.jsoup.internal.Normalizer.normalize;"
+      },
+      {
+        "txt": "public abstract class Evaluator { protected Evaluator() { } public abstract boolean matches(Element root, Element element); public static final class Tag extends Evaluator { private String tagName; public Tag(String tagName) { this.tagName = tagName; } @Override"
+      },
+      {
+        "txt": "public boolean matches(Element root, Element element) { return (element.tagName().equalsIgnoreCase(tagName)); } @Override public String toString() { return String.format(\"%s\", tagName); } } public static final class TagEndsWith extends Evaluator { private String tagName;"
+      },
+      {
+        "txt": "public TagEndsWith(String tagName) { this.tagName = tagName; } @Override public boolean matches(Element root, Element element) { return (element.tagName().endsWith(tagName)); } @Override public String toString() { return String.format(\"%s\", tagName);"
+      },
+      {
+        "txt": "} } public static final class Id extends Evaluator { private String id; public Id(String id) { this.id = id; } @Override public boolean matches(Element root, Element element) { return (id.equals(element.id()));"
+      },
+      {
+        "txt": "} @Override public String toString() { return String.format(\"#%s\", id); } } public static final class Class extends Evaluator { private String className; public Class(String className) { this.className = className;"
+      },
+      {
+        "txt": "} @Override public boolean matches(Element root, Element element) { return (element.hasClass(className)); } @Override public String toString() { return String.format(\".%s\", className); } }"
+      },
+      {
+        "txt": "public static final class Attribute extends Evaluator { private String key; public Attribute(String key) { this.key = key; } @Override public boolean matches(Element root, Element element) { return element.hasAttr(key); } @Override"
+      },
+      {
+        "txt": "public String toString() { return String.format(\"[%s]\", key); } } public static final class AttributeStarting extends Evaluator { private String keyPrefix; public AttributeStarting(String keyPrefix) { Validate.notEmpty(keyPrefix); this.keyPrefix = lowerCase(keyPrefix); }"
+      },
+      {
+        "txt": "@Override public boolean matches(Element root, Element element) { List<org.jsoup.nodes.Attribute> values = element.attributes().asList(); for (org.jsoup.nodes.Attribute attribute : values) { if (lowerCase(attribute.getKey()).startsWith(keyPrefix)) return true; } return false; } @Override"
+      },
+      {
+        "txt": "public String toString() { return String.format(\"[^%s]\", keyPrefix); } } public static final class AttributeWithValue extends AttributeKeyPair { public AttributeWithValue(String key, String value) { super(key, value); } @Override public boolean matches(Element root, Element element) {"
+      },
+      {
+        "txt": "return element.hasAttr(key) && value.equalsIgnoreCase(element.attr(key).trim()); } @Override public String toString() { return String.format(\"[%s=%s]\", key, value); } } public static final class AttributeWithValueNot extends AttributeKeyPair { public AttributeWithValueNot(String key, String value) { super(key, value);"
+      },
+      {
+        "txt": "} @Override public boolean matches(Element root, Element element) { return !value.equalsIgnoreCase(element.attr(key)); } @Override public String toString() { return String.format(\"[%s!=%s]\", key, value); } }"
+      },
+      {
+        "txt": "public static final class AttributeWithValueStarting extends AttributeKeyPair { public AttributeWithValueStarting(String key, String value) { super(key, value); } @Override public boolean matches(Element root, Element element) { return element.hasAttr(key) && lowerCase(element.attr(key)).startsWith(value); // value is lower case already } @Override public String toString() {"
+      },
+      {
+        "txt": "return String.format(\"[%s^=%s]\", key, value); } } public static final class AttributeWithValueEnding extends AttributeKeyPair { public AttributeWithValueEnding(String key, String value) { super(key, value); } @Override public boolean matches(Element root, Element element) { return element.hasAttr(key) && lowerCase(element.attr(key)).endsWith(value); // value is lower case"
+      },
+      {
+        "txt": "} @Override public String toString() { return String.format(\"[%s$=%s]\", key, value); } } public static final class AttributeWithValueContaining extends AttributeKeyPair { public AttributeWithValueContaining(String key, String value) { super(key, value); }"
+      },
+      {
+        "txt": "@Override public boolean matches(Element root, Element element) { return element.hasAttr(key) && lowerCase(element.attr(key)).contains(value); // value is lower case } @Override public String toString() { return String.format(\"[%s*=%s]\", key, value); } } public static final class AttributeWithValueMatching extends Evaluator {"
+      },
+      {
+        "txt": "String key; Pattern pattern; public AttributeWithValueMatching(String key, Pattern pattern) { this.key = normalize(key); this.pattern = pattern; } @Override public boolean matches(Element root, Element element) { return element.hasAttr(key) && pattern.matcher(element.attr(key)).find(); }"
+      },
+      {
+        "txt": "@Override public String toString() { return String.format(\"[%s~=%s]\", key, pattern.toString()); } } public abstract static class AttributeKeyPair extends Evaluator { String key; String value; public AttributeKeyPair(String key, String value) { Validate.notEmpty(key);"
+      },
+      {
+        "txt": "Validate.notEmpty(value); this.key = normalize(key); if (value.startsWith(\"\\\"\") && value.endsWith(\"\\\"\") || value.startsWith(\"'\") && value.endsWith(\"'\")) { value = value.substring(1, value.length()-1); } this.value = normalize(value); } } public static final class AllElements extends Evaluator {"
+      },
+      {
+        "txt": "@Override public boolean matches(Element root, Element element) { return true; } @Override public String toString() { return \"*\"; } } public static final class IndexLessThan extends IndexEvaluator {"
+      },
+      {
+        "txt": "public IndexLessThan(int index) { super(index); } @Override public boolean matches(Element root, Element element) { return root != element && element.elementSiblingIndex() < index; } @Override public String toString() { return String.format(\":lt(%d)\", index);"
+      },
+      {
+        "txt": "} } public static final class IndexGreaterThan extends IndexEvaluator { public IndexGreaterThan(int index) { super(index); } @Override public boolean matches(Element root, Element element) { return element.elementSiblingIndex() > index; }"
+      },
+      {
+        "txt": "@Override public String toString() { return String.format(\":gt(%d)\", index); } } public static final class IndexEquals extends IndexEvaluator { public IndexEquals(int index) { super(index); } @Override"
+      },
+      {
+        "txt": "public boolean matches(Element root, Element element) { return element.elementSiblingIndex() == index; } @Override public String toString() { return String.format(\":eq(%d)\", index); } } public static final class IsLastChild extends Evaluator { @Override"
+      },
+      {
+        "txt": "public boolean matches(Element root, Element element) { final Element p = element.parent(); return p != null && !(p instanceof Document) && element.elementSiblingIndex() == p.children().size()-1; } @Override public String toString() { return \":last-child\"; } } public static final class IsFirstOfType extends IsNthOfType {"
+      },
+      {
+        "txt": "public IsFirstOfType() { super(0,1); } @Override public String toString() { return \":first-of-type\"; } } public static final class IsLastOfType extends IsNthLastOfType { public IsLastOfType() {"
+      },
+      {
+        "txt": "super(0,1); } @Override public String toString() { return \":last-of-type\"; } } public static abstract class CssNthEvaluator extends Evaluator { protected final int a, b; public CssNthEvaluator(int a, int b) {"
+      },
+      {
+        "txt": "this.a = a; this.b = b; } public CssNthEvaluator(int b) { this(0,b); } @Override public boolean matches(Element root, Element element) { final Element p = element.parent(); if (p == null || (p instanceof Document)) return false;"
+      },
+      {
+        "txt": "final int pos = calculatePosition(root, element); if (a == 0) return pos == b; return (pos-b)*a >= 0 && (pos-b)%a==0; } @Override public String toString() { if (a == 0) return String.format(\":%s(%d)\",getPseudoClass(), b); if (b == 0) return String.format(\":%s(%dn)\",getPseudoClass(), a);"
+      },
+      {
+        "txt": "return String.format(\":%s(%dn%+d)\", getPseudoClass(),a, b); } protected abstract String getPseudoClass(); protected abstract int calculatePosition(Element root, Element element); } public static final class IsNthChild extends CssNthEvaluator { public IsNthChild(int a, int b) { super(a,b); } protected int calculatePosition(Element root, Element element) {"
+      },
+      {
+        "txt": "return element.elementSiblingIndex()+1; } protected String getPseudoClass() { return \"nth-child\"; } } public static final class IsNthLastChild extends CssNthEvaluator { public IsNthLastChild(int a, int b) { super(a,b); }"
+      },
+      {
+        "txt": "@Override protected int calculatePosition(Element root, Element element) { return element.parent().children().size() - element.elementSiblingIndex(); } @Override protected String getPseudoClass() { return \"nth-last-child\"; } } public static class IsNthOfType extends CssNthEvaluator {"
+      },
+      {
+        "txt": "public IsNthOfType(int a, int b) { super(a,b); } protected int calculatePosition(Element root, Element element) { int pos = 0; Elements family = element.parent().children(); for (Element el : family) { if (el.tag().equals(element.tag())) pos++; if (el == element) break; }"
+      },
+      {
+        "txt": "return pos; } @Override protected String getPseudoClass() { return \"nth-of-type\"; } } public static class IsNthLastOfType extends CssNthEvaluator { public IsNthLastOfType(int a, int b) { super(a, b);"
+      },
+      {
+        "txt": "} @Override protected int calculatePosition(Element root, Element element) { int pos = 0; Elements family = element.parent().children(); for (int i = element.elementSiblingIndex(); i < family.size(); i++) { if (family.get(i).tag().equals(element.tag())) pos++; } return pos; }"
+      },
+      {
+        "txt": "@Override protected String getPseudoClass() { return \"nth-last-of-type\"; } } public static final class IsFirstChild extends Evaluator { @Override public boolean matches(Element root, Element element) { final Element p = element.parent(); return p != null && !(p instanceof Document) && element.elementSiblingIndex() == 0;"
+      },
+      {
+        "txt": "} @Override public String toString() { return \":first-child\"; } } public static final class IsRoot extends Evaluator { @Override public boolean matches(Element root, Element element) { final Element r = root instanceof Document?root.child(0):root;"
+      },
+      {
+        "txt": "return element == r; } @Override public String toString() { return \":root\"; } } public static final class IsOnlyChild extends Evaluator { @Override public boolean matches(Element root, Element element) {"
+      },
+      {
+        "txt": "final Element p = element.parent(); return p!=null && !(p instanceof Document) && element.siblingElements().size() == 0; } @Override public String toString() { return \":only-child\"; } } public static final class IsOnlyOfType extends Evaluator { @Override"
+      },
+      {
+        "txt": "public boolean matches(Element root, Element element) { final Element p = element.parent(); if (p==null || p instanceof Document) return false; int pos = 0; Elements family = p.children(); for (Element el : family) { if (el.tag().equals(element.tag())) pos++; } return pos == 1; }"
+      },
+      {
+        "txt": "@Override public String toString() { return \":only-of-type\"; } } public static final class IsEmpty extends Evaluator { @Override public boolean matches(Element root, Element element) { List<Node> family = element.childNodes(); for (Node n : family) {"
+      },
+      {
+        "txt": "if (!(n instanceof Comment || n instanceof XmlDeclaration || n instanceof DocumentType)) return false; } return true; } @Override public String toString() { return \":empty\"; } } public abstract static class IndexEvaluator extends Evaluator {"
+      },
+      {
+        "txt": "int index; public IndexEvaluator(int index) { this.index = index; } } public static final class ContainsText extends Evaluator { private String searchText; public ContainsText(String searchText) { this.searchText = lowerCase(searchText); }"
+      },
+      {
+        "txt": "@Override public boolean matches(Element root, Element element) { return lowerCase(element.text()).contains(searchText); } @Override public String toString() { return String.format(\":contains(%s)\", searchText); } } public static final class ContainsData extends Evaluator {"
+      },
+      {
+        "txt": "private String searchText; public ContainsData(String searchText) { this.searchText = lowerCase(searchText); } @Override public boolean matches(Element root, Element element) { return lowerCase(element.data()).contains(searchText); } @Override public String toString() {"
+      },
+      {
+        "txt": "return String.format(\":containsData(%s)\", searchText); } } public static final class ContainsOwnText extends Evaluator { private String searchText; public ContainsOwnText(String searchText) { this.searchText = lowerCase(searchText); } @Override public boolean matches(Element root, Element element) {"
+      },
+      {
+        "txt": "return lowerCase(element.ownText()).contains(searchText); } @Override public String toString() { return String.format(\":containsOwn(%s)\", searchText); } } public static final class Matches extends Evaluator { private Pattern pattern; public Matches(Pattern pattern) {"
+      },
+      {
+        "txt": "this.pattern = pattern; } @Override public boolean matches(Element root, Element element) { Matcher m = pattern.matcher(element.text()); return m.find(); } @Override public String toString() { return String.format(\":matches(%s)\", pattern);"
+      },
+      {
+        "txt": "} } public static final class MatchesOwn extends Evaluator { private Pattern pattern; public MatchesOwn(Pattern pattern) { this.pattern = pattern; } @Override public boolean matches(Element root, Element element) { Matcher m = pattern.matcher(element.ownText());"
+      },
+      {
+        "txt": "} @Override public String toString() { return String.format(\":matchesOwn(%s)\", pattern); } } <extra_id_0> }"
+      }
+    ]
+  },
+  {
+    "id": 2042,
+    "file_path": "src/main/java/org/jsoup/select/Evaluator.java",
+    "start-bug-line": 756,
+    "end-bug-line": 756,
+    "bug": "",
+    "fix": "@Override public String toString() { return \":matchText\"; } }",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.jsoup.select; import org.jsoup.helper.Validate; import org.jsoup.nodes.Comment;"
+      },
+      {
+        "txt": "import org.jsoup.nodes.Document; import org.jsoup.nodes.DocumentType; import org.jsoup.nodes.Element; import org.jsoup.nodes.Node; import org.jsoup.nodes.XmlDeclaration; import java.util.List; import java.util.regex.Matcher; import java.util.regex.Pattern; import static org.jsoup.internal.Normalizer.lowerCase; import static org.jsoup.internal.Normalizer.normalize;"
+      },
+      {
+        "txt": "public abstract class Evaluator { protected Evaluator() { } public abstract boolean matches(Element root, Element element); public static final class Tag extends Evaluator { private String tagName; public Tag(String tagName) { this.tagName = tagName; } @Override"
+      },
+      {
+        "txt": "public boolean matches(Element root, Element element) { return (element.tagName().equalsIgnoreCase(tagName)); } @Override public String toString() { return String.format(\"%s\", tagName); } } public static final class TagEndsWith extends Evaluator { private String tagName;"
+      },
+      {
+        "txt": "public TagEndsWith(String tagName) { this.tagName = tagName; } @Override public boolean matches(Element root, Element element) { return (element.tagName().endsWith(tagName)); } @Override public String toString() { return String.format(\"%s\", tagName);"
+      },
+      {
+        "txt": "} } public static final class Id extends Evaluator { private String id; public Id(String id) { this.id = id; } @Override public boolean matches(Element root, Element element) { return (id.equals(element.id()));"
+      },
+      {
+        "txt": "} @Override public String toString() { return String.format(\"#%s\", id); } } public static final class Class extends Evaluator { private String className; public Class(String className) { this.className = className;"
+      },
+      {
+        "txt": "} @Override public boolean matches(Element root, Element element) { return (element.hasClass(className)); } @Override public String toString() { return String.format(\".%s\", className); } }"
+      },
+      {
+        "txt": "public static final class Attribute extends Evaluator { private String key; public Attribute(String key) { this.key = key; } @Override public boolean matches(Element root, Element element) { return element.hasAttr(key); } @Override"
+      },
+      {
+        "txt": "public String toString() { return String.format(\"[%s]\", key); } } public static final class AttributeStarting extends Evaluator { private String keyPrefix; public AttributeStarting(String keyPrefix) { Validate.notEmpty(keyPrefix); this.keyPrefix = lowerCase(keyPrefix); }"
+      },
+      {
+        "txt": "@Override public boolean matches(Element root, Element element) { List<org.jsoup.nodes.Attribute> values = element.attributes().asList(); for (org.jsoup.nodes.Attribute attribute : values) { if (lowerCase(attribute.getKey()).startsWith(keyPrefix)) return true; } return false; } @Override"
+      },
+      {
+        "txt": "public String toString() { return String.format(\"[^%s]\", keyPrefix); } } public static final class AttributeWithValue extends AttributeKeyPair { public AttributeWithValue(String key, String value) { super(key, value); } @Override public boolean matches(Element root, Element element) {"
+      },
+      {
+        "txt": "return element.hasAttr(key) && value.equalsIgnoreCase(element.attr(key).trim()); } @Override public String toString() { return String.format(\"[%s=%s]\", key, value); } } public static final class AttributeWithValueNot extends AttributeKeyPair { public AttributeWithValueNot(String key, String value) { super(key, value);"
+      },
+      {
+        "txt": "} @Override public boolean matches(Element root, Element element) { return !value.equalsIgnoreCase(element.attr(key)); } @Override public String toString() { return String.format(\"[%s!=%s]\", key, value); } }"
+      },
+      {
+        "txt": "public static final class AttributeWithValueStarting extends AttributeKeyPair { public AttributeWithValueStarting(String key, String value) { super(key, value); } @Override public boolean matches(Element root, Element element) { return element.hasAttr(key) && lowerCase(element.attr(key)).startsWith(value); // value is lower case already } @Override public String toString() {"
+      },
+      {
+        "txt": "return String.format(\"[%s^=%s]\", key, value); } } public static final class AttributeWithValueEnding extends AttributeKeyPair { public AttributeWithValueEnding(String key, String value) { super(key, value); } @Override public boolean matches(Element root, Element element) { return element.hasAttr(key) && lowerCase(element.attr(key)).endsWith(value); // value is lower case"
+      },
+      {
+        "txt": "} @Override public String toString() { return String.format(\"[%s$=%s]\", key, value); } } public static final class AttributeWithValueContaining extends AttributeKeyPair { public AttributeWithValueContaining(String key, String value) { super(key, value); }"
+      },
+      {
+        "txt": "@Override public boolean matches(Element root, Element element) { return element.hasAttr(key) && lowerCase(element.attr(key)).contains(value); // value is lower case } @Override public String toString() { return String.format(\"[%s*=%s]\", key, value); } } public static final class AttributeWithValueMatching extends Evaluator {"
+      },
+      {
+        "txt": "String key; Pattern pattern; public AttributeWithValueMatching(String key, Pattern pattern) { this.key = normalize(key); this.pattern = pattern; } @Override public boolean matches(Element root, Element element) { return element.hasAttr(key) && pattern.matcher(element.attr(key)).find(); }"
+      },
+      {
+        "txt": "@Override public String toString() { return String.format(\"[%s~=%s]\", key, pattern.toString()); } } public abstract static class AttributeKeyPair extends Evaluator { String key; String value; public AttributeKeyPair(String key, String value) { Validate.notEmpty(key);"
+      },
+      {
+        "txt": "Validate.notEmpty(value); this.key = normalize(key); if (value.startsWith(\"\\\"\") && value.endsWith(\"\\\"\") || value.startsWith(\"'\") && value.endsWith(\"'\")) { value = value.substring(1, value.length()-1); } this.value = normalize(value); } } public static final class AllElements extends Evaluator {"
+      },
+      {
+        "txt": "@Override public boolean matches(Element root, Element element) { return true; } @Override public String toString() { return \"*\"; } } public static final class IndexLessThan extends IndexEvaluator {"
+      },
+      {
+        "txt": "public IndexLessThan(int index) { super(index); } @Override public boolean matches(Element root, Element element) { return root != element && element.elementSiblingIndex() < index; } @Override public String toString() { return String.format(\":lt(%d)\", index);"
+      },
+      {
+        "txt": "} } public static final class IndexGreaterThan extends IndexEvaluator { public IndexGreaterThan(int index) { super(index); } @Override public boolean matches(Element root, Element element) { return element.elementSiblingIndex() > index; }"
+      },
+      {
+        "txt": "@Override public String toString() { return String.format(\":gt(%d)\", index); } } public static final class IndexEquals extends IndexEvaluator { public IndexEquals(int index) { super(index); } @Override"
+      },
+      {
+        "txt": "public boolean matches(Element root, Element element) { return element.elementSiblingIndex() == index; } @Override public String toString() { return String.format(\":eq(%d)\", index); } } public static final class IsLastChild extends Evaluator { @Override"
+      },
+      {
+        "txt": "public boolean matches(Element root, Element element) { final Element p = element.parent(); return p != null && !(p instanceof Document) && element.elementSiblingIndex() == p.children().size()-1; } @Override public String toString() { return \":last-child\"; } } public static final class IsFirstOfType extends IsNthOfType {"
+      },
+      {
+        "txt": "public IsFirstOfType() { super(0,1); } @Override public String toString() { return \":first-of-type\"; } } public static final class IsLastOfType extends IsNthLastOfType { public IsLastOfType() {"
+      },
+      {
+        "txt": "super(0,1); } @Override public String toString() { return \":last-of-type\"; } } public static abstract class CssNthEvaluator extends Evaluator { protected final int a, b; public CssNthEvaluator(int a, int b) {"
+      },
+      {
+        "txt": "this.a = a; this.b = b; } public CssNthEvaluator(int b) { this(0,b); } @Override public boolean matches(Element root, Element element) { final Element p = element.parent(); if (p == null || (p instanceof Document)) return false;"
+      },
+      {
+        "txt": "final int pos = calculatePosition(root, element); if (a == 0) return pos == b; return (pos-b)*a >= 0 && (pos-b)%a==0; } @Override public String toString() { if (a == 0) return String.format(\":%s(%d)\",getPseudoClass(), b); if (b == 0) return String.format(\":%s(%dn)\",getPseudoClass(), a);"
+      },
+      {
+        "txt": "return String.format(\":%s(%dn%+d)\", getPseudoClass(),a, b); } protected abstract String getPseudoClass(); protected abstract int calculatePosition(Element root, Element element); } public static final class IsNthChild extends CssNthEvaluator { public IsNthChild(int a, int b) { super(a,b); } protected int calculatePosition(Element root, Element element) {"
+      },
+      {
+        "txt": "return element.elementSiblingIndex()+1; } protected String getPseudoClass() { return \"nth-child\"; } } public static final class IsNthLastChild extends CssNthEvaluator { public IsNthLastChild(int a, int b) { super(a,b); }"
+      },
+      {
+        "txt": "@Override protected int calculatePosition(Element root, Element element) { return element.parent().children().size() - element.elementSiblingIndex(); } @Override protected String getPseudoClass() { return \"nth-last-child\"; } } public static class IsNthOfType extends CssNthEvaluator {"
+      },
+      {
+        "txt": "public IsNthOfType(int a, int b) { super(a,b); } protected int calculatePosition(Element root, Element element) { int pos = 0; Elements family = element.parent().children(); for (Element el : family) { if (el.tag().equals(element.tag())) pos++; if (el == element) break; }"
+      },
+      {
+        "txt": "return pos; } @Override protected String getPseudoClass() { return \"nth-of-type\"; } } public static class IsNthLastOfType extends CssNthEvaluator { public IsNthLastOfType(int a, int b) { super(a, b);"
+      },
+      {
+        "txt": "} @Override protected int calculatePosition(Element root, Element element) { int pos = 0; Elements family = element.parent().children(); for (int i = element.elementSiblingIndex(); i < family.size(); i++) { if (family.get(i).tag().equals(element.tag())) pos++; } return pos; }"
+      },
+      {
+        "txt": "@Override protected String getPseudoClass() { return \"nth-last-of-type\"; } } public static final class IsFirstChild extends Evaluator { @Override public boolean matches(Element root, Element element) { final Element p = element.parent(); return p != null && !(p instanceof Document) && element.elementSiblingIndex() == 0;"
+      },
+      {
+        "txt": "} @Override public String toString() { return \":first-child\"; } } public static final class IsRoot extends Evaluator { @Override public boolean matches(Element root, Element element) { final Element r = root instanceof Document?root.child(0):root;"
+      },
+      {
+        "txt": "return element == r; } @Override public String toString() { return \":root\"; } } public static final class IsOnlyChild extends Evaluator { @Override public boolean matches(Element root, Element element) {"
+      },
+      {
+        "txt": "final Element p = element.parent(); return p!=null && !(p instanceof Document) && element.siblingElements().size() == 0; } @Override public String toString() { return \":only-child\"; } } public static final class IsOnlyOfType extends Evaluator { @Override"
+      },
+      {
+        "txt": "public boolean matches(Element root, Element element) { final Element p = element.parent(); if (p==null || p instanceof Document) return false; int pos = 0; Elements family = p.children(); for (Element el : family) { if (el.tag().equals(element.tag())) pos++; } return pos == 1; }"
+      },
+      {
+        "txt": "@Override public String toString() { return \":only-of-type\"; } } public static final class IsEmpty extends Evaluator { @Override public boolean matches(Element root, Element element) { List<Node> family = element.childNodes(); for (Node n : family) {"
+      },
+      {
+        "txt": "if (!(n instanceof Comment || n instanceof XmlDeclaration || n instanceof DocumentType)) return false; } return true; } @Override public String toString() { return \":empty\"; } } public abstract static class IndexEvaluator extends Evaluator {"
+      },
+      {
+        "txt": "int index; public IndexEvaluator(int index) { this.index = index; } } public static final class ContainsText extends Evaluator { private String searchText; public ContainsText(String searchText) { this.searchText = lowerCase(searchText); }"
+      },
+      {
+        "txt": "@Override public boolean matches(Element root, Element element) { return lowerCase(element.text()).contains(searchText); } @Override public String toString() { return String.format(\":contains(%s)\", searchText); } } public static final class ContainsData extends Evaluator {"
+      },
+      {
+        "txt": "private String searchText; public ContainsData(String searchText) { this.searchText = lowerCase(searchText); } @Override public boolean matches(Element root, Element element) { return lowerCase(element.data()).contains(searchText); } @Override public String toString() {"
+      },
+      {
+        "txt": "return String.format(\":containsData(%s)\", searchText); } } public static final class ContainsOwnText extends Evaluator { private String searchText; public ContainsOwnText(String searchText) { this.searchText = lowerCase(searchText); } @Override public boolean matches(Element root, Element element) {"
+      },
+      {
+        "txt": "return lowerCase(element.ownText()).contains(searchText); } @Override public String toString() { return String.format(\":containsOwn(%s)\", searchText); } } public static final class Matches extends Evaluator { private Pattern pattern; public Matches(Pattern pattern) {"
+      },
+      {
+        "txt": "this.pattern = pattern; } @Override public boolean matches(Element root, Element element) { Matcher m = pattern.matcher(element.text()); return m.find(); } @Override public String toString() { return String.format(\":matches(%s)\", pattern);"
+      },
+      {
+        "txt": "} } public static final class MatchesOwn extends Evaluator { private Pattern pattern; public MatchesOwn(Pattern pattern) { this.pattern = pattern; } @Override public boolean matches(Element root, Element element) { Matcher m = pattern.matcher(element.ownText());"
+      },
+      {
+        "txt": "} @Override public String toString() { return String.format(\":matchesOwn(%s)\", pattern); } } <extra_id_0>"
+      }
+    ]
+  },
+  {
+    "id": 2043,
+    "file_path": "src/main/java/org/jsoup/select/QueryParser.java",
+    "start-bug-line": 203,
+    "end-bug-line": 203,
+    "bug": "",
+    "fix": "else if (tq.matchChomp(\":matchText\")) evals.add(new Evaluator.MatchText());",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.jsoup.select; import org.jsoup.helper.StringUtil; import org.jsoup.helper.Validate; import org.jsoup.parser.TokenQueue; import java.util.ArrayList; import java.util.List;"
+      },
+      {
+        "txt": "import java.util.regex.Matcher; import java.util.regex.Pattern; import static org.jsoup.internal.Normalizer.normalize; public class QueryParser { private final static String[] combinators = {\",\", \">\", \"+\", \"~\", \" \"}; private static final String[] AttributeEvals = new String[]{\"=\", \"!=\", \"^=\", \"$=\", \"*=\", \"~=\"}; private TokenQueue tq; private String query; private List<Evaluator> evals = new ArrayList<>(); private QueryParser(String query) {"
+      },
+      {
+        "txt": "this.query = query; this.tq = new TokenQueue(query); } public static Evaluator parse(String query) { try { QueryParser p = new QueryParser(query); return p.parse(); } catch (IllegalArgumentException e) { throw new Selector.SelectorParseException(e.getMessage()); }"
+      },
+      {
+        "txt": "} Evaluator parse() { tq.consumeWhitespace(); if (tq.matchesAny(combinators)) { // if starts with a combinator, use root as elements evals.add(new StructuralEvaluator.Root()); combinator(tq.consume()); } else { findElements(); } while (!tq.isEmpty()) {"
+      },
+      {
+        "txt": "boolean seenWhite = tq.consumeWhitespace(); if (tq.matchesAny(combinators)) { combinator(tq.consume()); } else if (seenWhite) { combinator(' '); } else { // E.class, E#id, E[attr] etc. AND findElements(); // take next el, #. etc off queue } } if (evals.size() == 1)"
+      },
+      {
+        "txt": "return evals.get(0); return new CombiningEvaluator.And(evals); } private void combinator(char combinator) { tq.consumeWhitespace(); String subQuery = consumeSubQuery(); // support multi > childs Evaluator rootEval; // the new topmost evaluator Evaluator currentEval; // the evaluator the new eval will be combined to. could be root, or rightmost or. Evaluator newEval = parse(subQuery); // the evaluator to add into target evaluator boolean replaceRightMost = false;"
+      },
+      {
+        "txt": "if (evals.size() == 1) { rootEval = currentEval = evals.get(0); if (rootEval instanceof CombiningEvaluator.Or && combinator != ',') { currentEval = ((CombiningEvaluator.Or) currentEval).rightMostEvaluator(); replaceRightMost = true; } } else { rootEval = currentEval = new CombiningEvaluator.And(evals); }"
+      },
+      {
+        "txt": "evals.clear(); if (combinator == '>') currentEval = new CombiningEvaluator.And(newEval, new StructuralEvaluator.ImmediateParent(currentEval)); else if (combinator == ' ') currentEval = new CombiningEvaluator.And(newEval, new StructuralEvaluator.Parent(currentEval)); else if (combinator == '+') currentEval = new CombiningEvaluator.And(newEval, new StructuralEvaluator.ImmediatePreviousSibling(currentEval)); else if (combinator == '~') currentEval = new CombiningEvaluator.And(newEval, new StructuralEvaluator.PreviousSibling(currentEval)); else if (combinator == ',') { // group or."
+      },
+      {
+        "txt": "CombiningEvaluator.Or or; if (currentEval instanceof CombiningEvaluator.Or) { or = (CombiningEvaluator.Or) currentEval; or.add(newEval); } else { or = new CombiningEvaluator.Or(); or.add(currentEval); or.add(newEval); } currentEval = or;"
+      },
+      {
+        "txt": "} else throw new Selector.SelectorParseException(\"Unknown combinator: \" + combinator); if (replaceRightMost) ((CombiningEvaluator.Or) rootEval).replaceRightMostEvaluator(currentEval); else rootEval = currentEval; evals.add(rootEval); } private String consumeSubQuery() { StringBuilder sq = new StringBuilder();"
+      },
+      {
+        "txt": "while (!tq.isEmpty()) { if (tq.matches(\"(\")) sq.append(\"(\").append(tq.chompBalanced('(', ')')).append(\")\"); else if (tq.matches(\"[\")) sq.append(\"[\").append(tq.chompBalanced('[', ']')).append(\"]\"); else if (tq.matchesAny(combinators)) break; else sq.append(tq.consume()); }"
+      },
+      {
+        "txt": "return sq.toString(); } private void findElements() { if (tq.matchChomp(\"#\")) byId(); else if (tq.matchChomp(\".\")) byClass(); else if (tq.matchesWord() || tq.matches(\"*|\")) byTag(); else if (tq.matches(\"[\"))"
+      },
+      {
+        "txt": "byAttribute(); else if (tq.matchChomp(\"*\")) allElements(); else if (tq.matchChomp(\":lt(\")) indexLessThan(); else if (tq.matchChomp(\":gt(\")) indexGreaterThan(); else if (tq.matchChomp(\":eq(\")) indexEquals(); else if (tq.matches(\":has(\"))"
+      },
+      {
+        "txt": "has(); else if (tq.matches(\":contains(\")) contains(false); else if (tq.matches(\":containsOwn(\")) contains(true); else if (tq.matches(\":containsData(\")) containsData(); else if (tq.matches(\":matches(\")) matches(false); else if (tq.matches(\":matchesOwn(\"))"
+      },
+      {
+        "txt": "matches(true); else if (tq.matches(\":not(\")) not(); else if (tq.matchChomp(\":nth-child(\")) cssNthChild(false, false); else if (tq.matchChomp(\":nth-last-child(\")) cssNthChild(true, false); else if (tq.matchChomp(\":nth-of-type(\")) cssNthChild(false, true); else if (tq.matchChomp(\":nth-last-of-type(\"))"
+      },
+      {
+        "txt": "cssNthChild(true, true); else if (tq.matchChomp(\":first-child\")) evals.add(new Evaluator.IsFirstChild()); else if (tq.matchChomp(\":last-child\")) evals.add(new Evaluator.IsLastChild()); else if (tq.matchChomp(\":first-of-type\")) evals.add(new Evaluator.IsFirstOfType()); else if (tq.matchChomp(\":last-of-type\")) evals.add(new Evaluator.IsLastOfType()); else if (tq.matchChomp(\":only-child\"))"
+      },
+      {
+        "txt": "else if (tq.matchChomp(\":only-of-type\")) evals.add(new Evaluator.IsOnlyOfType()); else if (tq.matchChomp(\":empty\")) evals.add(new Evaluator.IsEmpty()); else if (tq.matchChomp(\":root\")) evals.add(new Evaluator.IsRoot()); <extra_id_0> throw new Selector.SelectorParseException(\"Could not parse query '%s': unexpected token at '%s'\", query, tq.remainder()); } private void byId() { String id = tq.consumeCssIdentifier(); Validate.notEmpty(id); evals.add(new Evaluator.Id(id));"
+      },
+      {
+        "txt": "Validate.notEmpty(id); evals.add(new Evaluator.Id(id)); } private void byClass() { String className = tq.consumeCssIdentifier(); Validate.notEmpty(className); evals.add(new Evaluator.Class(className.trim())); } private void byTag() { String tagName = tq.consumeElementSelector();"
+      },
+      {
+        "txt": "Validate.notEmpty(tagName); if (tagName.startsWith(\"*|\")) { evals.add(new CombiningEvaluator.Or(new Evaluator.Tag(normalize(tagName)), new Evaluator.TagEndsWith(normalize(tagName.replace(\"*|\", \":\"))))); } else { if (tagName.contains(\"|\")) tagName = tagName.replace(\"|\", \":\"); evals.add(new Evaluator.Tag(tagName.trim())); } } private void byAttribute() {"
+      },
+      {
+        "txt": "TokenQueue cq = new TokenQueue(tq.chompBalanced('[', ']')); // content queue String key = cq.consumeToAny(AttributeEvals); // eq, not, start, end, contain, match, (no val) Validate.notEmpty(key); cq.consumeWhitespace(); if (cq.isEmpty()) { if (key.startsWith(\"^\")) evals.add(new Evaluator.AttributeStarting(key.substring(1))); else evals.add(new Evaluator.Attribute(key)); } else {"
+      },
+      {
+        "txt": "if (cq.matchChomp(\"=\")) evals.add(new Evaluator.AttributeWithValue(key, cq.remainder())); else if (cq.matchChomp(\"!=\")) evals.add(new Evaluator.AttributeWithValueNot(key, cq.remainder())); else if (cq.matchChomp(\"^=\")) evals.add(new Evaluator.AttributeWithValueStarting(key, cq.remainder())); else if (cq.matchChomp(\"$=\")) evals.add(new Evaluator.AttributeWithValueEnding(key, cq.remainder())); else if (cq.matchChomp(\"*=\")) evals.add(new Evaluator.AttributeWithValueContaining(key, cq.remainder()));"
+      },
+      {
+        "txt": "else if (cq.matchChomp(\"~=\")) evals.add(new Evaluator.AttributeWithValueMatching(key, Pattern.compile(cq.remainder()))); else throw new Selector.SelectorParseException(\"Could not parse attribute query '%s': unexpected token at '%s'\", query, cq.remainder()); } } private void allElements() { evals.add(new Evaluator.AllElements()); } private void indexLessThan() {"
+      },
+      {
+        "txt": "evals.add(new Evaluator.IndexLessThan(consumeIndex())); } private void indexGreaterThan() { evals.add(new Evaluator.IndexGreaterThan(consumeIndex())); } private void indexEquals() { evals.add(new Evaluator.IndexEquals(consumeIndex())); } private static final Pattern NTH_AB = Pattern.compile(\"(([+-])?(\\\\d+)?)n(\\\\s*([+-])?\\\\s*\\\\d+)?\", Pattern.CASE_INSENSITIVE); private static final Pattern NTH_B = Pattern.compile(\"([+-])?(\\\\d+)\");"
+      },
+      {
+        "txt": "private void cssNthChild(boolean backwards, boolean ofType) { String argS = normalize(tq.chompTo(\")\")); Matcher mAB = NTH_AB.matcher(argS); Matcher mB = NTH_B.matcher(argS); final int a, b; if (\"odd\".equals(argS)) { a = 2; b = 1; } else if (\"even\".equals(argS)) { a = 2;"
+      },
+      {
+        "txt": "b = 0; } else if (mAB.matches()) { a = mAB.group(3) != null ? Integer.parseInt(mAB.group(1).replaceFirst(\"^\\\\+\", \"\")) : 1; b = mAB.group(4) != null ? Integer.parseInt(mAB.group(4).replaceFirst(\"^\\\\+\", \"\")) : 0; } else if (mB.matches()) { a = 0; b = Integer.parseInt(mB.group().replaceFirst(\"^\\\\+\", \"\")); } else { throw new Selector.SelectorParseException(\"Could not parse nth-index '%s': unexpected format\", argS); }"
+      },
+      {
+        "txt": "if (ofType) if (backwards) evals.add(new Evaluator.IsNthLastOfType(a, b)); else evals.add(new Evaluator.IsNthOfType(a, b)); else { if (backwards) evals.add(new Evaluator.IsNthLastChild(a, b)); else evals.add(new Evaluator.IsNthChild(a, b));"
+      },
+      {
+        "txt": "} } private int consumeIndex() { String indexS = tq.chompTo(\")\").trim(); Validate.isTrue(StringUtil.isNumeric(indexS), \"Index must be numeric\"); return Integer.parseInt(indexS); } private void has() { tq.consume(\":has\"); String subQuery = tq.chompBalanced('(', ')');"
+      },
+      {
+        "txt": "Validate.notEmpty(subQuery, \":has(el) subselect must not be empty\"); evals.add(new StructuralEvaluator.Has(parse(subQuery))); } private void contains(boolean own) { tq.consume(own ? \":containsOwn\" : \":contains\"); String searchText = TokenQueue.unescape(tq.chompBalanced('(', ')')); Validate.notEmpty(searchText, \":contains(text) query must not be empty\"); if (own) evals.add(new Evaluator.ContainsOwnText(searchText)); else"
+      },
+      {
+        "txt": "evals.add(new Evaluator.ContainsText(searchText)); } private void containsData() { tq.consume(\":containsData\"); String searchText = TokenQueue.unescape(tq.chompBalanced('(', ')')); Validate.notEmpty(searchText, \":containsData(text) query must not be empty\"); evals.add(new Evaluator.ContainsData(searchText)); } private void matches(boolean own) { tq.consume(own ? \":matchesOwn\" : \":matches\");"
+      },
+      {
+        "txt": "String regex = tq.chompBalanced('(', ')'); // don't unescape, as regex bits will be escaped Validate.notEmpty(regex, \":matches(regex) query must not be empty\"); if (own) evals.add(new Evaluator.MatchesOwn(Pattern.compile(regex))); else evals.add(new Evaluator.Matches(Pattern.compile(regex))); } private void not() { tq.consume(\":not\"); String subQuery = tq.chompBalanced('(', ')');"
+      },
+      {
+        "txt": "Validate.notEmpty(subQuery, \":not(selector) subselect must not be empty\"); evals.add(new StructuralEvaluator.Not(parse(subQuery))); }"
+      }
+    ]
+  }
+]

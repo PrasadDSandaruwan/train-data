@@ -1,0 +1,1901 @@
+[
+  {
+    "id": 1069,
+    "file_path": "src/main/java/org/apache/commons/compress/archivers/ArchiveStreamFactory.java",
+    "start-bug-line": 297,
+    "end-bug-line": 297,
+    "bug": "",
+    "fix": "if (entryEncoding != null) { return new JarArchiveOutputStream(out, entryEncoding); } else {",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.compress.archivers; import java.io.ByteArrayInputStream; import java.io.IOException; import java.io.InputStream; import java.io.OutputStream; import org.apache.commons.compress.archivers.ar.ArArchiveInputStream; import org.apache.commons.compress.archivers.ar.ArArchiveOutputStream;"
+      },
+      {
+        "txt": "import org.apache.commons.compress.archivers.arj.ArjArchiveInputStream; import org.apache.commons.compress.archivers.cpio.CpioArchiveInputStream; import org.apache.commons.compress.archivers.cpio.CpioArchiveOutputStream; import org.apache.commons.compress.archivers.dump.DumpArchiveInputStream; import org.apache.commons.compress.archivers.jar.JarArchiveInputStream; import org.apache.commons.compress.archivers.jar.JarArchiveOutputStream; import org.apache.commons.compress.archivers.sevenz.SevenZFile; import org.apache.commons.compress.archivers.tar.TarArchiveInputStream; import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream; import org.apache.commons.compress.archivers.zip.ZipArchiveInputStream;"
+      },
+      {
+        "txt": "import org.apache.commons.compress.archivers.zip.ZipArchiveOutputStream; import org.apache.commons.compress.utils.IOUtils; public class ArchiveStreamFactory { public static final String AR = \"ar\"; public static final String ARJ = \"arj\"; public static final String CPIO = \"cpio\"; public static final String DUMP = \"dump\"; public static final String JAR = \"jar\"; public static final String TAR = \"tar\"; public static final String ZIP = \"zip\";"
+      },
+      {
+        "txt": "public static final String SEVEN_Z = \"7z\"; private final String encoding; private volatile String entryEncoding = null; public ArchiveStreamFactory() { this(null); } public ArchiveStreamFactory(String encoding) { super(); this.encoding = encoding; this.entryEncoding = encoding;"
+      },
+      {
+        "txt": "} public String getEntryEncoding() { return entryEncoding; } @Deprecated public void setEntryEncoding(String entryEncoding) { if (encoding != null) { throw new IllegalStateException(\"Cannot overide encoding set by the constructor\"); } this.entryEncoding = entryEncoding;"
+      },
+      {
+        "txt": "} public ArchiveInputStream createArchiveInputStream( final String archiverName, final InputStream in) throws ArchiveException { if (archiverName == null) { throw new IllegalArgumentException(\"Archivername must not be null.\"); } if (in == null) { throw new IllegalArgumentException(\"InputStream must not be null.\"); }"
+      },
+      {
+        "txt": "if (AR.equalsIgnoreCase(archiverName)) { return new ArArchiveInputStream(in); } if (ARJ.equalsIgnoreCase(archiverName)) { if (entryEncoding != null) { return new ArjArchiveInputStream(in, entryEncoding); } else { return new ArjArchiveInputStream(in); } }"
+      },
+      {
+        "txt": "if (ZIP.equalsIgnoreCase(archiverName)) { if (entryEncoding != null) { return new ZipArchiveInputStream(in, entryEncoding); } else { return new ZipArchiveInputStream(in); } } if (TAR.equalsIgnoreCase(archiverName)) { if (entryEncoding != null) { return new TarArchiveInputStream(in, entryEncoding);"
+      },
+      {
+        "txt": "} else { return new TarArchiveInputStream(in); } } if (JAR.equalsIgnoreCase(archiverName)) { if (entryEncoding != null) { return new JarArchiveInputStream(in, entryEncoding); } else { return new JarArchiveInputStream(in); }"
+      },
+      {
+        "txt": "} if (CPIO.equalsIgnoreCase(archiverName)) { if (entryEncoding != null) { return new CpioArchiveInputStream(in, entryEncoding); } else { return new CpioArchiveInputStream(in); } } if (DUMP.equalsIgnoreCase(archiverName)) { if (entryEncoding != null) {"
+      },
+      {
+        "txt": "return new DumpArchiveInputStream(in, entryEncoding); } else { return new DumpArchiveInputStream(in); } } if (SEVEN_Z.equalsIgnoreCase(archiverName)) { throw new StreamingNotSupportedException(SEVEN_Z); } throw new ArchiveException(\"Archiver: \" + archiverName + \" not found.\"); }"
+      },
+      {
+        "txt": "public ArchiveOutputStream createArchiveOutputStream( final String archiverName, final OutputStream out) throws ArchiveException { if (archiverName == null) { throw new IllegalArgumentException(\"Archivername must not be null.\"); } if (out == null) { throw new IllegalArgumentException(\"OutputStream must not be null.\"); } if (AR.equalsIgnoreCase(archiverName)) {"
+      },
+      {
+        "txt": "return new ArArchiveOutputStream(out); } if (ZIP.equalsIgnoreCase(archiverName)) { ZipArchiveOutputStream zip = new ZipArchiveOutputStream(out); if (entryEncoding != null) { zip.setEncoding(entryEncoding); } return zip; } if (TAR.equalsIgnoreCase(archiverName)) {"
+      },
+      {
+        "txt": "return new TarArchiveOutputStream(out, entryEncoding); } else { return new TarArchiveOutputStream(out); } } if (JAR.equalsIgnoreCase(archiverName)) { <extra_id_0> } if (CPIO.equalsIgnoreCase(archiverName)) { if (entryEncoding != null) { return new CpioArchiveOutputStream(out, entryEncoding); } else { return new CpioArchiveOutputStream(out);"
+      },
+      {
+        "txt": "} else { return new CpioArchiveOutputStream(out); } } if (SEVEN_Z.equalsIgnoreCase(archiverName)) { throw new StreamingNotSupportedException(SEVEN_Z); } throw new ArchiveException(\"Archiver: \" + archiverName + \" not found.\"); } public ArchiveInputStream createArchiveInputStream(final InputStream in)"
+      },
+      {
+        "txt": "throws ArchiveException { if (in == null) { throw new IllegalArgumentException(\"Stream must not be null.\"); } if (!in.markSupported()) { throw new IllegalArgumentException(\"Mark is not supported.\"); } final byte[] signature = new byte[12]; in.mark(signature.length); try {"
+      },
+      {
+        "txt": "int signatureLength = IOUtils.readFully(in, signature); in.reset(); if (ZipArchiveInputStream.matches(signature, signatureLength)) { if (entryEncoding != null) { return new ZipArchiveInputStream(in, entryEncoding); } else { return new ZipArchiveInputStream(in); } } else if (JarArchiveInputStream.matches(signature, signatureLength)) { if (entryEncoding != null) {"
+      },
+      {
+        "txt": "return new JarArchiveInputStream(in, entryEncoding); } else { return new JarArchiveInputStream(in); } } else if (ArArchiveInputStream.matches(signature, signatureLength)) { return new ArArchiveInputStream(in); } else if (CpioArchiveInputStream.matches(signature, signatureLength)) { if (entryEncoding != null) { return new CpioArchiveInputStream(in, entryEncoding); } else {"
+      },
+      {
+        "txt": "return new CpioArchiveInputStream(in); } } else if (ArjArchiveInputStream.matches(signature, signatureLength)) { return new ArjArchiveInputStream(in); } else if (SevenZFile.matches(signature, signatureLength)) { throw new StreamingNotSupportedException(SEVEN_Z); } final byte[] dumpsig = new byte[32]; in.mark(dumpsig.length); signatureLength = IOUtils.readFully(in, dumpsig);"
+      },
+      {
+        "txt": "in.reset(); if (DumpArchiveInputStream.matches(dumpsig, signatureLength)) { return new DumpArchiveInputStream(in, entryEncoding); } final byte[] tarheader = new byte[512]; in.mark(tarheader.length); signatureLength = IOUtils.readFully(in, tarheader); in.reset(); if (TarArchiveInputStream.matches(tarheader, signatureLength)) { return new TarArchiveInputStream(in, entryEncoding);"
+      },
+      {
+        "txt": "} if (signatureLength >= 512) { TarArchiveInputStream tais = null; try { tais = new TarArchiveInputStream(new ByteArrayInputStream(tarheader)); if (tais.getNextTarEntry().isCheckSumOK()) { return new TarArchiveInputStream(in, encoding); } } catch (Exception e) { // NOPMD } finally {"
+      },
+      {
+        "txt": "IOUtils.closeQuietly(tais); } } } catch (IOException e) { throw new ArchiveException(\"Could not use reset and mark operations.\", e); } throw new ArchiveException(\"No Archiver found for the stream signature\"); }"
+      }
+    ]
+  },
+  {
+    "id": 1070,
+    "file_path": "src/main/java/org/apache/commons/compress/archivers/ArchiveStreamFactory.java",
+    "start-bug-line": 298,
+    "end-bug-line": 298,
+    "bug": "",
+    "fix": "}",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.compress.archivers; import java.io.ByteArrayInputStream; import java.io.IOException; import java.io.InputStream; import java.io.OutputStream; import org.apache.commons.compress.archivers.ar.ArArchiveInputStream; import org.apache.commons.compress.archivers.ar.ArArchiveOutputStream; import org.apache.commons.compress.archivers.arj.ArjArchiveInputStream;"
+      },
+      {
+        "txt": "import org.apache.commons.compress.archivers.cpio.CpioArchiveInputStream; import org.apache.commons.compress.archivers.cpio.CpioArchiveOutputStream; import org.apache.commons.compress.archivers.dump.DumpArchiveInputStream; import org.apache.commons.compress.archivers.jar.JarArchiveInputStream; import org.apache.commons.compress.archivers.jar.JarArchiveOutputStream; import org.apache.commons.compress.archivers.sevenz.SevenZFile; import org.apache.commons.compress.archivers.tar.TarArchiveInputStream; import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream; import org.apache.commons.compress.archivers.zip.ZipArchiveInputStream; import org.apache.commons.compress.archivers.zip.ZipArchiveOutputStream;"
+      },
+      {
+        "txt": "import org.apache.commons.compress.utils.IOUtils; public class ArchiveStreamFactory { public static final String AR = \"ar\"; public static final String ARJ = \"arj\"; public static final String CPIO = \"cpio\"; public static final String DUMP = \"dump\"; public static final String JAR = \"jar\"; public static final String TAR = \"tar\"; public static final String ZIP = \"zip\"; public static final String SEVEN_Z = \"7z\";"
+      },
+      {
+        "txt": "private final String encoding; private volatile String entryEncoding = null; public ArchiveStreamFactory() { this(null); } public ArchiveStreamFactory(String encoding) { super(); this.encoding = encoding; this.entryEncoding = encoding; }"
+      },
+      {
+        "txt": "public String getEntryEncoding() { return entryEncoding; } @Deprecated public void setEntryEncoding(String entryEncoding) { if (encoding != null) { throw new IllegalStateException(\"Cannot overide encoding set by the constructor\"); } this.entryEncoding = entryEncoding; }"
+      },
+      {
+        "txt": "public ArchiveInputStream createArchiveInputStream( final String archiverName, final InputStream in) throws ArchiveException { if (archiverName == null) { throw new IllegalArgumentException(\"Archivername must not be null.\"); } if (in == null) { throw new IllegalArgumentException(\"InputStream must not be null.\"); } if (AR.equalsIgnoreCase(archiverName)) {"
+      },
+      {
+        "txt": "return new ArArchiveInputStream(in); } if (ARJ.equalsIgnoreCase(archiverName)) { if (entryEncoding != null) { return new ArjArchiveInputStream(in, entryEncoding); } else { return new ArjArchiveInputStream(in); } } if (ZIP.equalsIgnoreCase(archiverName)) {"
+      },
+      {
+        "txt": "if (entryEncoding != null) { return new ZipArchiveInputStream(in, entryEncoding); } else { return new ZipArchiveInputStream(in); } } if (TAR.equalsIgnoreCase(archiverName)) { if (entryEncoding != null) { return new TarArchiveInputStream(in, entryEncoding); } else {"
+      },
+      {
+        "txt": "return new TarArchiveInputStream(in); } } if (JAR.equalsIgnoreCase(archiverName)) { if (entryEncoding != null) { return new JarArchiveInputStream(in, entryEncoding); } else { return new JarArchiveInputStream(in); } }"
+      },
+      {
+        "txt": "if (CPIO.equalsIgnoreCase(archiverName)) { if (entryEncoding != null) { return new CpioArchiveInputStream(in, entryEncoding); } else { return new CpioArchiveInputStream(in); } } if (DUMP.equalsIgnoreCase(archiverName)) { if (entryEncoding != null) { return new DumpArchiveInputStream(in, entryEncoding);"
+      },
+      {
+        "txt": "} else { return new DumpArchiveInputStream(in); } } if (SEVEN_Z.equalsIgnoreCase(archiverName)) { throw new StreamingNotSupportedException(SEVEN_Z); } throw new ArchiveException(\"Archiver: \" + archiverName + \" not found.\"); } public ArchiveOutputStream createArchiveOutputStream("
+      },
+      {
+        "txt": "final String archiverName, final OutputStream out) throws ArchiveException { if (archiverName == null) { throw new IllegalArgumentException(\"Archivername must not be null.\"); } if (out == null) { throw new IllegalArgumentException(\"OutputStream must not be null.\"); } if (AR.equalsIgnoreCase(archiverName)) { return new ArArchiveOutputStream(out);"
+      },
+      {
+        "txt": "} if (ZIP.equalsIgnoreCase(archiverName)) { ZipArchiveOutputStream zip = new ZipArchiveOutputStream(out); if (entryEncoding != null) { zip.setEncoding(entryEncoding); } return zip; } if (TAR.equalsIgnoreCase(archiverName)) { if (entryEncoding != null) {"
+      },
+      {
+        "txt": "} else { return new TarArchiveOutputStream(out); } } if (JAR.equalsIgnoreCase(archiverName)) { return new JarArchiveOutputStream(out); <extra_id_0> if (CPIO.equalsIgnoreCase(archiverName)) { if (entryEncoding != null) { return new CpioArchiveOutputStream(out, entryEncoding); } else { return new CpioArchiveOutputStream(out); }"
+      },
+      {
+        "txt": "return new CpioArchiveOutputStream(out); } } if (SEVEN_Z.equalsIgnoreCase(archiverName)) { throw new StreamingNotSupportedException(SEVEN_Z); } throw new ArchiveException(\"Archiver: \" + archiverName + \" not found.\"); } public ArchiveInputStream createArchiveInputStream(final InputStream in) throws ArchiveException {"
+      },
+      {
+        "txt": "if (in == null) { throw new IllegalArgumentException(\"Stream must not be null.\"); } if (!in.markSupported()) { throw new IllegalArgumentException(\"Mark is not supported.\"); } final byte[] signature = new byte[12]; in.mark(signature.length); try { int signatureLength = IOUtils.readFully(in, signature);"
+      },
+      {
+        "txt": "in.reset(); if (ZipArchiveInputStream.matches(signature, signatureLength)) { if (entryEncoding != null) { return new ZipArchiveInputStream(in, entryEncoding); } else { return new ZipArchiveInputStream(in); } } else if (JarArchiveInputStream.matches(signature, signatureLength)) { if (entryEncoding != null) { return new JarArchiveInputStream(in, entryEncoding);"
+      },
+      {
+        "txt": "} else { return new JarArchiveInputStream(in); } } else if (ArArchiveInputStream.matches(signature, signatureLength)) { return new ArArchiveInputStream(in); } else if (CpioArchiveInputStream.matches(signature, signatureLength)) { if (entryEncoding != null) { return new CpioArchiveInputStream(in, entryEncoding); } else { return new CpioArchiveInputStream(in);"
+      },
+      {
+        "txt": "} } else if (ArjArchiveInputStream.matches(signature, signatureLength)) { return new ArjArchiveInputStream(in); } else if (SevenZFile.matches(signature, signatureLength)) { throw new StreamingNotSupportedException(SEVEN_Z); } final byte[] dumpsig = new byte[32]; in.mark(dumpsig.length); signatureLength = IOUtils.readFully(in, dumpsig); in.reset();"
+      },
+      {
+        "txt": "if (DumpArchiveInputStream.matches(dumpsig, signatureLength)) { return new DumpArchiveInputStream(in, entryEncoding); } final byte[] tarheader = new byte[512]; in.mark(tarheader.length); signatureLength = IOUtils.readFully(in, tarheader); in.reset(); if (TarArchiveInputStream.matches(tarheader, signatureLength)) { return new TarArchiveInputStream(in, entryEncoding); }"
+      },
+      {
+        "txt": "if (signatureLength >= 512) { TarArchiveInputStream tais = null; try { tais = new TarArchiveInputStream(new ByteArrayInputStream(tarheader)); if (tais.getNextTarEntry().isCheckSumOK()) { return new TarArchiveInputStream(in, encoding); } } catch (Exception e) { // NOPMD } finally { IOUtils.closeQuietly(tais);"
+      },
+      {
+        "txt": "} } } catch (IOException e) { throw new ArchiveException(\"Could not use reset and mark operations.\", e); } throw new ArchiveException(\"No Archiver found for the stream signature\"); }"
+      }
+    ]
+  },
+  {
+    "id": 1071,
+    "file_path": "src/main/java/org/apache/commons/compress/archivers/ArchiveStreamFactory.java",
+    "start-bug-line": 360,
+    "end-bug-line": 360,
+    "bug": "",
+    "fix": "if (entryEncoding != null) { return new ArjArchiveInputStream(in, entryEncoding); } else {",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.compress.archivers; import java.io.ByteArrayInputStream; import java.io.IOException; import java.io.InputStream; import java.io.OutputStream;"
+      },
+      {
+        "txt": "import org.apache.commons.compress.archivers.ar.ArArchiveInputStream; import org.apache.commons.compress.archivers.ar.ArArchiveOutputStream; import org.apache.commons.compress.archivers.arj.ArjArchiveInputStream; import org.apache.commons.compress.archivers.cpio.CpioArchiveInputStream; import org.apache.commons.compress.archivers.cpio.CpioArchiveOutputStream; import org.apache.commons.compress.archivers.dump.DumpArchiveInputStream; import org.apache.commons.compress.archivers.jar.JarArchiveInputStream; import org.apache.commons.compress.archivers.jar.JarArchiveOutputStream; import org.apache.commons.compress.archivers.sevenz.SevenZFile; import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;"
+      },
+      {
+        "txt": "import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream; import org.apache.commons.compress.archivers.zip.ZipArchiveInputStream; import org.apache.commons.compress.archivers.zip.ZipArchiveOutputStream; import org.apache.commons.compress.utils.IOUtils; public class ArchiveStreamFactory { public static final String AR = \"ar\"; public static final String ARJ = \"arj\"; public static final String CPIO = \"cpio\"; public static final String DUMP = \"dump\"; public static final String JAR = \"jar\";"
+      },
+      {
+        "txt": "public static final String TAR = \"tar\"; public static final String ZIP = \"zip\"; public static final String SEVEN_Z = \"7z\"; private final String encoding; private volatile String entryEncoding = null; public ArchiveStreamFactory() { this(null); } public ArchiveStreamFactory(String encoding) { super();"
+      },
+      {
+        "txt": "this.encoding = encoding; this.entryEncoding = encoding; } public String getEntryEncoding() { return entryEncoding; } @Deprecated public void setEntryEncoding(String entryEncoding) { if (encoding != null) { throw new IllegalStateException(\"Cannot overide encoding set by the constructor\");"
+      },
+      {
+        "txt": "} this.entryEncoding = entryEncoding; } public ArchiveInputStream createArchiveInputStream( final String archiverName, final InputStream in) throws ArchiveException { if (archiverName == null) { throw new IllegalArgumentException(\"Archivername must not be null.\"); } if (in == null) {"
+      },
+      {
+        "txt": "throw new IllegalArgumentException(\"InputStream must not be null.\"); } if (AR.equalsIgnoreCase(archiverName)) { return new ArArchiveInputStream(in); } if (ARJ.equalsIgnoreCase(archiverName)) { if (entryEncoding != null) { return new ArjArchiveInputStream(in, entryEncoding); } else { return new ArjArchiveInputStream(in);"
+      },
+      {
+        "txt": "} } if (ZIP.equalsIgnoreCase(archiverName)) { if (entryEncoding != null) { return new ZipArchiveInputStream(in, entryEncoding); } else { return new ZipArchiveInputStream(in); } } if (TAR.equalsIgnoreCase(archiverName)) {"
+      },
+      {
+        "txt": "if (entryEncoding != null) { return new TarArchiveInputStream(in, entryEncoding); } else { return new TarArchiveInputStream(in); } } if (JAR.equalsIgnoreCase(archiverName)) { if (entryEncoding != null) { return new JarArchiveInputStream(in, entryEncoding); } else {"
+      },
+      {
+        "txt": "return new JarArchiveInputStream(in); } } if (CPIO.equalsIgnoreCase(archiverName)) { if (entryEncoding != null) { return new CpioArchiveInputStream(in, entryEncoding); } else { return new CpioArchiveInputStream(in); } }"
+      },
+      {
+        "txt": "if (DUMP.equalsIgnoreCase(archiverName)) { if (entryEncoding != null) { return new DumpArchiveInputStream(in, entryEncoding); } else { return new DumpArchiveInputStream(in); } } if (SEVEN_Z.equalsIgnoreCase(archiverName)) { throw new StreamingNotSupportedException(SEVEN_Z); }"
+      },
+      {
+        "txt": "throw new ArchiveException(\"Archiver: \" + archiverName + \" not found.\"); } public ArchiveOutputStream createArchiveOutputStream( final String archiverName, final OutputStream out) throws ArchiveException { if (archiverName == null) { throw new IllegalArgumentException(\"Archivername must not be null.\"); } if (out == null) { throw new IllegalArgumentException(\"OutputStream must not be null.\");"
+      },
+      {
+        "txt": "} if (AR.equalsIgnoreCase(archiverName)) { return new ArArchiveOutputStream(out); } if (ZIP.equalsIgnoreCase(archiverName)) { ZipArchiveOutputStream zip = new ZipArchiveOutputStream(out); if (entryEncoding != null) { zip.setEncoding(entryEncoding); } return zip;"
+      },
+      {
+        "txt": "} if (TAR.equalsIgnoreCase(archiverName)) { if (entryEncoding != null) { return new TarArchiveOutputStream(out, entryEncoding); } else { return new TarArchiveOutputStream(out); } } if (JAR.equalsIgnoreCase(archiverName)) { return new JarArchiveOutputStream(out);"
+      },
+      {
+        "txt": "} if (CPIO.equalsIgnoreCase(archiverName)) { if (entryEncoding != null) { return new CpioArchiveOutputStream(out, entryEncoding); } else { return new CpioArchiveOutputStream(out); } } if (SEVEN_Z.equalsIgnoreCase(archiverName)) { throw new StreamingNotSupportedException(SEVEN_Z);"
+      },
+      {
+        "txt": "} throw new ArchiveException(\"Archiver: \" + archiverName + \" not found.\"); } public ArchiveInputStream createArchiveInputStream(final InputStream in) throws ArchiveException { if (in == null) { throw new IllegalArgumentException(\"Stream must not be null.\"); } if (!in.markSupported()) { throw new IllegalArgumentException(\"Mark is not supported.\");"
+      },
+      {
+        "txt": "} final byte[] signature = new byte[12]; in.mark(signature.length); try { int signatureLength = IOUtils.readFully(in, signature); in.reset(); if (ZipArchiveInputStream.matches(signature, signatureLength)) { if (entryEncoding != null) { return new ZipArchiveInputStream(in, entryEncoding); } else {"
+      },
+      {
+        "txt": "return new ZipArchiveInputStream(in); } } else if (JarArchiveInputStream.matches(signature, signatureLength)) { if (entryEncoding != null) { return new JarArchiveInputStream(in, entryEncoding); } else { return new JarArchiveInputStream(in); } } else if (ArArchiveInputStream.matches(signature, signatureLength)) { return new ArArchiveInputStream(in);"
+      },
+      {
+        "txt": "if (entryEncoding != null) { return new CpioArchiveInputStream(in, entryEncoding); } else { return new CpioArchiveInputStream(in); } } else if (ArjArchiveInputStream.matches(signature, signatureLength)) { <extra_id_0> } else if (SevenZFile.matches(signature, signatureLength)) { throw new StreamingNotSupportedException(SEVEN_Z); } final byte[] dumpsig = new byte[32]; in.mark(dumpsig.length); signatureLength = IOUtils.readFully(in, dumpsig);"
+      },
+      {
+        "txt": "in.mark(dumpsig.length); signatureLength = IOUtils.readFully(in, dumpsig); in.reset(); if (DumpArchiveInputStream.matches(dumpsig, signatureLength)) { return new DumpArchiveInputStream(in, entryEncoding); } final byte[] tarheader = new byte[512]; in.mark(tarheader.length); signatureLength = IOUtils.readFully(in, tarheader); in.reset();"
+      },
+      {
+        "txt": "if (TarArchiveInputStream.matches(tarheader, signatureLength)) { return new TarArchiveInputStream(in, entryEncoding); } if (signatureLength >= 512) { TarArchiveInputStream tais = null; try { tais = new TarArchiveInputStream(new ByteArrayInputStream(tarheader)); if (tais.getNextTarEntry().isCheckSumOK()) { return new TarArchiveInputStream(in, encoding); }"
+      },
+      {
+        "txt": "} catch (Exception e) { // NOPMD } finally { IOUtils.closeQuietly(tais); } } } catch (IOException e) { throw new ArchiveException(\"Could not use reset and mark operations.\", e); } throw new ArchiveException(\"No Archiver found for the stream signature\"); }"
+      }
+    ]
+  },
+  {
+    "id": 1072,
+    "file_path": "src/main/java/org/apache/commons/compress/archivers/ArchiveStreamFactory.java",
+    "start-bug-line": 361,
+    "end-bug-line": 361,
+    "bug": "",
+    "fix": "}",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.compress.archivers; import java.io.ByteArrayInputStream; import java.io.IOException; import java.io.InputStream; import java.io.OutputStream; import org.apache.commons.compress.archivers.ar.ArArchiveInputStream;"
+      },
+      {
+        "txt": "import org.apache.commons.compress.archivers.ar.ArArchiveOutputStream; import org.apache.commons.compress.archivers.arj.ArjArchiveInputStream; import org.apache.commons.compress.archivers.cpio.CpioArchiveInputStream; import org.apache.commons.compress.archivers.cpio.CpioArchiveOutputStream; import org.apache.commons.compress.archivers.dump.DumpArchiveInputStream; import org.apache.commons.compress.archivers.jar.JarArchiveInputStream; import org.apache.commons.compress.archivers.jar.JarArchiveOutputStream; import org.apache.commons.compress.archivers.sevenz.SevenZFile; import org.apache.commons.compress.archivers.tar.TarArchiveInputStream; import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream;"
+      },
+      {
+        "txt": "import org.apache.commons.compress.archivers.zip.ZipArchiveInputStream; import org.apache.commons.compress.archivers.zip.ZipArchiveOutputStream; import org.apache.commons.compress.utils.IOUtils; public class ArchiveStreamFactory { public static final String AR = \"ar\"; public static final String ARJ = \"arj\"; public static final String CPIO = \"cpio\"; public static final String DUMP = \"dump\"; public static final String JAR = \"jar\"; public static final String TAR = \"tar\";"
+      },
+      {
+        "txt": "public static final String ZIP = \"zip\"; public static final String SEVEN_Z = \"7z\"; private final String encoding; private volatile String entryEncoding = null; public ArchiveStreamFactory() { this(null); } public ArchiveStreamFactory(String encoding) { super(); this.encoding = encoding;"
+      },
+      {
+        "txt": "this.entryEncoding = encoding; } public String getEntryEncoding() { return entryEncoding; } @Deprecated public void setEntryEncoding(String entryEncoding) { if (encoding != null) { throw new IllegalStateException(\"Cannot overide encoding set by the constructor\"); }"
+      },
+      {
+        "txt": "this.entryEncoding = entryEncoding; } public ArchiveInputStream createArchiveInputStream( final String archiverName, final InputStream in) throws ArchiveException { if (archiverName == null) { throw new IllegalArgumentException(\"Archivername must not be null.\"); } if (in == null) { throw new IllegalArgumentException(\"InputStream must not be null.\");"
+      },
+      {
+        "txt": "} if (AR.equalsIgnoreCase(archiverName)) { return new ArArchiveInputStream(in); } if (ARJ.equalsIgnoreCase(archiverName)) { if (entryEncoding != null) { return new ArjArchiveInputStream(in, entryEncoding); } else { return new ArjArchiveInputStream(in); }"
+      },
+      {
+        "txt": "} if (ZIP.equalsIgnoreCase(archiverName)) { if (entryEncoding != null) { return new ZipArchiveInputStream(in, entryEncoding); } else { return new ZipArchiveInputStream(in); } } if (TAR.equalsIgnoreCase(archiverName)) { if (entryEncoding != null) {"
+      },
+      {
+        "txt": "return new TarArchiveInputStream(in, entryEncoding); } else { return new TarArchiveInputStream(in); } } if (JAR.equalsIgnoreCase(archiverName)) { if (entryEncoding != null) { return new JarArchiveInputStream(in, entryEncoding); } else { return new JarArchiveInputStream(in);"
+      },
+      {
+        "txt": "} } if (CPIO.equalsIgnoreCase(archiverName)) { if (entryEncoding != null) { return new CpioArchiveInputStream(in, entryEncoding); } else { return new CpioArchiveInputStream(in); } } if (DUMP.equalsIgnoreCase(archiverName)) {"
+      },
+      {
+        "txt": "if (entryEncoding != null) { return new DumpArchiveInputStream(in, entryEncoding); } else { return new DumpArchiveInputStream(in); } } if (SEVEN_Z.equalsIgnoreCase(archiverName)) { throw new StreamingNotSupportedException(SEVEN_Z); } throw new ArchiveException(\"Archiver: \" + archiverName + \" not found.\");"
+      },
+      {
+        "txt": "} public ArchiveOutputStream createArchiveOutputStream( final String archiverName, final OutputStream out) throws ArchiveException { if (archiverName == null) { throw new IllegalArgumentException(\"Archivername must not be null.\"); } if (out == null) { throw new IllegalArgumentException(\"OutputStream must not be null.\"); }"
+      },
+      {
+        "txt": "if (AR.equalsIgnoreCase(archiverName)) { return new ArArchiveOutputStream(out); } if (ZIP.equalsIgnoreCase(archiverName)) { ZipArchiveOutputStream zip = new ZipArchiveOutputStream(out); if (entryEncoding != null) { zip.setEncoding(entryEncoding); } return zip; }"
+      },
+      {
+        "txt": "if (TAR.equalsIgnoreCase(archiverName)) { if (entryEncoding != null) { return new TarArchiveOutputStream(out, entryEncoding); } else { return new TarArchiveOutputStream(out); } } if (JAR.equalsIgnoreCase(archiverName)) { return new JarArchiveOutputStream(out); }"
+      },
+      {
+        "txt": "if (CPIO.equalsIgnoreCase(archiverName)) { if (entryEncoding != null) { return new CpioArchiveOutputStream(out, entryEncoding); } else { return new CpioArchiveOutputStream(out); } } if (SEVEN_Z.equalsIgnoreCase(archiverName)) { throw new StreamingNotSupportedException(SEVEN_Z); }"
+      },
+      {
+        "txt": "throw new ArchiveException(\"Archiver: \" + archiverName + \" not found.\"); } public ArchiveInputStream createArchiveInputStream(final InputStream in) throws ArchiveException { if (in == null) { throw new IllegalArgumentException(\"Stream must not be null.\"); } if (!in.markSupported()) { throw new IllegalArgumentException(\"Mark is not supported.\"); }"
+      },
+      {
+        "txt": "final byte[] signature = new byte[12]; in.mark(signature.length); try { int signatureLength = IOUtils.readFully(in, signature); in.reset(); if (ZipArchiveInputStream.matches(signature, signatureLength)) { if (entryEncoding != null) { return new ZipArchiveInputStream(in, entryEncoding); } else { return new ZipArchiveInputStream(in);"
+      },
+      {
+        "txt": "} } else if (JarArchiveInputStream.matches(signature, signatureLength)) { if (entryEncoding != null) { return new JarArchiveInputStream(in, entryEncoding); } else { return new JarArchiveInputStream(in); } } else if (ArArchiveInputStream.matches(signature, signatureLength)) { return new ArArchiveInputStream(in); } else if (CpioArchiveInputStream.matches(signature, signatureLength)) {"
+      },
+      {
+        "txt": "return new CpioArchiveInputStream(in, entryEncoding); } else { return new CpioArchiveInputStream(in); } } else if (ArjArchiveInputStream.matches(signature, signatureLength)) { return new ArjArchiveInputStream(in); <extra_id_0> throw new StreamingNotSupportedException(SEVEN_Z); } final byte[] dumpsig = new byte[32]; in.mark(dumpsig.length); signatureLength = IOUtils.readFully(in, dumpsig); in.reset();"
+      },
+      {
+        "txt": "signatureLength = IOUtils.readFully(in, dumpsig); in.reset(); if (DumpArchiveInputStream.matches(dumpsig, signatureLength)) { return new DumpArchiveInputStream(in, entryEncoding); } final byte[] tarheader = new byte[512]; in.mark(tarheader.length); signatureLength = IOUtils.readFully(in, tarheader); in.reset(); if (TarArchiveInputStream.matches(tarheader, signatureLength)) {"
+      },
+      {
+        "txt": "return new TarArchiveInputStream(in, entryEncoding); } if (signatureLength >= 512) { TarArchiveInputStream tais = null; try { tais = new TarArchiveInputStream(new ByteArrayInputStream(tarheader)); if (tais.getNextTarEntry().isCheckSumOK()) { return new TarArchiveInputStream(in, encoding); } } catch (Exception e) { // NOPMD"
+      },
+      {
+        "txt": "} finally { IOUtils.closeQuietly(tais); } } } catch (IOException e) { throw new ArchiveException(\"Could not use reset and mark operations.\", e); } throw new ArchiveException(\"No Archiver found for the stream signature\"); }"
+      }
+    ]
+  },
+  {
+    "id": 1073,
+    "file_path": "src/main/java/org/apache/commons/compress/archivers/cpio/CpioArchiveInputStream.java",
+    "start-bug-line": 97,
+    "end-bug-line": 97,
+    "bug": "",
+    "fix": "final String encoding;",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.compress.archivers.cpio; import java.io.EOFException; import java.io.IOException; import java.io.InputStream; import org.apache.commons.compress.archivers.ArchiveEntry; import org.apache.commons.compress.archivers.ArchiveInputStream; import org.apache.commons.compress.archivers.zip.ZipEncoding; import org.apache.commons.compress.archivers.zip.ZipEncodingHelper;"
+      },
+      {
+        "txt": "import org.apache.commons.compress.utils.ArchiveUtils; import org.apache.commons.compress.utils.CharsetNames; import org.apache.commons.compress.utils.IOUtils; public class CpioArchiveInputStream extends ArchiveInputStream implements CpioConstants { private boolean closed = false; private CpioArchiveEntry entry; private long entryBytesRead = 0; private boolean entryEOF = false; private final byte tmpbuf[] = new byte[4096];"
+      },
+      {
+        "txt": "private final InputStream in; private final byte[] TWO_BYTES_BUF = new byte[2]; private final byte[] FOUR_BYTES_BUF = new byte[4]; private final byte[] SIX_BYTES_BUF = new byte[6]; private final int blockSize; private final ZipEncoding zipEncoding; <extra_id_0> public CpioArchiveInputStream(final InputStream in) { this(in, BLOCK_SIZE, CharsetNames.US_ASCII); } public CpioArchiveInputStream(final InputStream in, String encoding) { this(in, BLOCK_SIZE, encoding); }"
+      },
+      {
+        "txt": "this(in, BLOCK_SIZE, encoding); } public CpioArchiveInputStream(final InputStream in, int blockSize) { this(in, blockSize, CharsetNames.US_ASCII); } public CpioArchiveInputStream(final InputStream in, int blockSize, String encoding) { this.in = in; this.blockSize = blockSize; this.zipEncoding = ZipEncodingHelper.getZipEncoding(encoding); }"
+      },
+      {
+        "txt": "@Override public int available() throws IOException { ensureOpen(); if (this.entryEOF) { return 0; } return 1; } @Override public void close() throws IOException {"
+      },
+      {
+        "txt": "if (!this.closed) { in.close(); this.closed = true; } } private void closeEntry() throws IOException { while (skip((long) Integer.MAX_VALUE) == Integer.MAX_VALUE) { // NOPMD } } private void ensureOpen() throws IOException {"
+      },
+      {
+        "txt": "if (this.closed) { throw new IOException(\"Stream closed\"); } } public CpioArchiveEntry getNextCPIOEntry() throws IOException { ensureOpen(); if (this.entry != null) { closeEntry(); } readFully(TWO_BYTES_BUF, 0, TWO_BYTES_BUF.length);"
+      },
+      {
+        "txt": "if (CpioUtil.byteArray2long(TWO_BYTES_BUF, false) == MAGIC_OLD_BINARY) { this.entry = readOldBinaryEntry(false); } else if (CpioUtil.byteArray2long(TWO_BYTES_BUF, true) == MAGIC_OLD_BINARY) { this.entry = readOldBinaryEntry(true); } else { System.arraycopy(TWO_BYTES_BUF, 0, SIX_BYTES_BUF, 0, TWO_BYTES_BUF.length); readFully(SIX_BYTES_BUF, TWO_BYTES_BUF.length, FOUR_BYTES_BUF.length);"
+      },
+      {
+        "txt": "String magicString = ArchiveUtils.toAsciiString(SIX_BYTES_BUF); if (magicString.equals(MAGIC_NEW)) { this.entry = readNewEntry(false); } else if (magicString.equals(MAGIC_NEW_CRC)) { this.entry = readNewEntry(true); } else if (magicString.equals(MAGIC_OLD_ASCII)) { this.entry = readOldAsciiEntry(); } else { throw new IOException(\"Unknown magic [\" + magicString + \"]. Occured at byte: \" + getBytesRead()); }"
+      },
+      {
+        "txt": "} this.entryBytesRead = 0; this.entryEOF = false; this.crc = 0; if (this.entry.getName().equals(CPIO_TRAILER)) { this.entryEOF = true; skipRemainderOfLastBlock(); return null; } return this.entry;"
+      },
+      {
+        "txt": "} private void skip(int bytes) throws IOException{ if (bytes > 0) { readFully(FOUR_BYTES_BUF, 0, bytes); } } @Override public int read(final byte[] b, final int off, final int len) throws IOException { ensureOpen();"
+      },
+      {
+        "txt": "if (off < 0 || len < 0 || off > b.length - len) { throw new IndexOutOfBoundsException(); } else if (len == 0) { return 0; } if (this.entry == null || this.entryEOF) { return -1; } if (this.entryBytesRead == this.entry.getSize()) { skip(entry.getDataPadCount());"
+      },
+      {
+        "txt": "this.entryEOF = true; if (this.entry.getFormat() == FORMAT_NEW_CRC && this.crc != this.entry.getChksum()) { throw new IOException(\"CRC Error. Occured at byte: \" + getBytesRead()); } return -1; // EOF for this entry } int tmplength = (int) Math.min(len, this.entry.getSize() - this.entryBytesRead);"
+      },
+      {
+        "txt": "if (tmplength < 0) { return -1; } int tmpread = readFully(b, off, tmplength); if (this.entry.getFormat() == FORMAT_NEW_CRC) { for (int pos = 0; pos < tmpread; pos++) { this.crc += b[pos] & 0xFF; } } this.entryBytesRead += tmpread;"
+      },
+      {
+        "txt": "return tmpread; } private final int readFully(final byte[] b, final int off, final int len) throws IOException { int count = IOUtils.readFully(in, b, off, len); count(count); if (count < len) { throw new EOFException(); } return count;"
+      },
+      {
+        "txt": "} private long readBinaryLong(final int length, final boolean swapHalfWord) throws IOException { byte tmp[] = new byte[length]; readFully(tmp, 0, tmp.length); return CpioUtil.byteArray2long(tmp, swapHalfWord); } private long readAsciiLong(final int length, final int radix) throws IOException { byte tmpBuffer[] = new byte[length];"
+      },
+      {
+        "txt": "readFully(tmpBuffer, 0, tmpBuffer.length); return Long.parseLong(ArchiveUtils.toAsciiString(tmpBuffer), radix); } private CpioArchiveEntry readNewEntry(final boolean hasCrc) throws IOException { CpioArchiveEntry ret; if (hasCrc) { ret = new CpioArchiveEntry(FORMAT_NEW_CRC); } else { ret = new CpioArchiveEntry(FORMAT_NEW);"
+      },
+      {
+        "txt": "} ret.setInode(readAsciiLong(8, 16)); long mode = readAsciiLong(8, 16); if (CpioUtil.fileType(mode) != 0){ // mode is initialised to 0 ret.setMode(mode); } ret.setUID(readAsciiLong(8, 16)); ret.setGID(readAsciiLong(8, 16)); ret.setNumberOfLinks(readAsciiLong(8, 16)); ret.setTime(readAsciiLong(8, 16));"
+      },
+      {
+        "txt": "ret.setSize(readAsciiLong(8, 16)); ret.setDeviceMaj(readAsciiLong(8, 16)); ret.setDeviceMin(readAsciiLong(8, 16)); ret.setRemoteDeviceMaj(readAsciiLong(8, 16)); ret.setRemoteDeviceMin(readAsciiLong(8, 16)); long namesize = readAsciiLong(8, 16); ret.setChksum(readAsciiLong(8, 16)); String name = readCString((int) namesize); ret.setName(name); if (CpioUtil.fileType(mode) == 0 && !name.equals(CPIO_TRAILER)){"
+      },
+      {
+        "txt": "throw new IOException(\"Mode 0 only allowed in the trailer. Found entry name: \"+name + \" Occured at byte: \" + getBytesRead()); } skip(ret.getHeaderPadCount()); return ret; } private CpioArchiveEntry readOldAsciiEntry() throws IOException { CpioArchiveEntry ret = new CpioArchiveEntry(FORMAT_OLD_ASCII); ret.setDevice(readAsciiLong(6, 8)); ret.setInode(readAsciiLong(6, 8)); final long mode = readAsciiLong(6, 8);"
+      },
+      {
+        "txt": "if (CpioUtil.fileType(mode) != 0) { ret.setMode(mode); } ret.setUID(readAsciiLong(6, 8)); ret.setGID(readAsciiLong(6, 8)); ret.setNumberOfLinks(readAsciiLong(6, 8)); ret.setRemoteDevice(readAsciiLong(6, 8)); ret.setTime(readAsciiLong(11, 8)); long namesize = readAsciiLong(6, 8); ret.setSize(readAsciiLong(11, 8));"
+      },
+      {
+        "txt": "final String name = readCString((int) namesize); ret.setName(name); if (CpioUtil.fileType(mode) == 0 && !name.equals(CPIO_TRAILER)){ throw new IOException(\"Mode 0 only allowed in the trailer. Found entry: \"+ name + \" Occured at byte: \" + getBytesRead()); } return ret; } private CpioArchiveEntry readOldBinaryEntry(final boolean swapHalfWord) throws IOException { CpioArchiveEntry ret = new CpioArchiveEntry(FORMAT_OLD_BINARY);"
+      },
+      {
+        "txt": "ret.setDevice(readBinaryLong(2, swapHalfWord)); ret.setInode(readBinaryLong(2, swapHalfWord)); final long mode = readBinaryLong(2, swapHalfWord); if (CpioUtil.fileType(mode) != 0){ ret.setMode(mode); } ret.setUID(readBinaryLong(2, swapHalfWord)); ret.setGID(readBinaryLong(2, swapHalfWord)); ret.setNumberOfLinks(readBinaryLong(2, swapHalfWord)); ret.setRemoteDevice(readBinaryLong(2, swapHalfWord));"
+      },
+      {
+        "txt": "ret.setTime(readBinaryLong(4, swapHalfWord)); long namesize = readBinaryLong(2, swapHalfWord); ret.setSize(readBinaryLong(4, swapHalfWord)); final String name = readCString((int) namesize); ret.setName(name); if (CpioUtil.fileType(mode) == 0 && !name.equals(CPIO_TRAILER)){ throw new IOException(\"Mode 0 only allowed in the trailer. Found entry: \"+name + \"Occured at byte: \" + getBytesRead()); } skip(ret.getHeaderPadCount()); return ret;"
+      },
+      {
+        "txt": "} private String readCString(final int length) throws IOException { byte tmpBuffer[] = new byte[length - 1]; readFully(tmpBuffer, 0, tmpBuffer.length); this.in.read(); return zipEncoding.decode(tmpBuffer); } @Override public long skip(final long n) throws IOException { if (n < 0) {"
+      },
+      {
+        "txt": "throw new IllegalArgumentException(\"negative skip length\"); } ensureOpen(); int max = (int) Math.min(n, Integer.MAX_VALUE); int total = 0; while (total < max) { int len = max - total; if (len > this.tmpbuf.length) { len = this.tmpbuf.length; }"
+      },
+      {
+        "txt": "len = read(this.tmpbuf, 0, len); if (len == -1) { this.entryEOF = true; break; } total += len; } return total; } @Override"
+      },
+      {
+        "txt": "public ArchiveEntry getNextEntry() throws IOException { return getNextCPIOEntry(); } private void skipRemainderOfLastBlock() throws IOException { long readFromLastBlock = getBytesRead() % blockSize; long remainingBytes = readFromLastBlock == 0 ? 0 : blockSize - readFromLastBlock; while (remainingBytes > 0) { long skipped = skip(blockSize - readFromLastBlock); if (skipped <= 0) {"
+      },
+      {
+        "txt": "break; } remainingBytes -= skipped; } } public static boolean matches(byte[] signature, int length) { if (length < 6) { return false; } if (signature[0] == 0x71 && (signature[1] & 0xFF) == 0xc7) {"
+      },
+      {
+        "txt": "return true; } if (signature[1] == 0x71 && (signature[0] & 0xFF) == 0xc7) { return true; } if (signature[0] != 0x30) { return false; } if (signature[1] != 0x37) { return false;"
+      },
+      {
+        "txt": "} if (signature[2] != 0x30) { return false; } if (signature[3] != 0x37) { return false; } if (signature[4] != 0x30) { return false; }"
+      },
+      {
+        "txt": "if (signature[5] == 0x31) { return true; } if (signature[5] == 0x32) { return true; } if (signature[5] == 0x37) { return true; } return false;"
+      }
+    ]
+  },
+  {
+    "id": 1074,
+    "file_path": "src/main/java/org/apache/commons/compress/archivers/cpio/CpioArchiveInputStream.java",
+    "start-bug-line": 155,
+    "end-bug-line": 155,
+    "bug": "",
+    "fix": "this.encoding = encoding;",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.compress.archivers.cpio; import java.io.EOFException; import java.io.IOException; import java.io.InputStream; import org.apache.commons.compress.archivers.ArchiveEntry; import org.apache.commons.compress.archivers.ArchiveInputStream; import org.apache.commons.compress.archivers.zip.ZipEncoding; import org.apache.commons.compress.archivers.zip.ZipEncodingHelper; import org.apache.commons.compress.utils.ArchiveUtils; import org.apache.commons.compress.utils.CharsetNames;"
+      },
+      {
+        "txt": "import org.apache.commons.compress.utils.IOUtils; public class CpioArchiveInputStream extends ArchiveInputStream implements CpioConstants { private boolean closed = false; private CpioArchiveEntry entry; private long entryBytesRead = 0; private boolean entryEOF = false; private final byte tmpbuf[] = new byte[4096]; private long crc = 0; private final InputStream in;"
+      },
+      {
+        "txt": "private final byte[] TWO_BYTES_BUF = new byte[2]; private final byte[] FOUR_BYTES_BUF = new byte[4]; private final byte[] SIX_BYTES_BUF = new byte[6]; private final int blockSize; private final ZipEncoding zipEncoding; public CpioArchiveInputStream(final InputStream in) { this(in, BLOCK_SIZE, CharsetNames.US_ASCII); } public CpioArchiveInputStream(final InputStream in, String encoding) { this(in, BLOCK_SIZE, encoding);"
+      },
+      {
+        "txt": "public CpioArchiveInputStream(final InputStream in, int blockSize) { this(in, blockSize, CharsetNames.US_ASCII); } public CpioArchiveInputStream(final InputStream in, int blockSize, String encoding) { this.in = in; this.blockSize = blockSize; <extra_id_0> } @Override public int available() throws IOException { ensureOpen(); if (this.entryEOF) { return 0;"
+      },
+      {
+        "txt": "if (this.entryEOF) { return 0; } return 1; } @Override public void close() throws IOException { if (!this.closed) { in.close(); this.closed = true;"
+      },
+      {
+        "txt": "} } private void closeEntry() throws IOException { while (skip((long) Integer.MAX_VALUE) == Integer.MAX_VALUE) { // NOPMD } } private void ensureOpen() throws IOException { if (this.closed) { throw new IOException(\"Stream closed\"); }"
+      },
+      {
+        "txt": "} public CpioArchiveEntry getNextCPIOEntry() throws IOException { ensureOpen(); if (this.entry != null) { closeEntry(); } readFully(TWO_BYTES_BUF, 0, TWO_BYTES_BUF.length); if (CpioUtil.byteArray2long(TWO_BYTES_BUF, false) == MAGIC_OLD_BINARY) { this.entry = readOldBinaryEntry(false); } else if (CpioUtil.byteArray2long(TWO_BYTES_BUF, true)"
+      },
+      {
+        "txt": "== MAGIC_OLD_BINARY) { this.entry = readOldBinaryEntry(true); } else { System.arraycopy(TWO_BYTES_BUF, 0, SIX_BYTES_BUF, 0, TWO_BYTES_BUF.length); readFully(SIX_BYTES_BUF, TWO_BYTES_BUF.length, FOUR_BYTES_BUF.length); String magicString = ArchiveUtils.toAsciiString(SIX_BYTES_BUF); if (magicString.equals(MAGIC_NEW)) { this.entry = readNewEntry(false);"
+      },
+      {
+        "txt": "} else if (magicString.equals(MAGIC_NEW_CRC)) { this.entry = readNewEntry(true); } else if (magicString.equals(MAGIC_OLD_ASCII)) { this.entry = readOldAsciiEntry(); } else { throw new IOException(\"Unknown magic [\" + magicString + \"]. Occured at byte: \" + getBytesRead()); } } this.entryBytesRead = 0; this.entryEOF = false;"
+      },
+      {
+        "txt": "this.crc = 0; if (this.entry.getName().equals(CPIO_TRAILER)) { this.entryEOF = true; skipRemainderOfLastBlock(); return null; } return this.entry; } private void skip(int bytes) throws IOException{ if (bytes > 0) {"
+      },
+      {
+        "txt": "readFully(FOUR_BYTES_BUF, 0, bytes); } } @Override public int read(final byte[] b, final int off, final int len) throws IOException { ensureOpen(); if (off < 0 || len < 0 || off > b.length - len) { throw new IndexOutOfBoundsException(); } else if (len == 0) {"
+      },
+      {
+        "txt": "return 0; } if (this.entry == null || this.entryEOF) { return -1; } if (this.entryBytesRead == this.entry.getSize()) { skip(entry.getDataPadCount()); this.entryEOF = true; if (this.entry.getFormat() == FORMAT_NEW_CRC && this.crc != this.entry.getChksum()) {"
+      },
+      {
+        "txt": "throw new IOException(\"CRC Error. Occured at byte: \" + getBytesRead()); } return -1; // EOF for this entry } int tmplength = (int) Math.min(len, this.entry.getSize() - this.entryBytesRead); if (tmplength < 0) { return -1; }"
+      },
+      {
+        "txt": "int tmpread = readFully(b, off, tmplength); if (this.entry.getFormat() == FORMAT_NEW_CRC) { for (int pos = 0; pos < tmpread; pos++) { this.crc += b[pos] & 0xFF; } } this.entryBytesRead += tmpread; return tmpread; } private final int readFully(final byte[] b, final int off, final int len)"
+      },
+      {
+        "txt": "throws IOException { int count = IOUtils.readFully(in, b, off, len); count(count); if (count < len) { throw new EOFException(); } return count; } private long readBinaryLong(final int length, final boolean swapHalfWord) throws IOException {"
+      },
+      {
+        "txt": "byte tmp[] = new byte[length]; readFully(tmp, 0, tmp.length); return CpioUtil.byteArray2long(tmp, swapHalfWord); } private long readAsciiLong(final int length, final int radix) throws IOException { byte tmpBuffer[] = new byte[length]; readFully(tmpBuffer, 0, tmpBuffer.length); return Long.parseLong(ArchiveUtils.toAsciiString(tmpBuffer), radix); }"
+      },
+      {
+        "txt": "private CpioArchiveEntry readNewEntry(final boolean hasCrc) throws IOException { CpioArchiveEntry ret; if (hasCrc) { ret = new CpioArchiveEntry(FORMAT_NEW_CRC); } else { ret = new CpioArchiveEntry(FORMAT_NEW); } ret.setInode(readAsciiLong(8, 16)); long mode = readAsciiLong(8, 16);"
+      },
+      {
+        "txt": "if (CpioUtil.fileType(mode) != 0){ // mode is initialised to 0 ret.setMode(mode); } ret.setUID(readAsciiLong(8, 16)); ret.setGID(readAsciiLong(8, 16)); ret.setNumberOfLinks(readAsciiLong(8, 16)); ret.setTime(readAsciiLong(8, 16)); ret.setSize(readAsciiLong(8, 16)); ret.setDeviceMaj(readAsciiLong(8, 16)); ret.setDeviceMin(readAsciiLong(8, 16));"
+      },
+      {
+        "txt": "ret.setRemoteDeviceMaj(readAsciiLong(8, 16)); ret.setRemoteDeviceMin(readAsciiLong(8, 16)); long namesize = readAsciiLong(8, 16); ret.setChksum(readAsciiLong(8, 16)); String name = readCString((int) namesize); ret.setName(name); if (CpioUtil.fileType(mode) == 0 && !name.equals(CPIO_TRAILER)){ throw new IOException(\"Mode 0 only allowed in the trailer. Found entry name: \"+name + \" Occured at byte: \" + getBytesRead()); } skip(ret.getHeaderPadCount());"
+      },
+      {
+        "txt": "return ret; } private CpioArchiveEntry readOldAsciiEntry() throws IOException { CpioArchiveEntry ret = new CpioArchiveEntry(FORMAT_OLD_ASCII); ret.setDevice(readAsciiLong(6, 8)); ret.setInode(readAsciiLong(6, 8)); final long mode = readAsciiLong(6, 8); if (CpioUtil.fileType(mode) != 0) { ret.setMode(mode); }"
+      },
+      {
+        "txt": "ret.setUID(readAsciiLong(6, 8)); ret.setGID(readAsciiLong(6, 8)); ret.setNumberOfLinks(readAsciiLong(6, 8)); ret.setRemoteDevice(readAsciiLong(6, 8)); ret.setTime(readAsciiLong(11, 8)); long namesize = readAsciiLong(6, 8); ret.setSize(readAsciiLong(11, 8)); final String name = readCString((int) namesize); ret.setName(name); if (CpioUtil.fileType(mode) == 0 && !name.equals(CPIO_TRAILER)){"
+      },
+      {
+        "txt": "throw new IOException(\"Mode 0 only allowed in the trailer. Found entry: \"+ name + \" Occured at byte: \" + getBytesRead()); } return ret; } private CpioArchiveEntry readOldBinaryEntry(final boolean swapHalfWord) throws IOException { CpioArchiveEntry ret = new CpioArchiveEntry(FORMAT_OLD_BINARY); ret.setDevice(readBinaryLong(2, swapHalfWord)); ret.setInode(readBinaryLong(2, swapHalfWord)); final long mode = readBinaryLong(2, swapHalfWord);"
+      },
+      {
+        "txt": "if (CpioUtil.fileType(mode) != 0){ ret.setMode(mode); } ret.setUID(readBinaryLong(2, swapHalfWord)); ret.setGID(readBinaryLong(2, swapHalfWord)); ret.setNumberOfLinks(readBinaryLong(2, swapHalfWord)); ret.setRemoteDevice(readBinaryLong(2, swapHalfWord)); ret.setTime(readBinaryLong(4, swapHalfWord)); long namesize = readBinaryLong(2, swapHalfWord); ret.setSize(readBinaryLong(4, swapHalfWord));"
+      },
+      {
+        "txt": "final String name = readCString((int) namesize); ret.setName(name); if (CpioUtil.fileType(mode) == 0 && !name.equals(CPIO_TRAILER)){ throw new IOException(\"Mode 0 only allowed in the trailer. Found entry: \"+name + \"Occured at byte: \" + getBytesRead()); } skip(ret.getHeaderPadCount()); return ret; } private String readCString(final int length) throws IOException { byte tmpBuffer[] = new byte[length - 1];"
+      },
+      {
+        "txt": "readFully(tmpBuffer, 0, tmpBuffer.length); this.in.read(); return zipEncoding.decode(tmpBuffer); } @Override public long skip(final long n) throws IOException { if (n < 0) { throw new IllegalArgumentException(\"negative skip length\"); } ensureOpen();"
+      },
+      {
+        "txt": "int max = (int) Math.min(n, Integer.MAX_VALUE); int total = 0; while (total < max) { int len = max - total; if (len > this.tmpbuf.length) { len = this.tmpbuf.length; } len = read(this.tmpbuf, 0, len); if (len == -1) { this.entryEOF = true;"
+      },
+      {
+        "txt": "break; } total += len; } return total; } @Override public ArchiveEntry getNextEntry() throws IOException { return getNextCPIOEntry(); }"
+      },
+      {
+        "txt": "private void skipRemainderOfLastBlock() throws IOException { long readFromLastBlock = getBytesRead() % blockSize; long remainingBytes = readFromLastBlock == 0 ? 0 : blockSize - readFromLastBlock; while (remainingBytes > 0) { long skipped = skip(blockSize - readFromLastBlock); if (skipped <= 0) { break; } remainingBytes -= skipped;"
+      },
+      {
+        "txt": "} } public static boolean matches(byte[] signature, int length) { if (length < 6) { return false; } if (signature[0] == 0x71 && (signature[1] & 0xFF) == 0xc7) { return true; } if (signature[1] == 0x71 && (signature[0] & 0xFF) == 0xc7) {"
+      },
+      {
+        "txt": "return true; } if (signature[0] != 0x30) { return false; } if (signature[1] != 0x37) { return false; } if (signature[2] != 0x30) { return false;"
+      },
+      {
+        "txt": "} if (signature[3] != 0x37) { return false; } if (signature[4] != 0x30) { return false; } if (signature[5] == 0x31) { return true; }"
+      },
+      {
+        "txt": "if (signature[5] == 0x32) { return true; } if (signature[5] == 0x37) { return true; } return false; }"
+      }
+    ]
+  },
+  {
+    "id": 1075,
+    "file_path": "src/main/java/org/apache/commons/compress/archivers/cpio/CpioArchiveOutputStream.java",
+    "start-bug-line": 98,
+    "end-bug-line": 98,
+    "bug": "",
+    "fix": "final String encoding;",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.compress.archivers.cpio; import java.io.File; import java.io.IOException; import java.io.OutputStream; import java.nio.ByteBuffer; import java.util.HashMap; import org.apache.commons.compress.archivers.ArchiveEntry; import org.apache.commons.compress.archivers.ArchiveOutputStream; import org.apache.commons.compress.archivers.zip.ZipEncoding;"
+      },
+      {
+        "txt": "import org.apache.commons.compress.archivers.zip.ZipEncodingHelper; import org.apache.commons.compress.utils.ArchiveUtils; import org.apache.commons.compress.utils.CharsetNames; public class CpioArchiveOutputStream extends ArchiveOutputStream implements CpioConstants { private CpioArchiveEntry entry; private boolean closed = false; private boolean finished; private final short entryFormat; private final HashMap<String, CpioArchiveEntry> names ="
+      },
+      {
+        "txt": "private long crc = 0; private long written; private final OutputStream out; private final int blockSize; private long nextArtificalDeviceAndInode = 1; private final ZipEncoding zipEncoding; <extra_id_0> public CpioArchiveOutputStream(final OutputStream out, final short format) { this(out, format, BLOCK_SIZE, CharsetNames.US_ASCII); } public CpioArchiveOutputStream(final OutputStream out, final short format, final int blockSize) { this(out, format, blockSize, CharsetNames.US_ASCII);"
+      },
+      {
+        "txt": "final int blockSize) { this(out, format, blockSize, CharsetNames.US_ASCII); } public CpioArchiveOutputStream(final OutputStream out, final short format, final int blockSize, final String encoding) { this.out = out; switch (format) { case FORMAT_NEW: case FORMAT_NEW_CRC: case FORMAT_OLD_ASCII:"
+      },
+      {
+        "txt": "case FORMAT_OLD_BINARY: break; default: throw new IllegalArgumentException(\"Unknown format: \"+format); } this.entryFormat = format; this.blockSize = blockSize; this.zipEncoding = ZipEncodingHelper.getZipEncoding(encoding); } public CpioArchiveOutputStream(final OutputStream out) {"
+      },
+      {
+        "txt": "this(out, FORMAT_NEW); } public CpioArchiveOutputStream(final OutputStream out, String encoding) { this(out, FORMAT_NEW, BLOCK_SIZE, encoding); } private void ensureOpen() throws IOException { if (this.closed) { throw new IOException(\"Stream closed\"); } }"
+      },
+      {
+        "txt": "@Override public void putArchiveEntry(ArchiveEntry entry) throws IOException { if(finished) { throw new IOException(\"Stream has already been finished\"); } CpioArchiveEntry e = (CpioArchiveEntry) entry; ensureOpen(); if (this.entry != null) { closeArchiveEntry(); // close previous entry }"
+      },
+      {
+        "txt": "if (e.getTime() == -1) { e.setTime(System.currentTimeMillis() / 1000); } final short format = e.getFormat(); if (format != this.entryFormat){ throw new IOException(\"Header format: \"+format+\" does not match existing format: \"+this.entryFormat); } if (this.names.put(e.getName(), e) != null) { throw new IOException(\"duplicate entry: \" + e.getName()); }"
+      },
+      {
+        "txt": "writeHeader(e); this.entry = e; this.written = 0; } private void writeHeader(final CpioArchiveEntry e) throws IOException { switch (e.getFormat()) { case FORMAT_NEW: out.write(ArchiveUtils.toAsciiBytes(MAGIC_NEW)); count(6); writeNewEntry(e);"
+      },
+      {
+        "txt": "break; case FORMAT_NEW_CRC: out.write(ArchiveUtils.toAsciiBytes(MAGIC_NEW_CRC)); count(6); writeNewEntry(e); break; case FORMAT_OLD_ASCII: out.write(ArchiveUtils.toAsciiBytes(MAGIC_OLD_ASCII)); count(6); writeOldAsciiEntry(e);"
+      },
+      {
+        "txt": "break; case FORMAT_OLD_BINARY: boolean swapHalfWord = true; writeBinaryLong(MAGIC_OLD_BINARY, 2, swapHalfWord); writeOldBinaryEntry(e, swapHalfWord); break; default: throw new IOException(\"unknown format \" + e.getFormat()); } }"
+      },
+      {
+        "txt": "private void writeNewEntry(final CpioArchiveEntry entry) throws IOException { long inode = entry.getInode(); long devMin = entry.getDeviceMin(); if (CPIO_TRAILER.equals(entry.getName())) { inode = devMin = 0; } else { if (inode == 0 && devMin == 0) { inode = nextArtificalDeviceAndInode & 0xFFFFFFFF; devMin = (nextArtificalDeviceAndInode++ >> 32) & 0xFFFFFFFF; } else {"
+      },
+      {
+        "txt": "nextArtificalDeviceAndInode = Math.max(nextArtificalDeviceAndInode, inode + 0x100000000L * devMin) + 1; } } writeAsciiLong(inode, 8, 16); writeAsciiLong(entry.getMode(), 8, 16); writeAsciiLong(entry.getUID(), 8, 16); writeAsciiLong(entry.getGID(), 8, 16); writeAsciiLong(entry.getNumberOfLinks(), 8, 16);"
+      },
+      {
+        "txt": "writeAsciiLong(entry.getTime(), 8, 16); writeAsciiLong(entry.getSize(), 8, 16); writeAsciiLong(entry.getDeviceMaj(), 8, 16); writeAsciiLong(devMin, 8, 16); writeAsciiLong(entry.getRemoteDeviceMaj(), 8, 16); writeAsciiLong(entry.getRemoteDeviceMin(), 8, 16); writeAsciiLong(entry.getName().length() + 1, 8, 16); writeAsciiLong(entry.getChksum(), 8, 16); writeCString(entry.getName()); pad(entry.getHeaderPadCount());"
+      },
+      {
+        "txt": "} private void writeOldAsciiEntry(final CpioArchiveEntry entry) throws IOException { long inode = entry.getInode(); long device = entry.getDevice(); if (CPIO_TRAILER.equals(entry.getName())) { inode = device = 0; } else { if (inode == 0 && device == 0) { inode = nextArtificalDeviceAndInode & 0777777;"
+      },
+      {
+        "txt": "device = (nextArtificalDeviceAndInode++ >> 18) & 0777777; } else { nextArtificalDeviceAndInode = Math.max(nextArtificalDeviceAndInode, inode + 01000000 * device) + 1; } } writeAsciiLong(device, 6, 8); writeAsciiLong(inode, 6, 8); writeAsciiLong(entry.getMode(), 6, 8);"
+      },
+      {
+        "txt": "writeAsciiLong(entry.getUID(), 6, 8); writeAsciiLong(entry.getGID(), 6, 8); writeAsciiLong(entry.getNumberOfLinks(), 6, 8); writeAsciiLong(entry.getRemoteDevice(), 6, 8); writeAsciiLong(entry.getTime(), 11, 8); writeAsciiLong(entry.getName().length() + 1, 6, 8); writeAsciiLong(entry.getSize(), 11, 8); writeCString(entry.getName()); } private void writeOldBinaryEntry(final CpioArchiveEntry entry,"
+      },
+      {
+        "txt": "final boolean swapHalfWord) throws IOException { long inode = entry.getInode(); long device = entry.getDevice(); if (CPIO_TRAILER.equals(entry.getName())) { inode = device = 0; } else { if (inode == 0 && device == 0) { inode = nextArtificalDeviceAndInode & 0xFFFF; device = (nextArtificalDeviceAndInode++ >> 16) & 0xFFFF; } else {"
+      },
+      {
+        "txt": "nextArtificalDeviceAndInode = Math.max(nextArtificalDeviceAndInode, inode + 0x10000 * device) + 1; } } writeBinaryLong(device, 2, swapHalfWord); writeBinaryLong(inode, 2, swapHalfWord); writeBinaryLong(entry.getMode(), 2, swapHalfWord); writeBinaryLong(entry.getUID(), 2, swapHalfWord); writeBinaryLong(entry.getGID(), 2, swapHalfWord);"
+      },
+      {
+        "txt": "writeBinaryLong(entry.getNumberOfLinks(), 2, swapHalfWord); writeBinaryLong(entry.getRemoteDevice(), 2, swapHalfWord); writeBinaryLong(entry.getTime(), 4, swapHalfWord); writeBinaryLong(entry.getName().length() + 1, 2, swapHalfWord); writeBinaryLong(entry.getSize(), 4, swapHalfWord); writeCString(entry.getName()); pad(entry.getHeaderPadCount()); } @Override public void closeArchiveEntry() throws IOException {"
+      },
+      {
+        "txt": "if(finished) { throw new IOException(\"Stream has already been finished\"); } ensureOpen(); if (entry == null) { throw new IOException(\"Trying to close non-existent entry\"); } if (this.entry.getSize() != this.written) { throw new IOException(\"invalid entry size (expected \" + this.entry.getSize() + \" but got \" + this.written"
+      },
+      {
+        "txt": "+ \" bytes)\"); } pad(this.entry.getDataPadCount()); if (this.entry.getFormat() == FORMAT_NEW_CRC && this.crc != this.entry.getChksum()) { throw new IOException(\"CRC Error\"); } this.entry = null; this.crc = 0; this.written = 0;"
+      },
+      {
+        "txt": "} @Override public void write(final byte[] b, final int off, final int len) throws IOException { ensureOpen(); if (off < 0 || len < 0 || off > b.length - len) { throw new IndexOutOfBoundsException(); } else if (len == 0) { return; }"
+      },
+      {
+        "txt": "if (this.entry == null) { throw new IOException(\"no current CPIO entry\"); } if (this.written + len > this.entry.getSize()) { throw new IOException(\"attempt to write past end of STORED entry\"); } out.write(b, off, len); this.written += len; if (this.entry.getFormat() == FORMAT_NEW_CRC) { for (int pos = 0; pos < len; pos++) {"
+      },
+      {
+        "txt": "this.crc += b[pos] & 0xFF; } } count(len); } @Override public void finish() throws IOException { ensureOpen(); if (finished) { throw new IOException(\"This archive has already been finished\");"
+      },
+      {
+        "txt": "} if (this.entry != null) { throw new IOException(\"This archive contains unclosed entries.\"); } this.entry = new CpioArchiveEntry(this.entryFormat); this.entry.setName(CPIO_TRAILER); this.entry.setNumberOfLinks(1); writeHeader(this.entry); closeArchiveEntry(); int lengthOfLastBlock = (int) (getBytesWritten() % blockSize);"
+      },
+      {
+        "txt": "if (lengthOfLastBlock != 0) { pad(blockSize - lengthOfLastBlock); } finished = true; } @Override public void close() throws IOException { if(!finished) { finish(); }"
+      },
+      {
+        "txt": "if (!this.closed) { out.close(); this.closed = true; } } private void pad(int count) throws IOException{ if (count > 0){ byte buff[] = new byte[count]; out.write(buff); count(count);"
+      },
+      {
+        "txt": "} } private void writeBinaryLong(final long number, final int length, final boolean swapHalfWord) throws IOException { byte tmp[] = CpioUtil.long2byteArray(number, length, swapHalfWord); out.write(tmp); count(tmp.length); } private void writeAsciiLong(final long number, final int length, final int radix) throws IOException {"
+      },
+      {
+        "txt": "StringBuilder tmp = new StringBuilder(); String tmpStr; if (radix == 16) { tmp.append(Long.toHexString(number)); } else if (radix == 8) { tmp.append(Long.toOctalString(number)); } else { tmp.append(Long.toString(number)); } if (tmp.length() <= length) {"
+      },
+      {
+        "txt": "long insertLength = length - tmp.length(); for (int pos = 0; pos < insertLength; pos++) { tmp.insert(0, \"0\"); } tmpStr = tmp.toString(); } else { tmpStr = tmp.substring(tmp.length() - length); } byte[] b = ArchiveUtils.toAsciiBytes(tmpStr); out.write(b);"
+      },
+      {
+        "txt": "count(b.length); } private void writeCString(final String str) throws IOException { ByteBuffer buf = zipEncoding.encode(str); final int len = buf.limit() - buf.position(); out.write(buf.array(), buf.arrayOffset(), len); out.write('\\0'); count(len + 1); } @Override"
+      },
+      {
+        "txt": "public ArchiveEntry createArchiveEntry(File inputFile, String entryName) throws IOException { if(finished) { throw new IOException(\"Stream has already been finished\"); } return new CpioArchiveEntry(inputFile, entryName); }"
+      }
+    ]
+  },
+  {
+    "id": 1076,
+    "file_path": "src/main/java/org/apache/commons/compress/archivers/cpio/CpioArchiveOutputStream.java",
+    "start-bug-line": 162,
+    "end-bug-line": 162,
+    "bug": "",
+    "fix": "this.encoding = encoding;",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.compress.archivers.cpio; import java.io.File; import java.io.IOException; import java.io.OutputStream; import java.nio.ByteBuffer; import java.util.HashMap; import org.apache.commons.compress.archivers.ArchiveEntry; import org.apache.commons.compress.archivers.ArchiveOutputStream; import org.apache.commons.compress.archivers.zip.ZipEncoding; import org.apache.commons.compress.archivers.zip.ZipEncodingHelper;"
+      },
+      {
+        "txt": "import org.apache.commons.compress.utils.ArchiveUtils; import org.apache.commons.compress.utils.CharsetNames; public class CpioArchiveOutputStream extends ArchiveOutputStream implements CpioConstants { private CpioArchiveEntry entry; private boolean closed = false; private boolean finished; private final short entryFormat; private final HashMap<String, CpioArchiveEntry> names = new HashMap<String, CpioArchiveEntry>();"
+      },
+      {
+        "txt": "private long crc = 0; private long written; private final OutputStream out; private final int blockSize; private long nextArtificalDeviceAndInode = 1; private final ZipEncoding zipEncoding; public CpioArchiveOutputStream(final OutputStream out, final short format) { this(out, format, BLOCK_SIZE, CharsetNames.US_ASCII); } public CpioArchiveOutputStream(final OutputStream out, final short format,"
+      },
+      {
+        "txt": "final int blockSize) { this(out, format, blockSize, CharsetNames.US_ASCII); } public CpioArchiveOutputStream(final OutputStream out, final short format, final int blockSize, final String encoding) { this.out = out; switch (format) { case FORMAT_NEW: case FORMAT_NEW_CRC: case FORMAT_OLD_ASCII:"
+      },
+      {
+        "txt": "break; default: throw new IllegalArgumentException(\"Unknown format: \"+format); } this.entryFormat = format; this.blockSize = blockSize; <extra_id_0> } public CpioArchiveOutputStream(final OutputStream out) { this(out, FORMAT_NEW); } public CpioArchiveOutputStream(final OutputStream out, String encoding) { this(out, FORMAT_NEW, BLOCK_SIZE, encoding);"
+      },
+      {
+        "txt": "public CpioArchiveOutputStream(final OutputStream out, String encoding) { this(out, FORMAT_NEW, BLOCK_SIZE, encoding); } private void ensureOpen() throws IOException { if (this.closed) { throw new IOException(\"Stream closed\"); } } @Override public void putArchiveEntry(ArchiveEntry entry) throws IOException {"
+      },
+      {
+        "txt": "if(finished) { throw new IOException(\"Stream has already been finished\"); } CpioArchiveEntry e = (CpioArchiveEntry) entry; ensureOpen(); if (this.entry != null) { closeArchiveEntry(); // close previous entry } if (e.getTime() == -1) { e.setTime(System.currentTimeMillis() / 1000);"
+      },
+      {
+        "txt": "} final short format = e.getFormat(); if (format != this.entryFormat){ throw new IOException(\"Header format: \"+format+\" does not match existing format: \"+this.entryFormat); } if (this.names.put(e.getName(), e) != null) { throw new IOException(\"duplicate entry: \" + e.getName()); } writeHeader(e); this.entry = e;"
+      },
+      {
+        "txt": "this.written = 0; } private void writeHeader(final CpioArchiveEntry e) throws IOException { switch (e.getFormat()) { case FORMAT_NEW: out.write(ArchiveUtils.toAsciiBytes(MAGIC_NEW)); count(6); writeNewEntry(e); break; case FORMAT_NEW_CRC:"
+      },
+      {
+        "txt": "out.write(ArchiveUtils.toAsciiBytes(MAGIC_NEW_CRC)); count(6); writeNewEntry(e); break; case FORMAT_OLD_ASCII: out.write(ArchiveUtils.toAsciiBytes(MAGIC_OLD_ASCII)); count(6); writeOldAsciiEntry(e); break; case FORMAT_OLD_BINARY:"
+      },
+      {
+        "txt": "boolean swapHalfWord = true; writeBinaryLong(MAGIC_OLD_BINARY, 2, swapHalfWord); writeOldBinaryEntry(e, swapHalfWord); break; default: throw new IOException(\"unknown format \" + e.getFormat()); } } private void writeNewEntry(final CpioArchiveEntry entry) throws IOException { long inode = entry.getInode();"
+      },
+      {
+        "txt": "long devMin = entry.getDeviceMin(); if (CPIO_TRAILER.equals(entry.getName())) { inode = devMin = 0; } else { if (inode == 0 && devMin == 0) { inode = nextArtificalDeviceAndInode & 0xFFFFFFFF; devMin = (nextArtificalDeviceAndInode++ >> 32) & 0xFFFFFFFF; } else { nextArtificalDeviceAndInode = Math.max(nextArtificalDeviceAndInode,"
+      },
+      {
+        "txt": "inode + 0x100000000L * devMin) + 1; } } writeAsciiLong(inode, 8, 16); writeAsciiLong(entry.getMode(), 8, 16); writeAsciiLong(entry.getUID(), 8, 16); writeAsciiLong(entry.getGID(), 8, 16); writeAsciiLong(entry.getNumberOfLinks(), 8, 16); writeAsciiLong(entry.getTime(), 8, 16); writeAsciiLong(entry.getSize(), 8, 16);"
+      },
+      {
+        "txt": "writeAsciiLong(entry.getDeviceMaj(), 8, 16); writeAsciiLong(devMin, 8, 16); writeAsciiLong(entry.getRemoteDeviceMaj(), 8, 16); writeAsciiLong(entry.getRemoteDeviceMin(), 8, 16); writeAsciiLong(entry.getName().length() + 1, 8, 16); writeAsciiLong(entry.getChksum(), 8, 16); writeCString(entry.getName()); pad(entry.getHeaderPadCount()); } private void writeOldAsciiEntry(final CpioArchiveEntry entry)"
+      },
+      {
+        "txt": "throws IOException { long inode = entry.getInode(); long device = entry.getDevice(); if (CPIO_TRAILER.equals(entry.getName())) { inode = device = 0; } else { if (inode == 0 && device == 0) { inode = nextArtificalDeviceAndInode & 0777777; device = (nextArtificalDeviceAndInode++ >> 18) & 0777777; } else {"
+      },
+      {
+        "txt": "nextArtificalDeviceAndInode = Math.max(nextArtificalDeviceAndInode, inode + 01000000 * device) + 1; } } writeAsciiLong(device, 6, 8); writeAsciiLong(inode, 6, 8); writeAsciiLong(entry.getMode(), 6, 8); writeAsciiLong(entry.getUID(), 6, 8); writeAsciiLong(entry.getGID(), 6, 8);"
+      },
+      {
+        "txt": "writeAsciiLong(entry.getNumberOfLinks(), 6, 8); writeAsciiLong(entry.getRemoteDevice(), 6, 8); writeAsciiLong(entry.getTime(), 11, 8); writeAsciiLong(entry.getName().length() + 1, 6, 8); writeAsciiLong(entry.getSize(), 11, 8); writeCString(entry.getName()); } private void writeOldBinaryEntry(final CpioArchiveEntry entry, final boolean swapHalfWord) throws IOException { long inode = entry.getInode();"
+      },
+      {
+        "txt": "long device = entry.getDevice(); if (CPIO_TRAILER.equals(entry.getName())) { inode = device = 0; } else { if (inode == 0 && device == 0) { inode = nextArtificalDeviceAndInode & 0xFFFF; device = (nextArtificalDeviceAndInode++ >> 16) & 0xFFFF; } else { nextArtificalDeviceAndInode = Math.max(nextArtificalDeviceAndInode,"
+      },
+      {
+        "txt": "inode + 0x10000 * device) + 1; } } writeBinaryLong(device, 2, swapHalfWord); writeBinaryLong(inode, 2, swapHalfWord); writeBinaryLong(entry.getMode(), 2, swapHalfWord); writeBinaryLong(entry.getUID(), 2, swapHalfWord); writeBinaryLong(entry.getGID(), 2, swapHalfWord); writeBinaryLong(entry.getNumberOfLinks(), 2, swapHalfWord); writeBinaryLong(entry.getRemoteDevice(), 2, swapHalfWord);"
+      },
+      {
+        "txt": "writeBinaryLong(entry.getTime(), 4, swapHalfWord); writeBinaryLong(entry.getName().length() + 1, 2, swapHalfWord); writeBinaryLong(entry.getSize(), 4, swapHalfWord); writeCString(entry.getName()); pad(entry.getHeaderPadCount()); } @Override public void closeArchiveEntry() throws IOException { if(finished) { throw new IOException(\"Stream has already been finished\");"
+      },
+      {
+        "txt": "} ensureOpen(); if (entry == null) { throw new IOException(\"Trying to close non-existent entry\"); } if (this.entry.getSize() != this.written) { throw new IOException(\"invalid entry size (expected \" + this.entry.getSize() + \" but got \" + this.written + \" bytes)\"); }"
+      },
+      {
+        "txt": "pad(this.entry.getDataPadCount()); if (this.entry.getFormat() == FORMAT_NEW_CRC && this.crc != this.entry.getChksum()) { throw new IOException(\"CRC Error\"); } this.entry = null; this.crc = 0; this.written = 0; } @Override"
+      },
+      {
+        "txt": "public void write(final byte[] b, final int off, final int len) throws IOException { ensureOpen(); if (off < 0 || len < 0 || off > b.length - len) { throw new IndexOutOfBoundsException(); } else if (len == 0) { return; } if (this.entry == null) { throw new IOException(\"no current CPIO entry\");"
+      },
+      {
+        "txt": "} if (this.written + len > this.entry.getSize()) { throw new IOException(\"attempt to write past end of STORED entry\"); } out.write(b, off, len); this.written += len; if (this.entry.getFormat() == FORMAT_NEW_CRC) { for (int pos = 0; pos < len; pos++) { this.crc += b[pos] & 0xFF; }"
+      },
+      {
+        "txt": "} count(len); } @Override public void finish() throws IOException { ensureOpen(); if (finished) { throw new IOException(\"This archive has already been finished\"); } if (this.entry != null) {"
+      },
+      {
+        "txt": "throw new IOException(\"This archive contains unclosed entries.\"); } this.entry = new CpioArchiveEntry(this.entryFormat); this.entry.setName(CPIO_TRAILER); this.entry.setNumberOfLinks(1); writeHeader(this.entry); closeArchiveEntry(); int lengthOfLastBlock = (int) (getBytesWritten() % blockSize); if (lengthOfLastBlock != 0) { pad(blockSize - lengthOfLastBlock);"
+      },
+      {
+        "txt": "} finished = true; } @Override public void close() throws IOException { if(!finished) { finish(); } if (!this.closed) { out.close();"
+      },
+      {
+        "txt": "this.closed = true; } } private void pad(int count) throws IOException{ if (count > 0){ byte buff[] = new byte[count]; out.write(buff); count(count); } }"
+      },
+      {
+        "txt": "private void writeBinaryLong(final long number, final int length, final boolean swapHalfWord) throws IOException { byte tmp[] = CpioUtil.long2byteArray(number, length, swapHalfWord); out.write(tmp); count(tmp.length); } private void writeAsciiLong(final long number, final int length, final int radix) throws IOException { StringBuilder tmp = new StringBuilder(); String tmpStr;"
+      },
+      {
+        "txt": "if (radix == 16) { tmp.append(Long.toHexString(number)); } else if (radix == 8) { tmp.append(Long.toOctalString(number)); } else { tmp.append(Long.toString(number)); } if (tmp.length() <= length) { long insertLength = length - tmp.length(); for (int pos = 0; pos < insertLength; pos++) {"
+      },
+      {
+        "txt": "tmp.insert(0, \"0\"); } tmpStr = tmp.toString(); } else { tmpStr = tmp.substring(tmp.length() - length); } byte[] b = ArchiveUtils.toAsciiBytes(tmpStr); out.write(b); count(b.length); }"
+      },
+      {
+        "txt": "private void writeCString(final String str) throws IOException { ByteBuffer buf = zipEncoding.encode(str); final int len = buf.limit() - buf.position(); out.write(buf.array(), buf.arrayOffset(), len); out.write('\\0'); count(len + 1); } @Override public ArchiveEntry createArchiveEntry(File inputFile, String entryName) throws IOException {"
+      },
+      {
+        "txt": "if(finished) { throw new IOException(\"Stream has already been finished\"); } return new CpioArchiveEntry(inputFile, entryName); }"
+      }
+    ]
+  },
+  {
+    "id": 1077,
+    "file_path": "src/main/java/org/apache/commons/compress/archivers/dump/DumpArchiveInputStream.java",
+    "start-bug-line": 80,
+    "end-bug-line": 80,
+    "bug": "",
+    "fix": "final String encoding;",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.compress.archivers.dump; import org.apache.commons.compress.archivers.ArchiveException; import org.apache.commons.compress.archivers.ArchiveInputStream; import org.apache.commons.compress.archivers.zip.ZipEncoding; import org.apache.commons.compress.archivers.zip.ZipEncodingHelper;"
+      },
+      {
+        "txt": "import java.io.EOFException; import java.io.IOException; import java.io.InputStream; import java.util.Arrays; import java.util.Comparator; import java.util.HashMap; import java.util.Map; import java.util.PriorityQueue; import java.util.Queue; import java.util.Stack;"
+      },
+      {
+        "txt": "public class DumpArchiveInputStream extends ArchiveInputStream { private DumpArchiveSummary summary; private DumpArchiveEntry active; private boolean isClosed; private boolean hasHitEOF; private long entrySize; private long entryOffset; private int readIdx; private final byte[] readBuf = new byte[DumpArchiveConstants.TP_SIZE]; private byte[] blockBuffer;"
+      },
+      {
+        "txt": "private long filepos; protected TapeInputStream raw; private final Map<Integer, Dirent> names = new HashMap<Integer, Dirent>(); private final Map<Integer, DumpArchiveEntry> pending = new HashMap<Integer, DumpArchiveEntry>(); private Queue<DumpArchiveEntry> queue; private final ZipEncoding zipEncoding; <extra_id_0> public DumpArchiveInputStream(InputStream is) throws ArchiveException { this(is, null); } public DumpArchiveInputStream(InputStream is, String encoding) throws ArchiveException { this.raw = new TapeInputStream(is);"
+      },
+      {
+        "txt": "throws ArchiveException { this.raw = new TapeInputStream(is); this.hasHitEOF = false; this.zipEncoding = ZipEncodingHelper.getZipEncoding(encoding); try { byte[] headerBytes = raw.readRecord(); if (!DumpArchiveUtil.verify(headerBytes)) { throw new UnrecognizedFormatException(); } summary = new DumpArchiveSummary(headerBytes, this.zipEncoding);"
+      },
+      {
+        "txt": "raw.resetBlockSize(summary.getNTRec(), summary.isCompressed()); blockBuffer = new byte[4 * DumpArchiveConstants.TP_SIZE]; readCLRI(); readBITS(); } catch (IOException ex) { throw new ArchiveException(ex.getMessage(), ex); } Dirent root = new Dirent(2, 2, 4, \".\"); names.put(2, root); queue = new PriorityQueue<DumpArchiveEntry>(10,"
+      },
+      {
+        "txt": "new Comparator<DumpArchiveEntry>() { public int compare(DumpArchiveEntry p, DumpArchiveEntry q) { if (p.getOriginalName() == null || q.getOriginalName() == null) { return Integer.MAX_VALUE; } return p.getOriginalName().compareTo(q.getOriginalName()); } }); } @Deprecated"
+      },
+      {
+        "txt": "@Override public int getCount() { return (int) getBytesRead(); } @Override public long getBytesRead() { return raw.getBytesRead(); } public DumpArchiveSummary getSummary() { return summary;"
+      },
+      {
+        "txt": "} private void readCLRI() throws IOException { byte[] buffer = raw.readRecord(); if (!DumpArchiveUtil.verify(buffer)) { throw new InvalidFormatException(); } active = DumpArchiveEntry.parse(buffer); if (DumpArchiveConstants.SEGMENT_TYPE.CLRI != active.getHeaderType()) { throw new InvalidFormatException(); }"
+      },
+      {
+        "txt": "if (raw.skip(DumpArchiveConstants.TP_SIZE * active.getHeaderCount()) == -1) { throw new EOFException(); } readIdx = active.getHeaderCount(); } private void readBITS() throws IOException { byte[] buffer = raw.readRecord(); if (!DumpArchiveUtil.verify(buffer)) { throw new InvalidFormatException();"
+      },
+      {
+        "txt": "} active = DumpArchiveEntry.parse(buffer); if (DumpArchiveConstants.SEGMENT_TYPE.BITS != active.getHeaderType()) { throw new InvalidFormatException(); } if (raw.skip(DumpArchiveConstants.TP_SIZE * active.getHeaderCount()) == -1) { throw new EOFException(); } readIdx = active.getHeaderCount();"
+      },
+      {
+        "txt": "} public DumpArchiveEntry getNextDumpEntry() throws IOException { return getNextEntry(); } @Override public DumpArchiveEntry getNextEntry() throws IOException { DumpArchiveEntry entry = null; String path = null; if (!queue.isEmpty()) { return queue.remove();"
+      },
+      {
+        "txt": "} while (entry == null) { if (hasHitEOF) { return null; } while (readIdx < active.getHeaderCount()) { if (!active.isSparseRecord(readIdx++) && raw.skip(DumpArchiveConstants.TP_SIZE) == -1) { throw new EOFException(); }"
+      },
+      {
+        "txt": "} readIdx = 0; filepos = raw.getBytesRead(); byte[] headerBytes = raw.readRecord(); if (!DumpArchiveUtil.verify(headerBytes)) { throw new InvalidFormatException(); } active = DumpArchiveEntry.parse(headerBytes); while (DumpArchiveConstants.SEGMENT_TYPE.ADDR == active.getHeaderType()) { if (raw.skip(DumpArchiveConstants.TP_SIZE"
+      },
+      {
+        "txt": "- active.getHeaderHoles())) == -1) { throw new EOFException(); } filepos = raw.getBytesRead(); headerBytes = raw.readRecord(); if (!DumpArchiveUtil.verify(headerBytes)) { throw new InvalidFormatException(); } active = DumpArchiveEntry.parse(headerBytes); }"
+      },
+      {
+        "txt": "if (DumpArchiveConstants.SEGMENT_TYPE.END == active.getHeaderType()) { hasHitEOF = true; return null; } entry = active; if (entry.isDirectory()) { readDirectoryEntry(active); entryOffset = 0; entrySize = 0; readIdx = active.getHeaderCount();"
+      },
+      {
+        "txt": "} else { entryOffset = 0; entrySize = active.getEntrySize(); readIdx = 0; } recordOffset = readBuf.length; path = getPath(entry); if (path == null) { entry = null; }"
+      },
+      {
+        "txt": "} entry.setName(path); entry.setSimpleName(names.get(entry.getIno()).getName()); entry.setOffset(filepos); return entry; } private void readDirectoryEntry(DumpArchiveEntry entry) throws IOException { long size = entry.getEntrySize(); boolean first = true;"
+      },
+      {
+        "txt": "while (first || DumpArchiveConstants.SEGMENT_TYPE.ADDR == entry.getHeaderType()) { if (!first) { raw.readRecord(); } if (!names.containsKey(entry.getIno()) && DumpArchiveConstants.SEGMENT_TYPE.INODE == entry.getHeaderType()) { pending.put(entry.getIno(), entry); } int datalen = DumpArchiveConstants.TP_SIZE * entry.getHeaderCount();"
+      },
+      {
+        "txt": "if (blockBuffer.length < datalen) { blockBuffer = new byte[datalen]; } if (raw.read(blockBuffer, 0, datalen) != datalen) { throw new EOFException(); } int reclen = 0; for (int i = 0; i < datalen - 8 && i < size - 8; i += reclen) { int ino = DumpArchiveUtil.convert32(blockBuffer, i);"
+      },
+      {
+        "txt": "reclen = DumpArchiveUtil.convert16(blockBuffer, i + 4); byte type = blockBuffer[i + 6]; String name = DumpArchiveUtil.decode(zipEncoding, blockBuffer, i + 8, blockBuffer[i + 7]); if (\".\".equals(name) || \"..\".equals(name)) { continue; } Dirent d = new Dirent(ino, entry.getIno(), type, name); if ((type == 4) && names.containsKey(ino)) { System.out.println(\"we already have ino: \" + names.get(ino));"
+      },
+      {
+        "txt": "} names.put(ino, d); for (Map.Entry<Integer, DumpArchiveEntry> e : pending.entrySet()) { String path = getPath(e.getValue()); if (path != null) { e.getValue().setName(path); e.getValue() .setSimpleName(names.get(e.getKey()).getName()); queue.add(e.getValue()); }"
+      },
+      {
+        "txt": "} for (DumpArchiveEntry e : queue) { pending.remove(e.getIno()); } } byte[] peekBytes = raw.peek(); if (!DumpArchiveUtil.verify(peekBytes)) { throw new InvalidFormatException(); } entry = DumpArchiveEntry.parse(peekBytes);"
+      },
+      {
+        "txt": "first = false; size -= DumpArchiveConstants.TP_SIZE; } } private String getPath(DumpArchiveEntry entry) { Stack<String> elements = new Stack<String>(); Dirent dirent = null; for (int i = entry.getIno();; i = dirent.getParentIno()) { if (!names.containsKey(i)) { elements.clear();"
+      },
+      {
+        "txt": "break; } dirent = names.get(i); elements.push(dirent.getName()); if (dirent.getIno() == dirent.getParentIno()) { break; } } if (elements.isEmpty()) { pending.put(entry.getIno(), entry);"
+      },
+      {
+        "txt": "return null; } StringBuilder sb = new StringBuilder(elements.pop()); while (!elements.isEmpty()) { sb.append('/'); sb.append(elements.pop()); } return sb.toString(); } @Override"
+      },
+      {
+        "txt": "public int read(byte[] buf, int off, int len) throws IOException { int totalRead = 0; if (hasHitEOF || isClosed || entryOffset >= entrySize) { return -1; } if (active == null) { throw new IllegalStateException(\"No current dump entry\"); } if (len + entryOffset > entrySize) { len = (int) (entrySize - entryOffset);"
+      },
+      {
+        "txt": "} while (len > 0) { int sz = len > readBuf.length - recordOffset ? readBuf.length - recordOffset : len; if (recordOffset + sz <= readBuf.length) { System.arraycopy(readBuf, recordOffset, buf, off, sz); totalRead += sz; recordOffset += sz; len -= sz; off += sz;"
+      },
+      {
+        "txt": "} if (len > 0) { if (readIdx >= 512) { byte[] headerBytes = raw.readRecord(); if (!DumpArchiveUtil.verify(headerBytes)) { throw new InvalidFormatException(); } active = DumpArchiveEntry.parse(headerBytes); readIdx = 0; }"
+      },
+      {
+        "txt": "if (!active.isSparseRecord(readIdx++)) { int r = raw.read(readBuf, 0, readBuf.length); if (r != readBuf.length) { throw new EOFException(); } } else { Arrays.fill(readBuf, (byte) 0); } recordOffset = 0; }"
+      },
+      {
+        "txt": "} entryOffset += totalRead; return totalRead; } @Override public void close() throws IOException { if (!isClosed) { isClosed = true; raw.close(); }"
+      },
+      {
+        "txt": "} public static boolean matches(byte[] buffer, int length) { if (length < 32) { return false; } if (length >= DumpArchiveConstants.TP_SIZE) { return DumpArchiveUtil.verify(buffer); } return DumpArchiveConstants.NFS_MAGIC == DumpArchiveUtil.convert32(buffer, 24);"
+      }
+    ]
+  },
+  {
+    "id": 1078,
+    "file_path": "src/main/java/org/apache/commons/compress/archivers/dump/DumpArchiveInputStream.java",
+    "start-bug-line": 104,
+    "end-bug-line": 104,
+    "bug": "",
+    "fix": "this.encoding = encoding;",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.compress.archivers.dump; import org.apache.commons.compress.archivers.ArchiveException;"
+      },
+      {
+        "txt": "import org.apache.commons.compress.archivers.ArchiveInputStream; import org.apache.commons.compress.archivers.zip.ZipEncoding; import org.apache.commons.compress.archivers.zip.ZipEncodingHelper; import java.io.EOFException; import java.io.IOException; import java.io.InputStream; import java.util.Arrays; import java.util.Comparator; import java.util.HashMap; import java.util.Map;"
+      },
+      {
+        "txt": "import java.util.PriorityQueue; import java.util.Queue; import java.util.Stack; public class DumpArchiveInputStream extends ArchiveInputStream { private DumpArchiveSummary summary; private DumpArchiveEntry active; private boolean isClosed; private boolean hasHitEOF; private long entrySize; private long entryOffset;"
+      },
+      {
+        "txt": "private int readIdx; private final byte[] readBuf = new byte[DumpArchiveConstants.TP_SIZE]; private byte[] blockBuffer; private int recordOffset; private long filepos; protected TapeInputStream raw; private final Map<Integer, Dirent> names = new HashMap<Integer, Dirent>(); private final Map<Integer, DumpArchiveEntry> pending = new HashMap<Integer, DumpArchiveEntry>(); private Queue<DumpArchiveEntry> queue; private final ZipEncoding zipEncoding;"
+      },
+      {
+        "txt": "this(is, null); } public DumpArchiveInputStream(InputStream is, String encoding) throws ArchiveException { this.raw = new TapeInputStream(is); this.hasHitEOF = false; <extra_id_0> try { byte[] headerBytes = raw.readRecord(); if (!DumpArchiveUtil.verify(headerBytes)) { throw new UnrecognizedFormatException(); } summary = new DumpArchiveSummary(headerBytes, this.zipEncoding);"
+      },
+      {
+        "txt": "} summary = new DumpArchiveSummary(headerBytes, this.zipEncoding); raw.resetBlockSize(summary.getNTRec(), summary.isCompressed()); blockBuffer = new byte[4 * DumpArchiveConstants.TP_SIZE]; readCLRI(); readBITS(); } catch (IOException ex) { throw new ArchiveException(ex.getMessage(), ex); } Dirent root = new Dirent(2, 2, 4, \".\");"
+      },
+      {
+        "txt": "names.put(2, root); queue = new PriorityQueue<DumpArchiveEntry>(10, new Comparator<DumpArchiveEntry>() { public int compare(DumpArchiveEntry p, DumpArchiveEntry q) { if (p.getOriginalName() == null || q.getOriginalName() == null) { return Integer.MAX_VALUE; } return p.getOriginalName().compareTo(q.getOriginalName()); } });"
+      },
+      {
+        "txt": "} @Deprecated @Override public int getCount() { return (int) getBytesRead(); } @Override public long getBytesRead() { return raw.getBytesRead(); }"
+      },
+      {
+        "txt": "public DumpArchiveSummary getSummary() { return summary; } private void readCLRI() throws IOException { byte[] buffer = raw.readRecord(); if (!DumpArchiveUtil.verify(buffer)) { throw new InvalidFormatException(); } active = DumpArchiveEntry.parse(buffer); if (DumpArchiveConstants.SEGMENT_TYPE.CLRI != active.getHeaderType()) {"
+      },
+      {
+        "txt": "throw new InvalidFormatException(); } if (raw.skip(DumpArchiveConstants.TP_SIZE * active.getHeaderCount()) == -1) { throw new EOFException(); } readIdx = active.getHeaderCount(); } private void readBITS() throws IOException { byte[] buffer = raw.readRecord();"
+      },
+      {
+        "txt": "if (!DumpArchiveUtil.verify(buffer)) { throw new InvalidFormatException(); } active = DumpArchiveEntry.parse(buffer); if (DumpArchiveConstants.SEGMENT_TYPE.BITS != active.getHeaderType()) { throw new InvalidFormatException(); } if (raw.skip(DumpArchiveConstants.TP_SIZE * active.getHeaderCount()) == -1) { throw new EOFException();"
+      },
+      {
+        "txt": "} readIdx = active.getHeaderCount(); } public DumpArchiveEntry getNextDumpEntry() throws IOException { return getNextEntry(); } @Override public DumpArchiveEntry getNextEntry() throws IOException { DumpArchiveEntry entry = null; String path = null;"
+      },
+      {
+        "txt": "if (!queue.isEmpty()) { return queue.remove(); } while (entry == null) { if (hasHitEOF) { return null; } while (readIdx < active.getHeaderCount()) { if (!active.isSparseRecord(readIdx++) && raw.skip(DumpArchiveConstants.TP_SIZE) == -1) {"
+      },
+      {
+        "txt": "throw new EOFException(); } } readIdx = 0; filepos = raw.getBytesRead(); byte[] headerBytes = raw.readRecord(); if (!DumpArchiveUtil.verify(headerBytes)) { throw new InvalidFormatException(); } active = DumpArchiveEntry.parse(headerBytes);"
+      },
+      {
+        "txt": "while (DumpArchiveConstants.SEGMENT_TYPE.ADDR == active.getHeaderType()) { if (raw.skip(DumpArchiveConstants.TP_SIZE - active.getHeaderHoles())) == -1) { throw new EOFException(); } filepos = raw.getBytesRead(); headerBytes = raw.readRecord(); if (!DumpArchiveUtil.verify(headerBytes)) { throw new InvalidFormatException(); }"
+      },
+      {
+        "txt": "active = DumpArchiveEntry.parse(headerBytes); } if (DumpArchiveConstants.SEGMENT_TYPE.END == active.getHeaderType()) { hasHitEOF = true; return null; } entry = active; if (entry.isDirectory()) { readDirectoryEntry(active); entryOffset = 0;"
+      },
+      {
+        "txt": "entrySize = 0; readIdx = active.getHeaderCount(); } else { entryOffset = 0; entrySize = active.getEntrySize(); readIdx = 0; } recordOffset = readBuf.length; path = getPath(entry); if (path == null) {"
+      },
+      {
+        "txt": "entry = null; } } entry.setName(path); entry.setSimpleName(names.get(entry.getIno()).getName()); entry.setOffset(filepos); return entry; } private void readDirectoryEntry(DumpArchiveEntry entry) throws IOException {"
+      },
+      {
+        "txt": "long size = entry.getEntrySize(); boolean first = true; while (first || DumpArchiveConstants.SEGMENT_TYPE.ADDR == entry.getHeaderType()) { if (!first) { raw.readRecord(); } if (!names.containsKey(entry.getIno()) && DumpArchiveConstants.SEGMENT_TYPE.INODE == entry.getHeaderType()) { pending.put(entry.getIno(), entry);"
+      },
+      {
+        "txt": "} int datalen = DumpArchiveConstants.TP_SIZE * entry.getHeaderCount(); if (blockBuffer.length < datalen) { blockBuffer = new byte[datalen]; } if (raw.read(blockBuffer, 0, datalen) != datalen) { throw new EOFException(); } int reclen = 0; for (int i = 0; i < datalen - 8 && i < size - 8;"
+      },
+      {
+        "txt": "i += reclen) { int ino = DumpArchiveUtil.convert32(blockBuffer, i); reclen = DumpArchiveUtil.convert16(blockBuffer, i + 4); byte type = blockBuffer[i + 6]; String name = DumpArchiveUtil.decode(zipEncoding, blockBuffer, i + 8, blockBuffer[i + 7]); if (\".\".equals(name) || \"..\".equals(name)) { continue; } Dirent d = new Dirent(ino, entry.getIno(), type, name); if ((type == 4) && names.containsKey(ino)) {"
+      },
+      {
+        "txt": "System.out.println(\"we already have ino: \" + names.get(ino)); } names.put(ino, d); for (Map.Entry<Integer, DumpArchiveEntry> e : pending.entrySet()) { String path = getPath(e.getValue()); if (path != null) { e.getValue().setName(path); e.getValue() .setSimpleName(names.get(e.getKey()).getName());"
+      },
+      {
+        "txt": "queue.add(e.getValue()); } } for (DumpArchiveEntry e : queue) { pending.remove(e.getIno()); } } byte[] peekBytes = raw.peek(); if (!DumpArchiveUtil.verify(peekBytes)) { throw new InvalidFormatException();"
+      },
+      {
+        "txt": "} entry = DumpArchiveEntry.parse(peekBytes); first = false; size -= DumpArchiveConstants.TP_SIZE; } } private String getPath(DumpArchiveEntry entry) { Stack<String> elements = new Stack<String>(); Dirent dirent = null; for (int i = entry.getIno();; i = dirent.getParentIno()) {"
+      },
+      {
+        "txt": "if (!names.containsKey(i)) { elements.clear(); break; } dirent = names.get(i); elements.push(dirent.getName()); if (dirent.getIno() == dirent.getParentIno()) { break; } }"
+      },
+      {
+        "txt": "if (elements.isEmpty()) { pending.put(entry.getIno(), entry); return null; } StringBuilder sb = new StringBuilder(elements.pop()); while (!elements.isEmpty()) { sb.append('/'); sb.append(elements.pop()); } return sb.toString();"
+      },
+      {
+        "txt": "} @Override public int read(byte[] buf, int off, int len) throws IOException { int totalRead = 0; if (hasHitEOF || isClosed || entryOffset >= entrySize) { return -1; } if (active == null) { throw new IllegalStateException(\"No current dump entry\"); }"
+      },
+      {
+        "txt": "if (len + entryOffset > entrySize) { len = (int) (entrySize - entryOffset); } while (len > 0) { int sz = len > readBuf.length - recordOffset ? readBuf.length - recordOffset : len; if (recordOffset + sz <= readBuf.length) { System.arraycopy(readBuf, recordOffset, buf, off, sz); totalRead += sz; recordOffset += sz;"
+      },
+      {
+        "txt": "len -= sz; off += sz; } if (len > 0) { if (readIdx >= 512) { byte[] headerBytes = raw.readRecord(); if (!DumpArchiveUtil.verify(headerBytes)) { throw new InvalidFormatException(); } active = DumpArchiveEntry.parse(headerBytes);"
+      },
+      {
+        "txt": "readIdx = 0; } if (!active.isSparseRecord(readIdx++)) { int r = raw.read(readBuf, 0, readBuf.length); if (r != readBuf.length) { throw new EOFException(); } } else { Arrays.fill(readBuf, (byte) 0); }"
+      },
+      {
+        "txt": "recordOffset = 0; } } entryOffset += totalRead; return totalRead; } @Override public void close() throws IOException { if (!isClosed) { isClosed = true;"
+      },
+      {
+        "txt": "raw.close(); } } public static boolean matches(byte[] buffer, int length) { if (length < 32) { return false; } if (length >= DumpArchiveConstants.TP_SIZE) { return DumpArchiveUtil.verify(buffer); }"
+      },
+      {
+        "txt": "return DumpArchiveConstants.NFS_MAGIC == DumpArchiveUtil.convert32(buffer, 24); }"
+      }
+    ]
+  },
+  {
+    "id": 1079,
+    "file_path": "src/main/java/org/apache/commons/compress/archivers/tar/TarArchiveInputStream.java",
+    "start-bug-line": 79,
+    "end-bug-line": 79,
+    "bug": "",
+    "fix": "final String encoding;",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.compress.archivers.tar; import java.io.ByteArrayOutputStream; import java.io.IOException; import java.io.InputStream; import java.util.HashMap; import java.util.Map; import java.util.Map.Entry; import org.apache.commons.compress.archivers.ArchiveEntry;"
+      },
+      {
+        "txt": "import org.apache.commons.compress.archivers.ArchiveInputStream; import org.apache.commons.compress.archivers.zip.ZipEncoding; import org.apache.commons.compress.archivers.zip.ZipEncodingHelper; import org.apache.commons.compress.utils.ArchiveUtils; import org.apache.commons.compress.utils.CharsetNames; import org.apache.commons.compress.utils.IOUtils; public class TarArchiveInputStream extends ArchiveInputStream { private static final int SMALL_BUFFER_SIZE = 256; private final byte[] SMALL_BUF = new byte[SMALL_BUFFER_SIZE]; private final int recordSize;"
+      },
+      {
+        "txt": "private boolean hasHitEOF; private long entrySize; private long entryOffset; private final InputStream is; private TarArchiveEntry currEntry; private final ZipEncoding zipEncoding; <extra_id_0> public TarArchiveInputStream(InputStream is) { this(is, TarConstants.DEFAULT_BLKSIZE, TarConstants.DEFAULT_RCDSIZE); } public TarArchiveInputStream(InputStream is, String encoding) { this(is, TarConstants.DEFAULT_BLKSIZE, TarConstants.DEFAULT_RCDSIZE, encoding);"
+      },
+      {
+        "txt": "this(is, TarConstants.DEFAULT_BLKSIZE, TarConstants.DEFAULT_RCDSIZE, encoding); } public TarArchiveInputStream(InputStream is, int blockSize) { this(is, blockSize, TarConstants.DEFAULT_RCDSIZE); } public TarArchiveInputStream(InputStream is, int blockSize, String encoding) { this(is, blockSize, TarConstants.DEFAULT_RCDSIZE, encoding); }"
+      },
+      {
+        "txt": "public TarArchiveInputStream(InputStream is, int blockSize, int recordSize) { this(is, blockSize, recordSize, null); } public TarArchiveInputStream(InputStream is, int blockSize, int recordSize, String encoding) { this.is = is; this.hasHitEOF = false; this.zipEncoding = ZipEncodingHelper.getZipEncoding(encoding); this.recordSize = recordSize; this.blockSize = blockSize;"
+      },
+      {
+        "txt": "} @Override public void close() throws IOException { is.close(); } public int getRecordSize() { return recordSize; } @Override public int available() throws IOException {"
+      },
+      {
+        "txt": "if (entrySize - entryOffset > Integer.MAX_VALUE) { return Integer.MAX_VALUE; } return (int) (entrySize - entryOffset); } @Override public long skip(final long n) throws IOException { if (n <= 0) { return 0; }"
+      },
+      {
+        "txt": "final long available = entrySize - entryOffset; final long skipped = is.skip(Math.min(n, available)); count(skipped); entryOffset += skipped; return skipped; } @Override public boolean markSupported() { return false; }"
+      },
+      {
+        "txt": "@Override public void mark(int markLimit) { } @Override public synchronized void reset() { } public TarArchiveEntry getNextTarEntry() throws IOException { if (hasHitEOF) { return null; }"
+      },
+      {
+        "txt": "if (currEntry != null) { IOUtils.skip(this, Long.MAX_VALUE); skipRecordPadding(); } byte[] headerBuf = getRecord(); if (headerBuf == null) { currEntry = null; return null; } try {"
+      },
+      {
+        "txt": "currEntry = new TarArchiveEntry(headerBuf, zipEncoding); } catch (IllegalArgumentException e) { IOException ioe = new IOException(\"Error detected parsing the header\"); ioe.initCause(e); throw ioe; } entryOffset = 0; entrySize = currEntry.getSize(); if (currEntry.isGNULongLinkEntry()) { byte[] longLinkData = getLongNameData();"
+      },
+      {
+        "txt": "if (longLinkData == null) { return null; } currEntry.setLinkName(zipEncoding.decode(longLinkData)); } if (currEntry.isGNULongNameEntry()) { byte[] longNameData = getLongNameData(); if (longNameData == null) { return null; }"
+      },
+      {
+        "txt": "currEntry.setName(zipEncoding.decode(longNameData)); } if (currEntry.isPaxHeader()){ // Process Pax headers paxHeaders(); } if (currEntry.isGNUSparse()){ // Process sparse files readGNUSparse(); } entrySize = currEntry.getSize(); return currEntry;"
+      },
+      {
+        "txt": "} private void skipRecordPadding() throws IOException { if (this.entrySize > 0 && this.entrySize % this.recordSize != 0) { long numRecords = (this.entrySize / this.recordSize) + 1; long padding = (numRecords * this.recordSize) - this.entrySize; long skipped = IOUtils.skip(is, padding); count(skipped); } } protected byte[] getLongNameData() throws IOException {"
+      },
+      {
+        "txt": "ByteArrayOutputStream longName = new ByteArrayOutputStream(); int length = 0; while ((length = read(SMALL_BUF)) >= 0) { longName.write(SMALL_BUF, 0, length); } getNextEntry(); if (currEntry == null) { return null; } byte[] longNameData = longName.toByteArray();"
+      },
+      {
+        "txt": "length = longNameData.length; while (length > 0 && longNameData[length - 1] == 0) { --length; } if (length != longNameData.length) { byte[] l = new byte[length]; System.arraycopy(longNameData, 0, l, 0, length); longNameData = l; } return longNameData;"
+      },
+      {
+        "txt": "} private byte[] getRecord() throws IOException { byte[] headerBuf = readRecord(); hasHitEOF = isEOFRecord(headerBuf); if (hasHitEOF && headerBuf != null) { tryToConsumeSecondEOFRecord(); consumeRemainderOfLastBlock(); headerBuf = null; } return headerBuf;"
+      },
+      {
+        "txt": "} protected boolean isEOFRecord(byte[] record) { return record == null || ArchiveUtils.isArrayZero(record, recordSize); } protected byte[] readRecord() throws IOException { byte[] record = new byte[recordSize]; int readNow = IOUtils.readFully(is, record); count(readNow); if (readNow != recordSize) { return null;"
+      },
+      {
+        "txt": "} return record; } private void paxHeaders() throws IOException{ Map<String, String> headers = parsePaxHeaders(this); getNextEntry(); // Get the actual file entry applyPaxHeadersToCurrentEntry(headers); } Map<String, String> parsePaxHeaders(InputStream i) throws IOException { Map<String, String> headers = new HashMap<String, String>();"
+      },
+      {
+        "txt": "while(true){ // get length int ch; int len = 0; int read = 0; while((ch = i.read()) != -1) { read++; if (ch == ' '){ // End of length string ByteArrayOutputStream coll = new ByteArrayOutputStream(); while((ch = i.read()) != -1) { read++;"
+      },
+      {
+        "txt": "if (ch == '='){ // end of keyword String keyword = coll.toString(CharsetNames.UTF_8); final int restLen = len - read; byte[] rest = new byte[restLen]; int got = IOUtils.readFully(i, rest); if (got != restLen) { throw new IOException(\"Failed to read \" + \"Paxheader. Expected \" + restLen + \" bytes, read \""
+      },
+      {
+        "txt": "+ got); } String value = new String(rest, 0, restLen - 1, CharsetNames.UTF_8); headers.put(keyword, value); break; } coll.write((byte) ch); } break; // Processed single header"
+      },
+      {
+        "txt": "} len *= 10; len += ch - '0'; } if (ch == -1){ // EOF break; } } return headers; }"
+      },
+      {
+        "txt": "private void applyPaxHeadersToCurrentEntry(Map<String, String> headers) { for (Entry<String, String> ent : headers.entrySet()){ String key = ent.getKey(); String val = ent.getValue(); if (\"path\".equals(key)){ currEntry.setName(val); } else if (\"linkpath\".equals(key)){ currEntry.setLinkName(val); } else if (\"gid\".equals(key)){ currEntry.setGroupId(Integer.parseInt(val));"
+      },
+      {
+        "txt": "} else if (\"gname\".equals(key)){ currEntry.setGroupName(val); } else if (\"uid\".equals(key)){ currEntry.setUserId(Integer.parseInt(val)); } else if (\"uname\".equals(key)){ currEntry.setUserName(val); } else if (\"size\".equals(key)){ currEntry.setSize(Long.parseLong(val)); } else if (\"mtime\".equals(key)){ currEntry.setModTime((long) (Double.parseDouble(val) * 1000));"
+      },
+      {
+        "txt": "} else if (\"SCHILY.devminor\".equals(key)){ currEntry.setDevMinor(Integer.parseInt(val)); } else if (\"SCHILY.devmajor\".equals(key)){ currEntry.setDevMajor(Integer.parseInt(val)); } } } private void readGNUSparse() throws IOException { sparses = new ArrayList(); sparses.addAll(currEntry.getSparses());"
+      },
+      {
+        "txt": "if (currEntry.isExtended()) { TarArchiveSparseEntry entry; do { byte[] headerBuf = getRecord(); if (headerBuf == null) { currEntry = null; break; } entry = new TarArchiveSparseEntry(headerBuf); sparses.addAll(entry.getSparses());"
+      },
+      {
+        "txt": "} while (entry.isExtended()); } } @Override public ArchiveEntry getNextEntry() throws IOException { return getNextTarEntry(); } private void tryToConsumeSecondEOFRecord() throws IOException { boolean shouldReset = true; boolean marked = is.markSupported();"
+      },
+      {
+        "txt": "if (marked) { is.mark(recordSize); } try { shouldReset = !isEOFRecord(readRecord()); } finally { if (shouldReset && marked) { pushedBackBytes(recordSize); is.reset(); }"
+      },
+      {
+        "txt": "} } @Override public int read(byte[] buf, int offset, int numToRead) throws IOException { int totalRead = 0; if (hasHitEOF || entryOffset >= entrySize) { return -1; } if (currEntry == null) { throw new IllegalStateException(\"No current tar entry\");"
+      },
+      {
+        "txt": "} numToRead = Math.min(numToRead, available()); totalRead = is.read(buf, offset, numToRead); if (totalRead == -1) { if (numToRead > 0) { throw new IOException(\"Truncated TAR archive\"); } hasHitEOF = true; } else { count(totalRead);"
+      },
+      {
+        "txt": "entryOffset += totalRead; } return totalRead; } @Override public boolean canReadEntryData(ArchiveEntry ae) { if (ae instanceof TarArchiveEntry) { TarArchiveEntry te = (TarArchiveEntry) ae; return !te.isGNUSparse(); }"
+      },
+      {
+        "txt": "return false; } public TarArchiveEntry getCurrentEntry() { return currEntry; } protected final void setCurrentEntry(TarArchiveEntry e) { currEntry = e; } protected final boolean isAtEOF() { return hasHitEOF;"
+      },
+      {
+        "txt": "} protected final void setAtEOF(boolean b) { hasHitEOF = b; } private void consumeRemainderOfLastBlock() throws IOException { long bytesReadOfLastBlock = getBytesRead() % blockSize; if (bytesReadOfLastBlock > 0) { long skipped = IOUtils.skip(is, blockSize - bytesReadOfLastBlock); count(skipped); }"
+      },
+      {
+        "txt": "} public static boolean matches(byte[] signature, int length) { if (length < TarConstants.VERSION_OFFSET+TarConstants.VERSIONLEN) { return false; } if (ArchiveUtils.matchAsciiBuffer(TarConstants.MAGIC_POSIX, signature, TarConstants.MAGIC_OFFSET, TarConstants.MAGICLEN) && ArchiveUtils.matchAsciiBuffer(TarConstants.VERSION_POSIX, signature, TarConstants.VERSION_OFFSET, TarConstants.VERSIONLEN)"
+      },
+      {
+        "txt": "){ return true; } if (ArchiveUtils.matchAsciiBuffer(TarConstants.MAGIC_GNU, signature, TarConstants.MAGIC_OFFSET, TarConstants.MAGICLEN) && ( ArchiveUtils.matchAsciiBuffer(TarConstants.VERSION_GNU_SPACE, signature, TarConstants.VERSION_OFFSET, TarConstants.VERSIONLEN) ||"
+      },
+      {
+        "txt": "ArchiveUtils.matchAsciiBuffer(TarConstants.VERSION_GNU_ZERO, signature, TarConstants.VERSION_OFFSET, TarConstants.VERSIONLEN) ) ){ return true; } if (ArchiveUtils.matchAsciiBuffer(TarConstants.MAGIC_ANT, signature, TarConstants.MAGIC_OFFSET, TarConstants.MAGICLEN) && ArchiveUtils.matchAsciiBuffer(TarConstants.VERSION_ANT,"
+      },
+      {
+        "txt": "signature, TarConstants.VERSION_OFFSET, TarConstants.VERSIONLEN) ){ return true; } return false; }"
+      }
+    ]
+  },
+  {
+    "id": 1080,
+    "file_path": "src/main/java/org/apache/commons/compress/archivers/tar/TarArchiveInputStream.java",
+    "start-bug-line": 142,
+    "end-bug-line": 142,
+    "bug": "",
+    "fix": "this.encoding = encoding;",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.compress.archivers.tar; import java.io.ByteArrayOutputStream; import java.io.IOException; import java.io.InputStream; import java.util.HashMap; import java.util.Map; import java.util.Map.Entry; import org.apache.commons.compress.archivers.ArchiveEntry; import org.apache.commons.compress.archivers.ArchiveInputStream;"
+      },
+      {
+        "txt": "import org.apache.commons.compress.archivers.zip.ZipEncoding; import org.apache.commons.compress.archivers.zip.ZipEncodingHelper; import org.apache.commons.compress.utils.ArchiveUtils; import org.apache.commons.compress.utils.CharsetNames; import org.apache.commons.compress.utils.IOUtils; public class TarArchiveInputStream extends ArchiveInputStream { private static final int SMALL_BUFFER_SIZE = 256; private final byte[] SMALL_BUF = new byte[SMALL_BUFFER_SIZE]; private final int recordSize; private final int blockSize;"
+      },
+      {
+        "txt": "private boolean hasHitEOF; private long entrySize; private long entryOffset; private final InputStream is; private TarArchiveEntry currEntry; private final ZipEncoding zipEncoding; public TarArchiveInputStream(InputStream is) { this(is, TarConstants.DEFAULT_BLKSIZE, TarConstants.DEFAULT_RCDSIZE); } public TarArchiveInputStream(InputStream is, String encoding) {"
+      },
+      {
+        "txt": "this(is, TarConstants.DEFAULT_BLKSIZE, TarConstants.DEFAULT_RCDSIZE, encoding); } public TarArchiveInputStream(InputStream is, int blockSize) { this(is, blockSize, TarConstants.DEFAULT_RCDSIZE); } public TarArchiveInputStream(InputStream is, int blockSize, String encoding) { this(is, blockSize, TarConstants.DEFAULT_RCDSIZE, encoding); }"
+      },
+      {
+        "txt": "this(is, blockSize, recordSize, null); } public TarArchiveInputStream(InputStream is, int blockSize, int recordSize, String encoding) { this.is = is; this.hasHitEOF = false; <extra_id_0> this.recordSize = recordSize; this.blockSize = blockSize; } @Override public void close() throws IOException { is.close();"
+      },
+      {
+        "txt": "public void close() throws IOException { is.close(); } public int getRecordSize() { return recordSize; } @Override public int available() throws IOException { if (entrySize - entryOffset > Integer.MAX_VALUE) { return Integer.MAX_VALUE;"
+      },
+      {
+        "txt": "} return (int) (entrySize - entryOffset); } @Override public long skip(final long n) throws IOException { if (n <= 0) { return 0; } final long available = entrySize - entryOffset; final long skipped = is.skip(Math.min(n, available));"
+      },
+      {
+        "txt": "count(skipped); entryOffset += skipped; return skipped; } @Override public boolean markSupported() { return false; } @Override public void mark(int markLimit) {"
+      },
+      {
+        "txt": "} @Override public synchronized void reset() { } public TarArchiveEntry getNextTarEntry() throws IOException { if (hasHitEOF) { return null; } if (currEntry != null) { IOUtils.skip(this, Long.MAX_VALUE);"
+      },
+      {
+        "txt": "skipRecordPadding(); } byte[] headerBuf = getRecord(); if (headerBuf == null) { currEntry = null; return null; } try { currEntry = new TarArchiveEntry(headerBuf, zipEncoding); } catch (IllegalArgumentException e) {"
+      },
+      {
+        "txt": "IOException ioe = new IOException(\"Error detected parsing the header\"); ioe.initCause(e); throw ioe; } entryOffset = 0; entrySize = currEntry.getSize(); if (currEntry.isGNULongLinkEntry()) { byte[] longLinkData = getLongNameData(); if (longLinkData == null) { return null;"
+      },
+      {
+        "txt": "} currEntry.setLinkName(zipEncoding.decode(longLinkData)); } if (currEntry.isGNULongNameEntry()) { byte[] longNameData = getLongNameData(); if (longNameData == null) { return null; } currEntry.setName(zipEncoding.decode(longNameData)); }"
+      },
+      {
+        "txt": "if (currEntry.isPaxHeader()){ // Process Pax headers paxHeaders(); } if (currEntry.isGNUSparse()){ // Process sparse files readGNUSparse(); } entrySize = currEntry.getSize(); return currEntry; } private void skipRecordPadding() throws IOException {"
+      },
+      {
+        "txt": "if (this.entrySize > 0 && this.entrySize % this.recordSize != 0) { long numRecords = (this.entrySize / this.recordSize) + 1; long padding = (numRecords * this.recordSize) - this.entrySize; long skipped = IOUtils.skip(is, padding); count(skipped); } } protected byte[] getLongNameData() throws IOException { ByteArrayOutputStream longName = new ByteArrayOutputStream(); int length = 0;"
+      },
+      {
+        "txt": "while ((length = read(SMALL_BUF)) >= 0) { longName.write(SMALL_BUF, 0, length); } getNextEntry(); if (currEntry == null) { return null; } byte[] longNameData = longName.toByteArray(); length = longNameData.length; while (length > 0 && longNameData[length - 1] == 0) {"
+      },
+      {
+        "txt": "--length; } if (length != longNameData.length) { byte[] l = new byte[length]; System.arraycopy(longNameData, 0, l, 0, length); longNameData = l; } return longNameData; } private byte[] getRecord() throws IOException {"
+      },
+      {
+        "txt": "byte[] headerBuf = readRecord(); hasHitEOF = isEOFRecord(headerBuf); if (hasHitEOF && headerBuf != null) { tryToConsumeSecondEOFRecord(); consumeRemainderOfLastBlock(); headerBuf = null; } return headerBuf; } protected boolean isEOFRecord(byte[] record) {"
+      },
+      {
+        "txt": "return record == null || ArchiveUtils.isArrayZero(record, recordSize); } protected byte[] readRecord() throws IOException { byte[] record = new byte[recordSize]; int readNow = IOUtils.readFully(is, record); count(readNow); if (readNow != recordSize) { return null; } return record;"
+      },
+      {
+        "txt": "} private void paxHeaders() throws IOException{ Map<String, String> headers = parsePaxHeaders(this); getNextEntry(); // Get the actual file entry applyPaxHeadersToCurrentEntry(headers); } Map<String, String> parsePaxHeaders(InputStream i) throws IOException { Map<String, String> headers = new HashMap<String, String>(); while(true){ // get length int ch;"
+      },
+      {
+        "txt": "int len = 0; int read = 0; while((ch = i.read()) != -1) { read++; if (ch == ' '){ // End of length string ByteArrayOutputStream coll = new ByteArrayOutputStream(); while((ch = i.read()) != -1) { read++; if (ch == '='){ // end of keyword String keyword = coll.toString(CharsetNames.UTF_8);"
+      },
+      {
+        "txt": "final int restLen = len - read; byte[] rest = new byte[restLen]; int got = IOUtils.readFully(i, rest); if (got != restLen) { throw new IOException(\"Failed to read \" + \"Paxheader. Expected \" + restLen + \" bytes, read \" + got); }"
+      },
+      {
+        "txt": "String value = new String(rest, 0, restLen - 1, CharsetNames.UTF_8); headers.put(keyword, value); break; } coll.write((byte) ch); } break; // Processed single header } len *= 10;"
+      },
+      {
+        "txt": "len += ch - '0'; } if (ch == -1){ // EOF break; } } return headers; } private void applyPaxHeadersToCurrentEntry(Map<String, String> headers) { for (Entry<String, String> ent : headers.entrySet()){"
+      },
+      {
+        "txt": "String key = ent.getKey(); String val = ent.getValue(); if (\"path\".equals(key)){ currEntry.setName(val); } else if (\"linkpath\".equals(key)){ currEntry.setLinkName(val); } else if (\"gid\".equals(key)){ currEntry.setGroupId(Integer.parseInt(val)); } else if (\"gname\".equals(key)){ currEntry.setGroupName(val);"
+      },
+      {
+        "txt": "} else if (\"uid\".equals(key)){ currEntry.setUserId(Integer.parseInt(val)); } else if (\"uname\".equals(key)){ currEntry.setUserName(val); } else if (\"size\".equals(key)){ currEntry.setSize(Long.parseLong(val)); } else if (\"mtime\".equals(key)){ currEntry.setModTime((long) (Double.parseDouble(val) * 1000)); } else if (\"SCHILY.devminor\".equals(key)){ currEntry.setDevMinor(Integer.parseInt(val));"
+      },
+      {
+        "txt": "} else if (\"SCHILY.devmajor\".equals(key)){ currEntry.setDevMajor(Integer.parseInt(val)); } } } private void readGNUSparse() throws IOException { sparses = new ArrayList(); sparses.addAll(currEntry.getSparses()); if (currEntry.isExtended()) { TarArchiveSparseEntry entry;"
+      },
+      {
+        "txt": "do { byte[] headerBuf = getRecord(); if (headerBuf == null) { currEntry = null; break; } entry = new TarArchiveSparseEntry(headerBuf); sparses.addAll(entry.getSparses()); } while (entry.isExtended()); }"
+      },
+      {
+        "txt": "} @Override public ArchiveEntry getNextEntry() throws IOException { return getNextTarEntry(); } private void tryToConsumeSecondEOFRecord() throws IOException { boolean shouldReset = true; boolean marked = is.markSupported(); if (marked) { is.mark(recordSize);"
+      },
+      {
+        "txt": "} try { shouldReset = !isEOFRecord(readRecord()); } finally { if (shouldReset && marked) { pushedBackBytes(recordSize); is.reset(); } } }"
+      },
+      {
+        "txt": "@Override public int read(byte[] buf, int offset, int numToRead) throws IOException { int totalRead = 0; if (hasHitEOF || entryOffset >= entrySize) { return -1; } if (currEntry == null) { throw new IllegalStateException(\"No current tar entry\"); } numToRead = Math.min(numToRead, available());"
+      },
+      {
+        "txt": "totalRead = is.read(buf, offset, numToRead); if (totalRead == -1) { if (numToRead > 0) { throw new IOException(\"Truncated TAR archive\"); } hasHitEOF = true; } else { count(totalRead); entryOffset += totalRead; }"
+      },
+      {
+        "txt": "return totalRead; } @Override public boolean canReadEntryData(ArchiveEntry ae) { if (ae instanceof TarArchiveEntry) { TarArchiveEntry te = (TarArchiveEntry) ae; return !te.isGNUSparse(); } return false; }"
+      },
+      {
+        "txt": "public TarArchiveEntry getCurrentEntry() { return currEntry; } protected final void setCurrentEntry(TarArchiveEntry e) { currEntry = e; } protected final boolean isAtEOF() { return hasHitEOF; } protected final void setAtEOF(boolean b) {"
+      },
+      {
+        "txt": "hasHitEOF = b; } private void consumeRemainderOfLastBlock() throws IOException { long bytesReadOfLastBlock = getBytesRead() % blockSize; if (bytesReadOfLastBlock > 0) { long skipped = IOUtils.skip(is, blockSize - bytesReadOfLastBlock); count(skipped); } } public static boolean matches(byte[] signature, int length) {"
+      },
+      {
+        "txt": "if (length < TarConstants.VERSION_OFFSET+TarConstants.VERSIONLEN) { return false; } if (ArchiveUtils.matchAsciiBuffer(TarConstants.MAGIC_POSIX, signature, TarConstants.MAGIC_OFFSET, TarConstants.MAGICLEN) && ArchiveUtils.matchAsciiBuffer(TarConstants.VERSION_POSIX, signature, TarConstants.VERSION_OFFSET, TarConstants.VERSIONLEN) ){ return true;"
+      },
+      {
+        "txt": "} if (ArchiveUtils.matchAsciiBuffer(TarConstants.MAGIC_GNU, signature, TarConstants.MAGIC_OFFSET, TarConstants.MAGICLEN) && ( ArchiveUtils.matchAsciiBuffer(TarConstants.VERSION_GNU_SPACE, signature, TarConstants.VERSION_OFFSET, TarConstants.VERSIONLEN) || ArchiveUtils.matchAsciiBuffer(TarConstants.VERSION_GNU_ZERO, signature, TarConstants.VERSION_OFFSET, TarConstants.VERSIONLEN)"
+      },
+      {
+        "txt": ") ){ return true; } if (ArchiveUtils.matchAsciiBuffer(TarConstants.MAGIC_ANT, signature, TarConstants.MAGIC_OFFSET, TarConstants.MAGICLEN) && ArchiveUtils.matchAsciiBuffer(TarConstants.VERSION_ANT, signature, TarConstants.VERSION_OFFSET, TarConstants.VERSIONLEN) ){"
+      },
+      {
+        "txt": "return true; } return false; }"
+      }
+    ]
+  },
+  {
+    "id": 1081,
+    "file_path": "src/main/java/org/apache/commons/compress/archivers/tar/TarArchiveOutputStream.java",
+    "start-bug-line": 90,
+    "end-bug-line": 90,
+    "bug": "",
+    "fix": "final String encoding;",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.compress.archivers.tar; import java.io.File; import java.io.IOException;"
+      },
+      {
+        "txt": "import java.io.OutputStream; import java.io.StringWriter; import java.nio.ByteBuffer; import java.util.Arrays; import java.util.Date; import java.util.HashMap; import java.util.Map; import org.apache.commons.compress.archivers.ArchiveEntry; import org.apache.commons.compress.archivers.ArchiveOutputStream; import org.apache.commons.compress.archivers.zip.ZipEncoding;"
+      },
+      {
+        "txt": "import org.apache.commons.compress.archivers.zip.ZipEncodingHelper; import org.apache.commons.compress.utils.CharsetNames; import org.apache.commons.compress.utils.CountingOutputStream; public class TarArchiveOutputStream extends ArchiveOutputStream { public static final int LONGFILE_ERROR = 0; public static final int LONGFILE_TRUNCATE = 1; public static final int LONGFILE_GNU = 2; public static final int LONGFILE_POSIX = 3; public static final int BIGNUMBER_ERROR = 0; public static final int BIGNUMBER_STAR = 1;"
+      },
+      {
+        "txt": "public static final int BIGNUMBER_POSIX = 2; private long currSize; private String currName; private long currBytes; private final byte[] recordBuf; private int assemLen; private final byte[] assemBuf; private int longFileMode = LONGFILE_ERROR; private int bigNumberMode = BIGNUMBER_ERROR; private int recordsWritten;"
+      },
+      {
+        "txt": "private final int recordSize; private boolean closed = false; private boolean haveUnclosedEntry = false; private boolean finished = false; private final OutputStream out; private final ZipEncoding zipEncoding; <extra_id_0> private boolean addPaxHeadersForNonAsciiNames = false; private static final ZipEncoding ASCII = ZipEncodingHelper.getZipEncoding(\"ASCII\"); public TarArchiveOutputStream(OutputStream os) { this(os, TarConstants.DEFAULT_BLKSIZE, TarConstants.DEFAULT_RCDSIZE); }"
+      },
+      {
+        "txt": "this(os, TarConstants.DEFAULT_BLKSIZE, TarConstants.DEFAULT_RCDSIZE); } public TarArchiveOutputStream(OutputStream os, String encoding) { this(os, TarConstants.DEFAULT_BLKSIZE, TarConstants.DEFAULT_RCDSIZE, encoding); } public TarArchiveOutputStream(OutputStream os, int blockSize) { this(os, blockSize, TarConstants.DEFAULT_RCDSIZE); } public TarArchiveOutputStream(OutputStream os, int blockSize, String encoding) {"
+      },
+      {
+        "txt": "this(os, blockSize, TarConstants.DEFAULT_RCDSIZE, encoding); } public TarArchiveOutputStream(OutputStream os, int blockSize, int recordSize) { this(os, blockSize, recordSize, null); } public TarArchiveOutputStream(OutputStream os, int blockSize, int recordSize, String encoding) { out = new CountingOutputStream(os); this.zipEncoding = ZipEncodingHelper.getZipEncoding(encoding); this.assemLen = 0;"
+      },
+      {
+        "txt": "this.assemBuf = new byte[recordSize]; this.recordBuf = new byte[recordSize]; this.recordSize = recordSize; this.recordsPerBlock = blockSize / recordSize; } public void setLongFileMode(int longFileMode) { this.longFileMode = longFileMode; } public void setBigNumberMode(int bigNumberMode) { this.bigNumberMode = bigNumberMode;"
+      },
+      {
+        "txt": "} public void setAddPaxHeadersForNonAsciiNames(boolean b) { addPaxHeadersForNonAsciiNames = b; } @Deprecated @Override public int getCount() { return (int) getBytesWritten(); } @Override"
+      },
+      {
+        "txt": "public long getBytesWritten() { return ((CountingOutputStream) out).getBytesWritten(); } @Override public void finish() throws IOException { if (finished) { throw new IOException(\"This archive has already been finished\"); } if (haveUnclosedEntry) { throw new IOException(\"This archives contains unclosed entries.\");"
+      },
+      {
+        "txt": "} writeEOFRecord(); writeEOFRecord(); padAsNeeded(); out.flush(); finished = true; } @Override public void close() throws IOException { if (!finished) {"
+      },
+      {
+        "txt": "finish(); } if (!closed) { out.close(); closed = true; } } public int getRecordSize() { return this.recordSize; }"
+      },
+      {
+        "txt": "@Override public void putArchiveEntry(ArchiveEntry archiveEntry) throws IOException { if (finished) { throw new IOException(\"Stream has already been finished\"); } TarArchiveEntry entry = (TarArchiveEntry) archiveEntry; Map<String, String> paxHeaders = new HashMap<String, String>(); final String entryName = entry.getName(); boolean paxHeaderContainsPath = handleLongName(entry, entryName, paxHeaders, \"path\", TarConstants.LF_GNUTYPE_LONGNAME, \"file name\");"
+      },
+      {
+        "txt": "final String linkName = entry.getLinkName(); boolean paxHeaderContainsLinkPath = linkName != null && linkName.length() > 0 && handleLongName(entry, linkName, paxHeaders, \"linkpath\", TarConstants.LF_GNUTYPE_LONGLINK, \"link name\"); if (bigNumberMode == BIGNUMBER_POSIX) { addPaxHeadersForBigNumbers(paxHeaders, entry); } else if (bigNumberMode != BIGNUMBER_STAR) { failForBigNumbers(entry); } if (addPaxHeadersForNonAsciiNames && !paxHeaderContainsPath"
+      },
+      {
+        "txt": "&& !ASCII.canEncode(entryName)) { paxHeaders.put(\"path\", entryName); } if (addPaxHeadersForNonAsciiNames && !paxHeaderContainsLinkPath && (entry.isLink() || entry.isSymbolicLink()) && !ASCII.canEncode(linkName)) { paxHeaders.put(\"linkpath\", linkName); } if (paxHeaders.size() > 0) { writePaxHeaders(entry, entryName, paxHeaders);"
+      },
+      {
+        "txt": "} entry.writeEntryHeader(recordBuf, zipEncoding, bigNumberMode == BIGNUMBER_STAR); writeRecord(recordBuf); currBytes = 0; if (entry.isDirectory()) { currSize = 0; } else { currSize = entry.getSize(); }"
+      },
+      {
+        "txt": "currName = entryName; haveUnclosedEntry = true; } @Override public void closeArchiveEntry() throws IOException { if (finished) { throw new IOException(\"Stream has already been finished\"); } if (!haveUnclosedEntry){ throw new IOException(\"No current entry to close\");"
+      },
+      {
+        "txt": "} if (assemLen > 0) { for (int i = assemLen; i < assemBuf.length; ++i) { assemBuf[i] = 0; } writeRecord(assemBuf); currBytes += assemLen; assemLen = 0; } if (currBytes < currSize) {"
+      },
+      {
+        "txt": "throw new IOException(\"entry '\" + currName + \"' closed at '\" + currBytes + \"' before the '\" + currSize + \"' bytes specified in the header were written\"); } haveUnclosedEntry = false; } @Override public void write(byte[] wBuf, int wOffset, int numToWrite) throws IOException { if (!haveUnclosedEntry) {"
+      },
+      {
+        "txt": "throw new IllegalStateException(\"No current tar entry\"); } if (currBytes + numToWrite > currSize) { throw new IOException(\"request to write '\" + numToWrite + \"' bytes exceeds size in header of '\" + currSize + \"' bytes for entry '\" + currName + \"'\"); } if (assemLen > 0) { if (assemLen + numToWrite >= recordBuf.length) {"
+      },
+      {
+        "txt": "int aLen = recordBuf.length - assemLen; System.arraycopy(assemBuf, 0, recordBuf, 0, assemLen); System.arraycopy(wBuf, wOffset, recordBuf, assemLen, aLen); writeRecord(recordBuf); currBytes += recordBuf.length; wOffset += aLen; numToWrite -= aLen; assemLen = 0;"
+      },
+      {
+        "txt": "} else { System.arraycopy(wBuf, wOffset, assemBuf, assemLen, numToWrite); wOffset += numToWrite; assemLen += numToWrite; numToWrite = 0; } } while (numToWrite > 0) { if (numToWrite < recordBuf.length) {"
+      },
+      {
+        "txt": "System.arraycopy(wBuf, wOffset, assemBuf, assemLen, numToWrite); assemLen += numToWrite; break; } writeRecord(wBuf, wOffset); int num = recordBuf.length; currBytes += num; numToWrite -= num; wOffset += num;"
+      },
+      {
+        "txt": "} } void writePaxHeaders(TarArchiveEntry entry, String entryName, Map<String, String> headers) throws IOException { String name = \"./PaxHeaders.X/\" + stripTo7Bits(entryName); if (name.length() >= TarConstants.NAMELEN) { name = name.substring(0, TarConstants.NAMELEN - 1); } TarArchiveEntry pex = new TarArchiveEntry(name,"
+      },
+      {
+        "txt": "TarConstants.LF_PAX_EXTENDED_HEADER_LC); transferModTime(entry, pex); StringWriter w = new StringWriter(); for (Map.Entry<String, String> h : headers.entrySet()) { String key = h.getKey(); String value = h.getValue(); int len = key.length() + value.length() + 3 /* blank, equals and newline */ + 2 /* guess 9 < actual length < 100 */; String line = len + \" \" + key + \"=\" + value + \"\\n\";"
+      },
+      {
+        "txt": "int actualLength = line.getBytes(CharsetNames.UTF_8).length; while (len != actualLength) { len = actualLength; line = len + \" \" + key + \"=\" + value + \"\\n\"; actualLength = line.getBytes(CharsetNames.UTF_8).length; } w.write(line); } byte[] data = w.toString().getBytes(CharsetNames.UTF_8); pex.setSize(data.length);"
+      },
+      {
+        "txt": "putArchiveEntry(pex); write(data); closeArchiveEntry(); } private String stripTo7Bits(String name) { final int length = name.length(); StringBuilder result = new StringBuilder(length); for (int i = 0; i < length; i++) { char stripped = (char) (name.charAt(i) & 0x7F); if (shouldBeReplaced(stripped)) {"
+      },
+      {
+        "txt": "result.append(\"_\"); } else { result.append(stripped); } } return result.toString(); } private boolean shouldBeReplaced(char c) { return c == 0 // would be read as Trailing null || c == '/' // when used as last character TAE will consider the PAX header a directory"
+      },
+      {
+        "txt": "|| c == '\\\\'; // same as '/' as slashes get \"normalized\" on Windows } private void writeEOFRecord() throws IOException { Arrays.fill(recordBuf, (byte) 0); writeRecord(recordBuf); } @Override public void flush() throws IOException { out.flush(); }"
+      },
+      {
+        "txt": "@Override public ArchiveEntry createArchiveEntry(File inputFile, String entryName) throws IOException { if(finished) { throw new IOException(\"Stream has already been finished\"); } return new TarArchiveEntry(inputFile, entryName); } private void writeRecord(byte[] record) throws IOException { if (record.length != recordSize) {"
+      },
+      {
+        "txt": "throw new IOException(\"record to write has length '\" + record.length + \"' which is not the record size of '\" + recordSize + \"'\"); } out.write(record); recordsWritten++; } private void writeRecord(byte[] buf, int offset) throws IOException { if (offset + recordSize > buf.length) {"
+      },
+      {
+        "txt": "throw new IOException(\"record has length '\" + buf.length + \"' with offset '\" + offset + \"' which is less than the record size of '\" + recordSize + \"'\"); } out.write(buf, offset, recordSize); recordsWritten++; } private void padAsNeeded() throws IOException { int start = recordsWritten % recordsPerBlock;"
+      },
+      {
+        "txt": "if (start != 0) { for (int i = start; i < recordsPerBlock; i++) { writeEOFRecord(); } } } private void addPaxHeadersForBigNumbers(Map<String, String> paxHeaders, TarArchiveEntry entry) { addPaxHeaderForBigNumber(paxHeaders, \"size\", entry.getSize(), TarConstants.MAXSIZE);"
+      },
+      {
+        "txt": "addPaxHeaderForBigNumber(paxHeaders, \"gid\", entry.getGroupId(), TarConstants.MAXID); addPaxHeaderForBigNumber(paxHeaders, \"mtime\", entry.getModTime().getTime() / 1000, TarConstants.MAXSIZE); addPaxHeaderForBigNumber(paxHeaders, \"uid\", entry.getUserId(), TarConstants.MAXID); addPaxHeaderForBigNumber(paxHeaders, \"SCHILY.devmajor\", entry.getDevMajor(), TarConstants.MAXID); addPaxHeaderForBigNumber(paxHeaders, \"SCHILY.devminor\","
+      },
+      {
+        "txt": "entry.getDevMinor(), TarConstants.MAXID); failForBigNumber(\"mode\", entry.getMode(), TarConstants.MAXID); } private void addPaxHeaderForBigNumber(Map<String, String> paxHeaders, String header, long value, long maxValue) { if (value < 0 || value > maxValue) { paxHeaders.put(header, String.valueOf(value)); } }"
+      },
+      {
+        "txt": "private void failForBigNumbers(TarArchiveEntry entry) { failForBigNumber(\"entry size\", entry.getSize(), TarConstants.MAXSIZE); failForBigNumberWithPosixMessage(\"group id\", entry.getGroupId(), TarConstants.MAXID); failForBigNumber(\"last modification time\", entry.getModTime().getTime() / 1000, TarConstants.MAXSIZE); failForBigNumber(\"user id\", entry.getUserId(), TarConstants.MAXID); failForBigNumber(\"mode\", entry.getMode(), TarConstants.MAXID); failForBigNumber(\"major device number\", entry.getDevMajor(), TarConstants.MAXID);"
+      },
+      {
+        "txt": "failForBigNumber(\"minor device number\", entry.getDevMinor(), TarConstants.MAXID); } private void failForBigNumber(String field, long value, long maxValue) { failForBigNumber(field, value, maxValue, \"\"); } private void failForBigNumberWithPosixMessage(String field, long value, long maxValue) { failForBigNumber(field, value, maxValue, \" Use STAR or POSIX extensions to overcome this limit\"); } private void failForBigNumber(String field, long value, long maxValue, String additionalMsg) {"
+      },
+      {
+        "txt": "if (value < 0 || value > maxValue) { throw new RuntimeException(field + \" '\" + value + \"' is too big ( > \" + maxValue + \" ).\" + additionalMsg); } } private boolean handleLongName(TarArchiveEntry entry , String name, Map<String, String> paxHeaders, String paxHeaderName, byte linkType, String fieldName) throws IOException {"
+      },
+      {
+        "txt": "final ByteBuffer encodedName = zipEncoding.encode(name); final int len = encodedName.limit() - encodedName.position(); if (len >= TarConstants.NAMELEN) { if (longFileMode == LONGFILE_POSIX) { paxHeaders.put(paxHeaderName, name); return true; } else if (longFileMode == LONGFILE_GNU) { TarArchiveEntry longLinkEntry = new TarArchiveEntry(TarConstants.GNU_LONGLINK, linkType); longLinkEntry.setSize(len + 1); // +1 for NUL transferModTime(entry, longLinkEntry);"
+      },
+      {
+        "txt": "putArchiveEntry(longLinkEntry); write(encodedName.array(), encodedName.arrayOffset(), len); write(0); // NUL terminator closeArchiveEntry(); } else if (longFileMode != LONGFILE_TRUNCATE) { throw new RuntimeException(fieldName + \" '\" + name + \"' is too long ( > \" + TarConstants.NAMELEN + \" bytes)\"); } }"
+      },
+      {
+        "txt": "return false; } private void transferModTime(TarArchiveEntry from, TarArchiveEntry to) { Date fromModTime = from.getModTime(); long fromModTimeSeconds = fromModTime.getTime() / 1000; if (fromModTimeSeconds < 0 || fromModTimeSeconds > TarConstants.MAXSIZE) { fromModTime = new Date(0); } to.setModTime(fromModTime); }"
+      }
+    ]
+  },
+  {
+    "id": 1082,
+    "file_path": "src/main/java/org/apache/commons/compress/archivers/tar/TarArchiveOutputStream.java",
+    "start-bug-line": 155,
+    "end-bug-line": 155,
+    "bug": "",
+    "fix": "this.encoding = encoding;",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.compress.archivers.tar; import java.io.File; import java.io.IOException; import java.io.OutputStream; import java.io.StringWriter;"
+      },
+      {
+        "txt": "import java.nio.ByteBuffer; import java.util.Arrays; import java.util.Date; import java.util.HashMap; import java.util.Map; import org.apache.commons.compress.archivers.ArchiveEntry; import org.apache.commons.compress.archivers.ArchiveOutputStream; import org.apache.commons.compress.archivers.zip.ZipEncoding; import org.apache.commons.compress.archivers.zip.ZipEncodingHelper; import org.apache.commons.compress.utils.CharsetNames;"
+      },
+      {
+        "txt": "import org.apache.commons.compress.utils.CountingOutputStream; public class TarArchiveOutputStream extends ArchiveOutputStream { public static final int LONGFILE_ERROR = 0; public static final int LONGFILE_TRUNCATE = 1; public static final int LONGFILE_GNU = 2; public static final int LONGFILE_POSIX = 3; public static final int BIGNUMBER_ERROR = 0; public static final int BIGNUMBER_STAR = 1; public static final int BIGNUMBER_POSIX = 2; private long currSize;"
+      },
+      {
+        "txt": "private String currName; private long currBytes; private final byte[] recordBuf; private int assemLen; private final byte[] assemBuf; private int longFileMode = LONGFILE_ERROR; private int bigNumberMode = BIGNUMBER_ERROR; private int recordsWritten; private final int recordsPerBlock; private final int recordSize;"
+      },
+      {
+        "txt": "private boolean closed = false; private boolean haveUnclosedEntry = false; private boolean finished = false; private final OutputStream out; private final ZipEncoding zipEncoding; private boolean addPaxHeadersForNonAsciiNames = false; private static final ZipEncoding ASCII = ZipEncodingHelper.getZipEncoding(\"ASCII\"); public TarArchiveOutputStream(OutputStream os) { this(os, TarConstants.DEFAULT_BLKSIZE, TarConstants.DEFAULT_RCDSIZE);"
+      },
+      {
+        "txt": "} public TarArchiveOutputStream(OutputStream os, String encoding) { this(os, TarConstants.DEFAULT_BLKSIZE, TarConstants.DEFAULT_RCDSIZE, encoding); } public TarArchiveOutputStream(OutputStream os, int blockSize) { this(os, blockSize, TarConstants.DEFAULT_RCDSIZE); } public TarArchiveOutputStream(OutputStream os, int blockSize, String encoding) { this(os, blockSize, TarConstants.DEFAULT_RCDSIZE, encoding);"
+      },
+      {
+        "txt": "public TarArchiveOutputStream(OutputStream os, int blockSize, int recordSize) { this(os, blockSize, recordSize, null); } public TarArchiveOutputStream(OutputStream os, int blockSize, int recordSize, String encoding) { out = new CountingOutputStream(os); <extra_id_0> this.assemLen = 0; this.assemBuf = new byte[recordSize]; this.recordBuf = new byte[recordSize]; this.recordSize = recordSize; this.recordsPerBlock = blockSize / recordSize; }"
+      },
+      {
+        "txt": "this.recordsPerBlock = blockSize / recordSize; } public void setLongFileMode(int longFileMode) { this.longFileMode = longFileMode; } public void setBigNumberMode(int bigNumberMode) { this.bigNumberMode = bigNumberMode; } public void setAddPaxHeadersForNonAsciiNames(boolean b) { addPaxHeadersForNonAsciiNames = b;"
+      },
+      {
+        "txt": "} @Deprecated @Override public int getCount() { return (int) getBytesWritten(); } @Override public long getBytesWritten() { return ((CountingOutputStream) out).getBytesWritten(); }"
+      },
+      {
+        "txt": "@Override public void finish() throws IOException { if (finished) { throw new IOException(\"This archive has already been finished\"); } if (haveUnclosedEntry) { throw new IOException(\"This archives contains unclosed entries.\"); } writeEOFRecord(); writeEOFRecord();"
+      },
+      {
+        "txt": "padAsNeeded(); out.flush(); finished = true; } @Override public void close() throws IOException { if (!finished) { finish(); } if (!closed) {"
+      },
+      {
+        "txt": "out.close(); closed = true; } } public int getRecordSize() { return this.recordSize; } @Override public void putArchiveEntry(ArchiveEntry archiveEntry) throws IOException { if (finished) {"
+      },
+      {
+        "txt": "throw new IOException(\"Stream has already been finished\"); } TarArchiveEntry entry = (TarArchiveEntry) archiveEntry; Map<String, String> paxHeaders = new HashMap<String, String>(); final String entryName = entry.getName(); boolean paxHeaderContainsPath = handleLongName(entry, entryName, paxHeaders, \"path\", TarConstants.LF_GNUTYPE_LONGNAME, \"file name\"); final String linkName = entry.getLinkName(); boolean paxHeaderContainsLinkPath = linkName != null && linkName.length() > 0 && handleLongName(entry, linkName, paxHeaders, \"linkpath\","
+      },
+      {
+        "txt": "TarConstants.LF_GNUTYPE_LONGLINK, \"link name\"); if (bigNumberMode == BIGNUMBER_POSIX) { addPaxHeadersForBigNumbers(paxHeaders, entry); } else if (bigNumberMode != BIGNUMBER_STAR) { failForBigNumbers(entry); } if (addPaxHeadersForNonAsciiNames && !paxHeaderContainsPath && !ASCII.canEncode(entryName)) { paxHeaders.put(\"path\", entryName); }"
+      },
+      {
+        "txt": "if (addPaxHeadersForNonAsciiNames && !paxHeaderContainsLinkPath && (entry.isLink() || entry.isSymbolicLink()) && !ASCII.canEncode(linkName)) { paxHeaders.put(\"linkpath\", linkName); } if (paxHeaders.size() > 0) { writePaxHeaders(entry, entryName, paxHeaders); } entry.writeEntryHeader(recordBuf, zipEncoding, bigNumberMode == BIGNUMBER_STAR);"
+      },
+      {
+        "txt": "writeRecord(recordBuf); currBytes = 0; if (entry.isDirectory()) { currSize = 0; } else { currSize = entry.getSize(); } currName = entryName; haveUnclosedEntry = true; }"
+      },
+      {
+        "txt": "@Override public void closeArchiveEntry() throws IOException { if (finished) { throw new IOException(\"Stream has already been finished\"); } if (!haveUnclosedEntry){ throw new IOException(\"No current entry to close\"); } if (assemLen > 0) { for (int i = assemLen; i < assemBuf.length; ++i) {"
+      },
+      {
+        "txt": "assemBuf[i] = 0; } writeRecord(assemBuf); currBytes += assemLen; assemLen = 0; } if (currBytes < currSize) { throw new IOException(\"entry '\" + currName + \"' closed at '\" + currBytes + \"' before the '\" + currSize"
+      },
+      {
+        "txt": "+ \"' bytes specified in the header were written\"); } haveUnclosedEntry = false; } @Override public void write(byte[] wBuf, int wOffset, int numToWrite) throws IOException { if (!haveUnclosedEntry) { throw new IllegalStateException(\"No current tar entry\"); } if (currBytes + numToWrite > currSize) {"
+      },
+      {
+        "txt": "throw new IOException(\"request to write '\" + numToWrite + \"' bytes exceeds size in header of '\" + currSize + \"' bytes for entry '\" + currName + \"'\"); } if (assemLen > 0) { if (assemLen + numToWrite >= recordBuf.length) { int aLen = recordBuf.length - assemLen; System.arraycopy(assemBuf, 0, recordBuf, 0, assemLen);"
+      },
+      {
+        "txt": "System.arraycopy(wBuf, wOffset, recordBuf, assemLen, aLen); writeRecord(recordBuf); currBytes += recordBuf.length; wOffset += aLen; numToWrite -= aLen; assemLen = 0; } else { System.arraycopy(wBuf, wOffset, assemBuf, assemLen, numToWrite);"
+      },
+      {
+        "txt": "wOffset += numToWrite; assemLen += numToWrite; numToWrite = 0; } } while (numToWrite > 0) { if (numToWrite < recordBuf.length) { System.arraycopy(wBuf, wOffset, assemBuf, assemLen, numToWrite); assemLen += numToWrite;"
+      },
+      {
+        "txt": "break; } writeRecord(wBuf, wOffset); int num = recordBuf.length; currBytes += num; numToWrite -= num; wOffset += num; } } void writePaxHeaders(TarArchiveEntry entry,"
+      },
+      {
+        "txt": "String entryName, Map<String, String> headers) throws IOException { String name = \"./PaxHeaders.X/\" + stripTo7Bits(entryName); if (name.length() >= TarConstants.NAMELEN) { name = name.substring(0, TarConstants.NAMELEN - 1); } TarArchiveEntry pex = new TarArchiveEntry(name, TarConstants.LF_PAX_EXTENDED_HEADER_LC); transferModTime(entry, pex); StringWriter w = new StringWriter();"
+      },
+      {
+        "txt": "for (Map.Entry<String, String> h : headers.entrySet()) { String key = h.getKey(); String value = h.getValue(); int len = key.length() + value.length() + 3 /* blank, equals and newline */ + 2 /* guess 9 < actual length < 100 */; String line = len + \" \" + key + \"=\" + value + \"\\n\"; int actualLength = line.getBytes(CharsetNames.UTF_8).length; while (len != actualLength) { len = actualLength;"
+      },
+      {
+        "txt": "line = len + \" \" + key + \"=\" + value + \"\\n\"; actualLength = line.getBytes(CharsetNames.UTF_8).length; } w.write(line); } byte[] data = w.toString().getBytes(CharsetNames.UTF_8); pex.setSize(data.length); putArchiveEntry(pex); write(data); closeArchiveEntry();"
+      },
+      {
+        "txt": "} private String stripTo7Bits(String name) { final int length = name.length(); StringBuilder result = new StringBuilder(length); for (int i = 0; i < length; i++) { char stripped = (char) (name.charAt(i) & 0x7F); if (shouldBeReplaced(stripped)) { result.append(\"_\"); } else { result.append(stripped);"
+      },
+      {
+        "txt": "} } return result.toString(); } private boolean shouldBeReplaced(char c) { return c == 0 // would be read as Trailing null || c == '/' // when used as last character TAE will consider the PAX header a directory || c == '\\\\'; // same as '/' as slashes get \"normalized\" on Windows } private void writeEOFRecord() throws IOException {"
+      },
+      {
+        "txt": "Arrays.fill(recordBuf, (byte) 0); writeRecord(recordBuf); } @Override public void flush() throws IOException { out.flush(); } @Override public ArchiveEntry createArchiveEntry(File inputFile, String entryName) throws IOException {"
+      },
+      {
+        "txt": "if(finished) { throw new IOException(\"Stream has already been finished\"); } return new TarArchiveEntry(inputFile, entryName); } private void writeRecord(byte[] record) throws IOException { if (record.length != recordSize) { throw new IOException(\"record to write has length '\" + record.length + \"' which is not the record size of '\""
+      },
+      {
+        "txt": "+ recordSize + \"'\"); } out.write(record); recordsWritten++; } private void writeRecord(byte[] buf, int offset) throws IOException { if (offset + recordSize > buf.length) { throw new IOException(\"record has length '\" + buf.length + \"' with offset '\" + offset + \"' which is less than the record size of '\""
+      },
+      {
+        "txt": "+ recordSize + \"'\"); } out.write(buf, offset, recordSize); recordsWritten++; } private void padAsNeeded() throws IOException { int start = recordsWritten % recordsPerBlock; if (start != 0) { for (int i = start; i < recordsPerBlock; i++) { writeEOFRecord();"
+      },
+      {
+        "txt": "} } } private void addPaxHeadersForBigNumbers(Map<String, String> paxHeaders, TarArchiveEntry entry) { addPaxHeaderForBigNumber(paxHeaders, \"size\", entry.getSize(), TarConstants.MAXSIZE); addPaxHeaderForBigNumber(paxHeaders, \"gid\", entry.getGroupId(), TarConstants.MAXID); addPaxHeaderForBigNumber(paxHeaders, \"mtime\","
+      },
+      {
+        "txt": "entry.getModTime().getTime() / 1000, TarConstants.MAXSIZE); addPaxHeaderForBigNumber(paxHeaders, \"uid\", entry.getUserId(), TarConstants.MAXID); addPaxHeaderForBigNumber(paxHeaders, \"SCHILY.devmajor\", entry.getDevMajor(), TarConstants.MAXID); addPaxHeaderForBigNumber(paxHeaders, \"SCHILY.devminor\", entry.getDevMinor(), TarConstants.MAXID); failForBigNumber(\"mode\", entry.getMode(), TarConstants.MAXID); }"
+      },
+      {
+        "txt": "private void addPaxHeaderForBigNumber(Map<String, String> paxHeaders, String header, long value, long maxValue) { if (value < 0 || value > maxValue) { paxHeaders.put(header, String.valueOf(value)); } } private void failForBigNumbers(TarArchiveEntry entry) { failForBigNumber(\"entry size\", entry.getSize(), TarConstants.MAXSIZE); failForBigNumberWithPosixMessage(\"group id\", entry.getGroupId(), TarConstants.MAXID);"
+      },
+      {
+        "txt": "failForBigNumber(\"last modification time\", entry.getModTime().getTime() / 1000, TarConstants.MAXSIZE); failForBigNumber(\"user id\", entry.getUserId(), TarConstants.MAXID); failForBigNumber(\"mode\", entry.getMode(), TarConstants.MAXID); failForBigNumber(\"major device number\", entry.getDevMajor(), TarConstants.MAXID); failForBigNumber(\"minor device number\", entry.getDevMinor(), TarConstants.MAXID); }"
+      },
+      {
+        "txt": "private void failForBigNumber(String field, long value, long maxValue) { failForBigNumber(field, value, maxValue, \"\"); } private void failForBigNumberWithPosixMessage(String field, long value, long maxValue) { failForBigNumber(field, value, maxValue, \" Use STAR or POSIX extensions to overcome this limit\"); } private void failForBigNumber(String field, long value, long maxValue, String additionalMsg) { if (value < 0 || value > maxValue) { throw new RuntimeException(field + \" '\" + value + \"' is too big ( > \""
+      },
+      {
+        "txt": "+ maxValue + \" ).\" + additionalMsg); } } private boolean handleLongName(TarArchiveEntry entry , String name, Map<String, String> paxHeaders, String paxHeaderName, byte linkType, String fieldName) throws IOException { final ByteBuffer encodedName = zipEncoding.encode(name); final int len = encodedName.limit() - encodedName.position(); if (len >= TarConstants.NAMELEN) {"
+      },
+      {
+        "txt": "if (longFileMode == LONGFILE_POSIX) { paxHeaders.put(paxHeaderName, name); return true; } else if (longFileMode == LONGFILE_GNU) { TarArchiveEntry longLinkEntry = new TarArchiveEntry(TarConstants.GNU_LONGLINK, linkType); longLinkEntry.setSize(len + 1); // +1 for NUL transferModTime(entry, longLinkEntry); putArchiveEntry(longLinkEntry); write(encodedName.array(), encodedName.arrayOffset(), len); write(0); // NUL terminator"
+      },
+      {
+        "txt": "closeArchiveEntry(); } else if (longFileMode != LONGFILE_TRUNCATE) { throw new RuntimeException(fieldName + \" '\" + name + \"' is too long ( > \" + TarConstants.NAMELEN + \" bytes)\"); } } return false; } private void transferModTime(TarArchiveEntry from, TarArchiveEntry to) {"
+      },
+      {
+        "txt": "Date fromModTime = from.getModTime(); long fromModTimeSeconds = fromModTime.getTime() / 1000; if (fromModTimeSeconds < 0 || fromModTimeSeconds > TarConstants.MAXSIZE) { fromModTime = new Date(0); } to.setModTime(fromModTime); }"
+      }
+    ]
+  },
+  {
+    "id": 1083,
+    "file_path": "src/main/java/org/apache/commons/compress/archivers/zip/ZipArchiveInputStream.java",
+    "start-bug-line": 65,
+    "end-bug-line": 65,
+    "bug": "",
+    "fix": "final String encoding;",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.compress.archivers.zip; import java.io.ByteArrayInputStream; import java.io.ByteArrayOutputStream; import java.io.EOFException; import java.io.IOException;"
+      },
+      {
+        "txt": "import java.io.InputStream; import java.io.PushbackInputStream; import java.nio.ByteBuffer; import java.util.zip.CRC32; import java.util.zip.DataFormatException; import java.util.zip.Inflater; import java.util.zip.ZipEntry; import java.util.zip.ZipException; import org.apache.commons.compress.archivers.ArchiveEntry; import org.apache.commons.compress.archivers.ArchiveInputStream;"
+      },
+      {
+        "txt": "import static org.apache.commons.compress.archivers.zip.ZipConstants.DWORD; import static org.apache.commons.compress.archivers.zip.ZipConstants.SHORT; import static org.apache.commons.compress.archivers.zip.ZipConstants.WORD; import static org.apache.commons.compress.archivers.zip.ZipConstants.ZIP64_MAGIC; public class ZipArchiveInputStream extends ArchiveInputStream { private final ZipEncoding zipEncoding; <extra_id_0> private final boolean useUnicodeExtraFields; private final InputStream in; private final Inflater inf = new Inflater(true); private final ByteBuffer buf = ByteBuffer.allocate(ZipArchiveOutputStream.BUFFER_SIZE); private CurrentEntry current = null; private boolean closed = false;"
+      },
+      {
+        "txt": "private CurrentEntry current = null; private boolean closed = false; private boolean hitCentralDirectory = false; private ByteArrayInputStream lastStoredEntry = null; private boolean allowStoredEntriesWithDataDescriptor = false; private static final int LFH_LEN = 30; local file header signature WORD version needed to extract SHORT general purpose bit flag SHORT compression method SHORT"
+      },
+      {
+        "txt": "last mod file time SHORT last mod file date SHORT crc-32 WORD compressed size WORD uncompressed size WORD file name length SHORT extra field length SHORT private static final int CFH_LEN = 46; central file header signature WORD version made by SHORT"
+      },
+      {
+        "txt": "version needed to extract SHORT general purpose bit flag SHORT compression method SHORT last mod file time SHORT last mod file date SHORT crc-32 WORD compressed size WORD uncompressed size WORD file name length SHORT extra field length SHORT"
+      },
+      {
+        "txt": "file comment length SHORT disk number start SHORT internal file attributes SHORT external file attributes WORD relative offset of local header WORD private static final long TWO_EXP_32 = ZIP64_MAGIC + 1; private final byte[] LFH_BUF = new byte[LFH_LEN]; private final byte[] SKIP_BUF = new byte[1024]; private final byte[] SHORT_BUF = new byte[SHORT]; private final byte[] WORD_BUF = new byte[WORD];"
+      },
+      {
+        "txt": "private final byte[] TWO_DWORD_BUF = new byte[2 * DWORD]; private int entriesRead = 0; public ZipArchiveInputStream(InputStream inputStream) { this(inputStream, ZipEncodingHelper.UTF8); } public ZipArchiveInputStream(InputStream inputStream, String encoding) { this(inputStream, encoding, true); } public ZipArchiveInputStream(InputStream inputStream, String encoding, boolean useUnicodeExtraFields) { this(inputStream, encoding, useUnicodeExtraFields, false);"
+      },
+      {
+        "txt": "} public ZipArchiveInputStream(InputStream inputStream, String encoding, boolean useUnicodeExtraFields, boolean allowStoredEntriesWithDataDescriptor) { zipEncoding = ZipEncodingHelper.getZipEncoding(encoding); this.useUnicodeExtraFields = useUnicodeExtraFields; in = new PushbackInputStream(inputStream, buf.capacity()); this.allowStoredEntriesWithDataDescriptor = allowStoredEntriesWithDataDescriptor;"
+      },
+      {
+        "txt": "buf.limit(0); } public ZipArchiveEntry getNextZipEntry() throws IOException { boolean firstEntry = true; if (closed || hitCentralDirectory) { return null; } if (current != null) { closeEntry(); firstEntry = false;"
+      },
+      {
+        "txt": "} try { if (firstEntry) { readFirstLocalFileHeader(LFH_BUF); } else { readFully(LFH_BUF); } } catch (EOFException e) { return null; }"
+      },
+      {
+        "txt": "ZipLong sig = new ZipLong(LFH_BUF); if (sig.equals(ZipLong.CFH_SIG) || sig.equals(ZipLong.AED_SIG)) { hitCentralDirectory = true; skipRemainderOfArchive(); } if (!sig.equals(ZipLong.LFH_SIG)) { return null; } int off = WORD; current = new CurrentEntry();"
+      },
+      {
+        "txt": "int versionMadeBy = ZipShort.getValue(LFH_BUF, off); off += SHORT; current.entry.setPlatform((versionMadeBy >> ZipFile.BYTE_SHIFT) & ZipFile.NIBLET_MASK); final GeneralPurposeBit gpFlag = GeneralPurposeBit.parse(LFH_BUF, off); final boolean hasUTF8Flag = gpFlag.usesUTF8ForNames(); final ZipEncoding entryEncoding = hasUTF8Flag ? ZipEncodingHelper.UTF8_ZIP_ENCODING : zipEncoding; current.hasDataDescriptor = gpFlag.usesDataDescriptor(); current.entry.setGeneralPurposeBit(gpFlag); off += SHORT; current.entry.setMethod(ZipShort.getValue(LFH_BUF, off));"
+      },
+      {
+        "txt": "off += SHORT; long time = ZipUtil.dosToJavaTime(ZipLong.getValue(LFH_BUF, off)); current.entry.setTime(time); off += WORD; ZipLong size = null, cSize = null; if (!current.hasDataDescriptor) { current.entry.setCrc(ZipLong.getValue(LFH_BUF, off)); off += WORD; cSize = new ZipLong(LFH_BUF, off); off += WORD;"
+      },
+      {
+        "txt": "size = new ZipLong(LFH_BUF, off); off += WORD; } else { off += 3 * WORD; } int fileNameLen = ZipShort.getValue(LFH_BUF, off); off += SHORT; int extraLen = ZipShort.getValue(LFH_BUF, off); off += SHORT; byte[] fileName = new byte[fileNameLen];"
+      },
+      {
+        "txt": "readFully(fileName); current.entry.setName(entryEncoding.decode(fileName), fileName); byte[] extraData = new byte[extraLen]; readFully(extraData); current.entry.setExtra(extraData); if (!hasUTF8Flag && useUnicodeExtraFields) { ZipUtil.setNameAndCommentFromExtraFields(current.entry, fileName, null); } processZip64Extra(size, cSize); if (current.entry.getCompressedSize() != ZipArchiveEntry.SIZE_UNKNOWN) {"
+      },
+      {
+        "txt": "if (current.entry.getMethod() == ZipMethod.UNSHRINKING.getCode()) { current.in = new UnshrinkingInputStream(new BoundedInputStream(in, current.entry.getCompressedSize())); } else if (current.entry.getMethod() == ZipMethod.IMPLODING.getCode()) { current.in = new ExplodingInputStream( current.entry.getGeneralPurposeBit().getSlidingDictionarySize(), current.entry.getGeneralPurposeBit().getNumberOfShannonFanoTrees(), new BoundedInputStream(in, current.entry.getCompressedSize())); } } entriesRead++;"
+      },
+      {
+        "txt": "return current.entry; } private void readFirstLocalFileHeader(byte[] lfh) throws IOException { readFully(lfh); ZipLong sig = new ZipLong(lfh); if (sig.equals(ZipLong.DD_SIG)) { throw new UnsupportedZipFeatureException(UnsupportedZipFeatureException.Feature.SPLITTING); } if (sig.equals(ZipLong.SINGLE_SEGMENT_SPLIT_MARKER)) { byte[] missedLfhBytes = new byte[4];"
+      },
+      {
+        "txt": "readFully(missedLfhBytes); System.arraycopy(lfh, 4, lfh, 0, LFH_LEN - 4); System.arraycopy(missedLfhBytes, 0, lfh, LFH_LEN - 4, 4); } } private void processZip64Extra(ZipLong size, ZipLong cSize) { Zip64ExtendedInformationExtraField z64 = (Zip64ExtendedInformationExtraField) current.entry.getExtraField(Zip64ExtendedInformationExtraField.HEADER_ID); current.usesZip64 = z64 != null;"
+      },
+      {
+        "txt": "if (!current.hasDataDescriptor) { if (z64 != null // same as current.usesZip64 but avoids NPE warning && (cSize.equals(ZipLong.ZIP64_MAGIC) || size.equals(ZipLong.ZIP64_MAGIC)) ) { current.entry.setCompressedSize(z64.getCompressedSize().getLongValue()); current.entry.setSize(z64.getSize().getLongValue()); } else { current.entry.setCompressedSize(cSize.getValue()); current.entry.setSize(size.getValue()); } }"
+      },
+      {
+        "txt": "} @Override public ArchiveEntry getNextEntry() throws IOException { return getNextZipEntry(); } @Override public boolean canReadEntryData(ArchiveEntry ae) { if (ae instanceof ZipArchiveEntry) { ZipArchiveEntry ze = (ZipArchiveEntry) ae; return ZipUtil.canHandleEntryData(ze)"
+      },
+      {
+        "txt": "&& supportsDataDescriptorFor(ze); } return false; } @Override public int read(byte[] buffer, int offset, int length) throws IOException { if (closed) { throw new IOException(\"The stream is closed\"); } if (current == null) {"
+      },
+      {
+        "txt": "return -1; } if (offset > buffer.length || length < 0 || offset < 0 || buffer.length - offset < length) { throw new ArrayIndexOutOfBoundsException(); } ZipUtil.checkRequestedFeatures(current.entry); if (!supportsDataDescriptorFor(current.entry)) { throw new UnsupportedZipFeatureException(UnsupportedZipFeatureException.Feature.DATA_DESCRIPTOR, current.entry); }"
+      },
+      {
+        "txt": "int read; if (current.entry.getMethod() == ZipArchiveOutputStream.STORED) { read = readStored(buffer, offset, length); } else if (current.entry.getMethod() == ZipArchiveOutputStream.DEFLATED) { read = readDeflated(buffer, offset, length); } else if (current.entry.getMethod() == ZipMethod.UNSHRINKING.getCode() || current.entry.getMethod() == ZipMethod.IMPLODING.getCode()) { read = current.in.read(buffer, offset, length); } else { throw new UnsupportedZipFeatureException(ZipMethod.getMethodByCode(current.entry.getMethod()),"
+      },
+      {
+        "txt": "current.entry); } if (read >= 0) { current.crc.update(buffer, offset, read); } return read; } private int readStored(byte[] buffer, int offset, int length) throws IOException { if (current.hasDataDescriptor) { if (lastStoredEntry == null) {"
+      },
+      {
+        "txt": "readStoredEntry(); } return lastStoredEntry.read(buffer, offset, length); } long csize = current.entry.getSize(); if (current.bytesRead >= csize) { return -1; } if (buf.position() >= buf.limit()) { buf.position(0);"
+      },
+      {
+        "txt": "int l = in.read(buf.array()); if (l == -1) { return -1; } buf.limit(l); count(l); current.bytesReadFromStream += l; } int toRead = Math.min(buf.remaining(), length); if ((csize - current.bytesRead) < toRead) {"
+      },
+      {
+        "txt": "toRead = (int) (csize - current.bytesRead); } buf.get(buffer, offset, toRead); current.bytesRead += toRead; return toRead; } private int readDeflated(byte[] buffer, int offset, int length) throws IOException { int read = readFromInflater(buffer, offset, length); if (read <= 0) { if (inf.finished()) {"
+      },
+      {
+        "txt": "return -1; } else if (inf.needsDictionary()) { throw new ZipException(\"This archive needs a preset dictionary\" + \" which is not supported by Commons\" + \" Compress.\"); } else if (read == -1) { throw new IOException(\"Truncated ZIP file\"); } } return read;"
+      },
+      {
+        "txt": "} private int readFromInflater(byte[] buffer, int offset, int length) throws IOException { int read = 0; do { if (inf.needsInput()) { int l = fill(); if (l > 0) { current.bytesReadFromStream += buf.limit(); } else if (l == -1) { return -1;"
+      },
+      {
+        "txt": "} else { break; } } try { read = inf.inflate(buffer, offset, length); } catch (DataFormatException e) { throw (IOException) new ZipException(e.getMessage()).initCause(e); } } while (read == 0 && inf.needsInput());"
+      },
+      {
+        "txt": "return read; } @Override public void close() throws IOException { if (!closed) { closed = true; in.close(); inf.end(); } }"
+      },
+      {
+        "txt": "@Override public long skip(long value) throws IOException { if (value >= 0) { long skipped = 0; while (skipped < value) { long rem = value - skipped; int x = read(SKIP_BUF, 0, (int) (SKIP_BUF.length > rem ? rem : SKIP_BUF.length)); if (x == -1) { return skipped; }"
+      },
+      {
+        "txt": "skipped += x; } return skipped; } throw new IllegalArgumentException(); } public static boolean matches(byte[] signature, int length) { if (length < ZipArchiveOutputStream.LFH_SIG.length) { return false; }"
+      },
+      {
+        "txt": "return checksig(signature, ZipArchiveOutputStream.LFH_SIG) // normal file || checksig(signature, ZipArchiveOutputStream.EOCD_SIG) // empty zip || checksig(signature, ZipArchiveOutputStream.DD_SIG) // split zip || checksig(signature, ZipLong.SINGLE_SEGMENT_SPLIT_MARKER.getBytes()); } private static boolean checksig(byte[] signature, byte[] expected) { for (int i = 0; i < expected.length; i++) { if (signature[i] != expected[i]) { return false; }"
+      },
+      {
+        "txt": "} return true; } private void closeEntry() throws IOException { if (closed) { throw new IOException(\"The stream is closed\"); } if (current == null) { return; }"
+      },
+      {
+        "txt": "if (current.bytesReadFromStream <= current.entry.getCompressedSize() && !current.hasDataDescriptor) { drainCurrentEntryData(); } else { skip(Long.MAX_VALUE); long inB = current.entry.getMethod() == ZipArchiveOutputStream.DEFLATED ? getBytesInflated() : current.bytesRead; int diff = (int) (current.bytesReadFromStream - inB); if (diff > 0) { pushback(buf.array(), buf.limit() - diff, diff);"
+      },
+      {
+        "txt": "} } if (lastStoredEntry == null && current.hasDataDescriptor) { readDataDescriptor(); } inf.reset(); buf.clear().flip(); current = null; lastStoredEntry = null; }"
+      },
+      {
+        "txt": "private void drainCurrentEntryData() throws IOException { long remaining = current.entry.getCompressedSize() - current.bytesReadFromStream; while (remaining > 0) { long n = in.read(buf.array(), 0, (int) Math.min(buf.capacity(), remaining)); if (n < 0) { throw new EOFException(\"Truncated ZIP entry: \" + current.entry.getName()); } else { count(n); remaining -= n; }"
+      },
+      {
+        "txt": "} } private long getBytesInflated() { long inB = inf.getBytesRead(); if (current.bytesReadFromStream >= TWO_EXP_32) { while (inB + TWO_EXP_32 <= current.bytesReadFromStream) { inB += TWO_EXP_32; } } return inB;"
+      },
+      {
+        "txt": "} private int fill() throws IOException { if (closed) { throw new IOException(\"The stream is closed\"); } int length = in.read(buf.array()); if (length > 0) { buf.limit(length); count(buf.limit()); inf.setInput(buf.array(), 0, buf.limit());"
+      },
+      {
+        "txt": "} return length; } private void readFully(byte[] b) throws IOException { int count = IOUtils.readFully(in, b); count(count); if (count < b.length) { throw new EOFException(); } }"
+      },
+      {
+        "txt": "private void readDataDescriptor() throws IOException { readFully(WORD_BUF); ZipLong val = new ZipLong(WORD_BUF); if (ZipLong.DD_SIG.equals(val)) { readFully(WORD_BUF); val = new ZipLong(WORD_BUF); } current.entry.setCrc(val.getValue()); readFully(TWO_DWORD_BUF); ZipLong potentialSig = new ZipLong(TWO_DWORD_BUF, DWORD);"
+      },
+      {
+        "txt": "if (potentialSig.equals(ZipLong.CFH_SIG) || potentialSig.equals(ZipLong.LFH_SIG)) { pushback(TWO_DWORD_BUF, DWORD, DWORD); current.entry.setCompressedSize(ZipLong.getValue(TWO_DWORD_BUF)); current.entry.setSize(ZipLong.getValue(TWO_DWORD_BUF, WORD)); } else { current.entry.setCompressedSize(ZipEightByteInteger.getLongValue(TWO_DWORD_BUF)); current.entry.setSize(ZipEightByteInteger.getLongValue(TWO_DWORD_BUF, DWORD)); } } private boolean supportsDataDescriptorFor(ZipArchiveEntry entry) {"
+      },
+      {
+        "txt": "return !entry.getGeneralPurposeBit().usesDataDescriptor() || (allowStoredEntriesWithDataDescriptor && entry.getMethod() == ZipEntry.STORED) || entry.getMethod() == ZipEntry.DEFLATED; } private void readStoredEntry() throws IOException { ByteArrayOutputStream bos = new ByteArrayOutputStream(); int off = 0; boolean done = false; int ddLen = current.usesZip64 ? WORD + 2 * DWORD : 3 * WORD; while (!done) {"
+      },
+      {
+        "txt": "int r = in.read(buf.array(), off, ZipArchiveOutputStream.BUFFER_SIZE - off); if (r <= 0) { throw new IOException(\"Truncated ZIP file\"); } if (r + off < 4) { off += r; continue; } done = bufferContainsSignature(bos, off, r, ddLen); if (!done) {"
+      },
+      {
+        "txt": "off = cacheBytesRead(bos, off, r, ddLen); } } byte[] b = bos.toByteArray(); lastStoredEntry = new ByteArrayInputStream(b); } private static final byte[] LFH = ZipLong.LFH_SIG.getBytes(); private static final byte[] CFH = ZipLong.CFH_SIG.getBytes(); private static final byte[] DD = ZipLong.DD_SIG.getBytes(); private boolean bufferContainsSignature(ByteArrayOutputStream bos, int offset, int lastRead, int expectedDDLen)"
+      },
+      {
+        "txt": "throws IOException { boolean done = false; int readTooMuch = 0; for (int i = 0; !done && i < lastRead - 4; i++) { if (buf.array()[i] == LFH[0] && buf.array()[i + 1] == LFH[1]) { if ((buf.array()[i + 2] == LFH[2] && buf.array()[i + 3] == LFH[3]) || (buf.array()[i] == CFH[2] && buf.array()[i + 3] == CFH[3])) { readTooMuch = offset + lastRead - i - expectedDDLen; done = true; }"
+      },
+      {
+        "txt": "else if (buf.array()[i + 2] == DD[2] && buf.array()[i + 3] == DD[3]) { readTooMuch = offset + lastRead - i; done = true; } if (done) { pushback(buf.array(), offset + lastRead - readTooMuch, readTooMuch); bos.write(buf.array(), 0, i); readDataDescriptor(); } }"
+      },
+      {
+        "txt": "} return done; } private int cacheBytesRead(ByteArrayOutputStream bos, int offset, int lastRead, int expecteDDLen) { final int cacheable = offset + lastRead - expecteDDLen - 3; if (cacheable > 0) { bos.write(buf.array(), 0, cacheable); System.arraycopy(buf.array(), cacheable, buf.array(), 0, expecteDDLen + 3); offset = expecteDDLen + 3; } else {"
+      },
+      {
+        "txt": "offset += lastRead; } return offset; } private void pushback(byte[] buf, int offset, int length) throws IOException { ((PushbackInputStream) in).unread(buf, offset, length); pushedBackBytes(length); } private void skipRemainderOfArchive() throws IOException { realSkip(entriesRead * CFH_LEN - LFH_LEN);"
+      },
+      {
+        "txt": "findEocdRecord(); realSkip(ZipFile.MIN_EOCD_SIZE - WORD /* signature */ - SHORT /* comment len */); readFully(SHORT_BUF); realSkip(ZipShort.getValue(SHORT_BUF)); } private void findEocdRecord() throws IOException { int currentByte = -1; boolean skipReadCall = false; while (skipReadCall || (currentByte = readOneByte()) > -1) { skipReadCall = false;"
+      },
+      {
+        "txt": "if (!isFirstByteOfEocdSig(currentByte)) { continue; } currentByte = readOneByte(); if (currentByte != ZipArchiveOutputStream.EOCD_SIG[1]) { if (currentByte == -1) { break; } skipReadCall = isFirstByteOfEocdSig(currentByte); continue;"
+      },
+      {
+        "txt": "} currentByte = readOneByte(); if (currentByte != ZipArchiveOutputStream.EOCD_SIG[2]) { if (currentByte == -1) { break; } skipReadCall = isFirstByteOfEocdSig(currentByte); continue; } currentByte = readOneByte();"
+      },
+      {
+        "txt": "if (currentByte == -1 || currentByte == ZipArchiveOutputStream.EOCD_SIG[3]) { break; } skipReadCall = isFirstByteOfEocdSig(currentByte); } } private void realSkip(long value) throws IOException { if (value >= 0) { long skipped = 0;"
+      },
+      {
+        "txt": "while (skipped < value) { long rem = value - skipped; int x = in.read(SKIP_BUF, 0, (int) (SKIP_BUF.length > rem ? rem : SKIP_BUF.length)); if (x == -1) { return; } count(x); skipped += x; } return;"
+      },
+      {
+        "txt": "} throw new IllegalArgumentException(); } private int readOneByte() throws IOException { int b = in.read(); if (b != -1) { count(1); } return b; }"
+      },
+      {
+        "txt": "private boolean isFirstByteOfEocdSig(int b) { return b == ZipArchiveOutputStream.EOCD_SIG[0]; } private static final class CurrentEntry { private final ZipArchiveEntry entry = new ZipArchiveEntry(); private boolean hasDataDescriptor; private boolean usesZip64; private long bytesRead; private long bytesReadFromStream; private final CRC32 crc = new CRC32();"
+      },
+      {
+        "txt": "private InputStream in; } private class BoundedInputStream extends InputStream { private final InputStream in; private final long max; private long pos = 0; public BoundedInputStream(final InputStream in, final long size) { this.max = size; this.in = in; }"
+      },
+      {
+        "txt": "@Override public int read() throws IOException { if (max >= 0 && pos >= max) { return -1; } final int result = in.read(); pos++; count(1); current.bytesReadFromStream++; return result;"
+      },
+      {
+        "txt": "} @Override public int read(final byte[] b) throws IOException { return this.read(b, 0, b.length); } @Override public int read(final byte[] b, final int off, final int len) throws IOException { if (max >= 0 && pos >= max) { return -1; }"
+      },
+      {
+        "txt": "final long maxRead = max >= 0 ? Math.min(len, max - pos) : len; final int bytesRead = in.read(b, off, (int) maxRead); if (bytesRead == -1) { return -1; } pos += bytesRead; count(bytesRead); current.bytesReadFromStream += bytesRead; return bytesRead; }"
+      },
+      {
+        "txt": "@Override public long skip(final long n) throws IOException { final long toSkip = max >= 0 ? Math.min(n, max - pos) : n; final long skippedBytes = in.skip(toSkip); pos += skippedBytes; return skippedBytes; } @Override public int available() throws IOException { if (max >= 0 && pos >= max) {"
+      },
+      {
+        "txt": "return 0; } return in.available(); } }"
+      }
+    ]
+  },
+  {
+    "id": 1084,
+    "file_path": "src/main/java/org/apache/commons/compress/archivers/zip/ZipArchiveInputStream.java",
+    "start-bug-line": 184,
+    "end-bug-line": 184,
+    "bug": "",
+    "fix": "this.encoding = encoding;",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.compress.archivers.zip; import java.io.ByteArrayInputStream; import java.io.ByteArrayOutputStream; import java.io.EOFException;"
+      },
+      {
+        "txt": "import java.io.IOException; import java.io.InputStream; import java.io.PushbackInputStream; import java.nio.ByteBuffer; import java.util.zip.CRC32; import java.util.zip.DataFormatException; import java.util.zip.Inflater; import java.util.zip.ZipEntry; import java.util.zip.ZipException; import org.apache.commons.compress.archivers.ArchiveEntry;"
+      },
+      {
+        "txt": "import org.apache.commons.compress.archivers.ArchiveInputStream; import org.apache.commons.compress.utils.IOUtils; import static org.apache.commons.compress.archivers.zip.ZipConstants.DWORD; import static org.apache.commons.compress.archivers.zip.ZipConstants.SHORT; import static org.apache.commons.compress.archivers.zip.ZipConstants.WORD; import static org.apache.commons.compress.archivers.zip.ZipConstants.ZIP64_MAGIC; public class ZipArchiveInputStream extends ArchiveInputStream { private final ZipEncoding zipEncoding; private final boolean useUnicodeExtraFields; private final InputStream in;"
+      },
+      {
+        "txt": "private final Inflater inf = new Inflater(true); private final ByteBuffer buf = ByteBuffer.allocate(ZipArchiveOutputStream.BUFFER_SIZE); private CurrentEntry current = null; private boolean closed = false; private boolean hitCentralDirectory = false; private ByteArrayInputStream lastStoredEntry = null; private boolean allowStoredEntriesWithDataDescriptor = false; private static final int LFH_LEN = 30; local file header signature WORD version needed to extract SHORT"
+      },
+      {
+        "txt": "general purpose bit flag SHORT compression method SHORT last mod file time SHORT last mod file date SHORT crc-32 WORD compressed size WORD uncompressed size WORD file name length SHORT extra field length SHORT private static final int CFH_LEN = 46;"
+      },
+      {
+        "txt": "central file header signature WORD version made by SHORT version needed to extract SHORT general purpose bit flag SHORT compression method SHORT last mod file time SHORT last mod file date SHORT crc-32 WORD compressed size WORD uncompressed size WORD"
+      },
+      {
+        "txt": "file name length SHORT extra field length SHORT file comment length SHORT disk number start SHORT internal file attributes SHORT external file attributes WORD relative offset of local header WORD private static final long TWO_EXP_32 = ZIP64_MAGIC + 1; private final byte[] LFH_BUF = new byte[LFH_LEN]; private final byte[] SKIP_BUF = new byte[1024];"
+      },
+      {
+        "txt": "private final byte[] SHORT_BUF = new byte[SHORT]; private final byte[] WORD_BUF = new byte[WORD]; private final byte[] TWO_DWORD_BUF = new byte[2 * DWORD]; private int entriesRead = 0; public ZipArchiveInputStream(InputStream inputStream) { this(inputStream, ZipEncodingHelper.UTF8); } public ZipArchiveInputStream(InputStream inputStream, String encoding) { this(inputStream, encoding, true); }"
+      },
+      {
+        "txt": "this(inputStream, encoding, useUnicodeExtraFields, false); } public ZipArchiveInputStream(InputStream inputStream, String encoding, boolean useUnicodeExtraFields, boolean allowStoredEntriesWithDataDescriptor) { <extra_id_0> this.useUnicodeExtraFields = useUnicodeExtraFields; in = new PushbackInputStream(inputStream, buf.capacity()); this.allowStoredEntriesWithDataDescriptor = allowStoredEntriesWithDataDescriptor; buf.limit(0); }"
+      },
+      {
+        "txt": "buf.limit(0); } public ZipArchiveEntry getNextZipEntry() throws IOException { boolean firstEntry = true; if (closed || hitCentralDirectory) { return null; } if (current != null) { closeEntry(); firstEntry = false;"
+      },
+      {
+        "txt": "} try { if (firstEntry) { readFirstLocalFileHeader(LFH_BUF); } else { readFully(LFH_BUF); } } catch (EOFException e) { return null; }"
+      },
+      {
+        "txt": "ZipLong sig = new ZipLong(LFH_BUF); if (sig.equals(ZipLong.CFH_SIG) || sig.equals(ZipLong.AED_SIG)) { hitCentralDirectory = true; skipRemainderOfArchive(); } if (!sig.equals(ZipLong.LFH_SIG)) { return null; } int off = WORD; current = new CurrentEntry();"
+      },
+      {
+        "txt": "int versionMadeBy = ZipShort.getValue(LFH_BUF, off); off += SHORT; current.entry.setPlatform((versionMadeBy >> ZipFile.BYTE_SHIFT) & ZipFile.NIBLET_MASK); final GeneralPurposeBit gpFlag = GeneralPurposeBit.parse(LFH_BUF, off); final boolean hasUTF8Flag = gpFlag.usesUTF8ForNames(); final ZipEncoding entryEncoding = hasUTF8Flag ? ZipEncodingHelper.UTF8_ZIP_ENCODING : zipEncoding; current.hasDataDescriptor = gpFlag.usesDataDescriptor(); current.entry.setGeneralPurposeBit(gpFlag); off += SHORT; current.entry.setMethod(ZipShort.getValue(LFH_BUF, off));"
+      },
+      {
+        "txt": "off += SHORT; long time = ZipUtil.dosToJavaTime(ZipLong.getValue(LFH_BUF, off)); current.entry.setTime(time); off += WORD; ZipLong size = null, cSize = null; if (!current.hasDataDescriptor) { current.entry.setCrc(ZipLong.getValue(LFH_BUF, off)); off += WORD; cSize = new ZipLong(LFH_BUF, off); off += WORD;"
+      },
+      {
+        "txt": "size = new ZipLong(LFH_BUF, off); off += WORD; } else { off += 3 * WORD; } int fileNameLen = ZipShort.getValue(LFH_BUF, off); off += SHORT; int extraLen = ZipShort.getValue(LFH_BUF, off); off += SHORT; byte[] fileName = new byte[fileNameLen];"
+      },
+      {
+        "txt": "readFully(fileName); current.entry.setName(entryEncoding.decode(fileName), fileName); byte[] extraData = new byte[extraLen]; readFully(extraData); current.entry.setExtra(extraData); if (!hasUTF8Flag && useUnicodeExtraFields) { ZipUtil.setNameAndCommentFromExtraFields(current.entry, fileName, null); } processZip64Extra(size, cSize); if (current.entry.getCompressedSize() != ZipArchiveEntry.SIZE_UNKNOWN) {"
+      },
+      {
+        "txt": "if (current.entry.getMethod() == ZipMethod.UNSHRINKING.getCode()) { current.in = new UnshrinkingInputStream(new BoundedInputStream(in, current.entry.getCompressedSize())); } else if (current.entry.getMethod() == ZipMethod.IMPLODING.getCode()) { current.in = new ExplodingInputStream( current.entry.getGeneralPurposeBit().getSlidingDictionarySize(), current.entry.getGeneralPurposeBit().getNumberOfShannonFanoTrees(), new BoundedInputStream(in, current.entry.getCompressedSize())); } } entriesRead++;"
+      },
+      {
+        "txt": "return current.entry; } private void readFirstLocalFileHeader(byte[] lfh) throws IOException { readFully(lfh); ZipLong sig = new ZipLong(lfh); if (sig.equals(ZipLong.DD_SIG)) { throw new UnsupportedZipFeatureException(UnsupportedZipFeatureException.Feature.SPLITTING); } if (sig.equals(ZipLong.SINGLE_SEGMENT_SPLIT_MARKER)) { byte[] missedLfhBytes = new byte[4];"
+      },
+      {
+        "txt": "readFully(missedLfhBytes); System.arraycopy(lfh, 4, lfh, 0, LFH_LEN - 4); System.arraycopy(missedLfhBytes, 0, lfh, LFH_LEN - 4, 4); } } private void processZip64Extra(ZipLong size, ZipLong cSize) { Zip64ExtendedInformationExtraField z64 = (Zip64ExtendedInformationExtraField) current.entry.getExtraField(Zip64ExtendedInformationExtraField.HEADER_ID); current.usesZip64 = z64 != null;"
+      },
+      {
+        "txt": "if (!current.hasDataDescriptor) { if (z64 != null // same as current.usesZip64 but avoids NPE warning && (cSize.equals(ZipLong.ZIP64_MAGIC) || size.equals(ZipLong.ZIP64_MAGIC)) ) { current.entry.setCompressedSize(z64.getCompressedSize().getLongValue()); current.entry.setSize(z64.getSize().getLongValue()); } else { current.entry.setCompressedSize(cSize.getValue()); current.entry.setSize(size.getValue()); } }"
+      },
+      {
+        "txt": "} @Override public ArchiveEntry getNextEntry() throws IOException { return getNextZipEntry(); } @Override public boolean canReadEntryData(ArchiveEntry ae) { if (ae instanceof ZipArchiveEntry) { ZipArchiveEntry ze = (ZipArchiveEntry) ae; return ZipUtil.canHandleEntryData(ze)"
+      },
+      {
+        "txt": "&& supportsDataDescriptorFor(ze); } return false; } @Override public int read(byte[] buffer, int offset, int length) throws IOException { if (closed) { throw new IOException(\"The stream is closed\"); } if (current == null) {"
+      },
+      {
+        "txt": "return -1; } if (offset > buffer.length || length < 0 || offset < 0 || buffer.length - offset < length) { throw new ArrayIndexOutOfBoundsException(); } ZipUtil.checkRequestedFeatures(current.entry); if (!supportsDataDescriptorFor(current.entry)) { throw new UnsupportedZipFeatureException(UnsupportedZipFeatureException.Feature.DATA_DESCRIPTOR, current.entry); }"
+      },
+      {
+        "txt": "int read; if (current.entry.getMethod() == ZipArchiveOutputStream.STORED) { read = readStored(buffer, offset, length); } else if (current.entry.getMethod() == ZipArchiveOutputStream.DEFLATED) { read = readDeflated(buffer, offset, length); } else if (current.entry.getMethod() == ZipMethod.UNSHRINKING.getCode() || current.entry.getMethod() == ZipMethod.IMPLODING.getCode()) { read = current.in.read(buffer, offset, length); } else { throw new UnsupportedZipFeatureException(ZipMethod.getMethodByCode(current.entry.getMethod()),"
+      },
+      {
+        "txt": "current.entry); } if (read >= 0) { current.crc.update(buffer, offset, read); } return read; } private int readStored(byte[] buffer, int offset, int length) throws IOException { if (current.hasDataDescriptor) { if (lastStoredEntry == null) {"
+      },
+      {
+        "txt": "readStoredEntry(); } return lastStoredEntry.read(buffer, offset, length); } long csize = current.entry.getSize(); if (current.bytesRead >= csize) { return -1; } if (buf.position() >= buf.limit()) { buf.position(0);"
+      },
+      {
+        "txt": "int l = in.read(buf.array()); if (l == -1) { return -1; } buf.limit(l); count(l); current.bytesReadFromStream += l; } int toRead = Math.min(buf.remaining(), length); if ((csize - current.bytesRead) < toRead) {"
+      },
+      {
+        "txt": "toRead = (int) (csize - current.bytesRead); } buf.get(buffer, offset, toRead); current.bytesRead += toRead; return toRead; } private int readDeflated(byte[] buffer, int offset, int length) throws IOException { int read = readFromInflater(buffer, offset, length); if (read <= 0) { if (inf.finished()) {"
+      },
+      {
+        "txt": "return -1; } else if (inf.needsDictionary()) { throw new ZipException(\"This archive needs a preset dictionary\" + \" which is not supported by Commons\" + \" Compress.\"); } else if (read == -1) { throw new IOException(\"Truncated ZIP file\"); } } return read;"
+      },
+      {
+        "txt": "} private int readFromInflater(byte[] buffer, int offset, int length) throws IOException { int read = 0; do { if (inf.needsInput()) { int l = fill(); if (l > 0) { current.bytesReadFromStream += buf.limit(); } else if (l == -1) { return -1;"
+      },
+      {
+        "txt": "} else { break; } } try { read = inf.inflate(buffer, offset, length); } catch (DataFormatException e) { throw (IOException) new ZipException(e.getMessage()).initCause(e); } } while (read == 0 && inf.needsInput());"
+      },
+      {
+        "txt": "return read; } @Override public void close() throws IOException { if (!closed) { closed = true; in.close(); inf.end(); } }"
+      },
+      {
+        "txt": "@Override public long skip(long value) throws IOException { if (value >= 0) { long skipped = 0; while (skipped < value) { long rem = value - skipped; int x = read(SKIP_BUF, 0, (int) (SKIP_BUF.length > rem ? rem : SKIP_BUF.length)); if (x == -1) { return skipped; }"
+      },
+      {
+        "txt": "skipped += x; } return skipped; } throw new IllegalArgumentException(); } public static boolean matches(byte[] signature, int length) { if (length < ZipArchiveOutputStream.LFH_SIG.length) { return false; }"
+      },
+      {
+        "txt": "return checksig(signature, ZipArchiveOutputStream.LFH_SIG) // normal file || checksig(signature, ZipArchiveOutputStream.EOCD_SIG) // empty zip || checksig(signature, ZipArchiveOutputStream.DD_SIG) // split zip || checksig(signature, ZipLong.SINGLE_SEGMENT_SPLIT_MARKER.getBytes()); } private static boolean checksig(byte[] signature, byte[] expected) { for (int i = 0; i < expected.length; i++) { if (signature[i] != expected[i]) { return false; }"
+      },
+      {
+        "txt": "} return true; } private void closeEntry() throws IOException { if (closed) { throw new IOException(\"The stream is closed\"); } if (current == null) { return; }"
+      },
+      {
+        "txt": "if (current.bytesReadFromStream <= current.entry.getCompressedSize() && !current.hasDataDescriptor) { drainCurrentEntryData(); } else { skip(Long.MAX_VALUE); long inB = current.entry.getMethod() == ZipArchiveOutputStream.DEFLATED ? getBytesInflated() : current.bytesRead; int diff = (int) (current.bytesReadFromStream - inB); if (diff > 0) { pushback(buf.array(), buf.limit() - diff, diff);"
+      },
+      {
+        "txt": "} } if (lastStoredEntry == null && current.hasDataDescriptor) { readDataDescriptor(); } inf.reset(); buf.clear().flip(); current = null; lastStoredEntry = null; }"
+      },
+      {
+        "txt": "private void drainCurrentEntryData() throws IOException { long remaining = current.entry.getCompressedSize() - current.bytesReadFromStream; while (remaining > 0) { long n = in.read(buf.array(), 0, (int) Math.min(buf.capacity(), remaining)); if (n < 0) { throw new EOFException(\"Truncated ZIP entry: \" + current.entry.getName()); } else { count(n); remaining -= n; }"
+      },
+      {
+        "txt": "} } private long getBytesInflated() { long inB = inf.getBytesRead(); if (current.bytesReadFromStream >= TWO_EXP_32) { while (inB + TWO_EXP_32 <= current.bytesReadFromStream) { inB += TWO_EXP_32; } } return inB;"
+      },
+      {
+        "txt": "} private int fill() throws IOException { if (closed) { throw new IOException(\"The stream is closed\"); } int length = in.read(buf.array()); if (length > 0) { buf.limit(length); count(buf.limit()); inf.setInput(buf.array(), 0, buf.limit());"
+      },
+      {
+        "txt": "} return length; } private void readFully(byte[] b) throws IOException { int count = IOUtils.readFully(in, b); count(count); if (count < b.length) { throw new EOFException(); } }"
+      },
+      {
+        "txt": "private void readDataDescriptor() throws IOException { readFully(WORD_BUF); ZipLong val = new ZipLong(WORD_BUF); if (ZipLong.DD_SIG.equals(val)) { readFully(WORD_BUF); val = new ZipLong(WORD_BUF); } current.entry.setCrc(val.getValue()); readFully(TWO_DWORD_BUF); ZipLong potentialSig = new ZipLong(TWO_DWORD_BUF, DWORD);"
+      },
+      {
+        "txt": "if (potentialSig.equals(ZipLong.CFH_SIG) || potentialSig.equals(ZipLong.LFH_SIG)) { pushback(TWO_DWORD_BUF, DWORD, DWORD); current.entry.setCompressedSize(ZipLong.getValue(TWO_DWORD_BUF)); current.entry.setSize(ZipLong.getValue(TWO_DWORD_BUF, WORD)); } else { current.entry.setCompressedSize(ZipEightByteInteger.getLongValue(TWO_DWORD_BUF)); current.entry.setSize(ZipEightByteInteger.getLongValue(TWO_DWORD_BUF, DWORD)); } } private boolean supportsDataDescriptorFor(ZipArchiveEntry entry) {"
+      },
+      {
+        "txt": "return !entry.getGeneralPurposeBit().usesDataDescriptor() || (allowStoredEntriesWithDataDescriptor && entry.getMethod() == ZipEntry.STORED) || entry.getMethod() == ZipEntry.DEFLATED; } private void readStoredEntry() throws IOException { ByteArrayOutputStream bos = new ByteArrayOutputStream(); int off = 0; boolean done = false; int ddLen = current.usesZip64 ? WORD + 2 * DWORD : 3 * WORD; while (!done) {"
+      },
+      {
+        "txt": "int r = in.read(buf.array(), off, ZipArchiveOutputStream.BUFFER_SIZE - off); if (r <= 0) { throw new IOException(\"Truncated ZIP file\"); } if (r + off < 4) { off += r; continue; } done = bufferContainsSignature(bos, off, r, ddLen); if (!done) {"
+      },
+      {
+        "txt": "off = cacheBytesRead(bos, off, r, ddLen); } } byte[] b = bos.toByteArray(); lastStoredEntry = new ByteArrayInputStream(b); } private static final byte[] LFH = ZipLong.LFH_SIG.getBytes(); private static final byte[] CFH = ZipLong.CFH_SIG.getBytes(); private static final byte[] DD = ZipLong.DD_SIG.getBytes(); private boolean bufferContainsSignature(ByteArrayOutputStream bos, int offset, int lastRead, int expectedDDLen)"
+      },
+      {
+        "txt": "throws IOException { boolean done = false; int readTooMuch = 0; for (int i = 0; !done && i < lastRead - 4; i++) { if (buf.array()[i] == LFH[0] && buf.array()[i + 1] == LFH[1]) { if ((buf.array()[i + 2] == LFH[2] && buf.array()[i + 3] == LFH[3]) || (buf.array()[i] == CFH[2] && buf.array()[i + 3] == CFH[3])) { readTooMuch = offset + lastRead - i - expectedDDLen; done = true; }"
+      },
+      {
+        "txt": "else if (buf.array()[i + 2] == DD[2] && buf.array()[i + 3] == DD[3]) { readTooMuch = offset + lastRead - i; done = true; } if (done) { pushback(buf.array(), offset + lastRead - readTooMuch, readTooMuch); bos.write(buf.array(), 0, i); readDataDescriptor(); } }"
+      },
+      {
+        "txt": "} return done; } private int cacheBytesRead(ByteArrayOutputStream bos, int offset, int lastRead, int expecteDDLen) { final int cacheable = offset + lastRead - expecteDDLen - 3; if (cacheable > 0) { bos.write(buf.array(), 0, cacheable); System.arraycopy(buf.array(), cacheable, buf.array(), 0, expecteDDLen + 3); offset = expecteDDLen + 3; } else {"
+      },
+      {
+        "txt": "offset += lastRead; } return offset; } private void pushback(byte[] buf, int offset, int length) throws IOException { ((PushbackInputStream) in).unread(buf, offset, length); pushedBackBytes(length); } private void skipRemainderOfArchive() throws IOException { realSkip(entriesRead * CFH_LEN - LFH_LEN);"
+      },
+      {
+        "txt": "findEocdRecord(); realSkip(ZipFile.MIN_EOCD_SIZE - WORD /* signature */ - SHORT /* comment len */); readFully(SHORT_BUF); realSkip(ZipShort.getValue(SHORT_BUF)); } private void findEocdRecord() throws IOException { int currentByte = -1; boolean skipReadCall = false; while (skipReadCall || (currentByte = readOneByte()) > -1) { skipReadCall = false;"
+      },
+      {
+        "txt": "if (!isFirstByteOfEocdSig(currentByte)) { continue; } currentByte = readOneByte(); if (currentByte != ZipArchiveOutputStream.EOCD_SIG[1]) { if (currentByte == -1) { break; } skipReadCall = isFirstByteOfEocdSig(currentByte); continue;"
+      },
+      {
+        "txt": "} currentByte = readOneByte(); if (currentByte != ZipArchiveOutputStream.EOCD_SIG[2]) { if (currentByte == -1) { break; } skipReadCall = isFirstByteOfEocdSig(currentByte); continue; } currentByte = readOneByte();"
+      },
+      {
+        "txt": "if (currentByte == -1 || currentByte == ZipArchiveOutputStream.EOCD_SIG[3]) { break; } skipReadCall = isFirstByteOfEocdSig(currentByte); } } private void realSkip(long value) throws IOException { if (value >= 0) { long skipped = 0;"
+      },
+      {
+        "txt": "while (skipped < value) { long rem = value - skipped; int x = in.read(SKIP_BUF, 0, (int) (SKIP_BUF.length > rem ? rem : SKIP_BUF.length)); if (x == -1) { return; } count(x); skipped += x; } return;"
+      },
+      {
+        "txt": "} throw new IllegalArgumentException(); } private int readOneByte() throws IOException { int b = in.read(); if (b != -1) { count(1); } return b; }"
+      },
+      {
+        "txt": "private boolean isFirstByteOfEocdSig(int b) { return b == ZipArchiveOutputStream.EOCD_SIG[0]; } private static final class CurrentEntry { private final ZipArchiveEntry entry = new ZipArchiveEntry(); private boolean hasDataDescriptor; private boolean usesZip64; private long bytesRead; private long bytesReadFromStream; private final CRC32 crc = new CRC32();"
+      },
+      {
+        "txt": "private InputStream in; } private class BoundedInputStream extends InputStream { private final InputStream in; private final long max; private long pos = 0; public BoundedInputStream(final InputStream in, final long size) { this.max = size; this.in = in; }"
+      },
+      {
+        "txt": "@Override public int read() throws IOException { if (max >= 0 && pos >= max) { return -1; } final int result = in.read(); pos++; count(1); current.bytesReadFromStream++; return result;"
+      },
+      {
+        "txt": "} @Override public int read(final byte[] b) throws IOException { return this.read(b, 0, b.length); } @Override public int read(final byte[] b, final int off, final int len) throws IOException { if (max >= 0 && pos >= max) { return -1; }"
+      },
+      {
+        "txt": "final long maxRead = max >= 0 ? Math.min(len, max - pos) : len; final int bytesRead = in.read(b, off, (int) maxRead); if (bytesRead == -1) { return -1; } pos += bytesRead; count(bytesRead); current.bytesReadFromStream += bytesRead; return bytesRead; }"
+      },
+      {
+        "txt": "@Override public long skip(final long n) throws IOException { final long toSkip = max >= 0 ? Math.min(n, max - pos) : n; final long skippedBytes = in.skip(toSkip); pos += skippedBytes; return skippedBytes; } @Override public int available() throws IOException { if (max >= 0 && pos >= max) {"
+      },
+      {
+        "txt": "return 0; } return in.available(); } }"
+      }
+    ]
+  }
+]

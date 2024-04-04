@@ -1,0 +1,731 @@
+[
+  {
+    "id": 300,
+    "file_path": "src/com/google/javascript/jscomp/RemoveUnusedVars.java",
+    "start-bug-line": 732,
+    "end-bug-line": 732,
+    "bug": "",
+    "fix": "boolean maybeEscaped = false;",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.google.javascript.jscomp; import com.google.common.base.Preconditions; import com.google.common.collect.ArrayListMultimap; import com.google.common.collect.Lists; import com.google.common.collect.Maps; import com.google.common.collect.Multimap; import com.google.common.collect.Sets; import com.google.javascript.jscomp.CodingConvention.SubclassRelationship; import com.google.javascript.jscomp.DefinitionsRemover.Definition; import com.google.javascript.jscomp.Scope.Var;"
+      },
+      {
+        "txt": "import com.google.javascript.rhino.IR; import com.google.javascript.rhino.Node; import com.google.javascript.rhino.Token; import java.util.*; class RemoveUnusedVars implements CompilerPass, OptimizeCalls.CallGraphCompilerPass { private final AbstractCompiler compiler; private final CodingConvention codingConvention; private final boolean removeGlobals; private boolean preserveFunctionExpressionNames;"
+      },
+      {
+        "txt": "private final Set<Var> referenced = Sets.newHashSet(); private final List<Var> maybeUnreferenced = Lists.newArrayList(); private final List<Scope> allFunctionScopes = Lists.newArrayList(); private final Multimap<Var, Assign> assignsByVar = ArrayListMultimap.create(); private final Map<Node, Assign> assignsByNode = Maps.newHashMap(); private final Multimap<Var, Node> inheritsCalls = ArrayListMultimap.create(); private final Multimap<Var, Continuation> continuations = ArrayListMultimap.create();"
+      },
+      {
+        "txt": "private boolean modifyCallSites; private CallSiteOptimizer callSiteOptimizer; RemoveUnusedVars( AbstractCompiler compiler, boolean removeGlobals, boolean preserveFunctionExpressionNames, boolean modifyCallSites) { this.compiler = compiler; this.codingConvention = compiler.getCodingConvention(); this.removeGlobals = removeGlobals;"
+      },
+      {
+        "txt": "this.preserveFunctionExpressionNames = preserveFunctionExpressionNames; this.modifyCallSites = modifyCallSites; } @Override public void process(Node externs, Node root) { Preconditions.checkState(compiler.getLifeCycleStage().isNormalized()); SimpleDefinitionFinder defFinder = null; if (modifyCallSites) { defFinder = new SimpleDefinitionFinder(compiler); defFinder.process(externs, root);"
+      },
+      {
+        "txt": "} process(externs, root, defFinder); } @Override public void process( Node externs, Node root, SimpleDefinitionFinder defFinder) { if (modifyCallSites) { Preconditions.checkNotNull(defFinder); callSiteOptimizer = new CallSiteOptimizer(compiler, defFinder); }"
+      },
+      {
+        "txt": "traverseAndRemoveUnusedReferences(root); if (callSiteOptimizer != null) { callSiteOptimizer.applyChanges(); } } private void traverseAndRemoveUnusedReferences(Node root) { Scope scope = new SyntacticScopeCreator(compiler).createScope(root, null); traverseNode(root, null, scope); if (removeGlobals) { collectMaybeUnreferencedVars(scope);"
+      },
+      {
+        "txt": "} interpretAssigns(); removeUnreferencedVars(); for (Scope fnScope : allFunctionScopes) { removeUnreferencedFunctionArgs(fnScope); } } private void traverseNode(Node n, Node parent, Scope scope) { int type = n.getType(); Var var = null;"
+      },
+      {
+        "txt": "switch (type) { case Token.FUNCTION: if (NodeUtil.isFunctionDeclaration(n)) { var = scope.getVar(n.getFirstChild().getString()); } if (var != null && isRemovableVar(var)) { continuations.put(var, new Continuation(n, scope)); } else { traverseFunction(n, scope); }"
+      },
+      {
+        "txt": "return; case Token.ASSIGN: Assign maybeAssign = Assign.maybeCreateAssign(n); if (maybeAssign != null) { var = scope.getVar(maybeAssign.nameNode.getString()); if (var != null) { assignsByVar.put(var, maybeAssign); assignsByNode.put(maybeAssign.nameNode, maybeAssign); if (isRemovableVar(var) && !maybeAssign.mayHaveSecondarySideEffects) {"
+      },
+      {
+        "txt": "continuations.put(var, new Continuation(n, scope)); return; } } } break; case Token.CALL: SubclassRelationship subclassRelationship = codingConvention.getClassesDefinedByCall(n); if (subclassRelationship != null) {"
+      },
+      {
+        "txt": "Var subclassVar = scope.getVar(subclassRelationship.subclassName); if (subclassVar != null && subclassVar.isGlobal() && !referenced.contains(subclassVar)) { inheritsCalls.put(subclassVar, parent); continuations.put(subclassVar, new Continuation(n, scope)); return; } } break; case Token.NAME:"
+      },
+      {
+        "txt": "var = scope.getVar(n.getString()); if (parent.isVar()) { Node value = n.getFirstChild(); if (value != null && var != null && isRemovableVar(var) && !NodeUtil.mayHaveSideEffects(value)) { continuations.put(var, new Continuation(n, scope)); return; } } else { if (\"arguments\".equals(n.getString()) && scope.isLocal()) {"
+      },
+      {
+        "txt": "Node lp = scope.getRootNode().getFirstChild().getNext(); for (Node a = lp.getFirstChild(); a != null; a = a.getNext()) { markReferencedVar(scope.getVar(a.getString())); } } if (var != null) { if (isRemovableVar(var)) { if (!assignsByNode.containsKey(n)) { markReferencedVar(var); }"
+      },
+      {
+        "txt": "} else { markReferencedVar(var); } } } break; } for (Node c = n.getFirstChild(); c != null; c = c.getNext()) { traverseNode(c, n, scope); }"
+      },
+      {
+        "txt": "} private boolean isRemovableVar(Var var) { if (!removeGlobals && var.isGlobal()) { return false; } if (referenced.contains(var)) { return false; } if (codingConvention.isExported(var.getName())) { return false;"
+      },
+      {
+        "txt": "} return true; } private void traverseFunction(Node n, Scope parentScope) { Preconditions.checkState(n.getChildCount() == 3); Preconditions.checkState(n.isFunction()); final Node body = n.getLastChild(); Preconditions.checkState(body.getNext() == null && body.isBlock()); Scope fnScope ="
+      },
+      {
+        "txt": "new SyntacticScopeCreator(compiler).createScope(n, parentScope); traverseNode(body, n, fnScope); collectMaybeUnreferencedVars(fnScope); allFunctionScopes.add(fnScope); } private void collectMaybeUnreferencedVars(Scope scope) { for (Iterator<Var> it = scope.getVars(); it.hasNext(); ) { Var var = it.next(); if (isRemovableVar(var)) { maybeUnreferenced.add(var);"
+      },
+      {
+        "txt": "} } } private void removeUnreferencedFunctionArgs(Scope fnScope) { Node function = fnScope.getRootNode(); Preconditions.checkState(function.isFunction()); if (NodeUtil.isGetOrSetKey(function.getParent())) { return; } Node argList = getFunctionArgList(function);"
+      },
+      {
+        "txt": "boolean modifyCallers = modifyCallSites && callSiteOptimizer.canModifyCallers(function); if (!modifyCallers) { Node lastArg; while ((lastArg = argList.getLastChild()) != null) { Var var = fnScope.getVar(lastArg.getString()); if (!referenced.contains(var)) { argList.removeChild(lastArg); compiler.reportCodeChange(); } else {"
+      },
+      {
+        "txt": "break; } } } else { callSiteOptimizer.optimize(fnScope, referenced); } } private static Node getFunctionArgList(Node function) { return function.getFirstChild().getNext(); }"
+      },
+      {
+        "txt": "private static class CallSiteOptimizer { private final AbstractCompiler compiler; private final SimpleDefinitionFinder defFinder; private final List<Node> toRemove = Lists.newArrayList(); private final List<Node> toReplaceWithZero = Lists.newArrayList(); CallSiteOptimizer( AbstractCompiler compiler, SimpleDefinitionFinder defFinder) { this.compiler = compiler; this.defFinder = defFinder;"
+      },
+      {
+        "txt": "} public void optimize(Scope fnScope, Set<Var> referenced) { Node function = fnScope.getRootNode(); Preconditions.checkState(function.isFunction()); Node argList = getFunctionArgList(function); boolean changeCallSignature = canChangeSignature(function); markUnreferencedFunctionArgs( fnScope, function, referenced, argList.getFirstChild(), 0, changeCallSignature); }"
+      },
+      {
+        "txt": "public void applyChanges() { for (Node n : toRemove) { n.getParent().removeChild(n); compiler.reportCodeChange(); } for (Node n : toReplaceWithZero) { n.getParent().replaceChild(n, IR.number(0).srcref(n)); compiler.reportCodeChange(); } }"
+      },
+      {
+        "txt": "private boolean markUnreferencedFunctionArgs( Scope scope, Node function, Set<Var> referenced, Node param, int paramIndex, boolean canChangeSignature) { if (param != null) { boolean hasFollowing = markUnreferencedFunctionArgs( scope, function, referenced, param.getNext(), paramIndex+1, canChangeSignature); Var var = scope.getVar(param.getString()); if (!referenced.contains(var)) {"
+      },
+      {
+        "txt": "Preconditions.checkNotNull(var); boolean modifyAllCallSites = canChangeSignature || !hasFollowing; if (modifyAllCallSites) { modifyAllCallSites = canRemoveArgFromCallSites( function, paramIndex); } tryRemoveArgFromCallSites(function, paramIndex, modifyAllCallSites); if (modifyAllCallSites || !hasFollowing) { toRemove.add(param); return hasFollowing;"
+      },
+      {
+        "txt": "} } return true; } else { tryRemoveAllFollowingArgs(function, paramIndex-1); return false; } } private boolean canRemoveArgFromCallSites(Node function, int argIndex) { Definition definition = getFunctionDefinition(function);"
+      },
+      {
+        "txt": "for (UseSite site : defFinder.getUseSites(definition)) { if (isModifiableCallSite(site)) { Node arg = getArgumentForCallOrNewOrDotCall(site, argIndex); if (arg != null && NodeUtil.mayHaveSideEffects(arg, compiler)) { return false; } } else { return false; } }"
+      },
+      {
+        "txt": "return true; } private void tryRemoveArgFromCallSites( Node function, int argIndex, boolean canModifyAllSites) { Definition definition = getFunctionDefinition(function); for (UseSite site : defFinder.getUseSites(definition)) { if (isModifiableCallSite(site)) { Node arg = getArgumentForCallOrNewOrDotCall(site, argIndex); if (arg != null) { Node argParent = arg.getParent();"
+      },
+      {
+        "txt": "if (canModifyAllSites || (arg.getNext() == null && !NodeUtil.mayHaveSideEffects(arg, compiler))) { toRemove.add(arg); } else { if (!NodeUtil.mayHaveSideEffects(arg, compiler) && (!arg.isNumber() || arg.getDouble() != 0)) { toReplaceWithZero.add(arg); } }"
+      },
+      {
+        "txt": "} } } } private void tryRemoveAllFollowingArgs(Node function, final int argIndex) { Definition definition = getFunctionDefinition(function); for (UseSite site : defFinder.getUseSites(definition)) { if (!isModifiableCallSite(site)) { continue; }"
+      },
+      {
+        "txt": "Node arg = getArgumentForCallOrNewOrDotCall(site, argIndex + 1); while (arg != null) { if (!NodeUtil.mayHaveSideEffects(arg)) { toRemove.add(arg); } arg = arg.getNext(); } } } private static Node getArgumentForCallOrNewOrDotCall(UseSite site,"
+      },
+      {
+        "txt": "final int argIndex) { int adjustedArgIndex = argIndex; Node parent = site.node.getParent(); if (NodeUtil.isFunctionObjectCall(parent)) { adjustedArgIndex++; } return NodeUtil.getArgumentForCallOrNew(parent, adjustedArgIndex); } boolean canModifyCallers(Node function) { if (NodeUtil.isVarArgsFunction(function)) {"
+      },
+      {
+        "txt": "return false; } DefinitionSite defSite = defFinder.getDefinitionForFunction(function); if (defSite == null) { return false; } Definition definition = defSite.definition; if (!SimpleDefinitionFinder.isSimpleFunctionDeclaration(function)) { return false; }"
+      },
+      {
+        "txt": "return defFinder.canModifyDefinition(definition); } private static boolean isModifiableCallSite(UseSite site) { return SimpleDefinitionFinder.isCallOrNewSite(site) && !NodeUtil.isFunctionObjectApply(site.node.getParent()); } private boolean canChangeSignature(Node function) { Definition definition = getFunctionDefinition(function); CodingConvention convention = compiler.getCodingConvention(); Preconditions.checkState(!definition.isExtern());"
+      },
+      {
+        "txt": "Collection<UseSite> useSites = defFinder.getUseSites(definition); for (UseSite site : useSites) { Node parent = site.node.getParent(); if (parent == null) { continue; // Ignore it. } if (parent.isCall() && convention.getClassesDefinedByCall(parent) != null) { continue; }"
+      },
+      {
+        "txt": "if (!SimpleDefinitionFinder.isCallOrNewSite(site)) { if (!(parent.isGetProp() && NodeUtil.isFunctionObjectCall(parent.getParent()))) { return false; } } if (NodeUtil.isFunctionObjectApply(parent)) { return false; } Node nameNode = site.node;"
+      },
+      {
+        "txt": "Collection<Definition> singleSiteDefinitions = defFinder.getDefinitionsReferencedAt(nameNode); Preconditions.checkState(singleSiteDefinitions.size() == 1); Preconditions.checkState(singleSiteDefinitions.contains(definition)); } return true; } private Definition getFunctionDefinition(Node function) { DefinitionSite definitionSite = defFinder.getDefinitionForFunction( function);"
+      },
+      {
+        "txt": "Preconditions.checkNotNull(definitionSite); Definition definition = definitionSite.definition; Preconditions.checkState(!definitionSite.inExterns); Preconditions.checkState(definition.getRValue() == function); return definition; } } private void interpretAssigns() { boolean changes = false; do {"
+      },
+      {
+        "txt": "changes = false; for (int current = 0; current < maybeUnreferenced.size(); current++) { Var var = maybeUnreferenced.get(current); if (referenced.contains(var)) { maybeUnreferenced.remove(current); current--; } else { boolean assignedToUnknownValue = false; boolean hasPropertyAssign = false; if (var.getParentNode().isVar() &&"
+      },
+      {
+        "txt": "Node value = var.getInitialValue(); assignedToUnknownValue = value != null && !NodeUtil.isLiteralValue(value, true); } else { assignedToUnknownValue = true; } <extra_id_0> if (assign.isPropertyAssign) { hasPropertyAssign = true; } else if (!NodeUtil.isLiteralValue( assign.assignNode.getLastChild(), true)) { assignedToUnknownValue = true; }"
+      },
+      {
+        "txt": "assignedToUnknownValue = true; } } if (assignedToUnknownValue && hasPropertyAssign) { changes = markReferencedVar(var) || changes; maybeUnreferenced.remove(current); current--; } } }"
+      },
+      {
+        "txt": "} while (changes); } private void removeAllAssigns(Var var) { for (Assign assign : assignsByVar.get(var)) { assign.remove(); compiler.reportCodeChange(); } } private boolean markReferencedVar(Var var) { if (referenced.add(var)) {"
+      },
+      {
+        "txt": "for (Continuation c : continuations.get(var)) { c.apply(); } return true; } return false; } private void removeUnreferencedVars() { CodingConvention convention = codingConvention; for (Iterator<Var> it = maybeUnreferenced.iterator(); it.hasNext(); ) {"
+      },
+      {
+        "txt": "Var var = it.next(); for (Node exprCallNode : inheritsCalls.get(var)) { NodeUtil.removeChild(exprCallNode.getParent(), exprCallNode); compiler.reportCodeChange(); } removeAllAssigns(var); compiler.addToDebugLog(\"Unreferenced var: \" + var.name); Node nameNode = var.nameNode; Node toRemove = nameNode.getParent(); Node parent = toRemove.getParent();"
+      },
+      {
+        "txt": "Preconditions.checkState( toRemove.isVar() || toRemove.isFunction() || toRemove.isParamList() && parent.isFunction(), \"We should only declare vars and functions and function args\"); if (toRemove.isParamList() && parent.isFunction()) { } else if (NodeUtil.isFunctionExpression(toRemove)) { if (!preserveFunctionExpressionNames) {"
+      },
+      {
+        "txt": "toRemove.getFirstChild().setString(\"\"); compiler.reportCodeChange(); } } else if (parent != null && parent.isFor() && parent.getChildCount() < 4) { } else if (toRemove.isVar() && nameNode.hasChildren() && NodeUtil.mayHaveSideEffects(nameNode.getFirstChild())) { if (toRemove.getChildCount() == 1) {"
+      },
+      {
+        "txt": "parent.replaceChild(toRemove, IR.exprResult(nameNode.removeFirstChild())); compiler.reportCodeChange(); } } else if (toRemove.isVar() && toRemove.getChildCount() > 1) { toRemove.removeChild(nameNode); compiler.reportCodeChange(); } else if (parent != null) { NodeUtil.removeChild(parent, toRemove);"
+      },
+      {
+        "txt": "compiler.reportCodeChange(); } } } private class Continuation { private final Node node; private final Scope scope; Continuation(Node node, Scope scope) { this.node = node; this.scope = scope;"
+      },
+      {
+        "txt": "} void apply() { if (NodeUtil.isFunctionDeclaration(node)) { traverseFunction(node, scope); } else { for (Node child = node.getFirstChild(); child != null; child = child.getNext()) { traverseNode(child, node, scope); } }"
+      },
+      {
+        "txt": "} } private static class Assign { final Node assignNode; final Node nameNode; final boolean isPropertyAssign; final boolean mayHaveSecondarySideEffects; final boolean maybeAliased; Assign(Node assignNode, Node nameNode, boolean isPropertyAssign) { Preconditions.checkState(NodeUtil.isAssignmentOp(assignNode));"
+      },
+      {
+        "txt": "this.assignNode = assignNode; this.nameNode = nameNode; this.isPropertyAssign = isPropertyAssign; this.maybeAliased = !assignNode.getParent().isExprResult(); this.mayHaveSecondarySideEffects = maybeAliased || NodeUtil.mayHaveSideEffects(assignNode.getFirstChild()) || NodeUtil.mayHaveSideEffects(assignNode.getLastChild()); } static Assign maybeCreateAssign(Node assignNode) {"
+      },
+      {
+        "txt": "Preconditions.checkState(NodeUtil.isAssignmentOp(assignNode)); boolean isPropAssign = false; Node current = assignNode.getFirstChild(); if (NodeUtil.isGet(current)) { current = current.getFirstChild(); isPropAssign = true; if (current.isGetProp() && current.getLastChild().getString().equals(\"prototype\")) { current = current.getFirstChild(); }"
+      },
+      {
+        "txt": "} if (current.isName()) { return new Assign(assignNode, current, isPropAssign); } return null; } void remove() { Node parent = assignNode.getParent(); if (mayHaveSecondarySideEffects) { Node replacement = assignNode.getLastChild().detachFromParent();"
+      },
+      {
+        "txt": "for (Node current = assignNode.getFirstChild(); !current.isName(); current = current.getFirstChild()) { if (current.isGetElem()) { replacement = IR.comma( current.getLastChild().detachFromParent(), replacement); replacement.copyInformationFrom(current); } } parent.replaceChild(assignNode, replacement);"
+      },
+      {
+        "txt": "} else { Node gramps = parent.getParent(); if (parent.isExprResult()) { gramps.removeChild(parent); } else { parent.replaceChild(assignNode, assignNode.getLastChild().detachFromParent()); } } }"
+      }
+    ]
+  },
+  {
+    "id": 301,
+    "file_path": "src/com/google/javascript/jscomp/RemoveUnusedVars.java",
+    "start-bug-line": 739,
+    "end-bug-line": 739,
+    "bug": "",
+    "fix": "if (assign.maybeAliased) { maybeEscaped = true; }",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.google.javascript.jscomp; import com.google.common.base.Preconditions; import com.google.common.collect.ArrayListMultimap; import com.google.common.collect.Lists; import com.google.common.collect.Maps; import com.google.common.collect.Multimap; import com.google.common.collect.Sets;"
+      },
+      {
+        "txt": "import com.google.javascript.jscomp.CodingConvention.SubclassRelationship; import com.google.javascript.jscomp.DefinitionsRemover.Definition; import com.google.javascript.jscomp.Scope.Var; import com.google.javascript.rhino.IR; import com.google.javascript.rhino.Node; import com.google.javascript.rhino.Token; import java.util.*; class RemoveUnusedVars implements CompilerPass, OptimizeCalls.CallGraphCompilerPass { private final AbstractCompiler compiler;"
+      },
+      {
+        "txt": "private final CodingConvention codingConvention; private final boolean removeGlobals; private boolean preserveFunctionExpressionNames; private final Set<Var> referenced = Sets.newHashSet(); private final List<Var> maybeUnreferenced = Lists.newArrayList(); private final List<Scope> allFunctionScopes = Lists.newArrayList(); private final Multimap<Var, Assign> assignsByVar = ArrayListMultimap.create(); private final Map<Node, Assign> assignsByNode = Maps.newHashMap(); private final Multimap<Var, Node> inheritsCalls ="
+      },
+      {
+        "txt": "ArrayListMultimap.create(); private final Multimap<Var, Continuation> continuations = ArrayListMultimap.create(); private boolean modifyCallSites; private CallSiteOptimizer callSiteOptimizer; RemoveUnusedVars( AbstractCompiler compiler, boolean removeGlobals, boolean preserveFunctionExpressionNames, boolean modifyCallSites) {"
+      },
+      {
+        "txt": "this.compiler = compiler; this.codingConvention = compiler.getCodingConvention(); this.removeGlobals = removeGlobals; this.preserveFunctionExpressionNames = preserveFunctionExpressionNames; this.modifyCallSites = modifyCallSites; } @Override public void process(Node externs, Node root) { Preconditions.checkState(compiler.getLifeCycleStage().isNormalized()); SimpleDefinitionFinder defFinder = null;"
+      },
+      {
+        "txt": "if (modifyCallSites) { defFinder = new SimpleDefinitionFinder(compiler); defFinder.process(externs, root); } process(externs, root, defFinder); } @Override public void process( Node externs, Node root, SimpleDefinitionFinder defFinder) { if (modifyCallSites) {"
+      },
+      {
+        "txt": "Preconditions.checkNotNull(defFinder); callSiteOptimizer = new CallSiteOptimizer(compiler, defFinder); } traverseAndRemoveUnusedReferences(root); if (callSiteOptimizer != null) { callSiteOptimizer.applyChanges(); } } private void traverseAndRemoveUnusedReferences(Node root) { Scope scope = new SyntacticScopeCreator(compiler).createScope(root, null);"
+      },
+      {
+        "txt": "traverseNode(root, null, scope); if (removeGlobals) { collectMaybeUnreferencedVars(scope); } interpretAssigns(); removeUnreferencedVars(); for (Scope fnScope : allFunctionScopes) { removeUnreferencedFunctionArgs(fnScope); } }"
+      },
+      {
+        "txt": "private void traverseNode(Node n, Node parent, Scope scope) { int type = n.getType(); Var var = null; switch (type) { case Token.FUNCTION: if (NodeUtil.isFunctionDeclaration(n)) { var = scope.getVar(n.getFirstChild().getString()); } if (var != null && isRemovableVar(var)) { continuations.put(var, new Continuation(n, scope));"
+      },
+      {
+        "txt": "} else { traverseFunction(n, scope); } return; case Token.ASSIGN: Assign maybeAssign = Assign.maybeCreateAssign(n); if (maybeAssign != null) { var = scope.getVar(maybeAssign.nameNode.getString()); if (var != null) { assignsByVar.put(var, maybeAssign);"
+      },
+      {
+        "txt": "assignsByNode.put(maybeAssign.nameNode, maybeAssign); if (isRemovableVar(var) && !maybeAssign.mayHaveSecondarySideEffects) { continuations.put(var, new Continuation(n, scope)); return; } } } break; case Token.CALL:"
+      },
+      {
+        "txt": "SubclassRelationship subclassRelationship = codingConvention.getClassesDefinedByCall(n); if (subclassRelationship != null) { Var subclassVar = scope.getVar(subclassRelationship.subclassName); if (subclassVar != null && subclassVar.isGlobal() && !referenced.contains(subclassVar)) { inheritsCalls.put(subclassVar, parent); continuations.put(subclassVar, new Continuation(n, scope)); return; }"
+      },
+      {
+        "txt": "} break; case Token.NAME: var = scope.getVar(n.getString()); if (parent.isVar()) { Node value = n.getFirstChild(); if (value != null && var != null && isRemovableVar(var) && !NodeUtil.mayHaveSideEffects(value)) { continuations.put(var, new Continuation(n, scope)); return;"
+      },
+      {
+        "txt": "} } else { if (\"arguments\".equals(n.getString()) && scope.isLocal()) { Node lp = scope.getRootNode().getFirstChild().getNext(); for (Node a = lp.getFirstChild(); a != null; a = a.getNext()) { markReferencedVar(scope.getVar(a.getString())); } } if (var != null) { if (isRemovableVar(var)) {"
+      },
+      {
+        "txt": "if (!assignsByNode.containsKey(n)) { markReferencedVar(var); } } else { markReferencedVar(var); } } } break; }"
+      },
+      {
+        "txt": "for (Node c = n.getFirstChild(); c != null; c = c.getNext()) { traverseNode(c, n, scope); } } private boolean isRemovableVar(Var var) { if (!removeGlobals && var.isGlobal()) { return false; } if (referenced.contains(var)) { return false;"
+      },
+      {
+        "txt": "} if (codingConvention.isExported(var.getName())) { return false; } return true; } private void traverseFunction(Node n, Scope parentScope) { Preconditions.checkState(n.getChildCount() == 3); Preconditions.checkState(n.isFunction()); final Node body = n.getLastChild();"
+      },
+      {
+        "txt": "Preconditions.checkState(body.getNext() == null && body.isBlock()); Scope fnScope = new SyntacticScopeCreator(compiler).createScope(n, parentScope); traverseNode(body, n, fnScope); collectMaybeUnreferencedVars(fnScope); allFunctionScopes.add(fnScope); } private void collectMaybeUnreferencedVars(Scope scope) { for (Iterator<Var> it = scope.getVars(); it.hasNext(); ) {"
+      },
+      {
+        "txt": "Var var = it.next(); if (isRemovableVar(var)) { maybeUnreferenced.add(var); } } } private void removeUnreferencedFunctionArgs(Scope fnScope) { Node function = fnScope.getRootNode(); Preconditions.checkState(function.isFunction()); if (NodeUtil.isGetOrSetKey(function.getParent())) {"
+      },
+      {
+        "txt": "return; } Node argList = getFunctionArgList(function); boolean modifyCallers = modifyCallSites && callSiteOptimizer.canModifyCallers(function); if (!modifyCallers) { Node lastArg; while ((lastArg = argList.getLastChild()) != null) { Var var = fnScope.getVar(lastArg.getString()); if (!referenced.contains(var)) {"
+      },
+      {
+        "txt": "argList.removeChild(lastArg); compiler.reportCodeChange(); } else { break; } } } else { callSiteOptimizer.optimize(fnScope, referenced); } }"
+      },
+      {
+        "txt": "private static Node getFunctionArgList(Node function) { return function.getFirstChild().getNext(); } private static class CallSiteOptimizer { private final AbstractCompiler compiler; private final SimpleDefinitionFinder defFinder; private final List<Node> toRemove = Lists.newArrayList(); private final List<Node> toReplaceWithZero = Lists.newArrayList(); CallSiteOptimizer( AbstractCompiler compiler,"
+      },
+      {
+        "txt": "SimpleDefinitionFinder defFinder) { this.compiler = compiler; this.defFinder = defFinder; } public void optimize(Scope fnScope, Set<Var> referenced) { Node function = fnScope.getRootNode(); Preconditions.checkState(function.isFunction()); Node argList = getFunctionArgList(function); boolean changeCallSignature = canChangeSignature(function); markUnreferencedFunctionArgs("
+      },
+      {
+        "txt": "fnScope, function, referenced, argList.getFirstChild(), 0, changeCallSignature); } public void applyChanges() { for (Node n : toRemove) { n.getParent().removeChild(n); compiler.reportCodeChange(); } for (Node n : toReplaceWithZero) { n.getParent().replaceChild(n, IR.number(0).srcref(n));"
+      },
+      {
+        "txt": "compiler.reportCodeChange(); } } private boolean markUnreferencedFunctionArgs( Scope scope, Node function, Set<Var> referenced, Node param, int paramIndex, boolean canChangeSignature) { if (param != null) { boolean hasFollowing = markUnreferencedFunctionArgs( scope, function, referenced, param.getNext(), paramIndex+1,"
+      },
+      {
+        "txt": "canChangeSignature); Var var = scope.getVar(param.getString()); if (!referenced.contains(var)) { Preconditions.checkNotNull(var); boolean modifyAllCallSites = canChangeSignature || !hasFollowing; if (modifyAllCallSites) { modifyAllCallSites = canRemoveArgFromCallSites( function, paramIndex); } tryRemoveArgFromCallSites(function, paramIndex, modifyAllCallSites);"
+      },
+      {
+        "txt": "if (modifyAllCallSites || !hasFollowing) { toRemove.add(param); return hasFollowing; } } return true; } else { tryRemoveAllFollowingArgs(function, paramIndex-1); return false; }"
+      },
+      {
+        "txt": "} private boolean canRemoveArgFromCallSites(Node function, int argIndex) { Definition definition = getFunctionDefinition(function); for (UseSite site : defFinder.getUseSites(definition)) { if (isModifiableCallSite(site)) { Node arg = getArgumentForCallOrNewOrDotCall(site, argIndex); if (arg != null && NodeUtil.mayHaveSideEffects(arg, compiler)) { return false; } } else {"
+      },
+      {
+        "txt": "return false; } } return true; } private void tryRemoveArgFromCallSites( Node function, int argIndex, boolean canModifyAllSites) { Definition definition = getFunctionDefinition(function); for (UseSite site : defFinder.getUseSites(definition)) { if (isModifiableCallSite(site)) {"
+      },
+      {
+        "txt": "Node arg = getArgumentForCallOrNewOrDotCall(site, argIndex); if (arg != null) { Node argParent = arg.getParent(); if (canModifyAllSites || (arg.getNext() == null && !NodeUtil.mayHaveSideEffects(arg, compiler))) { toRemove.add(arg); } else { if (!NodeUtil.mayHaveSideEffects(arg, compiler) && (!arg.isNumber() || arg.getDouble() != 0)) {"
+      },
+      {
+        "txt": "toReplaceWithZero.add(arg); } } } } } } private void tryRemoveAllFollowingArgs(Node function, final int argIndex) { Definition definition = getFunctionDefinition(function); for (UseSite site : defFinder.getUseSites(definition)) {"
+      },
+      {
+        "txt": "if (!isModifiableCallSite(site)) { continue; } Node arg = getArgumentForCallOrNewOrDotCall(site, argIndex + 1); while (arg != null) { if (!NodeUtil.mayHaveSideEffects(arg)) { toRemove.add(arg); } arg = arg.getNext(); }"
+      },
+      {
+        "txt": "} } private static Node getArgumentForCallOrNewOrDotCall(UseSite site, final int argIndex) { int adjustedArgIndex = argIndex; Node parent = site.node.getParent(); if (NodeUtil.isFunctionObjectCall(parent)) { adjustedArgIndex++; } return NodeUtil.getArgumentForCallOrNew(parent, adjustedArgIndex);"
+      },
+      {
+        "txt": "} boolean canModifyCallers(Node function) { if (NodeUtil.isVarArgsFunction(function)) { return false; } DefinitionSite defSite = defFinder.getDefinitionForFunction(function); if (defSite == null) { return false; } Definition definition = defSite.definition;"
+      },
+      {
+        "txt": "if (!SimpleDefinitionFinder.isSimpleFunctionDeclaration(function)) { return false; } return defFinder.canModifyDefinition(definition); } private static boolean isModifiableCallSite(UseSite site) { return SimpleDefinitionFinder.isCallOrNewSite(site) && !NodeUtil.isFunctionObjectApply(site.node.getParent()); } private boolean canChangeSignature(Node function) {"
+      },
+      {
+        "txt": "Definition definition = getFunctionDefinition(function); CodingConvention convention = compiler.getCodingConvention(); Preconditions.checkState(!definition.isExtern()); Collection<UseSite> useSites = defFinder.getUseSites(definition); for (UseSite site : useSites) { Node parent = site.node.getParent(); if (parent == null) { continue; // Ignore it. } if (parent.isCall() &&"
+      },
+      {
+        "txt": "convention.getClassesDefinedByCall(parent) != null) { continue; } if (!SimpleDefinitionFinder.isCallOrNewSite(site)) { if (!(parent.isGetProp() && NodeUtil.isFunctionObjectCall(parent.getParent()))) { return false; } } if (NodeUtil.isFunctionObjectApply(parent)) {"
+      },
+      {
+        "txt": "return false; } Node nameNode = site.node; Collection<Definition> singleSiteDefinitions = defFinder.getDefinitionsReferencedAt(nameNode); Preconditions.checkState(singleSiteDefinitions.size() == 1); Preconditions.checkState(singleSiteDefinitions.contains(definition)); } return true; }"
+      },
+      {
+        "txt": "private Definition getFunctionDefinition(Node function) { DefinitionSite definitionSite = defFinder.getDefinitionForFunction( function); Preconditions.checkNotNull(definitionSite); Definition definition = definitionSite.definition; Preconditions.checkState(!definitionSite.inExterns); Preconditions.checkState(definition.getRValue() == function); return definition; } }"
+      },
+      {
+        "txt": "private void interpretAssigns() { boolean changes = false; do { changes = false; for (int current = 0; current < maybeUnreferenced.size(); current++) { Var var = maybeUnreferenced.get(current); if (referenced.contains(var)) { maybeUnreferenced.remove(current); current--; } else {"
+      },
+      {
+        "txt": "boolean assignedToUnknownValue = false; boolean hasPropertyAssign = false; if (var.getParentNode().isVar() && !NodeUtil.isForIn(var.getParentNode().getParent())) { Node value = var.getInitialValue(); assignedToUnknownValue = value != null && !NodeUtil.isLiteralValue(value, true); } else { assignedToUnknownValue = true; }"
+      },
+      {
+        "txt": "if (assign.isPropertyAssign) { hasPropertyAssign = true; } else if (!NodeUtil.isLiteralValue( assign.assignNode.getLastChild(), true)) { assignedToUnknownValue = true; } <extra_id_0> if (assignedToUnknownValue && hasPropertyAssign) { changes = markReferencedVar(var) || changes; maybeUnreferenced.remove(current); current--; } }"
+      },
+      {
+        "txt": "} } } } while (changes); } private void removeAllAssigns(Var var) { for (Assign assign : assignsByVar.get(var)) { assign.remove(); compiler.reportCodeChange(); }"
+      },
+      {
+        "txt": "} private boolean markReferencedVar(Var var) { if (referenced.add(var)) { for (Continuation c : continuations.get(var)) { c.apply(); } return true; } return false; }"
+      },
+      {
+        "txt": "private void removeUnreferencedVars() { CodingConvention convention = codingConvention; for (Iterator<Var> it = maybeUnreferenced.iterator(); it.hasNext(); ) { Var var = it.next(); for (Node exprCallNode : inheritsCalls.get(var)) { NodeUtil.removeChild(exprCallNode.getParent(), exprCallNode); compiler.reportCodeChange(); } removeAllAssigns(var); compiler.addToDebugLog(\"Unreferenced var: \" + var.name);"
+      },
+      {
+        "txt": "Node nameNode = var.nameNode; Node toRemove = nameNode.getParent(); Node parent = toRemove.getParent(); Preconditions.checkState( toRemove.isVar() || toRemove.isFunction() || toRemove.isParamList() && parent.isFunction(), \"We should only declare vars and functions and function args\"); if (toRemove.isParamList() &&"
+      },
+      {
+        "txt": "parent.isFunction()) { } else if (NodeUtil.isFunctionExpression(toRemove)) { if (!preserveFunctionExpressionNames) { toRemove.getFirstChild().setString(\"\"); compiler.reportCodeChange(); } } else if (parent != null && parent.isFor() && parent.getChildCount() < 4) { } else if (toRemove.isVar() &&"
+      },
+      {
+        "txt": "nameNode.hasChildren() && NodeUtil.mayHaveSideEffects(nameNode.getFirstChild())) { if (toRemove.getChildCount() == 1) { parent.replaceChild(toRemove, IR.exprResult(nameNode.removeFirstChild())); compiler.reportCodeChange(); } } else if (toRemove.isVar() && toRemove.getChildCount() > 1) { toRemove.removeChild(nameNode);"
+      },
+      {
+        "txt": "compiler.reportCodeChange(); } else if (parent != null) { NodeUtil.removeChild(parent, toRemove); compiler.reportCodeChange(); } } } private class Continuation { private final Node node; private final Scope scope;"
+      },
+      {
+        "txt": "Continuation(Node node, Scope scope) { this.node = node; this.scope = scope; } void apply() { if (NodeUtil.isFunctionDeclaration(node)) { traverseFunction(node, scope); } else { for (Node child = node.getFirstChild(); child != null; child = child.getNext()) {"
+      },
+      {
+        "txt": "traverseNode(child, node, scope); } } } } private static class Assign { final Node assignNode; final Node nameNode; final boolean isPropertyAssign; final boolean mayHaveSecondarySideEffects;"
+      },
+      {
+        "txt": "final boolean maybeAliased; Assign(Node assignNode, Node nameNode, boolean isPropertyAssign) { Preconditions.checkState(NodeUtil.isAssignmentOp(assignNode)); this.assignNode = assignNode; this.nameNode = nameNode; this.isPropertyAssign = isPropertyAssign; this.maybeAliased = !assignNode.getParent().isExprResult(); this.mayHaveSecondarySideEffects = maybeAliased || NodeUtil.mayHaveSideEffects(assignNode.getFirstChild()) ||"
+      },
+      {
+        "txt": "NodeUtil.mayHaveSideEffects(assignNode.getLastChild()); } static Assign maybeCreateAssign(Node assignNode) { Preconditions.checkState(NodeUtil.isAssignmentOp(assignNode)); boolean isPropAssign = false; Node current = assignNode.getFirstChild(); if (NodeUtil.isGet(current)) { current = current.getFirstChild(); isPropAssign = true; if (current.isGetProp() &&"
+      },
+      {
+        "txt": "current.getLastChild().getString().equals(\"prototype\")) { current = current.getFirstChild(); } } if (current.isName()) { return new Assign(assignNode, current, isPropAssign); } return null; } void remove() {"
+      },
+      {
+        "txt": "Node parent = assignNode.getParent(); if (mayHaveSecondarySideEffects) { Node replacement = assignNode.getLastChild().detachFromParent(); for (Node current = assignNode.getFirstChild(); !current.isName(); current = current.getFirstChild()) { if (current.isGetElem()) { replacement = IR.comma( current.getLastChild().detachFromParent(), replacement); replacement.copyInformationFrom(current);"
+      },
+      {
+        "txt": "} } parent.replaceChild(assignNode, replacement); } else { Node gramps = parent.getParent(); if (parent.isExprResult()) { gramps.removeChild(parent); } else { parent.replaceChild(assignNode, assignNode.getLastChild().detachFromParent());"
+      },
+      {
+        "txt": "} } } }"
+      }
+    ]
+  },
+  {
+    "id": 302,
+    "file_path": "src/com/google/javascript/jscomp/RemoveUnusedVars.java",
+    "start-bug-line": 741,
+    "end-bug-line": 741,
+    "bug": "if (assignedToUnknownValue && hasPropertyAssign) {",
+    "fix": "if ((assignedToUnknownValue || maybeEscaped) && hasPropertyAssign) {",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.google.javascript.jscomp; import com.google.common.base.Preconditions; import com.google.common.collect.ArrayListMultimap; import com.google.common.collect.Lists; import com.google.common.collect.Maps; import com.google.common.collect.Multimap; import com.google.common.collect.Sets; import com.google.javascript.jscomp.CodingConvention.SubclassRelationship;"
+      },
+      {
+        "txt": "import com.google.javascript.jscomp.DefinitionsRemover.Definition; import com.google.javascript.jscomp.Scope.Var; import com.google.javascript.rhino.IR; import com.google.javascript.rhino.Node; import com.google.javascript.rhino.Token; import java.util.*; class RemoveUnusedVars implements CompilerPass, OptimizeCalls.CallGraphCompilerPass { private final AbstractCompiler compiler; private final CodingConvention codingConvention;"
+      },
+      {
+        "txt": "private final boolean removeGlobals; private boolean preserveFunctionExpressionNames; private final Set<Var> referenced = Sets.newHashSet(); private final List<Var> maybeUnreferenced = Lists.newArrayList(); private final List<Scope> allFunctionScopes = Lists.newArrayList(); private final Multimap<Var, Assign> assignsByVar = ArrayListMultimap.create(); private final Map<Node, Assign> assignsByNode = Maps.newHashMap(); private final Multimap<Var, Node> inheritsCalls = ArrayListMultimap.create();"
+      },
+      {
+        "txt": "private final Multimap<Var, Continuation> continuations = ArrayListMultimap.create(); private boolean modifyCallSites; private CallSiteOptimizer callSiteOptimizer; RemoveUnusedVars( AbstractCompiler compiler, boolean removeGlobals, boolean preserveFunctionExpressionNames, boolean modifyCallSites) { this.compiler = compiler;"
+      },
+      {
+        "txt": "this.codingConvention = compiler.getCodingConvention(); this.removeGlobals = removeGlobals; this.preserveFunctionExpressionNames = preserveFunctionExpressionNames; this.modifyCallSites = modifyCallSites; } @Override public void process(Node externs, Node root) { Preconditions.checkState(compiler.getLifeCycleStage().isNormalized()); SimpleDefinitionFinder defFinder = null; if (modifyCallSites) {"
+      },
+      {
+        "txt": "defFinder = new SimpleDefinitionFinder(compiler); defFinder.process(externs, root); } process(externs, root, defFinder); } @Override public void process( Node externs, Node root, SimpleDefinitionFinder defFinder) { if (modifyCallSites) { Preconditions.checkNotNull(defFinder);"
+      },
+      {
+        "txt": "callSiteOptimizer = new CallSiteOptimizer(compiler, defFinder); } traverseAndRemoveUnusedReferences(root); if (callSiteOptimizer != null) { callSiteOptimizer.applyChanges(); } } private void traverseAndRemoveUnusedReferences(Node root) { Scope scope = new SyntacticScopeCreator(compiler).createScope(root, null); traverseNode(root, null, scope);"
+      },
+      {
+        "txt": "if (removeGlobals) { collectMaybeUnreferencedVars(scope); } interpretAssigns(); removeUnreferencedVars(); for (Scope fnScope : allFunctionScopes) { removeUnreferencedFunctionArgs(fnScope); } } private void traverseNode(Node n, Node parent, Scope scope) {"
+      },
+      {
+        "txt": "int type = n.getType(); Var var = null; switch (type) { case Token.FUNCTION: if (NodeUtil.isFunctionDeclaration(n)) { var = scope.getVar(n.getFirstChild().getString()); } if (var != null && isRemovableVar(var)) { continuations.put(var, new Continuation(n, scope)); } else {"
+      },
+      {
+        "txt": "traverseFunction(n, scope); } return; case Token.ASSIGN: Assign maybeAssign = Assign.maybeCreateAssign(n); if (maybeAssign != null) { var = scope.getVar(maybeAssign.nameNode.getString()); if (var != null) { assignsByVar.put(var, maybeAssign); assignsByNode.put(maybeAssign.nameNode, maybeAssign);"
+      },
+      {
+        "txt": "if (isRemovableVar(var) && !maybeAssign.mayHaveSecondarySideEffects) { continuations.put(var, new Continuation(n, scope)); return; } } } break; case Token.CALL: SubclassRelationship subclassRelationship ="
+      },
+      {
+        "txt": "codingConvention.getClassesDefinedByCall(n); if (subclassRelationship != null) { Var subclassVar = scope.getVar(subclassRelationship.subclassName); if (subclassVar != null && subclassVar.isGlobal() && !referenced.contains(subclassVar)) { inheritsCalls.put(subclassVar, parent); continuations.put(subclassVar, new Continuation(n, scope)); return; } }"
+      },
+      {
+        "txt": "break; case Token.NAME: var = scope.getVar(n.getString()); if (parent.isVar()) { Node value = n.getFirstChild(); if (value != null && var != null && isRemovableVar(var) && !NodeUtil.mayHaveSideEffects(value)) { continuations.put(var, new Continuation(n, scope)); return; }"
+      },
+      {
+        "txt": "} else { if (\"arguments\".equals(n.getString()) && scope.isLocal()) { Node lp = scope.getRootNode().getFirstChild().getNext(); for (Node a = lp.getFirstChild(); a != null; a = a.getNext()) { markReferencedVar(scope.getVar(a.getString())); } } if (var != null) { if (isRemovableVar(var)) { if (!assignsByNode.containsKey(n)) {"
+      },
+      {
+        "txt": "markReferencedVar(var); } } else { markReferencedVar(var); } } } break; } for (Node c = n.getFirstChild(); c != null; c = c.getNext()) {"
+      },
+      {
+        "txt": "traverseNode(c, n, scope); } } private boolean isRemovableVar(Var var) { if (!removeGlobals && var.isGlobal()) { return false; } if (referenced.contains(var)) { return false; }"
+      },
+      {
+        "txt": "if (codingConvention.isExported(var.getName())) { return false; } return true; } private void traverseFunction(Node n, Scope parentScope) { Preconditions.checkState(n.getChildCount() == 3); Preconditions.checkState(n.isFunction()); final Node body = n.getLastChild(); Preconditions.checkState(body.getNext() == null &&"
+      },
+      {
+        "txt": "body.isBlock()); Scope fnScope = new SyntacticScopeCreator(compiler).createScope(n, parentScope); traverseNode(body, n, fnScope); collectMaybeUnreferencedVars(fnScope); allFunctionScopes.add(fnScope); } private void collectMaybeUnreferencedVars(Scope scope) { for (Iterator<Var> it = scope.getVars(); it.hasNext(); ) { Var var = it.next();"
+      },
+      {
+        "txt": "if (isRemovableVar(var)) { maybeUnreferenced.add(var); } } } private void removeUnreferencedFunctionArgs(Scope fnScope) { Node function = fnScope.getRootNode(); Preconditions.checkState(function.isFunction()); if (NodeUtil.isGetOrSetKey(function.getParent())) { return;"
+      },
+      {
+        "txt": "} Node argList = getFunctionArgList(function); boolean modifyCallers = modifyCallSites && callSiteOptimizer.canModifyCallers(function); if (!modifyCallers) { Node lastArg; while ((lastArg = argList.getLastChild()) != null) { Var var = fnScope.getVar(lastArg.getString()); if (!referenced.contains(var)) { argList.removeChild(lastArg);"
+      },
+      {
+        "txt": "compiler.reportCodeChange(); } else { break; } } } else { callSiteOptimizer.optimize(fnScope, referenced); } } private static Node getFunctionArgList(Node function) {"
+      },
+      {
+        "txt": "return function.getFirstChild().getNext(); } private static class CallSiteOptimizer { private final AbstractCompiler compiler; private final SimpleDefinitionFinder defFinder; private final List<Node> toRemove = Lists.newArrayList(); private final List<Node> toReplaceWithZero = Lists.newArrayList(); CallSiteOptimizer( AbstractCompiler compiler, SimpleDefinitionFinder defFinder) {"
+      },
+      {
+        "txt": "this.compiler = compiler; this.defFinder = defFinder; } public void optimize(Scope fnScope, Set<Var> referenced) { Node function = fnScope.getRootNode(); Preconditions.checkState(function.isFunction()); Node argList = getFunctionArgList(function); boolean changeCallSignature = canChangeSignature(function); markUnreferencedFunctionArgs( fnScope, function, referenced,"
+      },
+      {
+        "txt": "argList.getFirstChild(), 0, changeCallSignature); } public void applyChanges() { for (Node n : toRemove) { n.getParent().removeChild(n); compiler.reportCodeChange(); } for (Node n : toReplaceWithZero) { n.getParent().replaceChild(n, IR.number(0).srcref(n)); compiler.reportCodeChange();"
+      },
+      {
+        "txt": "} } private boolean markUnreferencedFunctionArgs( Scope scope, Node function, Set<Var> referenced, Node param, int paramIndex, boolean canChangeSignature) { if (param != null) { boolean hasFollowing = markUnreferencedFunctionArgs( scope, function, referenced, param.getNext(), paramIndex+1, canChangeSignature);"
+      },
+      {
+        "txt": "Var var = scope.getVar(param.getString()); if (!referenced.contains(var)) { Preconditions.checkNotNull(var); boolean modifyAllCallSites = canChangeSignature || !hasFollowing; if (modifyAllCallSites) { modifyAllCallSites = canRemoveArgFromCallSites( function, paramIndex); } tryRemoveArgFromCallSites(function, paramIndex, modifyAllCallSites); if (modifyAllCallSites || !hasFollowing) {"
+      },
+      {
+        "txt": "toRemove.add(param); return hasFollowing; } } return true; } else { tryRemoveAllFollowingArgs(function, paramIndex-1); return false; } }"
+      },
+      {
+        "txt": "private boolean canRemoveArgFromCallSites(Node function, int argIndex) { Definition definition = getFunctionDefinition(function); for (UseSite site : defFinder.getUseSites(definition)) { if (isModifiableCallSite(site)) { Node arg = getArgumentForCallOrNewOrDotCall(site, argIndex); if (arg != null && NodeUtil.mayHaveSideEffects(arg, compiler)) { return false; } } else { return false;"
+      },
+      {
+        "txt": "} } return true; } private void tryRemoveArgFromCallSites( Node function, int argIndex, boolean canModifyAllSites) { Definition definition = getFunctionDefinition(function); for (UseSite site : defFinder.getUseSites(definition)) { if (isModifiableCallSite(site)) { Node arg = getArgumentForCallOrNewOrDotCall(site, argIndex);"
+      },
+      {
+        "txt": "if (arg != null) { Node argParent = arg.getParent(); if (canModifyAllSites || (arg.getNext() == null && !NodeUtil.mayHaveSideEffects(arg, compiler))) { toRemove.add(arg); } else { if (!NodeUtil.mayHaveSideEffects(arg, compiler) && (!arg.isNumber() || arg.getDouble() != 0)) { toReplaceWithZero.add(arg);"
+      },
+      {
+        "txt": "} } } } } } private void tryRemoveAllFollowingArgs(Node function, final int argIndex) { Definition definition = getFunctionDefinition(function); for (UseSite site : defFinder.getUseSites(definition)) { if (!isModifiableCallSite(site)) {"
+      },
+      {
+        "txt": "continue; } Node arg = getArgumentForCallOrNewOrDotCall(site, argIndex + 1); while (arg != null) { if (!NodeUtil.mayHaveSideEffects(arg)) { toRemove.add(arg); } arg = arg.getNext(); } }"
+      },
+      {
+        "txt": "} private static Node getArgumentForCallOrNewOrDotCall(UseSite site, final int argIndex) { int adjustedArgIndex = argIndex; Node parent = site.node.getParent(); if (NodeUtil.isFunctionObjectCall(parent)) { adjustedArgIndex++; } return NodeUtil.getArgumentForCallOrNew(parent, adjustedArgIndex); }"
+      },
+      {
+        "txt": "boolean canModifyCallers(Node function) { if (NodeUtil.isVarArgsFunction(function)) { return false; } DefinitionSite defSite = defFinder.getDefinitionForFunction(function); if (defSite == null) { return false; } Definition definition = defSite.definition; if (!SimpleDefinitionFinder.isSimpleFunctionDeclaration(function)) {"
+      },
+      {
+        "txt": "return false; } return defFinder.canModifyDefinition(definition); } private static boolean isModifiableCallSite(UseSite site) { return SimpleDefinitionFinder.isCallOrNewSite(site) && !NodeUtil.isFunctionObjectApply(site.node.getParent()); } private boolean canChangeSignature(Node function) { Definition definition = getFunctionDefinition(function);"
+      },
+      {
+        "txt": "CodingConvention convention = compiler.getCodingConvention(); Preconditions.checkState(!definition.isExtern()); Collection<UseSite> useSites = defFinder.getUseSites(definition); for (UseSite site : useSites) { Node parent = site.node.getParent(); if (parent == null) { continue; // Ignore it. } if (parent.isCall() && convention.getClassesDefinedByCall(parent) != null) {"
+      },
+      {
+        "txt": "continue; } if (!SimpleDefinitionFinder.isCallOrNewSite(site)) { if (!(parent.isGetProp() && NodeUtil.isFunctionObjectCall(parent.getParent()))) { return false; } } if (NodeUtil.isFunctionObjectApply(parent)) { return false;"
+      },
+      {
+        "txt": "} Node nameNode = site.node; Collection<Definition> singleSiteDefinitions = defFinder.getDefinitionsReferencedAt(nameNode); Preconditions.checkState(singleSiteDefinitions.size() == 1); Preconditions.checkState(singleSiteDefinitions.contains(definition)); } return true; } private Definition getFunctionDefinition(Node function) {"
+      },
+      {
+        "txt": "DefinitionSite definitionSite = defFinder.getDefinitionForFunction( function); Preconditions.checkNotNull(definitionSite); Definition definition = definitionSite.definition; Preconditions.checkState(!definitionSite.inExterns); Preconditions.checkState(definition.getRValue() == function); return definition; } } private void interpretAssigns() {"
+      },
+      {
+        "txt": "boolean changes = false; do { changes = false; for (int current = 0; current < maybeUnreferenced.size(); current++) { Var var = maybeUnreferenced.get(current); if (referenced.contains(var)) { maybeUnreferenced.remove(current); current--; } else { boolean assignedToUnknownValue = false;"
+      },
+      {
+        "txt": "boolean hasPropertyAssign = false; if (var.getParentNode().isVar() && !NodeUtil.isForIn(var.getParentNode().getParent())) { Node value = var.getInitialValue(); assignedToUnknownValue = value != null && !NodeUtil.isLiteralValue(value, true); } else { assignedToUnknownValue = true; } for (Assign assign : assignsByVar.get(var)) {"
+      },
+      {
+        "txt": "hasPropertyAssign = true; } else if (!NodeUtil.isLiteralValue( assign.assignNode.getLastChild(), true)) { assignedToUnknownValue = true; } } <extra_id_0> changes = markReferencedVar(var) || changes; maybeUnreferenced.remove(current); current--; } } }"
+      },
+      {
+        "txt": "} } } while (changes); } private void removeAllAssigns(Var var) { for (Assign assign : assignsByVar.get(var)) { assign.remove(); compiler.reportCodeChange(); } }"
+      },
+      {
+        "txt": "private boolean markReferencedVar(Var var) { if (referenced.add(var)) { for (Continuation c : continuations.get(var)) { c.apply(); } return true; } return false; } private void removeUnreferencedVars() {"
+      },
+      {
+        "txt": "CodingConvention convention = codingConvention; for (Iterator<Var> it = maybeUnreferenced.iterator(); it.hasNext(); ) { Var var = it.next(); for (Node exprCallNode : inheritsCalls.get(var)) { NodeUtil.removeChild(exprCallNode.getParent(), exprCallNode); compiler.reportCodeChange(); } removeAllAssigns(var); compiler.addToDebugLog(\"Unreferenced var: \" + var.name); Node nameNode = var.nameNode;"
+      },
+      {
+        "txt": "Node toRemove = nameNode.getParent(); Node parent = toRemove.getParent(); Preconditions.checkState( toRemove.isVar() || toRemove.isFunction() || toRemove.isParamList() && parent.isFunction(), \"We should only declare vars and functions and function args\"); if (toRemove.isParamList() && parent.isFunction()) {"
+      },
+      {
+        "txt": "} else if (NodeUtil.isFunctionExpression(toRemove)) { if (!preserveFunctionExpressionNames) { toRemove.getFirstChild().setString(\"\"); compiler.reportCodeChange(); } } else if (parent != null && parent.isFor() && parent.getChildCount() < 4) { } else if (toRemove.isVar() && nameNode.hasChildren() &&"
+      },
+      {
+        "txt": "NodeUtil.mayHaveSideEffects(nameNode.getFirstChild())) { if (toRemove.getChildCount() == 1) { parent.replaceChild(toRemove, IR.exprResult(nameNode.removeFirstChild())); compiler.reportCodeChange(); } } else if (toRemove.isVar() && toRemove.getChildCount() > 1) { toRemove.removeChild(nameNode); compiler.reportCodeChange();"
+      },
+      {
+        "txt": "} else if (parent != null) { NodeUtil.removeChild(parent, toRemove); compiler.reportCodeChange(); } } } private class Continuation { private final Node node; private final Scope scope; Continuation(Node node, Scope scope) {"
+      },
+      {
+        "txt": "this.node = node; this.scope = scope; } void apply() { if (NodeUtil.isFunctionDeclaration(node)) { traverseFunction(node, scope); } else { for (Node child = node.getFirstChild(); child != null; child = child.getNext()) { traverseNode(child, node, scope);"
+      },
+      {
+        "txt": "} } } } private static class Assign { final Node assignNode; final Node nameNode; final boolean isPropertyAssign; final boolean mayHaveSecondarySideEffects; final boolean maybeAliased;"
+      },
+      {
+        "txt": "Assign(Node assignNode, Node nameNode, boolean isPropertyAssign) { Preconditions.checkState(NodeUtil.isAssignmentOp(assignNode)); this.assignNode = assignNode; this.nameNode = nameNode; this.isPropertyAssign = isPropertyAssign; this.maybeAliased = !assignNode.getParent().isExprResult(); this.mayHaveSecondarySideEffects = maybeAliased || NodeUtil.mayHaveSideEffects(assignNode.getFirstChild()) || NodeUtil.mayHaveSideEffects(assignNode.getLastChild());"
+      },
+      {
+        "txt": "} static Assign maybeCreateAssign(Node assignNode) { Preconditions.checkState(NodeUtil.isAssignmentOp(assignNode)); boolean isPropAssign = false; Node current = assignNode.getFirstChild(); if (NodeUtil.isGet(current)) { current = current.getFirstChild(); isPropAssign = true; if (current.isGetProp() && current.getLastChild().getString().equals(\"prototype\")) {"
+      },
+      {
+        "txt": "current = current.getFirstChild(); } } if (current.isName()) { return new Assign(assignNode, current, isPropAssign); } return null; } void remove() { Node parent = assignNode.getParent();"
+      },
+      {
+        "txt": "if (mayHaveSecondarySideEffects) { Node replacement = assignNode.getLastChild().detachFromParent(); for (Node current = assignNode.getFirstChild(); !current.isName(); current = current.getFirstChild()) { if (current.isGetElem()) { replacement = IR.comma( current.getLastChild().detachFromParent(), replacement); replacement.copyInformationFrom(current); }"
+      },
+      {
+        "txt": "} parent.replaceChild(assignNode, replacement); } else { Node gramps = parent.getParent(); if (parent.isExprResult()) { gramps.removeChild(parent); } else { parent.replaceChild(assignNode, assignNode.getLastChild().detachFromParent()); }"
+      },
+      {
+        "txt": "} } }"
+      }
+    ]
+  },
+  {
+    "id": 303,
+    "file_path": "src/com/google/javascript/jscomp/RemoveUnusedVars.java",
+    "start-bug-line": 904,
+    "end-bug-line": 904,
+    "bug": "this.maybeAliased = !assignNode.getParent().isExprResult();",
+    "fix": "this.maybeAliased = NodeUtil.isExpressionResultUsed(assignNode);",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.google.javascript.jscomp; import com.google.common.base.Preconditions; import com.google.common.collect.ArrayListMultimap; import com.google.common.collect.Lists; import com.google.common.collect.Maps; import com.google.common.collect.Multimap; import com.google.common.collect.Sets; import com.google.javascript.jscomp.CodingConvention.SubclassRelationship;"
+      },
+      {
+        "txt": "import com.google.javascript.jscomp.DefinitionsRemover.Definition; import com.google.javascript.jscomp.Scope.Var; import com.google.javascript.rhino.IR; import com.google.javascript.rhino.Node; import com.google.javascript.rhino.Token; import java.util.*; class RemoveUnusedVars implements CompilerPass, OptimizeCalls.CallGraphCompilerPass { private final AbstractCompiler compiler; private final CodingConvention codingConvention;"
+      },
+      {
+        "txt": "private final boolean removeGlobals; private boolean preserveFunctionExpressionNames; private final Set<Var> referenced = Sets.newHashSet(); private final List<Var> maybeUnreferenced = Lists.newArrayList(); private final List<Scope> allFunctionScopes = Lists.newArrayList(); private final Multimap<Var, Assign> assignsByVar = ArrayListMultimap.create(); private final Map<Node, Assign> assignsByNode = Maps.newHashMap(); private final Multimap<Var, Node> inheritsCalls = ArrayListMultimap.create();"
+      },
+      {
+        "txt": "private final Multimap<Var, Continuation> continuations = ArrayListMultimap.create(); private boolean modifyCallSites; private CallSiteOptimizer callSiteOptimizer; RemoveUnusedVars( AbstractCompiler compiler, boolean removeGlobals, boolean preserveFunctionExpressionNames, boolean modifyCallSites) { this.compiler = compiler;"
+      },
+      {
+        "txt": "this.codingConvention = compiler.getCodingConvention(); this.removeGlobals = removeGlobals; this.preserveFunctionExpressionNames = preserveFunctionExpressionNames; this.modifyCallSites = modifyCallSites; } @Override public void process(Node externs, Node root) { Preconditions.checkState(compiler.getLifeCycleStage().isNormalized()); SimpleDefinitionFinder defFinder = null; if (modifyCallSites) {"
+      },
+      {
+        "txt": "defFinder = new SimpleDefinitionFinder(compiler); defFinder.process(externs, root); } process(externs, root, defFinder); } @Override public void process( Node externs, Node root, SimpleDefinitionFinder defFinder) { if (modifyCallSites) { Preconditions.checkNotNull(defFinder);"
+      },
+      {
+        "txt": "callSiteOptimizer = new CallSiteOptimizer(compiler, defFinder); } traverseAndRemoveUnusedReferences(root); if (callSiteOptimizer != null) { callSiteOptimizer.applyChanges(); } } private void traverseAndRemoveUnusedReferences(Node root) { Scope scope = new SyntacticScopeCreator(compiler).createScope(root, null); traverseNode(root, null, scope);"
+      },
+      {
+        "txt": "if (removeGlobals) { collectMaybeUnreferencedVars(scope); } interpretAssigns(); removeUnreferencedVars(); for (Scope fnScope : allFunctionScopes) { removeUnreferencedFunctionArgs(fnScope); } } private void traverseNode(Node n, Node parent, Scope scope) {"
+      },
+      {
+        "txt": "int type = n.getType(); Var var = null; switch (type) { case Token.FUNCTION: if (NodeUtil.isFunctionDeclaration(n)) { var = scope.getVar(n.getFirstChild().getString()); } if (var != null && isRemovableVar(var)) { continuations.put(var, new Continuation(n, scope)); } else {"
+      },
+      {
+        "txt": "traverseFunction(n, scope); } return; case Token.ASSIGN: Assign maybeAssign = Assign.maybeCreateAssign(n); if (maybeAssign != null) { var = scope.getVar(maybeAssign.nameNode.getString()); if (var != null) { assignsByVar.put(var, maybeAssign); assignsByNode.put(maybeAssign.nameNode, maybeAssign);"
+      },
+      {
+        "txt": "if (isRemovableVar(var) && !maybeAssign.mayHaveSecondarySideEffects) { continuations.put(var, new Continuation(n, scope)); return; } } } break; case Token.CALL: SubclassRelationship subclassRelationship ="
+      },
+      {
+        "txt": "codingConvention.getClassesDefinedByCall(n); if (subclassRelationship != null) { Var subclassVar = scope.getVar(subclassRelationship.subclassName); if (subclassVar != null && subclassVar.isGlobal() && !referenced.contains(subclassVar)) { inheritsCalls.put(subclassVar, parent); continuations.put(subclassVar, new Continuation(n, scope)); return; } }"
+      },
+      {
+        "txt": "break; case Token.NAME: var = scope.getVar(n.getString()); if (parent.isVar()) { Node value = n.getFirstChild(); if (value != null && var != null && isRemovableVar(var) && !NodeUtil.mayHaveSideEffects(value)) { continuations.put(var, new Continuation(n, scope)); return; }"
+      },
+      {
+        "txt": "} else { if (\"arguments\".equals(n.getString()) && scope.isLocal()) { Node lp = scope.getRootNode().getFirstChild().getNext(); for (Node a = lp.getFirstChild(); a != null; a = a.getNext()) { markReferencedVar(scope.getVar(a.getString())); } } if (var != null) { if (isRemovableVar(var)) { if (!assignsByNode.containsKey(n)) {"
+      },
+      {
+        "txt": "markReferencedVar(var); } } else { markReferencedVar(var); } } } break; } for (Node c = n.getFirstChild(); c != null; c = c.getNext()) {"
+      },
+      {
+        "txt": "traverseNode(c, n, scope); } } private boolean isRemovableVar(Var var) { if (!removeGlobals && var.isGlobal()) { return false; } if (referenced.contains(var)) { return false; }"
+      },
+      {
+        "txt": "if (codingConvention.isExported(var.getName())) { return false; } return true; } private void traverseFunction(Node n, Scope parentScope) { Preconditions.checkState(n.getChildCount() == 3); Preconditions.checkState(n.isFunction()); final Node body = n.getLastChild(); Preconditions.checkState(body.getNext() == null &&"
+      },
+      {
+        "txt": "body.isBlock()); Scope fnScope = new SyntacticScopeCreator(compiler).createScope(n, parentScope); traverseNode(body, n, fnScope); collectMaybeUnreferencedVars(fnScope); allFunctionScopes.add(fnScope); } private void collectMaybeUnreferencedVars(Scope scope) { for (Iterator<Var> it = scope.getVars(); it.hasNext(); ) { Var var = it.next();"
+      },
+      {
+        "txt": "if (isRemovableVar(var)) { maybeUnreferenced.add(var); } } } private void removeUnreferencedFunctionArgs(Scope fnScope) { Node function = fnScope.getRootNode(); Preconditions.checkState(function.isFunction()); if (NodeUtil.isGetOrSetKey(function.getParent())) { return;"
+      },
+      {
+        "txt": "} Node argList = getFunctionArgList(function); boolean modifyCallers = modifyCallSites && callSiteOptimizer.canModifyCallers(function); if (!modifyCallers) { Node lastArg; while ((lastArg = argList.getLastChild()) != null) { Var var = fnScope.getVar(lastArg.getString()); if (!referenced.contains(var)) { argList.removeChild(lastArg);"
+      },
+      {
+        "txt": "compiler.reportCodeChange(); } else { break; } } } else { callSiteOptimizer.optimize(fnScope, referenced); } } private static Node getFunctionArgList(Node function) {"
+      },
+      {
+        "txt": "return function.getFirstChild().getNext(); } private static class CallSiteOptimizer { private final AbstractCompiler compiler; private final SimpleDefinitionFinder defFinder; private final List<Node> toRemove = Lists.newArrayList(); private final List<Node> toReplaceWithZero = Lists.newArrayList(); CallSiteOptimizer( AbstractCompiler compiler, SimpleDefinitionFinder defFinder) {"
+      },
+      {
+        "txt": "this.compiler = compiler; this.defFinder = defFinder; } public void optimize(Scope fnScope, Set<Var> referenced) { Node function = fnScope.getRootNode(); Preconditions.checkState(function.isFunction()); Node argList = getFunctionArgList(function); boolean changeCallSignature = canChangeSignature(function); markUnreferencedFunctionArgs( fnScope, function, referenced,"
+      },
+      {
+        "txt": "argList.getFirstChild(), 0, changeCallSignature); } public void applyChanges() { for (Node n : toRemove) { n.getParent().removeChild(n); compiler.reportCodeChange(); } for (Node n : toReplaceWithZero) { n.getParent().replaceChild(n, IR.number(0).srcref(n)); compiler.reportCodeChange();"
+      },
+      {
+        "txt": "} } private boolean markUnreferencedFunctionArgs( Scope scope, Node function, Set<Var> referenced, Node param, int paramIndex, boolean canChangeSignature) { if (param != null) { boolean hasFollowing = markUnreferencedFunctionArgs( scope, function, referenced, param.getNext(), paramIndex+1, canChangeSignature);"
+      },
+      {
+        "txt": "Var var = scope.getVar(param.getString()); if (!referenced.contains(var)) { Preconditions.checkNotNull(var); boolean modifyAllCallSites = canChangeSignature || !hasFollowing; if (modifyAllCallSites) { modifyAllCallSites = canRemoveArgFromCallSites( function, paramIndex); } tryRemoveArgFromCallSites(function, paramIndex, modifyAllCallSites); if (modifyAllCallSites || !hasFollowing) {"
+      },
+      {
+        "txt": "toRemove.add(param); return hasFollowing; } } return true; } else { tryRemoveAllFollowingArgs(function, paramIndex-1); return false; } }"
+      },
+      {
+        "txt": "private boolean canRemoveArgFromCallSites(Node function, int argIndex) { Definition definition = getFunctionDefinition(function); for (UseSite site : defFinder.getUseSites(definition)) { if (isModifiableCallSite(site)) { Node arg = getArgumentForCallOrNewOrDotCall(site, argIndex); if (arg != null && NodeUtil.mayHaveSideEffects(arg, compiler)) { return false; } } else { return false;"
+      },
+      {
+        "txt": "} } return true; } private void tryRemoveArgFromCallSites( Node function, int argIndex, boolean canModifyAllSites) { Definition definition = getFunctionDefinition(function); for (UseSite site : defFinder.getUseSites(definition)) { if (isModifiableCallSite(site)) { Node arg = getArgumentForCallOrNewOrDotCall(site, argIndex);"
+      },
+      {
+        "txt": "if (arg != null) { Node argParent = arg.getParent(); if (canModifyAllSites || (arg.getNext() == null && !NodeUtil.mayHaveSideEffects(arg, compiler))) { toRemove.add(arg); } else { if (!NodeUtil.mayHaveSideEffects(arg, compiler) && (!arg.isNumber() || arg.getDouble() != 0)) { toReplaceWithZero.add(arg);"
+      },
+      {
+        "txt": "} } } } } } private void tryRemoveAllFollowingArgs(Node function, final int argIndex) { Definition definition = getFunctionDefinition(function); for (UseSite site : defFinder.getUseSites(definition)) { if (!isModifiableCallSite(site)) {"
+      },
+      {
+        "txt": "continue; } Node arg = getArgumentForCallOrNewOrDotCall(site, argIndex + 1); while (arg != null) { if (!NodeUtil.mayHaveSideEffects(arg)) { toRemove.add(arg); } arg = arg.getNext(); } }"
+      },
+      {
+        "txt": "} private static Node getArgumentForCallOrNewOrDotCall(UseSite site, final int argIndex) { int adjustedArgIndex = argIndex; Node parent = site.node.getParent(); if (NodeUtil.isFunctionObjectCall(parent)) { adjustedArgIndex++; } return NodeUtil.getArgumentForCallOrNew(parent, adjustedArgIndex); }"
+      },
+      {
+        "txt": "boolean canModifyCallers(Node function) { if (NodeUtil.isVarArgsFunction(function)) { return false; } DefinitionSite defSite = defFinder.getDefinitionForFunction(function); if (defSite == null) { return false; } Definition definition = defSite.definition; if (!SimpleDefinitionFinder.isSimpleFunctionDeclaration(function)) {"
+      },
+      {
+        "txt": "return false; } return defFinder.canModifyDefinition(definition); } private static boolean isModifiableCallSite(UseSite site) { return SimpleDefinitionFinder.isCallOrNewSite(site) && !NodeUtil.isFunctionObjectApply(site.node.getParent()); } private boolean canChangeSignature(Node function) { Definition definition = getFunctionDefinition(function);"
+      },
+      {
+        "txt": "CodingConvention convention = compiler.getCodingConvention(); Preconditions.checkState(!definition.isExtern()); Collection<UseSite> useSites = defFinder.getUseSites(definition); for (UseSite site : useSites) { Node parent = site.node.getParent(); if (parent == null) { continue; // Ignore it. } if (parent.isCall() && convention.getClassesDefinedByCall(parent) != null) {"
+      },
+      {
+        "txt": "continue; } if (!SimpleDefinitionFinder.isCallOrNewSite(site)) { if (!(parent.isGetProp() && NodeUtil.isFunctionObjectCall(parent.getParent()))) { return false; } } if (NodeUtil.isFunctionObjectApply(parent)) { return false;"
+      },
+      {
+        "txt": "} Node nameNode = site.node; Collection<Definition> singleSiteDefinitions = defFinder.getDefinitionsReferencedAt(nameNode); Preconditions.checkState(singleSiteDefinitions.size() == 1); Preconditions.checkState(singleSiteDefinitions.contains(definition)); } return true; } private Definition getFunctionDefinition(Node function) {"
+      },
+      {
+        "txt": "DefinitionSite definitionSite = defFinder.getDefinitionForFunction( function); Preconditions.checkNotNull(definitionSite); Definition definition = definitionSite.definition; Preconditions.checkState(!definitionSite.inExterns); Preconditions.checkState(definition.getRValue() == function); return definition; } } private void interpretAssigns() {"
+      },
+      {
+        "txt": "boolean changes = false; do { changes = false; for (int current = 0; current < maybeUnreferenced.size(); current++) { Var var = maybeUnreferenced.get(current); if (referenced.contains(var)) { maybeUnreferenced.remove(current); current--; } else { boolean assignedToUnknownValue = false;"
+      },
+      {
+        "txt": "boolean hasPropertyAssign = false; if (var.getParentNode().isVar() && !NodeUtil.isForIn(var.getParentNode().getParent())) { Node value = var.getInitialValue(); assignedToUnknownValue = value != null && !NodeUtil.isLiteralValue(value, true); } else { assignedToUnknownValue = true; } for (Assign assign : assignsByVar.get(var)) {"
+      },
+      {
+        "txt": "if (assign.isPropertyAssign) { hasPropertyAssign = true; } else if (!NodeUtil.isLiteralValue( assign.assignNode.getLastChild(), true)) { assignedToUnknownValue = true; } } if (assignedToUnknownValue && hasPropertyAssign) { changes = markReferencedVar(var) || changes; maybeUnreferenced.remove(current);"
+      },
+      {
+        "txt": "current--; } } } } while (changes); } private void removeAllAssigns(Var var) { for (Assign assign : assignsByVar.get(var)) { assign.remove(); compiler.reportCodeChange();"
+      },
+      {
+        "txt": "} } private boolean markReferencedVar(Var var) { if (referenced.add(var)) { for (Continuation c : continuations.get(var)) { c.apply(); } return true; } return false;"
+      },
+      {
+        "txt": "} private void removeUnreferencedVars() { CodingConvention convention = codingConvention; for (Iterator<Var> it = maybeUnreferenced.iterator(); it.hasNext(); ) { Var var = it.next(); for (Node exprCallNode : inheritsCalls.get(var)) { NodeUtil.removeChild(exprCallNode.getParent(), exprCallNode); compiler.reportCodeChange(); } removeAllAssigns(var);"
+      },
+      {
+        "txt": "compiler.addToDebugLog(\"Unreferenced var: \" + var.name); Node nameNode = var.nameNode; Node toRemove = nameNode.getParent(); Node parent = toRemove.getParent(); Preconditions.checkState( toRemove.isVar() || toRemove.isFunction() || toRemove.isParamList() && parent.isFunction(), \"We should only declare vars and functions and function args\");"
+      },
+      {
+        "txt": "if (toRemove.isParamList() && parent.isFunction()) { } else if (NodeUtil.isFunctionExpression(toRemove)) { if (!preserveFunctionExpressionNames) { toRemove.getFirstChild().setString(\"\"); compiler.reportCodeChange(); } } else if (parent != null && parent.isFor() && parent.getChildCount() < 4) {"
+      },
+      {
+        "txt": "} else if (toRemove.isVar() && nameNode.hasChildren() && NodeUtil.mayHaveSideEffects(nameNode.getFirstChild())) { if (toRemove.getChildCount() == 1) { parent.replaceChild(toRemove, IR.exprResult(nameNode.removeFirstChild())); compiler.reportCodeChange(); } } else if (toRemove.isVar() && toRemove.getChildCount() > 1) {"
+      },
+      {
+        "txt": "toRemove.removeChild(nameNode); compiler.reportCodeChange(); } else if (parent != null) { NodeUtil.removeChild(parent, toRemove); compiler.reportCodeChange(); } } } private class Continuation { private final Node node;"
+      },
+      {
+        "txt": "private final Scope scope; Continuation(Node node, Scope scope) { this.node = node; this.scope = scope; } void apply() { if (NodeUtil.isFunctionDeclaration(node)) { traverseFunction(node, scope); } else { for (Node child = node.getFirstChild();"
+      },
+      {
+        "txt": "child != null; child = child.getNext()) { traverseNode(child, node, scope); } } } } private static class Assign { final Node assignNode; final Node nameNode; final boolean isPropertyAssign;"
+      },
+      {
+        "txt": "final boolean maybeAliased; Assign(Node assignNode, Node nameNode, boolean isPropertyAssign) { Preconditions.checkState(NodeUtil.isAssignmentOp(assignNode)); this.assignNode = assignNode; this.nameNode = nameNode; this.isPropertyAssign = isPropertyAssign; <extra_id_0> this.mayHaveSecondarySideEffects = maybeAliased || NodeUtil.mayHaveSideEffects(assignNode.getFirstChild()) || NodeUtil.mayHaveSideEffects(assignNode.getLastChild()); } static Assign maybeCreateAssign(Node assignNode) {"
+      },
+      {
+        "txt": "} static Assign maybeCreateAssign(Node assignNode) { Preconditions.checkState(NodeUtil.isAssignmentOp(assignNode)); boolean isPropAssign = false; Node current = assignNode.getFirstChild(); if (NodeUtil.isGet(current)) { current = current.getFirstChild(); isPropAssign = true; if (current.isGetProp() && current.getLastChild().getString().equals(\"prototype\")) {"
+      },
+      {
+        "txt": "current = current.getFirstChild(); } } if (current.isName()) { return new Assign(assignNode, current, isPropAssign); } return null; } void remove() { Node parent = assignNode.getParent();"
+      },
+      {
+        "txt": "if (mayHaveSecondarySideEffects) { Node replacement = assignNode.getLastChild().detachFromParent(); for (Node current = assignNode.getFirstChild(); !current.isName(); current = current.getFirstChild()) { if (current.isGetElem()) { replacement = IR.comma( current.getLastChild().detachFromParent(), replacement); replacement.copyInformationFrom(current); }"
+      },
+      {
+        "txt": "} parent.replaceChild(assignNode, replacement); } else { Node gramps = parent.getParent(); if (parent.isExprResult()) { gramps.removeChild(parent); } else { parent.replaceChild(assignNode, assignNode.getLastChild().detachFromParent()); }"
+      },
+      {
+        "txt": "} } }"
+      }
+    ]
+  }
+]

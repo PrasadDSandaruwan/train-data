@@ -1,0 +1,722 @@
+[
+  {
+    "id": 276,
+    "file_path": "src/com/google/javascript/jscomp/CodeGenerator.java",
+    "start-bug-line": 122,
+    "end-bug-line": 124,
+    "bug": "addExpr(first, p, context); cc.addOp(opstr, true); addExpr(last, p + 1, rhsContext);",
+    "fix": "unrollBinaryOperator(n, type, opstr, context, rhsContext, p, p + 1);",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "import com.google.common.base.Charsets; import com.google.common.base.Preconditions; import com.google.common.collect.Maps; import com.google.javascript.rhino.Node; import com.google.javascript.rhino.Token; import com.google.javascript.rhino.TokenStream; import java.io.IOException; import java.nio.charset.Charset; import java.nio.charset.CharsetEncoder; import java.util.Map;"
+      },
+      {
+        "txt": "class CodeGenerator { private final Map<String, String> ESCAPED_JS_STRINGS = Maps.newHashMap(); private static final char[] HEX_CHARS = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f' }; private final CodeConsumer cc; private final CharsetEncoder outputCharsetEncoder; CodeGenerator( CodeConsumer consumer, Charset outputCharset) { cc = consumer;"
+      },
+      {
+        "txt": "if (outputCharset == null || outputCharset == Charsets.US_ASCII) { this.outputCharsetEncoder = null; } else { this.outputCharsetEncoder = outputCharset.newEncoder(); } } CodeGenerator(CodeConsumer consumer) { this(consumer, null); } public void tagAsStrict() {"
+      },
+      {
+        "txt": "add(\"'use strict';\"); } void add(String str) { cc.add(str); } private void addIdentifier(String identifier) { cc.addIdentifier(identifierEscape(identifier)); } void add(Node n) { add(n, Context.OTHER);"
+      },
+      {
+        "txt": "} void add(Node n, Context context) { if (!cc.continueProcessing()) { return; } int type = n.getType(); String opstr = NodeUtil.opToStr(type); int childCount = n.getChildCount(); Node first = n.getFirstChild(); Node last = n.getLastChild();"
+      },
+      {
+        "txt": "if (opstr != null && first != last) { Preconditions.checkState( childCount == 2, \"Bad binary operator \\\"%s\\\": expected 2 arguments but got %s\", opstr, childCount); int p = NodeUtil.precedence(type); Context rhsContext = getContextForNoInOperator(context); if (last.getType() == type && NodeUtil.isAssociative(type)) { addExpr(first, p, context);"
+      },
+      {
+        "txt": "addExpr(last, p, rhsContext); } else if (NodeUtil.isAssignmentOp(n) && NodeUtil.isAssignmentOp(last)) { addExpr(first, p, context); cc.addOp(opstr, true); addExpr(last, p, rhsContext); } else { <extra_id_0> } return; } cc.startSourceMapping(n); switch (type) { case Token.TRY: {"
+      },
+      {
+        "txt": "switch (type) { case Token.TRY: { Preconditions.checkState(first.getNext().isBlock() && !first.getNext().hasMoreThanOneChild()); Preconditions.checkState(childCount >= 2 && childCount <= 3); add(\"try\"); add(first, Context.PRESERVE_BLOCK); Node catchblock = first.getNext().getFirstChild(); if (catchblock != null) { add(catchblock);"
+      },
+      {
+        "txt": "} if (childCount == 3) { add(\"finally\"); add(last, Context.PRESERVE_BLOCK); } break; } case Token.CATCH: Preconditions.checkState(childCount == 2); add(\"catch(\");"
+      },
+      {
+        "txt": "add(first); add(\")\"); add(last, Context.PRESERVE_BLOCK); break; case Token.THROW: Preconditions.checkState(childCount == 1); add(\"throw\"); add(first); cc.endStatement(true); break;"
+      },
+      {
+        "txt": "case Token.RETURN: add(\"return\"); if (childCount == 1) { add(first); } else { Preconditions.checkState(childCount == 0); } cc.endStatement(); break; case Token.VAR:"
+      },
+      {
+        "txt": "if (first != null) { add(\"var \"); addList(first, false, getContextForNoInOperator(context)); } break; case Token.LABEL_NAME: Preconditions.checkState(!n.getString().isEmpty()); addIdentifier(n.getString()); break; case Token.NAME:"
+      },
+      {
+        "txt": "if (first == null || first.isEmpty()) { addIdentifier(n.getString()); } else { Preconditions.checkState(childCount == 1); addIdentifier(n.getString()); cc.addOp(\"=\", true); if (first.isComma()) { addExpr(first, NodeUtil.precedence(Token.ASSIGN), Context.OTHER); } else { addExpr(first, 0, getContextForNoInOperator(context));"
+      },
+      {
+        "txt": "} } break; case Token.ARRAYLIT: add(\"[\"); addArrayList(first); add(\"]\"); break; case Token.PARAM_LIST: add(\"(\");"
+      },
+      {
+        "txt": "addList(first); add(\")\"); break; case Token.COMMA: Preconditions.checkState(childCount == 2); unrollBinaryOperator(n, Token.COMMA, \",\", context, Context.OTHER, 0, 0); break; case Token.NUMBER: Preconditions.checkState(childCount == 0); cc.addNumber(n.getDouble());"
+      },
+      {
+        "txt": "break; case Token.TYPEOF: case Token.VOID: case Token.NOT: case Token.BITNOT: case Token.POS: { Preconditions.checkState(childCount == 1); cc.addOp(NodeUtil.opToStrNoFail(type), false); addExpr(first, NodeUtil.precedence(type), Context.OTHER); break;"
+      },
+      {
+        "txt": "} case Token.NEG: { Preconditions.checkState(childCount == 1); if (n.getFirstChild().isNumber()) { cc.addNumber(-n.getFirstChild().getDouble()); } else { cc.addOp(NodeUtil.opToStrNoFail(type), false); addExpr(first, NodeUtil.precedence(type), Context.OTHER); } break;"
+      },
+      {
+        "txt": "} case Token.HOOK: { Preconditions.checkState(childCount == 3); int p = NodeUtil.precedence(type); addExpr(first, p + 1, context); cc.addOp(\"?\", true); addExpr(first.getNext(), 1, Context.OTHER); cc.addOp(\":\", true); addExpr(last, 1, Context.OTHER); break;"
+      },
+      {
+        "txt": "} case Token.REGEXP: if (!first.isString() || !last.isString()) { throw new Error(\"Expected children to be strings\"); } String regexp = regexpEscape(first.getString(), outputCharsetEncoder); if (childCount == 2) { add(regexp + last.getString()); } else {"
+      },
+      {
+        "txt": "Preconditions.checkState(childCount == 1); add(regexp); } break; case Token.FUNCTION: if (n.getClass() != Node.class) { throw new Error(\"Unexpected Node subclass.\"); } Preconditions.checkState(childCount == 3); boolean funcNeedsParens = (context == Context.START_OF_EXPR);"
+      },
+      {
+        "txt": "if (funcNeedsParens) { add(\"(\"); } add(\"function\"); add(first); add(first.getNext()); add(last, Context.PRESERVE_BLOCK); cc.endFunction(context == Context.STATEMENT); if (funcNeedsParens) { add(\")\");"
+      },
+      {
+        "txt": "} break; case Token.GETTER_DEF: case Token.SETTER_DEF: Preconditions.checkState(n.getParent().isObjectLit()); Preconditions.checkState(childCount == 1); Preconditions.checkState(first.isFunction()); Preconditions.checkState(first.getFirstChild().getString().isEmpty()); if (type == Token.GETTER_DEF) { Preconditions.checkState(!first.getChildAtIndex(1).hasChildren());"
+      },
+      {
+        "txt": "add(\"get \"); } else { Preconditions.checkState(first.getChildAtIndex(1).hasOneChild()); add(\"set \"); } String name = n.getString(); Node fn = first; Node parameters = fn.getChildAtIndex(1); Node body = fn.getLastChild(); if (!n.isQuotedString() &&"
+      },
+      {
+        "txt": "TokenStream.isJSIdentifier(name) && NodeUtil.isLatin(name)) { add(name); } else { double d = getSimpleNumber(name); if (!Double.isNaN(d)) { cc.addNumber(d); } else { addJsString(n); }"
+      },
+      {
+        "txt": "} add(parameters); add(body, Context.PRESERVE_BLOCK); break; case Token.SCRIPT: case Token.BLOCK: { if (n.getClass() != Node.class) { throw new Error(\"Unexpected Node subclass.\"); } boolean preserveBlock = context == Context.PRESERVE_BLOCK;"
+      },
+      {
+        "txt": "if (preserveBlock) { cc.beginBlock(); } boolean preferLineBreaks = type == Token.SCRIPT || (type == Token.BLOCK && !preserveBlock && n.getParent() != null && n.getParent().isScript()); for (Node c = first; c != null; c = c.getNext()) {"
+      },
+      {
+        "txt": "add(c, Context.STATEMENT); if (c.isVar()) { cc.endStatement(); } if (c.isFunction()) { cc.maybeLineBreak(); } if (preferLineBreaks) { cc.notePreferredLineBreak(); }"
+      },
+      {
+        "txt": "} if (preserveBlock) { cc.endBlock(cc.breakAfterBlockFor(n, context == Context.STATEMENT)); } break; } case Token.FOR: if (childCount == 4) { add(\"for(\"); if (first.isVar()) {"
+      },
+      {
+        "txt": "add(first, Context.IN_FOR_INIT_CLAUSE); } else { addExpr(first, 0, Context.IN_FOR_INIT_CLAUSE); } add(\";\"); add(first.getNext()); add(\";\"); add(first.getNext().getNext()); add(\")\"); addNonEmptyStatement("
+      },
+      {
+        "txt": "last, getContextForNonEmptyExpression(context), false); } else { Preconditions.checkState(childCount == 3); add(\"for(\"); add(first); add(\"in\"); add(first.getNext()); add(\")\"); addNonEmptyStatement( last, getContextForNonEmptyExpression(context), false);"
+      },
+      {
+        "txt": "} break; case Token.DO: Preconditions.checkState(childCount == 2); add(\"do\"); addNonEmptyStatement(first, Context.OTHER, false); add(\"while(\"); add(last); add(\")\"); cc.endStatement();"
+      },
+      {
+        "txt": "break; case Token.WHILE: Preconditions.checkState(childCount == 2); add(\"while(\"); add(first); add(\")\"); addNonEmptyStatement( last, getContextForNonEmptyExpression(context), false); break; case Token.EMPTY:"
+      },
+      {
+        "txt": "Preconditions.checkState(childCount == 0); break; case Token.GETPROP: { Preconditions.checkState( childCount == 2, \"Bad GETPROP: expected 2 children, but got %s\", childCount); Preconditions.checkState( last.isString(), \"Bad GETPROP: RHS should be STRING\"); boolean needsParens = (first.isNumber());"
+      },
+      {
+        "txt": "if (needsParens) { add(\"(\"); } addExpr(first, NodeUtil.precedence(type), context); if (needsParens) { add(\")\"); } add(\".\"); addIdentifier(last.getString()); break;"
+      },
+      {
+        "txt": "} case Token.GETELEM: Preconditions.checkState( childCount == 2, \"Bad GETELEM: expected 2 children but got %s\", childCount); addExpr(first, NodeUtil.precedence(type), context); add(\"[\"); add(first.getNext()); add(\"]\"); break;"
+      },
+      {
+        "txt": "case Token.WITH: Preconditions.checkState(childCount == 2); add(\"with(\"); add(first); add(\")\"); addNonEmptyStatement( last, getContextForNonEmptyExpression(context), false); break; case Token.INC: case Token.DEC: {"
+      },
+      {
+        "txt": "Preconditions.checkState(childCount == 1); String o = type == Token.INC ? \"++\" : \"--\"; int postProp = n.getIntProp(Node.INCRDECR_PROP); if (postProp != 0) { addExpr(first, NodeUtil.precedence(type), context); cc.addOp(o, false); } else { cc.addOp(o, false); add(first); }"
+      },
+      {
+        "txt": "break; } case Token.CALL: if (isIndirectEval(first) || n.getBooleanProp(Node.FREE_CALL) && NodeUtil.isGet(first)) { add(\"(0,\"); addExpr(first, NodeUtil.precedence(Token.COMMA), Context.OTHER); add(\")\"); } else { addExpr(first, NodeUtil.precedence(type), context);"
+      },
+      {
+        "txt": "} add(\"(\"); addList(first.getNext()); add(\")\"); break; case Token.IF: boolean hasElse = childCount == 3; boolean ambiguousElseClause = context == Context.BEFORE_DANGLING_ELSE && !hasElse; if (ambiguousElseClause) {"
+      },
+      {
+        "txt": "cc.beginBlock(); } add(\"if(\"); add(first); add(\")\"); if (hasElse) { addNonEmptyStatement( first.getNext(), Context.BEFORE_DANGLING_ELSE, false); add(\"else\"); addNonEmptyStatement("
+      },
+      {
+        "txt": "last, getContextForNonEmptyExpression(context), false); } else { addNonEmptyStatement(first.getNext(), Context.OTHER, false); Preconditions.checkState(childCount == 2); } if (ambiguousElseClause) { cc.endBlock(); } break; case Token.NULL:"
+      },
+      {
+        "txt": "Preconditions.checkState(childCount == 0); add(\"null\"); break; case Token.THIS: Preconditions.checkState(childCount == 0); add(\"this\"); break; case Token.FALSE: Preconditions.checkState(childCount == 0); add(\"false\");"
+      },
+      {
+        "txt": "break; case Token.TRUE: Preconditions.checkState(childCount == 0); add(\"true\"); break; case Token.CONTINUE: Preconditions.checkState(childCount <= 1); add(\"continue\"); if (childCount == 1) { if (!first.isLabelName()) {"
+      },
+      {
+        "txt": "throw new Error(\"Unexpected token type. Should be LABEL_NAME.\"); } add(\" \"); add(first); } cc.endStatement(); break; case Token.DEBUGGER: Preconditions.checkState(childCount == 0); add(\"debugger\");"
+      },
+      {
+        "txt": "cc.endStatement(); break; case Token.BREAK: Preconditions.checkState(childCount <= 1); add(\"break\"); if (childCount == 1) { if (!first.isLabelName()) { throw new Error(\"Unexpected token type. Should be LABEL_NAME.\"); } add(\" \");"
+      },
+      {
+        "txt": "add(first); } cc.endStatement(); break; case Token.EXPR_RESULT: Preconditions.checkState(childCount == 1); add(first, Context.START_OF_EXPR); cc.endStatement(); break; case Token.NEW:"
+      },
+      {
+        "txt": "add(\"new \"); int precedence = NodeUtil.precedence(type); if (NodeUtil.containsType( first, Token.CALL, NodeUtil.MATCH_NOT_FUNCTION)) { precedence = NodeUtil.precedence(first.getType()) + 1; } addExpr(first, precedence, Context.OTHER); Node next = first.getNext(); if (next != null) { add(\"(\");"
+      },
+      {
+        "txt": "addList(next); add(\")\"); } break; case Token.STRING: if (childCount != ((n.getParent() != null && n.getParent().isObjectLit()) ? 1 : 0)) { throw new IllegalStateException( \"Unexpected String children: \" + n.getParent().toStringTree());"
+      },
+      {
+        "txt": "} addJsString(n); break; case Token.DELPROP: Preconditions.checkState(childCount == 1); add(\"delete \"); add(first); break; case Token.OBJECTLIT: { boolean needsParens = (context == Context.START_OF_EXPR);"
+      },
+      {
+        "txt": "if (needsParens) { add(\"(\"); } add(\"{\"); for (Node c = first; c != null; c = c.getNext()) { if (c != first) { cc.listSeparator(); } if (c.isGetterDef() || c.isSetterDef()) { add(c);"
+      },
+      {
+        "txt": "} else { Preconditions.checkState(c.isString()); String key = c.getString(); if (!c.isQuotedString() && !TokenStream.isKeyword(key) && TokenStream.isJSIdentifier(key) && NodeUtil.isLatin(key)) { add(key); } else { double d = getSimpleNumber(key);"
+      },
+      {
+        "txt": "if (!Double.isNaN(d)) { cc.addNumber(d); } else { addExpr(c, 1, Context.OTHER); } } add(\":\"); addExpr(c.getFirstChild(), 1, Context.OTHER); } }"
+      },
+      {
+        "txt": "add(\"}\"); if (needsParens) { add(\")\"); } break; } case Token.SWITCH: add(\"switch(\"); add(first); add(\")\");"
+      },
+      {
+        "txt": "cc.beginBlock(); addAllSiblings(first.getNext()); cc.endBlock(context == Context.STATEMENT); break; case Token.CASE: Preconditions.checkState(childCount == 2); add(\"case \"); add(first); addCaseBody(last); break;"
+      },
+      {
+        "txt": "case Token.DEFAULT_CASE: Preconditions.checkState(childCount == 1); add(\"default\"); addCaseBody(first); break; case Token.LABEL: Preconditions.checkState(childCount == 2); if (!first.isLabelName()) { throw new Error(\"Unexpected token type. Should be LABEL_NAME.\"); }"
+      },
+      {
+        "txt": "add(first); add(\":\"); addNonEmptyStatement( last, getContextForNonEmptyExpression(context), true); break; default: throw new Error(\"Unknown type \" + type + \"\\n\" + n.toStringTree()); } cc.endSourceMapping(n); }"
+      },
+      {
+        "txt": "private void unrollBinaryOperator( Node n, int op, String opStr, Context context, Context rhsContext, int leftPrecedence, int rightPrecedence) { Node firstNonOperator = n.getFirstChild(); while (firstNonOperator.getType() == op) { firstNonOperator = firstNonOperator.getFirstChild(); } addExpr(firstNonOperator, leftPrecedence, context); Node current = firstNonOperator; do {"
+      },
+      {
+        "txt": "current = current.getParent(); cc.listSeparator(); addExpr(current.getFirstChild().getNext(), rightPrecedence, rhsContext); } while (current != n); } static boolean isSimpleNumber(String s) { int len = s.length(); for (int index = 0; index < len; index++) { char c = s.charAt(index); if (c < '0' || c > '9') {"
+      },
+      {
+        "txt": "return false; } } return len > 0 && s.charAt(0) != '0'; } static double getSimpleNumber(String s) { if (isSimpleNumber(s)) { try { long l = Long.parseLong(s); if (l < NodeUtil.MAX_POSITIVE_INTEGER_NUMBER) {"
+      },
+      {
+        "txt": "return l; } } catch (NumberFormatException e) { } } return Double.NaN; } private boolean isIndirectEval(Node n) { return n.isName() && \"eval\".equals(n.getString()) && !n.getBooleanProp(Node.DIRECT_EVAL);"
+      },
+      {
+        "txt": "} private void addNonEmptyStatement( Node n, Context context, boolean allowNonBlockChild) { Node nodeToProcess = n; if (!allowNonBlockChild && !n.isBlock()) { throw new Error(\"Missing BLOCK child.\"); } if (n.isBlock()) { int count = getNonEmptyChildCount(n, 2); if (count == 0) {"
+      },
+      {
+        "txt": "if (cc.shouldPreserveExtraBlocks()) { cc.beginBlock(); cc.endBlock(cc.breakAfterBlockFor(n, context == Context.STATEMENT)); } else { cc.endStatement(true); } return; } if (count == 1) { Node firstAndOnlyChild = getFirstNonEmptyChild(n);"
+      },
+      {
+        "txt": "boolean alwaysWrapInBlock = cc.shouldPreserveExtraBlocks(); if (alwaysWrapInBlock || isOneExactlyFunctionOrDo(firstAndOnlyChild)) { cc.beginBlock(); add(firstAndOnlyChild, Context.STATEMENT); cc.maybeLineBreak(); cc.endBlock(cc.breakAfterBlockFor(n, context == Context.STATEMENT)); return; } else { nodeToProcess = firstAndOnlyChild; }"
+      },
+      {
+        "txt": "} if (count > 1) { context = Context.PRESERVE_BLOCK; } } if (nodeToProcess.isEmpty()) { cc.endStatement(true); } else { add(nodeToProcess, context); if (nodeToProcess.isVar()) {"
+      },
+      {
+        "txt": "cc.endStatement(); } } } private boolean isOneExactlyFunctionOrDo(Node n) { if (n.isLabel()) { Node labeledStatement = n.getLastChild(); if (!labeledStatement.isBlock()) { return isOneExactlyFunctionOrDo(labeledStatement); } else {"
+      },
+      {
+        "txt": "if (getNonEmptyChildCount(n, 2) == 1) { return isOneExactlyFunctionOrDo(getFirstNonEmptyChild(n)); } else { return false; } } } else { return (n.isFunction() || n.isDo()); } }"
+      },
+      {
+        "txt": "private void addExpr(Node n, int minPrecedence, Context context) { if ((NodeUtil.precedence(n.getType()) < minPrecedence) || ((context == Context.IN_FOR_INIT_CLAUSE) && (n.isIn()))){ add(\"(\"); add(n, clearContextForNoInOperator(context)); add(\")\"); } else { add(n, context); }"
+      },
+      {
+        "txt": "} void addList(Node firstInList) { addList(firstInList, true, Context.OTHER); } void addList(Node firstInList, boolean isArrayOrFunctionArgument) { addList(firstInList, isArrayOrFunctionArgument, Context.OTHER); } void addList(Node firstInList, boolean isArrayOrFunctionArgument, Context lhsContext) { for (Node n = firstInList; n != null; n = n.getNext()) {"
+      },
+      {
+        "txt": "boolean isFirst = n == firstInList; if (isFirst) { addExpr(n, isArrayOrFunctionArgument ? 1 : 0, lhsContext); } else { cc.listSeparator(); addExpr(n, isArrayOrFunctionArgument ? 1 : 0, Context.OTHER); } } } void addArrayList(Node firstInList) {"
+      },
+      {
+        "txt": "boolean lastWasEmpty = false; for (Node n = firstInList; n != null; n = n.getNext()) { if (n != firstInList) { cc.listSeparator(); } addExpr(n, 1, Context.OTHER); lastWasEmpty = n.isEmpty(); } if (lastWasEmpty) { cc.listSeparator();"
+      },
+      {
+        "txt": "} } void addCaseBody(Node caseBody) { cc.beginCaseBody(); add(caseBody); cc.endCaseBody(); } void addAllSiblings(Node n) { for (Node c = n; c != null; c = c.getNext()) { add(c);"
+      },
+      {
+        "txt": "} } private void addJsString(Node n) { String s = n.getString(); boolean useSlashV = n.getBooleanProp(Node.SLASH_V); if (useSlashV) { add(jsString(n.getString(), useSlashV)); } else { String cached = ESCAPED_JS_STRINGS.get(s); if (cached == null) {"
+      },
+      {
+        "txt": "cached = jsString(n.getString(), useSlashV); ESCAPED_JS_STRINGS.put(s, cached); } add(cached); } } private String jsString(String s, boolean useSlashV) { int singleq = 0, doubleq = 0; for (int i = 0; i < s.length(); i++) { switch (s.charAt(i)) {"
+      },
+      {
+        "txt": "case '\"': doubleq++; break; case '\\'': singleq++; break; } } String doublequote, singlequote; char quote; if (singleq < doubleq) { quote = '\\''; doublequote = \"\\\"\"; singlequote = \"\\\\\\'\";"
+      },
+      {
+        "txt": "} else { quote = '\\\"'; doublequote = \"\\\\\\\"\"; singlequote = \"\\'\"; } return strEscape(s, quote, doublequote, singlequote, \"\\\\\\\\\", outputCharsetEncoder, useSlashV); } static String regexpEscape(String s, CharsetEncoder outputCharsetEncoder) { return strEscape(s, '/', \"\\\"\", \"'\", \"\\\\\", outputCharsetEncoder, false);"
+      },
+      {
+        "txt": "} static String escapeToDoubleQuotedJsString(String s) { return strEscape(s, '\"', \"\\\\\\\"\", \"\\'\", \"\\\\\\\\\", null, false); } they want Latin/ASCII characters only. static String regexpEscape(String s) { return regexpEscape(s, null); } private static String strEscape( String s, char quote,"
+      },
+      {
+        "txt": "String doublequoteEscape, String singlequoteEscape, String backslashEscape, CharsetEncoder outputCharsetEncoder, boolean useSlashV) { StringBuilder sb = new StringBuilder(s.length() + 2); sb.append(quote); for (int i = 0; i < s.length(); i++) { char c = s.charAt(i); switch (c) {"
+      },
+      {
+        "txt": "case '\\0': sb.append(\"\\\\x00\"); break; case '\\u000B': if (useSlashV) { sb.append(\"\\\\v\"); } else { sb.append(\"\\\\x0B\"); } break; case '\\n': sb.append(\"\\\\n\"); break; case '\\r': sb.append(\"\\\\r\"); break;"
+      },
+      {
+        "txt": "case '\\t': sb.append(\"\\\\t\"); break; case '\\\\': sb.append(backslashEscape); break; case '\\\"': sb.append(doublequoteEscape); break; case '\\'': sb.append(singlequoteEscape); break; case '>': // Break --> into --\\> or ]]> into ]]\\> if (i >= 2 && ((s.charAt(i - 1) == '-' && s.charAt(i - 2) == '-') || (s.charAt(i - 1) == ']' && s.charAt(i - 2) == ']'))) { sb.append(\"\\\\>\"); } else {"
+      },
+      {
+        "txt": "sb.append(c); } break; case '<': final String END_SCRIPT = \"/script\"; final String START_COMMENT = \"!--\"; if (s.regionMatches(true, i + 1, END_SCRIPT, 0, END_SCRIPT.length())) { sb.append(\"<\\\\\"); } else if (s.regionMatches(false, i + 1, START_COMMENT, 0,"
+      },
+      {
+        "txt": "START_COMMENT.length())) { sb.append(\"<\\\\\"); } else { sb.append(c); } break; default: if (outputCharsetEncoder != null) { if (outputCharsetEncoder.canEncode(c)) { sb.append(c);"
+      },
+      {
+        "txt": "} else { appendHexJavaScriptRepresentation(sb, c); } } else { if (c > 0x1f && c < 0x7f) { sb.append(c); } else { appendHexJavaScriptRepresentation(sb, c); } }"
+      },
+      {
+        "txt": "} } sb.append(quote); return sb.toString(); } static String identifierEscape(String s) { if (NodeUtil.isLatin(s)) { return s; } StringBuilder sb = new StringBuilder();"
+      },
+      {
+        "txt": "for (int i = 0; i < s.length(); i++) { char c = s.charAt(i); if (c > 0x1F && c < 0x7F) { sb.append(c); } else { appendHexJavaScriptRepresentation(sb, c); } } return sb.toString(); }"
+      },
+      {
+        "txt": "private static int getNonEmptyChildCount(Node n, int maxCount) { int i = 0; Node c = n.getFirstChild(); for (; c != null && i < maxCount; c = c.getNext()) { if (c.isBlock()) { i += getNonEmptyChildCount(c, maxCount-i); } else if (!c.isEmpty()) { i++; } }"
+      },
+      {
+        "txt": "return i; } private static Node getFirstNonEmptyChild(Node n) { for (Node c = n.getFirstChild(); c != null; c = c.getNext()) { if (c.isBlock()) { Node result = getFirstNonEmptyChild(c); if (result != null) { return result; } } else if (!c.isEmpty()) {"
+      },
+      {
+        "txt": "return c; } } return null; } enum Context { STATEMENT, BEFORE_DANGLING_ELSE, // a hack to resolve the else-clause ambiguity START_OF_EXPR, PRESERVE_BLOCK,"
+      },
+      {
+        "txt": "IN_FOR_INIT_CLAUSE, OTHER } private Context getContextForNonEmptyExpression(Context currentContext) { return currentContext == Context.BEFORE_DANGLING_ELSE ? Context.BEFORE_DANGLING_ELSE : Context.OTHER; } private Context getContextForNoInOperator(Context context) { return (context == Context.IN_FOR_INIT_CLAUSE ? Context.IN_FOR_INIT_CLAUSE : Context.OTHER);"
+      },
+      {
+        "txt": "} private Context clearContextForNoInOperator(Context context) { return (context == Context.IN_FOR_INIT_CLAUSE ? Context.OTHER : context); } private static void appendHexJavaScriptRepresentation( StringBuilder sb, char c) { try { appendHexJavaScriptRepresentation(c, sb); } catch (IOException ex) {"
+      },
+      {
+        "txt": "throw new RuntimeException(ex); } } private static void appendHexJavaScriptRepresentation( int codePoint, Appendable out) throws IOException { if (Character.isSupplementaryCodePoint(codePoint)) { char[] surrogates = Character.toChars(codePoint); appendHexJavaScriptRepresentation(surrogates[0], out); appendHexJavaScriptRepresentation(surrogates[1], out);"
+      },
+      {
+        "txt": "return; } out.append(\"\\\\u\") .append(HEX_CHARS[(codePoint >>> 12) & 0xf]) .append(HEX_CHARS[(codePoint >>> 8) & 0xf]) .append(HEX_CHARS[(codePoint >>> 4) & 0xf]) .append(HEX_CHARS[codePoint & 0xf]); }"
+      }
+    ]
+  },
+  {
+    "id": 277,
+    "file_path": "src/com/google/javascript/jscomp/CodeGenerator.java",
+    "start-bug-line": 754,
+    "end-bug-line": 754,
+    "bug": "cc.listSeparator();",
+    "fix": "cc.addOp(opStr, true);",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.google.javascript.jscomp; import com.google.common.base.Charsets; import com.google.common.base.Preconditions; import com.google.common.collect.Maps; import com.google.javascript.rhino.Node; import com.google.javascript.rhino.Token; import com.google.javascript.rhino.TokenStream; import java.io.IOException; import java.nio.charset.Charset;"
+      },
+      {
+        "txt": "import java.nio.charset.CharsetEncoder; import java.util.Map; class CodeGenerator { private final Map<String, String> ESCAPED_JS_STRINGS = Maps.newHashMap(); private static final char[] HEX_CHARS = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f' }; private final CodeConsumer cc; private final CharsetEncoder outputCharsetEncoder; CodeGenerator("
+      },
+      {
+        "txt": "CodeConsumer consumer, Charset outputCharset) { cc = consumer; if (outputCharset == null || outputCharset == Charsets.US_ASCII) { this.outputCharsetEncoder = null; } else { this.outputCharsetEncoder = outputCharset.newEncoder(); } } CodeGenerator(CodeConsumer consumer) { this(consumer, null);"
+      },
+      {
+        "txt": "} public void tagAsStrict() { add(\"'use strict';\"); } void add(String str) { cc.add(str); } private void addIdentifier(String identifier) { cc.addIdentifier(identifierEscape(identifier)); }"
+      },
+      {
+        "txt": "void add(Node n) { add(n, Context.OTHER); } void add(Node n, Context context) { if (!cc.continueProcessing()) { return; } int type = n.getType(); String opstr = NodeUtil.opToStr(type); int childCount = n.getChildCount();"
+      },
+      {
+        "txt": "Node first = n.getFirstChild(); Node last = n.getLastChild(); if (opstr != null && first != last) { Preconditions.checkState( childCount == 2, \"Bad binary operator \\\"%s\\\": expected 2 arguments but got %s\", opstr, childCount); int p = NodeUtil.precedence(type); Context rhsContext = getContextForNoInOperator(context); if (last.getType() == type &&"
+      },
+      {
+        "txt": "NodeUtil.isAssociative(type)) { addExpr(first, p, context); cc.addOp(opstr, true); addExpr(last, p, rhsContext); } else if (NodeUtil.isAssignmentOp(n) && NodeUtil.isAssignmentOp(last)) { addExpr(first, p, context); cc.addOp(opstr, true); addExpr(last, p, rhsContext); } else { addExpr(first, p, context);"
+      },
+      {
+        "txt": "cc.addOp(opstr, true); addExpr(last, p + 1, rhsContext); } return; } cc.startSourceMapping(n); switch (type) { case Token.TRY: { Preconditions.checkState(first.getNext().isBlock() && !first.getNext().hasMoreThanOneChild());"
+      },
+      {
+        "txt": "Preconditions.checkState(childCount >= 2 && childCount <= 3); add(\"try\"); add(first, Context.PRESERVE_BLOCK); Node catchblock = first.getNext().getFirstChild(); if (catchblock != null) { add(catchblock); } if (childCount == 3) { add(\"finally\"); add(last, Context.PRESERVE_BLOCK);"
+      },
+      {
+        "txt": "} break; } case Token.CATCH: Preconditions.checkState(childCount == 2); add(\"catch(\"); add(first); add(\")\"); add(last, Context.PRESERVE_BLOCK); break;"
+      },
+      {
+        "txt": "case Token.THROW: Preconditions.checkState(childCount == 1); add(\"throw\"); add(first); cc.endStatement(true); break; case Token.RETURN: add(\"return\"); if (childCount == 1) { add(first);"
+      },
+      {
+        "txt": "} else { Preconditions.checkState(childCount == 0); } cc.endStatement(); break; case Token.VAR: if (first != null) { add(\"var \"); addList(first, false, getContextForNoInOperator(context)); }"
+      },
+      {
+        "txt": "break; case Token.LABEL_NAME: Preconditions.checkState(!n.getString().isEmpty()); addIdentifier(n.getString()); break; case Token.NAME: if (first == null || first.isEmpty()) { addIdentifier(n.getString()); } else { Preconditions.checkState(childCount == 1);"
+      },
+      {
+        "txt": "addIdentifier(n.getString()); cc.addOp(\"=\", true); if (first.isComma()) { addExpr(first, NodeUtil.precedence(Token.ASSIGN), Context.OTHER); } else { addExpr(first, 0, getContextForNoInOperator(context)); } } break; case Token.ARRAYLIT:"
+      },
+      {
+        "txt": "add(\"[\"); addArrayList(first); add(\"]\"); break; case Token.PARAM_LIST: add(\"(\"); addList(first); add(\")\"); break; case Token.COMMA:"
+      },
+      {
+        "txt": "Preconditions.checkState(childCount == 2); unrollBinaryOperator(n, Token.COMMA, \",\", context, Context.OTHER, 0, 0); break; case Token.NUMBER: Preconditions.checkState(childCount == 0); cc.addNumber(n.getDouble()); break; case Token.TYPEOF: case Token.VOID: case Token.NOT:"
+      },
+      {
+        "txt": "case Token.BITNOT: case Token.POS: { Preconditions.checkState(childCount == 1); cc.addOp(NodeUtil.opToStrNoFail(type), false); addExpr(first, NodeUtil.precedence(type), Context.OTHER); break; } case Token.NEG: { Preconditions.checkState(childCount == 1); if (n.getFirstChild().isNumber()) {"
+      },
+      {
+        "txt": "cc.addNumber(-n.getFirstChild().getDouble()); } else { cc.addOp(NodeUtil.opToStrNoFail(type), false); addExpr(first, NodeUtil.precedence(type), Context.OTHER); } break; } case Token.HOOK: { Preconditions.checkState(childCount == 3); int p = NodeUtil.precedence(type);"
+      },
+      {
+        "txt": "addExpr(first, p + 1, context); cc.addOp(\"?\", true); addExpr(first.getNext(), 1, Context.OTHER); cc.addOp(\":\", true); addExpr(last, 1, Context.OTHER); break; } case Token.REGEXP: if (!first.isString() || !last.isString()) {"
+      },
+      {
+        "txt": "throw new Error(\"Expected children to be strings\"); } String regexp = regexpEscape(first.getString(), outputCharsetEncoder); if (childCount == 2) { add(regexp + last.getString()); } else { Preconditions.checkState(childCount == 1); add(regexp); } break;"
+      },
+      {
+        "txt": "case Token.FUNCTION: if (n.getClass() != Node.class) { throw new Error(\"Unexpected Node subclass.\"); } Preconditions.checkState(childCount == 3); boolean funcNeedsParens = (context == Context.START_OF_EXPR); if (funcNeedsParens) { add(\"(\"); } add(\"function\");"
+      },
+      {
+        "txt": "add(first); add(first.getNext()); add(last, Context.PRESERVE_BLOCK); cc.endFunction(context == Context.STATEMENT); if (funcNeedsParens) { add(\")\"); } break; case Token.GETTER_DEF: case Token.SETTER_DEF:"
+      },
+      {
+        "txt": "Preconditions.checkState(n.getParent().isObjectLit()); Preconditions.checkState(childCount == 1); Preconditions.checkState(first.isFunction()); Preconditions.checkState(first.getFirstChild().getString().isEmpty()); if (type == Token.GETTER_DEF) { Preconditions.checkState(!first.getChildAtIndex(1).hasChildren()); add(\"get \"); } else { Preconditions.checkState(first.getChildAtIndex(1).hasOneChild()); add(\"set \");"
+      },
+      {
+        "txt": "} String name = n.getString(); Node fn = first; Node parameters = fn.getChildAtIndex(1); Node body = fn.getLastChild(); if (!n.isQuotedString() && TokenStream.isJSIdentifier(name) && NodeUtil.isLatin(name)) { add(name); } else {"
+      },
+      {
+        "txt": "double d = getSimpleNumber(name); if (!Double.isNaN(d)) { cc.addNumber(d); } else { addJsString(n); } } add(parameters); add(body, Context.PRESERVE_BLOCK); break;"
+      },
+      {
+        "txt": "case Token.SCRIPT: case Token.BLOCK: { if (n.getClass() != Node.class) { throw new Error(\"Unexpected Node subclass.\"); } boolean preserveBlock = context == Context.PRESERVE_BLOCK; if (preserveBlock) { cc.beginBlock(); } boolean preferLineBreaks ="
+      },
+      {
+        "txt": "type == Token.SCRIPT || (type == Token.BLOCK && !preserveBlock && n.getParent() != null && n.getParent().isScript()); for (Node c = first; c != null; c = c.getNext()) { add(c, Context.STATEMENT); if (c.isVar()) { cc.endStatement(); }"
+      },
+      {
+        "txt": "if (c.isFunction()) { cc.maybeLineBreak(); } if (preferLineBreaks) { cc.notePreferredLineBreak(); } } if (preserveBlock) { cc.endBlock(cc.breakAfterBlockFor(n, context == Context.STATEMENT)); }"
+      },
+      {
+        "txt": "break; } case Token.FOR: if (childCount == 4) { add(\"for(\"); if (first.isVar()) { add(first, Context.IN_FOR_INIT_CLAUSE); } else { addExpr(first, 0, Context.IN_FOR_INIT_CLAUSE); }"
+      },
+      {
+        "txt": "add(\";\"); add(first.getNext()); add(\";\"); add(first.getNext().getNext()); add(\")\"); addNonEmptyStatement( last, getContextForNonEmptyExpression(context), false); } else { Preconditions.checkState(childCount == 3); add(\"for(\");"
+      },
+      {
+        "txt": "add(first); add(\"in\"); add(first.getNext()); add(\")\"); addNonEmptyStatement( last, getContextForNonEmptyExpression(context), false); } break; case Token.DO: Preconditions.checkState(childCount == 2);"
+      },
+      {
+        "txt": "add(\"do\"); addNonEmptyStatement(first, Context.OTHER, false); add(\"while(\"); add(last); add(\")\"); cc.endStatement(); break; case Token.WHILE: Preconditions.checkState(childCount == 2); add(\"while(\");"
+      },
+      {
+        "txt": "add(first); add(\")\"); addNonEmptyStatement( last, getContextForNonEmptyExpression(context), false); break; case Token.EMPTY: Preconditions.checkState(childCount == 0); break; case Token.GETPROP: { Preconditions.checkState("
+      },
+      {
+        "txt": "childCount == 2, \"Bad GETPROP: expected 2 children, but got %s\", childCount); Preconditions.checkState( last.isString(), \"Bad GETPROP: RHS should be STRING\"); boolean needsParens = (first.isNumber()); if (needsParens) { add(\"(\"); } addExpr(first, NodeUtil.precedence(type), context);"
+      },
+      {
+        "txt": "if (needsParens) { add(\")\"); } add(\".\"); addIdentifier(last.getString()); break; } case Token.GETELEM: Preconditions.checkState( childCount == 2,"
+      },
+      {
+        "txt": "\"Bad GETELEM: expected 2 children but got %s\", childCount); addExpr(first, NodeUtil.precedence(type), context); add(\"[\"); add(first.getNext()); add(\"]\"); break; case Token.WITH: Preconditions.checkState(childCount == 2); add(\"with(\"); add(first);"
+      },
+      {
+        "txt": "add(\")\"); addNonEmptyStatement( last, getContextForNonEmptyExpression(context), false); break; case Token.INC: case Token.DEC: { Preconditions.checkState(childCount == 1); String o = type == Token.INC ? \"++\" : \"--\"; int postProp = n.getIntProp(Node.INCRDECR_PROP); if (postProp != 0) {"
+      },
+      {
+        "txt": "addExpr(first, NodeUtil.precedence(type), context); cc.addOp(o, false); } else { cc.addOp(o, false); add(first); } break; } case Token.CALL: if (isIndirectEval(first)"
+      },
+      {
+        "txt": "|| n.getBooleanProp(Node.FREE_CALL) && NodeUtil.isGet(first)) { add(\"(0,\"); addExpr(first, NodeUtil.precedence(Token.COMMA), Context.OTHER); add(\")\"); } else { addExpr(first, NodeUtil.precedence(type), context); } add(\"(\"); addList(first.getNext()); add(\")\");"
+      },
+      {
+        "txt": "break; case Token.IF: boolean hasElse = childCount == 3; boolean ambiguousElseClause = context == Context.BEFORE_DANGLING_ELSE && !hasElse; if (ambiguousElseClause) { cc.beginBlock(); } add(\"if(\"); add(first);"
+      },
+      {
+        "txt": "add(\")\"); if (hasElse) { addNonEmptyStatement( first.getNext(), Context.BEFORE_DANGLING_ELSE, false); add(\"else\"); addNonEmptyStatement( last, getContextForNonEmptyExpression(context), false); } else { addNonEmptyStatement(first.getNext(), Context.OTHER, false); Preconditions.checkState(childCount == 2);"
+      },
+      {
+        "txt": "} if (ambiguousElseClause) { cc.endBlock(); } break; case Token.NULL: Preconditions.checkState(childCount == 0); add(\"null\"); break; case Token.THIS:"
+      },
+      {
+        "txt": "Preconditions.checkState(childCount == 0); add(\"this\"); break; case Token.FALSE: Preconditions.checkState(childCount == 0); add(\"false\"); break; case Token.TRUE: Preconditions.checkState(childCount == 0); add(\"true\");"
+      },
+      {
+        "txt": "break; case Token.CONTINUE: Preconditions.checkState(childCount <= 1); add(\"continue\"); if (childCount == 1) { if (!first.isLabelName()) { throw new Error(\"Unexpected token type. Should be LABEL_NAME.\"); } add(\" \"); add(first);"
+      },
+      {
+        "txt": "} cc.endStatement(); break; case Token.DEBUGGER: Preconditions.checkState(childCount == 0); add(\"debugger\"); cc.endStatement(); break; case Token.BREAK: Preconditions.checkState(childCount <= 1);"
+      },
+      {
+        "txt": "add(\"break\"); if (childCount == 1) { if (!first.isLabelName()) { throw new Error(\"Unexpected token type. Should be LABEL_NAME.\"); } add(\" \"); add(first); } cc.endStatement(); break;"
+      },
+      {
+        "txt": "case Token.EXPR_RESULT: Preconditions.checkState(childCount == 1); add(first, Context.START_OF_EXPR); cc.endStatement(); break; case Token.NEW: add(\"new \"); int precedence = NodeUtil.precedence(type); if (NodeUtil.containsType( first, Token.CALL, NodeUtil.MATCH_NOT_FUNCTION)) {"
+      },
+      {
+        "txt": "precedence = NodeUtil.precedence(first.getType()) + 1; } addExpr(first, precedence, Context.OTHER); Node next = first.getNext(); if (next != null) { add(\"(\"); addList(next); add(\")\"); } break;"
+      },
+      {
+        "txt": "case Token.STRING: if (childCount != ((n.getParent() != null && n.getParent().isObjectLit()) ? 1 : 0)) { throw new IllegalStateException( \"Unexpected String children: \" + n.getParent().toStringTree()); } addJsString(n); break; case Token.DELPROP:"
+      },
+      {
+        "txt": "Preconditions.checkState(childCount == 1); add(\"delete \"); add(first); break; case Token.OBJECTLIT: { boolean needsParens = (context == Context.START_OF_EXPR); if (needsParens) { add(\"(\"); } add(\"{\");"
+      },
+      {
+        "txt": "for (Node c = first; c != null; c = c.getNext()) { if (c != first) { cc.listSeparator(); } if (c.isGetterDef() || c.isSetterDef()) { add(c); } else { Preconditions.checkState(c.isString()); String key = c.getString(); if (!c.isQuotedString() &&"
+      },
+      {
+        "txt": "!TokenStream.isKeyword(key) && TokenStream.isJSIdentifier(key) && NodeUtil.isLatin(key)) { add(key); } else { double d = getSimpleNumber(key); if (!Double.isNaN(d)) { cc.addNumber(d); } else { addExpr(c, 1, Context.OTHER);"
+      },
+      {
+        "txt": "} } add(\":\"); addExpr(c.getFirstChild(), 1, Context.OTHER); } } add(\"}\"); if (needsParens) { add(\")\"); }"
+      },
+      {
+        "txt": "break; } case Token.SWITCH: add(\"switch(\"); add(first); add(\")\"); cc.beginBlock(); addAllSiblings(first.getNext()); cc.endBlock(context == Context.STATEMENT); break;"
+      },
+      {
+        "txt": "case Token.CASE: Preconditions.checkState(childCount == 2); add(\"case \"); add(first); addCaseBody(last); break; case Token.DEFAULT_CASE: Preconditions.checkState(childCount == 1); add(\"default\"); addCaseBody(first);"
+      },
+      {
+        "txt": "break; case Token.LABEL: Preconditions.checkState(childCount == 2); if (!first.isLabelName()) { throw new Error(\"Unexpected token type. Should be LABEL_NAME.\"); } add(first); add(\":\"); addNonEmptyStatement( last, getContextForNonEmptyExpression(context), true);"
+      },
+      {
+        "txt": "break; default: throw new Error(\"Unknown type \" + type + \"\\n\" + n.toStringTree()); } cc.endSourceMapping(n); } private void unrollBinaryOperator( Node n, int op, String opStr, Context context, Context rhsContext, int leftPrecedence, int rightPrecedence) { Node firstNonOperator = n.getFirstChild();"
+      },
+      {
+        "txt": "firstNonOperator = firstNonOperator.getFirstChild(); } addExpr(firstNonOperator, leftPrecedence, context); Node current = firstNonOperator; do { current = current.getParent(); <extra_id_0> addExpr(current.getFirstChild().getNext(), rightPrecedence, rhsContext); } while (current != n); } static boolean isSimpleNumber(String s) { int len = s.length(); for (int index = 0; index < len; index++) {"
+      },
+      {
+        "txt": "int len = s.length(); for (int index = 0; index < len; index++) { char c = s.charAt(index); if (c < '0' || c > '9') { return false; } } return len > 0 && s.charAt(0) != '0'; } static double getSimpleNumber(String s) {"
+      },
+      {
+        "txt": "if (isSimpleNumber(s)) { try { long l = Long.parseLong(s); if (l < NodeUtil.MAX_POSITIVE_INTEGER_NUMBER) { return l; } } catch (NumberFormatException e) { } } return Double.NaN;"
+      },
+      {
+        "txt": "} private boolean isIndirectEval(Node n) { return n.isName() && \"eval\".equals(n.getString()) && !n.getBooleanProp(Node.DIRECT_EVAL); } private void addNonEmptyStatement( Node n, Context context, boolean allowNonBlockChild) { Node nodeToProcess = n; if (!allowNonBlockChild && !n.isBlock()) { throw new Error(\"Missing BLOCK child.\");"
+      },
+      {
+        "txt": "} if (n.isBlock()) { int count = getNonEmptyChildCount(n, 2); if (count == 0) { if (cc.shouldPreserveExtraBlocks()) { cc.beginBlock(); cc.endBlock(cc.breakAfterBlockFor(n, context == Context.STATEMENT)); } else { cc.endStatement(true); }"
+      },
+      {
+        "txt": "return; } if (count == 1) { Node firstAndOnlyChild = getFirstNonEmptyChild(n); boolean alwaysWrapInBlock = cc.shouldPreserveExtraBlocks(); if (alwaysWrapInBlock || isOneExactlyFunctionOrDo(firstAndOnlyChild)) { cc.beginBlock(); add(firstAndOnlyChild, Context.STATEMENT); cc.maybeLineBreak(); cc.endBlock(cc.breakAfterBlockFor(n, context == Context.STATEMENT));"
+      },
+      {
+        "txt": "return; } else { nodeToProcess = firstAndOnlyChild; } } if (count > 1) { context = Context.PRESERVE_BLOCK; } } if (nodeToProcess.isEmpty()) {"
+      },
+      {
+        "txt": "cc.endStatement(true); } else { add(nodeToProcess, context); if (nodeToProcess.isVar()) { cc.endStatement(); } } } private boolean isOneExactlyFunctionOrDo(Node n) { if (n.isLabel()) {"
+      },
+      {
+        "txt": "Node labeledStatement = n.getLastChild(); if (!labeledStatement.isBlock()) { return isOneExactlyFunctionOrDo(labeledStatement); } else { if (getNonEmptyChildCount(n, 2) == 1) { return isOneExactlyFunctionOrDo(getFirstNonEmptyChild(n)); } else { return false; } }"
+      },
+      {
+        "txt": "} else { return (n.isFunction() || n.isDo()); } } private void addExpr(Node n, int minPrecedence, Context context) { if ((NodeUtil.precedence(n.getType()) < minPrecedence) || ((context == Context.IN_FOR_INIT_CLAUSE) && (n.isIn()))){ add(\"(\"); add(n, clearContextForNoInOperator(context));"
+      },
+      {
+        "txt": "add(\")\"); } else { add(n, context); } } void addList(Node firstInList) { addList(firstInList, true, Context.OTHER); } void addList(Node firstInList, boolean isArrayOrFunctionArgument) { addList(firstInList, isArrayOrFunctionArgument, Context.OTHER);"
+      },
+      {
+        "txt": "} void addList(Node firstInList, boolean isArrayOrFunctionArgument, Context lhsContext) { for (Node n = firstInList; n != null; n = n.getNext()) { boolean isFirst = n == firstInList; if (isFirst) { addExpr(n, isArrayOrFunctionArgument ? 1 : 0, lhsContext); } else { cc.listSeparator(); addExpr(n, isArrayOrFunctionArgument ? 1 : 0, Context.OTHER);"
+      },
+      {
+        "txt": "} } } void addArrayList(Node firstInList) { boolean lastWasEmpty = false; for (Node n = firstInList; n != null; n = n.getNext()) { if (n != firstInList) { cc.listSeparator(); } addExpr(n, 1, Context.OTHER);"
+      },
+      {
+        "txt": "lastWasEmpty = n.isEmpty(); } if (lastWasEmpty) { cc.listSeparator(); } } void addCaseBody(Node caseBody) { cc.beginCaseBody(); add(caseBody); cc.endCaseBody();"
+      },
+      {
+        "txt": "} void addAllSiblings(Node n) { for (Node c = n; c != null; c = c.getNext()) { add(c); } } private void addJsString(Node n) { String s = n.getString(); boolean useSlashV = n.getBooleanProp(Node.SLASH_V); if (useSlashV) {"
+      },
+      {
+        "txt": "add(jsString(n.getString(), useSlashV)); } else { String cached = ESCAPED_JS_STRINGS.get(s); if (cached == null) { cached = jsString(n.getString(), useSlashV); ESCAPED_JS_STRINGS.put(s, cached); } add(cached); } }"
+      },
+      {
+        "txt": "private String jsString(String s, boolean useSlashV) { int singleq = 0, doubleq = 0; for (int i = 0; i < s.length(); i++) { switch (s.charAt(i)) { case '\"': doubleq++; break; case '\\'': singleq++; break; } } String doublequote, singlequote; char quote;"
+      },
+      {
+        "txt": "if (singleq < doubleq) { quote = '\\''; doublequote = \"\\\"\"; singlequote = \"\\\\\\'\"; } else { quote = '\\\"'; doublequote = \"\\\\\\\"\"; singlequote = \"\\'\"; } return strEscape(s, quote, doublequote, singlequote, \"\\\\\\\\\","
+      },
+      {
+        "txt": "outputCharsetEncoder, useSlashV); } static String regexpEscape(String s, CharsetEncoder outputCharsetEncoder) { return strEscape(s, '/', \"\\\"\", \"'\", \"\\\\\", outputCharsetEncoder, false); } static String escapeToDoubleQuotedJsString(String s) { return strEscape(s, '\"', \"\\\\\\\"\", \"\\'\", \"\\\\\\\\\", null, false); } they want Latin/ASCII characters only. static String regexpEscape(String s) {"
+      },
+      {
+        "txt": "return regexpEscape(s, null); } private static String strEscape( String s, char quote, String doublequoteEscape, String singlequoteEscape, String backslashEscape, CharsetEncoder outputCharsetEncoder, boolean useSlashV) { StringBuilder sb = new StringBuilder(s.length() + 2);"
+      },
+      {
+        "txt": "sb.append(quote); for (int i = 0; i < s.length(); i++) { char c = s.charAt(i); switch (c) { case '\\0': sb.append(\"\\\\x00\"); break; case '\\u000B': if (useSlashV) { sb.append(\"\\\\v\"); } else { sb.append(\"\\\\x0B\");"
+      },
+      {
+        "txt": "} break; case '\\n': sb.append(\"\\\\n\"); break; case '\\r': sb.append(\"\\\\r\"); break; case '\\t': sb.append(\"\\\\t\"); break; case '\\\\': sb.append(backslashEscape); break; case '\\\"': sb.append(doublequoteEscape); break; case '\\'': sb.append(singlequoteEscape); break; case '>': // Break --> into --\\> or ]]> into ]]\\> if (i >= 2 &&"
+      },
+      {
+        "txt": "((s.charAt(i - 1) == '-' && s.charAt(i - 2) == '-') || (s.charAt(i - 1) == ']' && s.charAt(i - 2) == ']'))) { sb.append(\"\\\\>\"); } else { sb.append(c); } break; case '<': final String END_SCRIPT = \"/script\"; final String START_COMMENT = \"!--\";"
+      },
+      {
+        "txt": "if (s.regionMatches(true, i + 1, END_SCRIPT, 0, END_SCRIPT.length())) { sb.append(\"<\\\\\"); } else if (s.regionMatches(false, i + 1, START_COMMENT, 0, START_COMMENT.length())) { sb.append(\"<\\\\\"); } else { sb.append(c); } break;"
+      },
+      {
+        "txt": "default: if (outputCharsetEncoder != null) { if (outputCharsetEncoder.canEncode(c)) { sb.append(c); } else { appendHexJavaScriptRepresentation(sb, c); } } else { if (c > 0x1f && c < 0x7f) { sb.append(c);"
+      },
+      {
+        "txt": "} else { appendHexJavaScriptRepresentation(sb, c); } } } } sb.append(quote); return sb.toString(); } static String identifierEscape(String s) {"
+      },
+      {
+        "txt": "if (NodeUtil.isLatin(s)) { return s; } StringBuilder sb = new StringBuilder(); for (int i = 0; i < s.length(); i++) { char c = s.charAt(i); if (c > 0x1F && c < 0x7F) { sb.append(c); } else { appendHexJavaScriptRepresentation(sb, c);"
+      },
+      {
+        "txt": "} } return sb.toString(); } private static int getNonEmptyChildCount(Node n, int maxCount) { int i = 0; Node c = n.getFirstChild(); for (; c != null && i < maxCount; c = c.getNext()) { if (c.isBlock()) { i += getNonEmptyChildCount(c, maxCount-i);"
+      },
+      {
+        "txt": "} else if (!c.isEmpty()) { i++; } } return i; } private static Node getFirstNonEmptyChild(Node n) { for (Node c = n.getFirstChild(); c != null; c = c.getNext()) { if (c.isBlock()) { Node result = getFirstNonEmptyChild(c);"
+      },
+      {
+        "txt": "if (result != null) { return result; } } else if (!c.isEmpty()) { return c; } } return null; } enum Context {"
+      },
+      {
+        "txt": "STATEMENT, BEFORE_DANGLING_ELSE, // a hack to resolve the else-clause ambiguity START_OF_EXPR, PRESERVE_BLOCK, IN_FOR_INIT_CLAUSE, OTHER } private Context getContextForNonEmptyExpression(Context currentContext) { return currentContext == Context.BEFORE_DANGLING_ELSE ? Context.BEFORE_DANGLING_ELSE : Context.OTHER;"
+      },
+      {
+        "txt": "} private Context getContextForNoInOperator(Context context) { return (context == Context.IN_FOR_INIT_CLAUSE ? Context.IN_FOR_INIT_CLAUSE : Context.OTHER); } private Context clearContextForNoInOperator(Context context) { return (context == Context.IN_FOR_INIT_CLAUSE ? Context.OTHER : context); } private static void appendHexJavaScriptRepresentation("
+      },
+      {
+        "txt": "StringBuilder sb, char c) { try { appendHexJavaScriptRepresentation(c, sb); } catch (IOException ex) { throw new RuntimeException(ex); } } private static void appendHexJavaScriptRepresentation( int codePoint, Appendable out) throws IOException {"
+      },
+      {
+        "txt": "if (Character.isSupplementaryCodePoint(codePoint)) { char[] surrogates = Character.toChars(codePoint); appendHexJavaScriptRepresentation(surrogates[0], out); appendHexJavaScriptRepresentation(surrogates[1], out); return; } out.append(\"\\\\u\") .append(HEX_CHARS[(codePoint >>> 12) & 0xf]) .append(HEX_CHARS[(codePoint >>> 8) & 0xf]) .append(HEX_CHARS[(codePoint >>> 4) & 0xf])"
+      },
+      {
+        "txt": ".append(HEX_CHARS[codePoint & 0xf]); }"
+      }
+    ]
+  },
+  {
+    "id": 278,
+    "file_path": "src/com/google/javascript/jscomp/CodePrinter.java",
+    "start-bug-line": 334,
+    "end-bug-line": 334,
+    "bug": "if (getLastChar() != ' ') {",
+    "fix": "if (getLastChar() != ' ' && op.charAt(0) != ',') {",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.google.javascript.jscomp; import com.google.common.base.Preconditions; import com.google.debugging.sourcemap.FilePosition; import com.google.javascript.rhino.Node; import com.google.javascript.rhino.Token; import java.nio.charset.Charset;"
+      },
+      {
+        "txt": "import java.util.ArrayDeque; import java.util.ArrayList; import java.util.Deque; import java.util.List; class CodePrinter { static final int DEFAULT_LINE_LENGTH_THRESHOLD = 500; private abstract static class MappedCodePrinter extends CodeConsumer { final private Deque<Mapping> mappings; final private List<Mapping> allMappings; final private boolean createSrcMap;"
+      },
+      {
+        "txt": "final private SourceMap.DetailLevel sourceMapDetailLevel; protected final StringBuilder code = new StringBuilder(1024); protected final int lineLengthThreshold; protected int lineLength = 0; protected int lineIndex = 0; MappedCodePrinter( int lineLengthThreshold, boolean createSrcMap, SourceMap.DetailLevel sourceMapDetailLevel) { Preconditions.checkState(sourceMapDetailLevel != null);"
+      },
+      {
+        "txt": "this.lineLengthThreshold = lineLengthThreshold <= 0 ? Integer.MAX_VALUE : lineLengthThreshold; this.createSrcMap = createSrcMap; this.sourceMapDetailLevel = sourceMapDetailLevel; this.mappings = createSrcMap ? new ArrayDeque<Mapping>() : null; this.allMappings = createSrcMap ? new ArrayList<Mapping>() : null; } private static class Mapping { Node node; FilePosition start;"
+      },
+      {
+        "txt": "FilePosition end; } @Override void startSourceMapping(Node node) { Preconditions.checkState(sourceMapDetailLevel != null); Preconditions.checkState(node != null); if (createSrcMap && node.getSourceFileName() != null && node.getLineno() > 0 && sourceMapDetailLevel.apply(node)) {"
+      },
+      {
+        "txt": "int line = getCurrentLineIndex(); int index = getCurrentCharIndex(); Preconditions.checkState(line >= 0); Mapping mapping = new Mapping(); mapping.node = node; mapping.start = new FilePosition(line, index); mappings.push(mapping); allMappings.add(mapping); } }"
+      },
+      {
+        "txt": "@Override void endSourceMapping(Node node) { if (createSrcMap && !mappings.isEmpty() && mappings.peek().node == node) { Mapping mapping = mappings.pop(); int line = getCurrentLineIndex(); int index = getCurrentCharIndex(); Preconditions.checkState(line >= 0); mapping.end = new FilePosition(line, index); } }"
+      },
+      {
+        "txt": "void generateSourceMap(SourceMap map){ if (createSrcMap) { for (Mapping mapping : allMappings) { map.addMapping(mapping.node, mapping.start, mapping.end); } } } void reportLineCut(int lineIndex, int charIndex, boolean insertion) { if (createSrcMap) { for (Mapping mapping : allMappings) {"
+      },
+      {
+        "txt": "mapping.start = convertPosition(mapping.start, lineIndex, charIndex, insertion); if (mapping.end != null) { mapping.end = convertPosition(mapping.end, lineIndex, charIndex, insertion); } } } } private FilePosition convertPosition(FilePosition position, int lineIndex,"
+      },
+      {
+        "txt": "int characterPosition, boolean insertion) { int originalLine = position.getLine(); int originalChar = position.getColumn(); if (insertion) { if (originalLine == lineIndex && originalChar >= characterPosition) { return new FilePosition( originalLine + 1, originalChar - characterPosition); } else { return position; }"
+      },
+      {
+        "txt": "} else { if (originalLine == lineIndex) { return new FilePosition( originalLine - 1, originalChar + characterPosition); } else if (originalLine > lineIndex) { throw new IllegalStateException( \"Cannot undo line cut on a previous line.\"); } else { return position; }"
+      },
+      {
+        "txt": "} } public String getCode() { return code.toString(); } @Override char getLastChar() { return (code.length() > 0) ? code.charAt(code.length() - 1) : '\\0'; } protected final int getCurrentCharIndex() {"
+      },
+      {
+        "txt": "return lineLength; } protected final int getCurrentLineIndex() { return lineIndex; } } static class PrettyCodePrinter extends MappedCodePrinter { static final String INDENT = \" \"; private int indent = 0;"
+      },
+      {
+        "txt": "private PrettyCodePrinter( int lineLengthThreshold, boolean createSourceMap, SourceMap.DetailLevel sourceMapDetailLevel) { super(lineLengthThreshold, createSourceMap, sourceMapDetailLevel); } @Override void append(String str) { if (lineLength == 0) { for (int i = 0; i < indent; i++) {"
+      },
+      {
+        "txt": "code.append(INDENT); lineLength += INDENT.length(); } } code.append(str); lineLength += str.length(); } @Override void startNewLine() { if (lineLength > 0) {"
+      },
+      {
+        "txt": "code.append('\\n'); lineIndex++; lineLength = 0; } } @Override void maybeLineBreak() { maybeCutLine(); } @Override"
+      },
+      {
+        "txt": "void maybeCutLine() { if (lineLength > lineLengthThreshold) { startNewLine(); } } @Override void endLine() { startNewLine(); } @Override"
+      },
+      {
+        "txt": "void appendBlockStart() { append(\" {\"); indent++; } @Override void appendBlockEnd() { endLine(); indent--; append(\"}\"); }"
+      },
+      {
+        "txt": "@Override void listSeparator() { add(\", \"); maybeLineBreak(); } @Override void endFunction(boolean statementContext) { super.endFunction(statementContext); if (statementContext) { startNewLine();"
+      },
+      {
+        "txt": "} } @Override void beginCaseBody() { super.beginCaseBody(); indent++; endLine(); } @Override void endCaseBody() {"
+      },
+      {
+        "txt": "indent--; endStatement(); } @Override void appendOp(String op, boolean binOp) { if (binOp) { <extra_id_0> append(\" \"); } append(op); append(\" \"); } else { append(op);"
+      },
+      {
+        "txt": "} else { append(op); } } @Override boolean shouldPreserveExtraBlocks() { return true; } private Node getTryForCatch(Node n) { return n.getParent().getParent();"
+      },
+      {
+        "txt": "} @Override boolean breakAfterBlockFor(Node n, boolean isStatementContext) { Preconditions.checkState(n.isBlock()); Node parent = n.getParent(); if (parent != null) { int type = parent.getType(); switch (type) { case Token.DO: return false;"
+      },
+      {
+        "txt": "case Token.FUNCTION: return false; case Token.TRY: return n != parent.getFirstChild(); case Token.CATCH: return !NodeUtil.hasFinally(getTryForCatch(parent)); case Token.IF: return n == parent.getLastChild(); } }"
+      },
+      {
+        "txt": "return true; } @Override void endFile() { maybeEndStatement(); } } static class CompactCodePrinter extends MappedCodePrinter { private final boolean lineBreak;"
+      },
+      {
+        "txt": "private final boolean preferLineBreakAtEndOfFile; private int lineStartPosition = 0; private int preferredBreakPosition = 0; private int prevCutPosition = 0; private int prevLineStartPosition = 0; private CompactCodePrinter(boolean lineBreak, boolean preferLineBreakAtEndOfFile, int lineLengthThreshold, boolean createSrcMap, SourceMap.DetailLevel sourceMapDetailLevel) { super(lineLengthThreshold, createSrcMap, sourceMapDetailLevel); this.lineBreak = lineBreak;"
+      },
+      {
+        "txt": "this.preferLineBreakAtEndOfFile = preferLineBreakAtEndOfFile; } @Override void append(String str) { code.append(str); lineLength += str.length(); } @Override void startNewLine() { if (lineLength > 0) {"
+      },
+      {
+        "txt": "prevCutPosition = code.length(); prevLineStartPosition = lineStartPosition; code.append('\\n'); lineLength = 0; lineIndex++; lineStartPosition = code.length(); } } @Override void maybeLineBreak() {"
+      },
+      {
+        "txt": "if (lineBreak) { if (sawFunction) { startNewLine(); sawFunction = false; } } int len = code.length(); if (preferredBreakPosition == len - 1) { char ch = code.charAt(len - 1); if (ch == ';') {"
+      },
+      {
+        "txt": "preferredBreakPosition = len; } } maybeCutLine(); } @Override void maybeCutLine() { if (lineLength > lineLengthThreshold) { if (preferredBreakPosition > lineStartPosition && preferredBreakPosition < lineStartPosition + lineLength) {"
+      },
+      {
+        "txt": "int position = preferredBreakPosition; code.insert(position, '\\n'); prevCutPosition = position; reportLineCut(lineIndex, position - lineStartPosition, true); lineIndex++; lineLength -= (position - lineStartPosition); lineStartPosition = position + 1; } else { startNewLine(); }"
+      },
+      {
+        "txt": "} } @Override void notePreferredLineBreak() { preferredBreakPosition = code.length(); } @Override void endFile() { super.endFile(); if (!preferLineBreakAtEndOfFile) {"
+      },
+      {
+        "txt": "return; } if (lineLength > lineLengthThreshold / 2) { append(\";\"); startNewLine(); } else if (prevCutPosition > 0) { code.setCharAt(prevCutPosition, ' '); lineStartPosition = prevLineStartPosition; lineLength = code.length() - lineStartPosition; reportLineCut(lineIndex, prevCutPosition + 1, false);"
+      },
+      {
+        "txt": "lineIndex--; prevCutPosition = 0; prevLineStartPosition = 0; append(\";\"); startNewLine(); } else { } } } static class Builder {"
+      },
+      {
+        "txt": "private final Node root; private boolean prettyPrint = false; private boolean lineBreak = false; private boolean preferLineBreakAtEndOfFile = false; private boolean outputTypes = false; private int lineLengthThreshold = DEFAULT_LINE_LENGTH_THRESHOLD; private SourceMap sourceMap = null; private SourceMap.DetailLevel sourceMapDetailLevel = SourceMap.DetailLevel.ALL; private Charset outputCharset = null;"
+      },
+      {
+        "txt": "private boolean tagAsStrict; Builder(Node node) { root = node; } Builder setPrettyPrint(boolean prettyPrint) { this.prettyPrint = prettyPrint; return this; } Builder setLineBreak(boolean lineBreak) { this.lineBreak = lineBreak;"
+      },
+      {
+        "txt": "return this; } Builder setPreferLineBreakAtEndOfFile(boolean lineBreakAtEnd) { this.preferLineBreakAtEndOfFile = lineBreakAtEnd; return this; } Builder setOutputTypes(boolean outputTypes) { this.outputTypes = outputTypes; return this; }"
+      },
+      {
+        "txt": "Builder setLineLengthThreshold(int threshold) { this.lineLengthThreshold = threshold; return this; } Builder setSourceMap(SourceMap sourceMap) { this.sourceMap = sourceMap; return this; } Builder setSourceMapDetailLevel(SourceMap.DetailLevel level) { Preconditions.checkState(level != null);"
+      },
+      {
+        "txt": "this.sourceMapDetailLevel = level; return this; } Builder setOutputCharset(Charset outCharset) { this.outputCharset = outCharset; return this; } Builder setTagAsStrict(boolean tagAsStrict) { this.tagAsStrict = tagAsStrict; return this;"
+      },
+      {
+        "txt": "} String build() { if (root == null) { throw new IllegalStateException( \"Cannot build without root node being specified\"); } Format outputFormat = outputTypes ? Format.TYPED : prettyPrint ? Format.PRETTY"
+      },
+      {
+        "txt": ": Format.COMPACT; return toSource(root, outputFormat, lineBreak, preferLineBreakAtEndOfFile, lineLengthThreshold, sourceMap, sourceMapDetailLevel, outputCharset, tagAsStrict); } } enum Format { COMPACT, PRETTY, TYPED"
+      },
+      {
+        "txt": "} private static String toSource(Node root, Format outputFormat, boolean lineBreak, boolean preferEndOfFileBreak, int lineLengthThreshold, SourceMap sourceMap, SourceMap.DetailLevel sourceMapDetailLevel, Charset outputCharset, boolean tagAsStrict) { Preconditions.checkState(sourceMapDetailLevel != null); boolean createSourceMap = (sourceMap != null);"
+      },
+      {
+        "txt": "MappedCodePrinter mcp = outputFormat == Format.COMPACT ? new CompactCodePrinter( lineBreak, preferEndOfFileBreak, lineLengthThreshold, createSourceMap, sourceMapDetailLevel) : new PrettyCodePrinter( lineLengthThreshold, createSourceMap, sourceMapDetailLevel); CodeGenerator cg = outputFormat == Format.TYPED ? new TypedCodeGenerator(mcp, outputCharset)"
+      },
+      {
+        "txt": ": new CodeGenerator(mcp, outputCharset); if (tagAsStrict) { cg.tagAsStrict(); } cg.add(root); mcp.endFile(); String code = mcp.getCode(); if (createSourceMap) { mcp.generateSourceMap(sourceMap); }"
+      },
+      {
+        "txt": "return code; }"
+      }
+    ]
+  }
+]

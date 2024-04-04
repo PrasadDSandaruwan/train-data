@@ -1,0 +1,335 @@
+[
+  {
+    "id": 101,
+    "file_path": "src/java/org/apache/commons/cli2/option/GroupImpl.java",
+    "start-bug-line": 250,
+    "end-bug-line": 252,
+    "bug": "if (validate) { option.validate(commandLine); }",
+    "fix": "[Delete]",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.cli2.option; import java.util.ArrayList; import java.util.Collection; import java.util.Collections; import java.util.Comparator; import java.util.HashSet; import java.util.Iterator; import java.util.List; import java.util.ListIterator;"
+      },
+      {
+        "txt": "import java.util.Map; import java.util.Set; import java.util.SortedMap; import java.util.TreeMap; import org.apache.commons.cli2.Argument; import org.apache.commons.cli2.DisplaySetting; import org.apache.commons.cli2.Group; import org.apache.commons.cli2.HelpLine; import org.apache.commons.cli2.Option; import org.apache.commons.cli2.OptionException;"
+      },
+      {
+        "txt": "import org.apache.commons.cli2.WriteableCommandLine; import org.apache.commons.cli2.resource.ResourceConstants; public class GroupImpl extends OptionImpl implements Group { private final String name; private final String description; private final List options; private final int minimum; private final int maximum; private final List anonymous;"
+      },
+      {
+        "txt": "private final SortedMap optionMap; private final Set prefixes; public GroupImpl(final List options, final String name, final String description, final int minimum, final int maximum) { super(0, false); this.name = name; this.description = description;"
+      },
+      {
+        "txt": "this.minimum = minimum; this.maximum = maximum; this.options = Collections.unmodifiableList(options); final List newAnonymous = new ArrayList(); final SortedMap newOptionMap = new TreeMap(ReverseStringComparator.getInstance()); final Set newPrefixes = new HashSet(); for (final Iterator i = options.iterator(); i.hasNext();) { final Option option = (Option) i.next(); if (option instanceof Argument) { i.remove();"
+      },
+      {
+        "txt": "newAnonymous.add(option); } else { final Set triggers = option.getTriggers(); for (Iterator j = triggers.iterator(); j.hasNext();) { newOptionMap.put(j.next(), option); } newPrefixes.addAll(option.getPrefixes()); } } this.anonymous = Collections.unmodifiableList(newAnonymous);"
+      },
+      {
+        "txt": "this.optionMap = Collections.unmodifiableSortedMap(newOptionMap); this.prefixes = Collections.unmodifiableSet(newPrefixes); } public boolean canProcess(final WriteableCommandLine commandLine, final String arg) { if (arg == null) { return false; } if (optionMap.containsKey(arg)) { return true;"
+      },
+      {
+        "txt": "} final Map tailMap = optionMap.tailMap(arg); for (final Iterator iter = tailMap.values().iterator(); iter.hasNext();) { final Option option = (Option) iter.next(); if (option.canProcess(commandLine, arg)) { return true; } } if (commandLine.looksLikeOption(arg)) { return false;"
+      },
+      {
+        "txt": "} if (anonymous.size() > 0) { return true; } return false; } public Set getPrefixes() { return prefixes; } public Set getTriggers() {"
+      },
+      {
+        "txt": "return optionMap.keySet(); } public void process(final WriteableCommandLine commandLine, final ListIterator arguments) throws OptionException { String previous = null; while (arguments.hasNext()) { final String arg = (String) arguments.next(); if (arg == previous) { arguments.previous();"
+      },
+      {
+        "txt": "break; } previous = arg; final Option opt = (Option) optionMap.get(arg); if (opt != null) { arguments.previous(); opt.process(commandLine, arguments); } else { if (commandLine.looksLikeOption(arg)) {"
+      },
+      {
+        "txt": "final Collection values = optionMap.tailMap(arg).values(); boolean foundMemberOption = false; for (Iterator i = values.iterator(); i.hasNext() && !foundMemberOption;) { final Option option = (Option) i.next(); if (option.canProcess(commandLine, arg)) { foundMemberOption = true; arguments.previous(); option.process(commandLine, arguments); } }"
+      },
+      {
+        "txt": "if (!foundMemberOption) { arguments.previous(); return; } } // [END argument may be anonymous else { arguments.previous(); if (anonymous.isEmpty()) { break; }"
+      },
+      {
+        "txt": "for (final Iterator i = anonymous.iterator(); i.hasNext();) { final Argument argument = (Argument) i.next(); if (argument.canProcess(commandLine, arguments)) { argument.process(commandLine, arguments); } } } // [END argument is NOT anonymous } // [END option NOT found } // [END process each command line token }"
+      },
+      {
+        "txt": "throws OptionException { int present = 0; Option unexpected = null; for (final Iterator i = options.iterator(); i.hasNext();) { final Option option = (Option) i.next(); boolean validate = option.isRequired() || option instanceof Group; <extra_id_0> if (commandLine.hasOption(option)) { if (++present > maximum) { unexpected = option; break; } option.validate(commandLine);"
+      },
+      {
+        "txt": "} option.validate(commandLine); } } if (unexpected != null) { throw new OptionException(this, ResourceConstants.UNEXPECTED_TOKEN, unexpected.getPreferredName()); } if (present < minimum) { throw new OptionException(this, ResourceConstants.MISSING_OPTION);"
+      },
+      {
+        "txt": "} for (final Iterator i = anonymous.iterator(); i.hasNext();) { final Option option = (Option) i.next(); option.validate(commandLine); } } public String getPreferredName() { return name; } public String getDescription() {"
+      },
+      {
+        "txt": "return description; } public void appendUsage(final StringBuffer buffer, final Set helpSettings, final Comparator comp) { appendUsage(buffer, helpSettings, comp, \"|\"); } public void appendUsage(final StringBuffer buffer, final Set helpSettings, final Comparator comp,"
+      },
+      {
+        "txt": "final String separator) { final Set helpSettingsCopy = new HashSet(helpSettings); final boolean optional = (minimum == 0) && helpSettingsCopy.contains(DisplaySetting.DISPLAY_OPTIONAL); final boolean expanded = (name == null) || helpSettingsCopy.contains(DisplaySetting.DISPLAY_GROUP_EXPANDED); final boolean named = !expanded || ((name != null) && helpSettingsCopy.contains(DisplaySetting.DISPLAY_GROUP_NAME)); final boolean arguments = helpSettingsCopy.contains(DisplaySetting.DISPLAY_GROUP_ARGUMENT);"
+      },
+      {
+        "txt": "final boolean outer = helpSettingsCopy.contains(DisplaySetting.DISPLAY_GROUP_OUTER); helpSettingsCopy.remove(DisplaySetting.DISPLAY_GROUP_OUTER); final boolean both = named && expanded; if (optional) { buffer.append('['); } if (named) { buffer.append(name); } if (both) {"
+      },
+      {
+        "txt": "buffer.append(\" (\"); } if (expanded) { final Set childSettings; if (!helpSettingsCopy.contains(DisplaySetting.DISPLAY_GROUP_EXPANDED)) { childSettings = DisplaySetting.NONE; } else { childSettings = new HashSet(helpSettingsCopy); childSettings.remove(DisplaySetting.DISPLAY_OPTIONAL); }"
+      },
+      {
+        "txt": "final List list; if (comp == null) { list = options; } else { list = new ArrayList(options); Collections.sort(list, comp); } for (final Iterator i = list.iterator(); i.hasNext();) { final Option option = (Option) i.next(); option.appendUsage(buffer, childSettings, comp);"
+      },
+      {
+        "txt": "if (i.hasNext()) { buffer.append(separator); } } } if (both) { buffer.append(')'); } if (optional && outer) { buffer.append(']');"
+      },
+      {
+        "txt": "} if (arguments) { for (final Iterator i = anonymous.iterator(); i.hasNext();) { buffer.append(' '); final Option option = (Option) i.next(); option.appendUsage(buffer, helpSettingsCopy, comp); } } if (optional && !outer) { buffer.append(']');"
+      },
+      {
+        "txt": "} } public List helpLines(final int depth, final Set helpSettings, final Comparator comp) { final List helpLines = new ArrayList(); if (helpSettings.contains(DisplaySetting.DISPLAY_GROUP_NAME)) { final HelpLine helpLine = new HelpLineImpl(this, depth); helpLines.add(helpLine); }"
+      },
+      {
+        "txt": "if (helpSettings.contains(DisplaySetting.DISPLAY_GROUP_EXPANDED)) { final List list; if (comp == null) { list = options; } else { list = new ArrayList(options); Collections.sort(list, comp); } for (final Iterator i = list.iterator(); i.hasNext();) { final Option option = (Option) i.next();"
+      },
+      {
+        "txt": "helpLines.addAll(option.helpLines(depth + 1, helpSettings, comp)); } } if (helpSettings.contains(DisplaySetting.DISPLAY_GROUP_ARGUMENT)) { for (final Iterator i = anonymous.iterator(); i.hasNext();) { final Option option = (Option) i.next(); helpLines.addAll(option.helpLines(depth + 1, helpSettings, comp)); } } return helpLines;"
+      },
+      {
+        "txt": "} public List getOptions() { return options; } public List getAnonymous() { return anonymous; } public Option findOption(final String trigger) { final Iterator i = getOptions().iterator(); while (i.hasNext()) {"
+      },
+      {
+        "txt": "final Option option = (Option) i.next(); final Option found = option.findOption(trigger); if (found != null) { return found; } } return null; } public int getMinimum() { return minimum;"
+      },
+      {
+        "txt": "} public int getMaximum() { return maximum; } public boolean isRequired() { return getMinimum() > 0; } public void defaults(final WriteableCommandLine commandLine) { super.defaults(commandLine); for (final Iterator i = options.iterator(); i.hasNext();) {"
+      },
+      {
+        "txt": "final Option option = (Option) i.next(); option.defaults(commandLine); } for (final Iterator i = anonymous.iterator(); i.hasNext();) { final Option option = (Option) i.next(); option.defaults(commandLine); } } } class ReverseStringComparator implements Comparator {"
+      },
+      {
+        "txt": "private static final Comparator instance = new ReverseStringComparator(); private ReverseStringComparator() { } public static final Comparator getInstance() { return instance; } public int compare(final Object o1, final Object o2) { final String s1 = (String) o1; final String s2 = (String) o2;"
+      },
+      {
+        "txt": "return -s1.compareTo(s2); }"
+      }
+    ]
+  },
+  {
+    "id": 102,
+    "file_path": "src/java/org/apache/commons/cli2/option/GroupImpl.java",
+    "start-bug-line": 261,
+    "end-bug-line": 261,
+    "bug": "",
+    "fix": "validate = true; }",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.cli2.option; import java.util.ArrayList; import java.util.Collection; import java.util.Collections; import java.util.Comparator; import java.util.HashSet; import java.util.Iterator;"
+      },
+      {
+        "txt": "import java.util.List; import java.util.ListIterator; import java.util.Map; import java.util.Set; import java.util.SortedMap; import java.util.TreeMap; import org.apache.commons.cli2.Argument; import org.apache.commons.cli2.DisplaySetting; import org.apache.commons.cli2.Group; import org.apache.commons.cli2.HelpLine;"
+      },
+      {
+        "txt": "import org.apache.commons.cli2.Option; import org.apache.commons.cli2.OptionException; import org.apache.commons.cli2.WriteableCommandLine; import org.apache.commons.cli2.resource.ResourceConstants; public class GroupImpl extends OptionImpl implements Group { private final String name; private final String description; private final List options; private final int minimum;"
+      },
+      {
+        "txt": "private final int maximum; private final List anonymous; private final SortedMap optionMap; private final Set prefixes; public GroupImpl(final List options, final String name, final String description, final int minimum, final int maximum) { super(0, false);"
+      },
+      {
+        "txt": "this.name = name; this.description = description; this.minimum = minimum; this.maximum = maximum; this.options = Collections.unmodifiableList(options); final List newAnonymous = new ArrayList(); final SortedMap newOptionMap = new TreeMap(ReverseStringComparator.getInstance()); final Set newPrefixes = new HashSet(); for (final Iterator i = options.iterator(); i.hasNext();) { final Option option = (Option) i.next();"
+      },
+      {
+        "txt": "if (option instanceof Argument) { i.remove(); newAnonymous.add(option); } else { final Set triggers = option.getTriggers(); for (Iterator j = triggers.iterator(); j.hasNext();) { newOptionMap.put(j.next(), option); } newPrefixes.addAll(option.getPrefixes()); }"
+      },
+      {
+        "txt": "} this.anonymous = Collections.unmodifiableList(newAnonymous); this.optionMap = Collections.unmodifiableSortedMap(newOptionMap); this.prefixes = Collections.unmodifiableSet(newPrefixes); } public boolean canProcess(final WriteableCommandLine commandLine, final String arg) { if (arg == null) { return false; }"
+      },
+      {
+        "txt": "if (optionMap.containsKey(arg)) { return true; } final Map tailMap = optionMap.tailMap(arg); for (final Iterator iter = tailMap.values().iterator(); iter.hasNext();) { final Option option = (Option) iter.next(); if (option.canProcess(commandLine, arg)) { return true; } }"
+      },
+      {
+        "txt": "if (commandLine.looksLikeOption(arg)) { return false; } if (anonymous.size() > 0) { return true; } return false; } public Set getPrefixes() { return prefixes;"
+      },
+      {
+        "txt": "} public Set getTriggers() { return optionMap.keySet(); } public void process(final WriteableCommandLine commandLine, final ListIterator arguments) throws OptionException { String previous = null; while (arguments.hasNext()) { final String arg = (String) arguments.next();"
+      },
+      {
+        "txt": "if (arg == previous) { arguments.previous(); break; } previous = arg; final Option opt = (Option) optionMap.get(arg); if (opt != null) { arguments.previous(); opt.process(commandLine, arguments); }"
+      },
+      {
+        "txt": "else { if (commandLine.looksLikeOption(arg)) { final Collection values = optionMap.tailMap(arg).values(); boolean foundMemberOption = false; for (Iterator i = values.iterator(); i.hasNext() && !foundMemberOption;) { final Option option = (Option) i.next(); if (option.canProcess(commandLine, arg)) { foundMemberOption = true; arguments.previous(); option.process(commandLine, arguments);"
+      },
+      {
+        "txt": "} } if (!foundMemberOption) { arguments.previous(); return; } } // [END argument may be anonymous else { arguments.previous(); if (anonymous.isEmpty()) {"
+      },
+      {
+        "txt": "break; } for (final Iterator i = anonymous.iterator(); i.hasNext();) { final Argument argument = (Argument) i.next(); if (argument.canProcess(commandLine, arguments)) { argument.process(commandLine, arguments); } } } // [END argument is NOT anonymous } // [END option NOT found"
+      },
+      {
+        "txt": "} // [END process each command line token } public void validate(final WriteableCommandLine commandLine) throws OptionException { int present = 0; Option unexpected = null; for (final Iterator i = options.iterator(); i.hasNext();) { final Option option = (Option) i.next(); boolean validate = option.isRequired() || option instanceof Group; if (validate) {"
+      },
+      {
+        "txt": "} if (commandLine.hasOption(option)) { if (++present > maximum) { unexpected = option; break; } <extra_id_0> option.validate(commandLine); } } if (unexpected != null) { throw new OptionException(this, ResourceConstants.UNEXPECTED_TOKEN, unexpected.getPreferredName());"
+      },
+      {
+        "txt": "throw new OptionException(this, ResourceConstants.UNEXPECTED_TOKEN, unexpected.getPreferredName()); } if (present < minimum) { throw new OptionException(this, ResourceConstants.MISSING_OPTION); } for (final Iterator i = anonymous.iterator(); i.hasNext();) { final Option option = (Option) i.next(); option.validate(commandLine); }"
+      },
+      {
+        "txt": "} public String getPreferredName() { return name; } public String getDescription() { return description; } public void appendUsage(final StringBuffer buffer, final Set helpSettings, final Comparator comp) {"
+      },
+      {
+        "txt": "appendUsage(buffer, helpSettings, comp, \"|\"); } public void appendUsage(final StringBuffer buffer, final Set helpSettings, final Comparator comp, final String separator) { final Set helpSettingsCopy = new HashSet(helpSettings); final boolean optional = (minimum == 0) && helpSettingsCopy.contains(DisplaySetting.DISPLAY_OPTIONAL); final boolean expanded ="
+      },
+      {
+        "txt": "(name == null) || helpSettingsCopy.contains(DisplaySetting.DISPLAY_GROUP_EXPANDED); final boolean named = !expanded || ((name != null) && helpSettingsCopy.contains(DisplaySetting.DISPLAY_GROUP_NAME)); final boolean arguments = helpSettingsCopy.contains(DisplaySetting.DISPLAY_GROUP_ARGUMENT); final boolean outer = helpSettingsCopy.contains(DisplaySetting.DISPLAY_GROUP_OUTER); helpSettingsCopy.remove(DisplaySetting.DISPLAY_GROUP_OUTER); final boolean both = named && expanded; if (optional) { buffer.append('[');"
+      },
+      {
+        "txt": "} if (named) { buffer.append(name); } if (both) { buffer.append(\" (\"); } if (expanded) { final Set childSettings; if (!helpSettingsCopy.contains(DisplaySetting.DISPLAY_GROUP_EXPANDED)) {"
+      },
+      {
+        "txt": "childSettings = DisplaySetting.NONE; } else { childSettings = new HashSet(helpSettingsCopy); childSettings.remove(DisplaySetting.DISPLAY_OPTIONAL); } final List list; if (comp == null) { list = options; } else { list = new ArrayList(options);"
+      },
+      {
+        "txt": "Collections.sort(list, comp); } for (final Iterator i = list.iterator(); i.hasNext();) { final Option option = (Option) i.next(); option.appendUsage(buffer, childSettings, comp); if (i.hasNext()) { buffer.append(separator); } } }"
+      },
+      {
+        "txt": "if (both) { buffer.append(')'); } if (optional && outer) { buffer.append(']'); } if (arguments) { for (final Iterator i = anonymous.iterator(); i.hasNext();) { buffer.append(' '); final Option option = (Option) i.next();"
+      },
+      {
+        "txt": "option.appendUsage(buffer, helpSettingsCopy, comp); } } if (optional && !outer) { buffer.append(']'); } } public List helpLines(final int depth, final Set helpSettings, final Comparator comp) {"
+      },
+      {
+        "txt": "final List helpLines = new ArrayList(); if (helpSettings.contains(DisplaySetting.DISPLAY_GROUP_NAME)) { final HelpLine helpLine = new HelpLineImpl(this, depth); helpLines.add(helpLine); } if (helpSettings.contains(DisplaySetting.DISPLAY_GROUP_EXPANDED)) { final List list; if (comp == null) { list = options; } else {"
+      },
+      {
+        "txt": "list = new ArrayList(options); Collections.sort(list, comp); } for (final Iterator i = list.iterator(); i.hasNext();) { final Option option = (Option) i.next(); helpLines.addAll(option.helpLines(depth + 1, helpSettings, comp)); } } if (helpSettings.contains(DisplaySetting.DISPLAY_GROUP_ARGUMENT)) { for (final Iterator i = anonymous.iterator(); i.hasNext();) {"
+      },
+      {
+        "txt": "final Option option = (Option) i.next(); helpLines.addAll(option.helpLines(depth + 1, helpSettings, comp)); } } return helpLines; } public List getOptions() { return options; } public List getAnonymous() {"
+      },
+      {
+        "txt": "return anonymous; } public Option findOption(final String trigger) { final Iterator i = getOptions().iterator(); while (i.hasNext()) { final Option option = (Option) i.next(); final Option found = option.findOption(trigger); if (found != null) { return found; }"
+      },
+      {
+        "txt": "} return null; } public int getMinimum() { return minimum; } public int getMaximum() { return maximum; } public boolean isRequired() {"
+      },
+      {
+        "txt": "return getMinimum() > 0; } public void defaults(final WriteableCommandLine commandLine) { super.defaults(commandLine); for (final Iterator i = options.iterator(); i.hasNext();) { final Option option = (Option) i.next(); option.defaults(commandLine); } for (final Iterator i = anonymous.iterator(); i.hasNext();) { final Option option = (Option) i.next();"
+      },
+      {
+        "txt": "option.defaults(commandLine); } } } class ReverseStringComparator implements Comparator { private static final Comparator instance = new ReverseStringComparator(); private ReverseStringComparator() { } public static final Comparator getInstance() { return instance;"
+      },
+      {
+        "txt": "} public int compare(final Object o1, final Object o2) { final String s1 = (String) o1; final String s2 = (String) o2; return -s1.compareTo(s2); }"
+      }
+    ]
+  },
+  {
+    "id": 103,
+    "file_path": "src/java/org/apache/commons/cli2/option/GroupImpl.java",
+    "start-bug-line": 262,
+    "end-bug-line": 262,
+    "bug": "",
+    "fix": "if (validate) {",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.cli2.option; import java.util.ArrayList; import java.util.Collection; import java.util.Collections; import java.util.Comparator; import java.util.HashSet; import java.util.Iterator;"
+      },
+      {
+        "txt": "import java.util.List; import java.util.ListIterator; import java.util.Map; import java.util.Set; import java.util.SortedMap; import java.util.TreeMap; import org.apache.commons.cli2.Argument; import org.apache.commons.cli2.DisplaySetting; import org.apache.commons.cli2.Group; import org.apache.commons.cli2.HelpLine;"
+      },
+      {
+        "txt": "import org.apache.commons.cli2.Option; import org.apache.commons.cli2.OptionException; import org.apache.commons.cli2.WriteableCommandLine; import org.apache.commons.cli2.resource.ResourceConstants; public class GroupImpl extends OptionImpl implements Group { private final String name; private final String description; private final List options; private final int minimum;"
+      },
+      {
+        "txt": "private final int maximum; private final List anonymous; private final SortedMap optionMap; private final Set prefixes; public GroupImpl(final List options, final String name, final String description, final int minimum, final int maximum) { super(0, false);"
+      },
+      {
+        "txt": "this.name = name; this.description = description; this.minimum = minimum; this.maximum = maximum; this.options = Collections.unmodifiableList(options); final List newAnonymous = new ArrayList(); final SortedMap newOptionMap = new TreeMap(ReverseStringComparator.getInstance()); final Set newPrefixes = new HashSet(); for (final Iterator i = options.iterator(); i.hasNext();) { final Option option = (Option) i.next();"
+      },
+      {
+        "txt": "if (option instanceof Argument) { i.remove(); newAnonymous.add(option); } else { final Set triggers = option.getTriggers(); for (Iterator j = triggers.iterator(); j.hasNext();) { newOptionMap.put(j.next(), option); } newPrefixes.addAll(option.getPrefixes()); }"
+      },
+      {
+        "txt": "} this.anonymous = Collections.unmodifiableList(newAnonymous); this.optionMap = Collections.unmodifiableSortedMap(newOptionMap); this.prefixes = Collections.unmodifiableSet(newPrefixes); } public boolean canProcess(final WriteableCommandLine commandLine, final String arg) { if (arg == null) { return false; }"
+      },
+      {
+        "txt": "if (optionMap.containsKey(arg)) { return true; } final Map tailMap = optionMap.tailMap(arg); for (final Iterator iter = tailMap.values().iterator(); iter.hasNext();) { final Option option = (Option) iter.next(); if (option.canProcess(commandLine, arg)) { return true; } }"
+      },
+      {
+        "txt": "if (commandLine.looksLikeOption(arg)) { return false; } if (anonymous.size() > 0) { return true; } return false; } public Set getPrefixes() { return prefixes;"
+      },
+      {
+        "txt": "} public Set getTriggers() { return optionMap.keySet(); } public void process(final WriteableCommandLine commandLine, final ListIterator arguments) throws OptionException { String previous = null; while (arguments.hasNext()) { final String arg = (String) arguments.next();"
+      },
+      {
+        "txt": "if (arg == previous) { arguments.previous(); break; } previous = arg; final Option opt = (Option) optionMap.get(arg); if (opt != null) { arguments.previous(); opt.process(commandLine, arguments); }"
+      },
+      {
+        "txt": "else { if (commandLine.looksLikeOption(arg)) { final Collection values = optionMap.tailMap(arg).values(); boolean foundMemberOption = false; for (Iterator i = values.iterator(); i.hasNext() && !foundMemberOption;) { final Option option = (Option) i.next(); if (option.canProcess(commandLine, arg)) { foundMemberOption = true; arguments.previous(); option.process(commandLine, arguments);"
+      },
+      {
+        "txt": "} } if (!foundMemberOption) { arguments.previous(); return; } } // [END argument may be anonymous else { arguments.previous(); if (anonymous.isEmpty()) {"
+      },
+      {
+        "txt": "break; } for (final Iterator i = anonymous.iterator(); i.hasNext();) { final Argument argument = (Argument) i.next(); if (argument.canProcess(commandLine, arguments)) { argument.process(commandLine, arguments); } } } // [END argument is NOT anonymous } // [END option NOT found"
+      },
+      {
+        "txt": "} // [END process each command line token } public void validate(final WriteableCommandLine commandLine) throws OptionException { int present = 0; Option unexpected = null; for (final Iterator i = options.iterator(); i.hasNext();) { final Option option = (Option) i.next(); boolean validate = option.isRequired() || option instanceof Group; if (validate) {"
+      },
+      {
+        "txt": "} if (commandLine.hasOption(option)) { if (++present > maximum) { unexpected = option; break; } <extra_id_0> } } if (unexpected != null) { throw new OptionException(this, ResourceConstants.UNEXPECTED_TOKEN, unexpected.getPreferredName()); }"
+      },
+      {
+        "txt": "unexpected.getPreferredName()); } if (present < minimum) { throw new OptionException(this, ResourceConstants.MISSING_OPTION); } for (final Iterator i = anonymous.iterator(); i.hasNext();) { final Option option = (Option) i.next(); option.validate(commandLine); } }"
+      },
+      {
+        "txt": "public String getPreferredName() { return name; } public String getDescription() { return description; } public void appendUsage(final StringBuffer buffer, final Set helpSettings, final Comparator comp) { appendUsage(buffer, helpSettings, comp, \"|\");"
+      },
+      {
+        "txt": "} public void appendUsage(final StringBuffer buffer, final Set helpSettings, final Comparator comp, final String separator) { final Set helpSettingsCopy = new HashSet(helpSettings); final boolean optional = (minimum == 0) && helpSettingsCopy.contains(DisplaySetting.DISPLAY_OPTIONAL); final boolean expanded = (name == null) || helpSettingsCopy.contains(DisplaySetting.DISPLAY_GROUP_EXPANDED);"
+      },
+      {
+        "txt": "final boolean named = !expanded || ((name != null) && helpSettingsCopy.contains(DisplaySetting.DISPLAY_GROUP_NAME)); final boolean arguments = helpSettingsCopy.contains(DisplaySetting.DISPLAY_GROUP_ARGUMENT); final boolean outer = helpSettingsCopy.contains(DisplaySetting.DISPLAY_GROUP_OUTER); helpSettingsCopy.remove(DisplaySetting.DISPLAY_GROUP_OUTER); final boolean both = named && expanded; if (optional) { buffer.append('['); }"
+      },
+      {
+        "txt": "if (named) { buffer.append(name); } if (both) { buffer.append(\" (\"); } if (expanded) { final Set childSettings; if (!helpSettingsCopy.contains(DisplaySetting.DISPLAY_GROUP_EXPANDED)) { childSettings = DisplaySetting.NONE;"
+      },
+      {
+        "txt": "} else { childSettings = new HashSet(helpSettingsCopy); childSettings.remove(DisplaySetting.DISPLAY_OPTIONAL); } final List list; if (comp == null) { list = options; } else { list = new ArrayList(options); Collections.sort(list, comp);"
+      },
+      {
+        "txt": "} for (final Iterator i = list.iterator(); i.hasNext();) { final Option option = (Option) i.next(); option.appendUsage(buffer, childSettings, comp); if (i.hasNext()) { buffer.append(separator); } } } if (both) {"
+      },
+      {
+        "txt": "buffer.append(')'); } if (optional && outer) { buffer.append(']'); } if (arguments) { for (final Iterator i = anonymous.iterator(); i.hasNext();) { buffer.append(' '); final Option option = (Option) i.next(); option.appendUsage(buffer, helpSettingsCopy, comp);"
+      },
+      {
+        "txt": "} } if (optional && !outer) { buffer.append(']'); } } public List helpLines(final int depth, final Set helpSettings, final Comparator comp) { final List helpLines = new ArrayList();"
+      },
+      {
+        "txt": "if (helpSettings.contains(DisplaySetting.DISPLAY_GROUP_NAME)) { final HelpLine helpLine = new HelpLineImpl(this, depth); helpLines.add(helpLine); } if (helpSettings.contains(DisplaySetting.DISPLAY_GROUP_EXPANDED)) { final List list; if (comp == null) { list = options; } else { list = new ArrayList(options);"
+      },
+      {
+        "txt": "Collections.sort(list, comp); } for (final Iterator i = list.iterator(); i.hasNext();) { final Option option = (Option) i.next(); helpLines.addAll(option.helpLines(depth + 1, helpSettings, comp)); } } if (helpSettings.contains(DisplaySetting.DISPLAY_GROUP_ARGUMENT)) { for (final Iterator i = anonymous.iterator(); i.hasNext();) { final Option option = (Option) i.next();"
+      },
+      {
+        "txt": "helpLines.addAll(option.helpLines(depth + 1, helpSettings, comp)); } } return helpLines; } public List getOptions() { return options; } public List getAnonymous() { return anonymous;"
+      },
+      {
+        "txt": "} public Option findOption(final String trigger) { final Iterator i = getOptions().iterator(); while (i.hasNext()) { final Option option = (Option) i.next(); final Option found = option.findOption(trigger); if (found != null) { return found; } }"
+      },
+      {
+        "txt": "return null; } public int getMinimum() { return minimum; } public int getMaximum() { return maximum; } public boolean isRequired() { return getMinimum() > 0;"
+      },
+      {
+        "txt": "} public void defaults(final WriteableCommandLine commandLine) { super.defaults(commandLine); for (final Iterator i = options.iterator(); i.hasNext();) { final Option option = (Option) i.next(); option.defaults(commandLine); } for (final Iterator i = anonymous.iterator(); i.hasNext();) { final Option option = (Option) i.next(); option.defaults(commandLine);"
+      },
+      {
+        "txt": "} } } class ReverseStringComparator implements Comparator { private static final Comparator instance = new ReverseStringComparator(); private ReverseStringComparator() { } public static final Comparator getInstance() { return instance; }"
+      },
+      {
+        "txt": "public int compare(final Object o1, final Object o2) { final String s1 = (String) o1; final String s2 = (String) o2; return -s1.compareTo(s2); }"
+      }
+    ]
+  }
+]

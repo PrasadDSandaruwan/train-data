@@ -1,0 +1,134 @@
+[
+  {
+    "id": 585,
+    "file_path": "src/com/google/javascript/jscomp/CheckGlobalThis.java",
+    "start-bug-line": 108,
+    "end-bug-line": 108,
+    "bug": "pType == Token.ASSIGN)) {",
+    "fix": "pType == Token.ASSIGN || pType == Token.OBJECTLIT)) {",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.google.javascript.jscomp; import com.google.javascript.jscomp.CheckLevel; import com.google.javascript.jscomp.NodeTraversal.Callback; import com.google.javascript.rhino.JSDocInfo;"
+      },
+      {
+        "txt": "import com.google.javascript.rhino.Node; import com.google.javascript.rhino.Token; final class CheckGlobalThis implements Callback { static final DiagnosticType GLOBAL_THIS = DiagnosticType.warning( \"JSC_USED_GLOBAL_THIS\", \"dangerous use of the global 'this' object\"); private final AbstractCompiler compiler; private final CheckLevel level; private Node assignLhsChild = null; CheckGlobalThis(AbstractCompiler compiler, CheckLevel level) {"
+      },
+      {
+        "txt": "this.compiler = compiler; this.level = level; } public boolean shouldTraverse(NodeTraversal t, Node n, Node parent) { if (n.getType() == Token.FUNCTION) { JSDocInfo jsDoc = getFunctionJsDocInfo(n); if (jsDoc != null && (jsDoc.isConstructor() || jsDoc.isInterface() || jsDoc.hasThisType() ||"
+      },
+      {
+        "txt": "return false; } int pType = parent.getType(); if (!(pType == Token.BLOCK || pType == Token.SCRIPT || pType == Token.NAME || <extra_id_0> return false; } } if (parent != null && parent.getType() == Token.ASSIGN) { Node lhs = parent.getFirstChild(); Node rhs = lhs.getNext();"
+      },
+      {
+        "txt": "Node lhs = parent.getFirstChild(); Node rhs = lhs.getNext(); if (n == lhs) { if (assignLhsChild == null) { assignLhsChild = lhs; } } else { if (NodeUtil.isGet(lhs)) { if (lhs.getType() == Token.GETPROP && lhs.getLastChild().getString().equals(\"prototype\")) {"
+      },
+      {
+        "txt": "return false; } Node llhs = lhs.getFirstChild(); if (llhs.getType() == Token.GETPROP && llhs.getLastChild().getString().equals(\"prototype\")) { return false; } } } }"
+      },
+      {
+        "txt": "return true; } public void visit(NodeTraversal t, Node n, Node parent) { if (n.getType() == Token.THIS && shouldReportThis(n, parent)) { compiler.report(t.makeError(n, level, GLOBAL_THIS)); } if (n == assignLhsChild) { assignLhsChild = null; } }"
+      },
+      {
+        "txt": "private boolean shouldReportThis(Node n, Node parent) { if (assignLhsChild != null) { return true; } return parent != null && NodeUtil.isGet(parent); } private JSDocInfo getFunctionJsDocInfo(Node n) { JSDocInfo jsDoc = n.getJSDocInfo(); Node parent = n.getParent(); if (jsDoc == null) {"
+      },
+      {
+        "txt": "int parentType = parent.getType(); if (parentType == Token.NAME || parentType == Token.ASSIGN) { jsDoc = parent.getJSDocInfo(); if (jsDoc == null && parentType == Token.NAME) { Node gramps = parent.getParent(); if (gramps.getType() == Token.VAR) { jsDoc = gramps.getJSDocInfo(); } } }"
+      },
+      {
+        "txt": "} return jsDoc; }"
+      }
+    ]
+  },
+  {
+    "id": 586,
+    "file_path": "src/com/google/javascript/jscomp/RuntimeTypeCheck.java",
+    "start-bug-line": 247,
+    "end-bug-line": 247,
+    "bug": "",
+    "fix": "for (Node next = block.getFirstChild(); next != null && NodeUtil.isFunctionDeclaration(next); next = next.getNext()) { insertionPoint = next; }",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.google.javascript.jscomp; import com.google.common.annotations.VisibleForTesting; import com.google.common.base.Charsets; import com.google.common.collect.ImmutableList; import com.google.common.collect.Iterables; import com.google.common.collect.Sets; import com.google.common.io.CharStreams;"
+      },
+      {
+        "txt": "import com.google.javascript.rhino.Node; import com.google.javascript.rhino.Token; import com.google.javascript.rhino.jstype.FunctionType; import com.google.javascript.rhino.jstype.JSType; import com.google.javascript.rhino.jstype.ObjectType; import com.google.javascript.rhino.jstype.UnionType; import java.io.IOException; import java.io.InputStreamReader; import java.util.Collection; import java.util.Comparator;"
+      },
+      {
+        "txt": "import java.util.TreeSet; import javax.annotation.Nullable; class RuntimeTypeCheck implements CompilerPass { private static final Comparator<JSType> ALPHA = new Comparator<JSType>() { public int compare(JSType t1, JSType t2) { return getName(t1).compareTo(getName(t2)); } private String getName(JSType type) { if (type.isInstanceType()) { return ((ObjectType) type).getReferenceName();"
+      },
+      {
+        "txt": "} else if (type.isNullType() || type.isBooleanValueType() || type.isNumberValueType() || type.isStringValueType() || type.isVoidType()) { return type.toString(); } else { return \"\"; } }"
+      },
+      {
+        "txt": "}; private final AbstractCompiler compiler; private final String logFunction; RuntimeTypeCheck(AbstractCompiler compiler, @Nullable String logFunction) { this.compiler = compiler; this.logFunction = logFunction; } @Override public void process(Node externs, Node root) { NodeTraversal.traverse(compiler, root, new AddMarkers(compiler));"
+      },
+      {
+        "txt": "NodeTraversal.traverse(compiler, root, new AddChecks(compiler)); addBoilerplateCode(); } private static class AddMarkers extends NodeTraversal.AbstractPostOrderCallback { private final AbstractCompiler compiler; private AddMarkers(AbstractCompiler compiler) { this.compiler = compiler; } @Override"
+      },
+      {
+        "txt": "public void visit(NodeTraversal t, Node n, Node parent) { if (NodeUtil.isFunction(n)) { visitFunction(t, n); } } private void visitFunction(NodeTraversal t, Node n) { FunctionType funType = (FunctionType) n.getJSType(); if (!funType.isConstructor()) { return; }"
+      },
+      {
+        "txt": "Node nodeToInsertAfter = findNodeToInsertAfter(n); nodeToInsertAfter = addMarker(funType, nodeToInsertAfter, null); TreeSet<ObjectType> stuff = Sets.newTreeSet(ALPHA); Iterables.addAll(stuff, funType.getAllImplementedInterfaces()); for (ObjectType interfaceType : stuff) { nodeToInsertAfter = addMarker(funType, nodeToInsertAfter, interfaceType); } } private Node addMarker("
+      },
+      {
+        "txt": "FunctionType funType, Node nodeToInsertAfter, @Nullable ObjectType interfaceType) { if (funType.getSource() == null) { return nodeToInsertAfter; } String className = NodeUtil.getFunctionName(funType.getSource()); if (className == null) { return nodeToInsertAfter; }"
+      },
+      {
+        "txt": "Node classNode = NodeUtil.newQualifiedNameNode(className, -1, -1); Node marker = Node.newString( interfaceType == null ? \"instance_of__\" + className : \"implements__\" + interfaceType.getReferenceName()); Node assign = new Node(Token.EXPR_RESULT, new Node(Token.ASSIGN, new Node(Token.GETELEM, new Node(Token.GETPROP, classNode, Node.newString(\"prototype\")), marker),"
+      },
+      {
+        "txt": "new Node(Token.TRUE))); nodeToInsertAfter.getParent().addChildAfter(assign, nodeToInsertAfter); compiler.reportCodeChange(); nodeToInsertAfter = assign; return nodeToInsertAfter; } private Node findNodeToInsertAfter(Node n) { Node nodeToInsertAfter = findEnclosingConstructorDeclaration(n); Node next = nodeToInsertAfter.getNext(); while (next != null && isClassDefiningCall(next)) {"
+      },
+      {
+        "txt": "nodeToInsertAfter = next; next = nodeToInsertAfter.getNext(); } return nodeToInsertAfter; } private Node findEnclosingConstructorDeclaration(Node n) { while (n.getParent().getType() != Token.SCRIPT && n.getParent().getType() != Token.BLOCK) { n = n.getParent(); }"
+      },
+      {
+        "txt": "return n; } private boolean isClassDefiningCall(Node next) { return NodeUtil.isExprCall(next) && compiler.getCodingConvention().getClassesDefinedByCall( next.getFirstChild()) != null; } } private static class AddChecks extends NodeTraversal.AbstractPostOrderCallback {"
+      },
+      {
+        "txt": "private final AbstractCompiler compiler; private AddChecks(AbstractCompiler compiler) { this.compiler = compiler; } @Override public void visit(NodeTraversal t, Node n, Node parent) { if (NodeUtil.isFunction(n)) { visitFunction(t, n); } else if (n.getType() == Token.RETURN) { visitReturn(t, n);"
+      },
+      {
+        "txt": "} private void visitFunction(NodeTraversal t, Node n) { FunctionType funType = (FunctionType) n.getJSType(); Node block = n.getLastChild(); Node paramName = NodeUtil.getFnParameters(n).getFirstChild(); Node insertionPoint = null; <extra_id_0> for (Node paramType : funType.getParameters()) { if (paramName == null) { return; } Node checkNode = createCheckTypeCallNode( paramType.getJSType(), paramName.cloneTree());"
+      },
+      {
+        "txt": "Node checkNode = createCheckTypeCallNode( paramType.getJSType(), paramName.cloneTree()); if (checkNode == null) { paramName = paramName.getNext(); continue; } checkNode = new Node(Token.EXPR_RESULT, checkNode); if (insertionPoint == null) { block.addChildToFront(checkNode); } else {"
+      },
+      {
+        "txt": "block.addChildAfter(checkNode, insertionPoint); } compiler.reportCodeChange(); paramName = paramName.getNext(); insertionPoint = checkNode; } } private void visitReturn(NodeTraversal t, Node n) { Node function = t.getEnclosingFunction(); FunctionType funType = (FunctionType) function.getJSType();"
+      },
+      {
+        "txt": "Node retValue = n.getFirstChild(); if (retValue == null) { return; } Node checkNode = createCheckTypeCallNode( funType.getReturnType(), retValue.cloneTree()); if (checkNode == null) { return; } n.replaceChild(retValue, checkNode);"
+      },
+      {
+        "txt": "compiler.reportCodeChange(); } private Node createCheckTypeCallNode(JSType type, Node expr) { Node arrayNode = new Node(Token.ARRAYLIT); Collection<JSType> alternates; if (type.isUnionType()) { alternates = Sets.newTreeSet(ALPHA); Iterables.addAll(alternates, ((UnionType)type).getAlternates()); } else { alternates = ImmutableList.of(type);"
+      },
+      {
+        "txt": "} for (JSType alternate : alternates) { Node checkerNode = createCheckerNode(alternate); if (checkerNode == null) { return null; } arrayNode.addChildToBack(checkerNode); } return new Node(Token.CALL, jsCode(\"checkType\"), expr, arrayNode); }"
+      },
+      {
+        "txt": "private Node createCheckerNode(JSType type) { if (type.isNullType()) { return jsCode(\"nullChecker\"); } else if (type.isBooleanValueType() || type.isNumberValueType() || type.isStringValueType() || type.isVoidType()) { return new Node(Token.CALL, jsCode(\"valueChecker\"), Node.newString(type.toString()));"
+      },
+      {
+        "txt": "} else if (type.isInstanceType()) { ObjectType objType = (ObjectType) type; String refName = objType.getReferenceName(); String sourceName = NodeUtil.getSourceName(objType.getConstructor().getSource()); CompilerInput sourceInput = compiler.getInput(sourceName); if (sourceInput == null || sourceInput.isExtern()) { return new Node(Token.CALL, jsCode(\"externClassChecker\"), Node.newString(refName));"
+      },
+      {
+        "txt": "} return new Node(Token.CALL, jsCode(objType.getConstructor().isInterface() ? \"interfaceChecker\" : \"classChecker\"), Node.newString(refName)); } else { return null; } } }"
+      },
+      {
+        "txt": "private void addBoilerplateCode() { Node js = getBoilerplateCode(compiler, logFunction); compiler.getNodeForCodeInsertion(null).addChildrenToFront( js.removeChildren()); compiler.reportCodeChange(); } private static Node jsCode(String prop) { return NodeUtil.newQualifiedNameNode(\"jscomp.typecheck.\" + prop, -1, -1); } @VisibleForTesting"
+      },
+      {
+        "txt": "static Node getBoilerplateCode( AbstractCompiler compiler, @Nullable String logFunction) { String boilerplateCode; try { boilerplateCode = CharStreams.toString(new InputStreamReader( RuntimeTypeCheck.class.getResourceAsStream( \"js/runtime_type_check.js\"), Charsets.UTF_8)); } catch (IOException e) { throw new RuntimeException(e); }"
+      },
+      {
+        "txt": "boilerplateCode = boilerplateCode.replace(\"%%LOG%%\", logFunction == null ? \"function(warning, expr) {}\" : logFunction); return Normalize.parseAndNormalizeSyntheticCode( compiler, boilerplateCode, \"jscomp_runtimeTypeCheck_\"); }"
+      }
+    ]
+  }
+]

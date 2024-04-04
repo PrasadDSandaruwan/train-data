@@ -1,0 +1,173 @@
+[
+  {
+    "id": 1606,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/JsonMappingException.java",
+    "start-bug-line": 130,
+    "end-bug-line": 130,
+    "bug": "String pkgName = com.fasterxml.jackson.databind.util.ClassUtil.getPackageName(cls);",
+    "fix": "int arrays = 0; while (cls.isArray()) { cls = cls.getComponentType(); ++arrays; } sb.append(cls.getName()); while (--arrays >= 0) { sb.append(\"[]\"); } /* was: String pkgName = ClassUtil.getPackageName(cls);",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind; import java.io.Closeable; import java.io.IOException; import java.io.Serializable; import java.util.*; import com.fasterxml.jackson.annotation.JsonIgnore; import com.fasterxml.jackson.core.*; public class JsonMappingException extends JsonProcessingException"
+      },
+      {
+        "txt": "{ private static final long serialVersionUID = 1L; final static int MAX_REFS_TO_LIST = 1000; public static class Reference implements Serializable { private static final long serialVersionUID = 2L; // changes between 2.7 and 2.8 protected transient Object _from; protected String _fieldName; protected int _index = -1; protected String _desc;"
+      },
+      {
+        "txt": "protected Reference() { } public Reference(Object from) { _from = from; } public Reference(Object from, String fieldName) { _from = from; if (fieldName == null) { throw new NullPointerException(\"Can not pass null fieldName\"); } _fieldName = fieldName; } public Reference(Object from, int index) {"
+      },
+      {
+        "txt": "_from = from; _index = index; } void setFieldName(String n) { _fieldName = n; } void setIndex(int ix) { _index = ix; } void setDescription(String d) { _desc = d; } @JsonIgnore public Object getFrom() { return _from; } public String getFieldName() { return _fieldName; } public int getIndex() { return _index; }"
+      },
+      {
+        "txt": "if (_desc == null) { StringBuilder sb = new StringBuilder(); if (_from == null) { // can this ever occur? sb.append(\"UNKNOWN\"); } else { Class<?> cls = (_from instanceof Class<?>) ? (Class<?>)_from : _from.getClass(); <extra_id_0> if (pkgName != null) { sb.append(pkgName); sb.append('.'); } sb.append(cls.getSimpleName()); }"
+      },
+      {
+        "txt": "sb.append(cls.getSimpleName()); } sb.append('['); if (_fieldName != null) { sb.append('\"'); sb.append(_fieldName); sb.append('\"'); } else if (_index >= 0) { sb.append(_index); } else {"
+      },
+      {
+        "txt": "sb.append('?'); } sb.append(']'); _desc = sb.toString(); } return _desc; } @Override public String toString() { return getDescription();"
+      },
+      {
+        "txt": "} Object writeReplace() { getDescription(); return this; } } protected LinkedList<Reference> _path; protected transient Closeable _processor; @Deprecated // since 2.7 public JsonMappingException(String msg) { super(msg); }"
+      },
+      {
+        "txt": "@Deprecated // since 2.7 public JsonMappingException(String msg, Throwable rootCause) { super(msg, rootCause); } @Deprecated // since 2.7 public JsonMappingException(String msg, JsonLocation loc) { super(msg, loc); } @Deprecated // since 2.7 public JsonMappingException(String msg, JsonLocation loc, Throwable rootCause) { super(msg, loc, rootCause); } public JsonMappingException(Closeable processor, String msg) { super(msg); _processor = processor; if (processor instanceof JsonParser) {"
+      },
+      {
+        "txt": "_location = ((JsonParser) processor).getTokenLocation(); } } public JsonMappingException(Closeable processor, String msg, Throwable problem) { super(msg, problem); _processor = processor; if (processor instanceof JsonParser) { _location = ((JsonParser) processor).getTokenLocation(); } }"
+      },
+      {
+        "txt": "public JsonMappingException(Closeable processor, String msg, JsonLocation loc) { super(msg, loc); _processor = processor; } public static JsonMappingException from(JsonParser p, String msg) { return new JsonMappingException(p, msg); } public static JsonMappingException from(JsonParser p, String msg, Throwable problem) { return new JsonMappingException(p, msg, problem); }"
+      },
+      {
+        "txt": "public static JsonMappingException from(JsonGenerator g, String msg) { return new JsonMappingException(g, msg, (Throwable) null); } public static JsonMappingException from(JsonGenerator g, String msg, Throwable problem) { return new JsonMappingException(g, msg, problem); } public static JsonMappingException from(DeserializationContext ctxt, String msg) { return new JsonMappingException(ctxt.getParser(), msg); } public static JsonMappingException from(DeserializationContext ctxt, String msg, Throwable t) {"
+      },
+      {
+        "txt": "return new JsonMappingException(ctxt.getParser(), msg, t); } public static JsonMappingException from(SerializerProvider ctxt, String msg) { return new JsonMappingException(ctxt.getGenerator(), msg); } public static JsonMappingException from(SerializerProvider ctxt, String msg, Throwable problem) { return new JsonMappingException(ctxt.getGenerator(), msg, problem); } public static JsonMappingException fromUnexpectedIOE(IOException src) { return new JsonMappingException(null,"
+      },
+      {
+        "txt": "String.format(\"Unexpected IOException (of type %s): %s\", src.getClass().getName(), src.getMessage())); } public static JsonMappingException wrapWithPath(Throwable src, Object refFrom, String refFieldName) { return wrapWithPath(src, new Reference(refFrom, refFieldName)); } public static JsonMappingException wrapWithPath(Throwable src, Object refFrom, int index) { return wrapWithPath(src, new Reference(refFrom, index)); }"
+      },
+      {
+        "txt": "@SuppressWarnings(\"resource\") public static JsonMappingException wrapWithPath(Throwable src, Reference ref) { JsonMappingException jme; if (src instanceof JsonMappingException) { jme = (JsonMappingException) src; } else { String msg = src.getMessage(); if (msg == null || msg.length() == 0) { msg = \"(was \"+src.getClass().getName()+\")\";"
+      },
+      {
+        "txt": "} Closeable proc = null; if (src instanceof JsonProcessingException) { Object proc0 = ((JsonProcessingException) src).getProcessor(); if (proc0 instanceof Closeable) { proc = (Closeable) proc0; } } jme = new JsonMappingException(proc, msg, src); }"
+      },
+      {
+        "txt": "jme.prependPath(ref); return jme; } public List<Reference> getPath() { if (_path == null) { return Collections.emptyList(); } return Collections.unmodifiableList(_path); }"
+      },
+      {
+        "txt": "public String getPathReference() { return getPathReference(new StringBuilder()).toString(); } public StringBuilder getPathReference(StringBuilder sb) { _appendPathDesc(sb); return sb; } public void prependPath(Object referrer, String fieldName)"
+      },
+      {
+        "txt": "{ Reference ref = new Reference(referrer, fieldName); prependPath(ref); } public void prependPath(Object referrer, int index) { Reference ref = new Reference(referrer, index); prependPath(ref); } public void prependPath(Reference r)"
+      },
+      {
+        "txt": "{ if (_path == null) { _path = new LinkedList<Reference>(); } if (_path.size() < MAX_REFS_TO_LIST) { _path.addFirst(r); } } @Override // since 2.7.5 @JsonIgnore // as per [databind#1368]"
+      },
+      {
+        "txt": "public Object getProcessor() { return _processor; } @Override public String getLocalizedMessage() { return _buildMessage(); } @Override public String getMessage() { return _buildMessage(); } protected String _buildMessage()"
+      },
+      {
+        "txt": "{ String msg = super.getMessage(); if (_path == null) { return msg; } StringBuilder sb = (msg == null) ? new StringBuilder() : new StringBuilder(msg); sb.append(\" (through reference chain: \"); sb = getPathReference(sb); sb.append(')'); return sb.toString();"
+      },
+      {
+        "txt": "} @Override public String toString() { return getClass().getName()+\": \"+getMessage(); } protected void _appendPathDesc(StringBuilder sb) { if (_path == null) { return;"
+      },
+      {
+        "txt": "} Iterator<Reference> it = _path.iterator(); while (it.hasNext()) { sb.append(it.next().toString()); if (it.hasNext()) { sb.append(\"->\"); } } }"
+      }
+    ]
+  },
+  {
+    "id": 1607,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/JsonMappingException.java",
+    "start-bug-line": 135,
+    "end-bug-line": 135,
+    "bug": "sb.append(cls.getSimpleName());",
+    "fix": "*/",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind; import java.io.Closeable; import java.io.IOException; import java.io.Serializable;"
+      },
+      {
+        "txt": "import java.util.*; import com.fasterxml.jackson.annotation.JsonIgnore; import com.fasterxml.jackson.core.*; public class JsonMappingException extends JsonProcessingException { private static final long serialVersionUID = 1L; final static int MAX_REFS_TO_LIST = 1000; public static class Reference implements Serializable {"
+      },
+      {
+        "txt": "private static final long serialVersionUID = 2L; // changes between 2.7 and 2.8 protected transient Object _from; protected String _fieldName; protected int _index = -1; protected String _desc; protected Reference() { } public Reference(Object from) { _from = from; } public Reference(Object from, String fieldName) { _from = from; if (fieldName == null) {"
+      },
+      {
+        "txt": "throw new NullPointerException(\"Can not pass null fieldName\"); } _fieldName = fieldName; } public Reference(Object from, int index) { _from = from; _index = index; } void setFieldName(String n) { _fieldName = n; } void setIndex(int ix) { _index = ix; }"
+      },
+      {
+        "txt": "void setDescription(String d) { _desc = d; } @JsonIgnore public Object getFrom() { return _from; } public String getFieldName() { return _fieldName; } public int getIndex() { return _index; } public String getDescription() { if (_desc == null) { StringBuilder sb = new StringBuilder(); if (_from == null) { // can this ever occur? sb.append(\"UNKNOWN\");"
+      },
+      {
+        "txt": "Class<?> cls = (_from instanceof Class<?>) ? (Class<?>)_from : _from.getClass(); String pkgName = com.fasterxml.jackson.databind.util.ClassUtil.getPackageName(cls); if (pkgName != null) { sb.append(pkgName); sb.append('.'); } <extra_id_0> } sb.append('['); if (_fieldName != null) { sb.append('\"'); sb.append(_fieldName); sb.append('\"');"
+      },
+      {
+        "txt": "sb.append(_fieldName); sb.append('\"'); } else if (_index >= 0) { sb.append(_index); } else { sb.append('?'); } sb.append(']'); _desc = sb.toString(); }"
+      },
+      {
+        "txt": "return _desc; } @Override public String toString() { return getDescription(); } Object writeReplace() { getDescription(); return this; }"
+      },
+      {
+        "txt": "} protected LinkedList<Reference> _path; protected transient Closeable _processor; @Deprecated // since 2.7 public JsonMappingException(String msg) { super(msg); } @Deprecated // since 2.7 public JsonMappingException(String msg, Throwable rootCause) { super(msg, rootCause); } @Deprecated // since 2.7 public JsonMappingException(String msg, JsonLocation loc) { super(msg, loc); } @Deprecated // since 2.7"
+      },
+      {
+        "txt": "public JsonMappingException(String msg, JsonLocation loc, Throwable rootCause) { super(msg, loc, rootCause); } public JsonMappingException(Closeable processor, String msg) { super(msg); _processor = processor; if (processor instanceof JsonParser) { _location = ((JsonParser) processor).getTokenLocation(); } } public JsonMappingException(Closeable processor, String msg, Throwable problem) { super(msg, problem);"
+      },
+      {
+        "txt": "_processor = processor; if (processor instanceof JsonParser) { _location = ((JsonParser) processor).getTokenLocation(); } } public JsonMappingException(Closeable processor, String msg, JsonLocation loc) { super(msg, loc); _processor = processor; } public static JsonMappingException from(JsonParser p, String msg) {"
+      },
+      {
+        "txt": "return new JsonMappingException(p, msg); } public static JsonMappingException from(JsonParser p, String msg, Throwable problem) { return new JsonMappingException(p, msg, problem); } public static JsonMappingException from(JsonGenerator g, String msg) { return new JsonMappingException(g, msg, (Throwable) null); } public static JsonMappingException from(JsonGenerator g, String msg, Throwable problem) { return new JsonMappingException(g, msg, problem);"
+      },
+      {
+        "txt": "} public static JsonMappingException from(DeserializationContext ctxt, String msg) { return new JsonMappingException(ctxt.getParser(), msg); } public static JsonMappingException from(DeserializationContext ctxt, String msg, Throwable t) { return new JsonMappingException(ctxt.getParser(), msg, t); } public static JsonMappingException from(SerializerProvider ctxt, String msg) { return new JsonMappingException(ctxt.getGenerator(), msg); }"
+      },
+      {
+        "txt": "public static JsonMappingException from(SerializerProvider ctxt, String msg, Throwable problem) { return new JsonMappingException(ctxt.getGenerator(), msg, problem); } public static JsonMappingException fromUnexpectedIOE(IOException src) { return new JsonMappingException(null, String.format(\"Unexpected IOException (of type %s): %s\", src.getClass().getName(), src.getMessage())); } public static JsonMappingException wrapWithPath(Throwable src, Object refFrom, String refFieldName) {"
+      },
+      {
+        "txt": "return wrapWithPath(src, new Reference(refFrom, refFieldName)); } public static JsonMappingException wrapWithPath(Throwable src, Object refFrom, int index) { return wrapWithPath(src, new Reference(refFrom, index)); } @SuppressWarnings(\"resource\") public static JsonMappingException wrapWithPath(Throwable src, Reference ref) { JsonMappingException jme; if (src instanceof JsonMappingException) {"
+      },
+      {
+        "txt": "jme = (JsonMappingException) src; } else { String msg = src.getMessage(); if (msg == null || msg.length() == 0) { msg = \"(was \"+src.getClass().getName()+\")\"; } Closeable proc = null; if (src instanceof JsonProcessingException) { Object proc0 = ((JsonProcessingException) src).getProcessor(); if (proc0 instanceof Closeable) {"
+      },
+      {
+        "txt": "proc = (Closeable) proc0; } } jme = new JsonMappingException(proc, msg, src); } jme.prependPath(ref); return jme; } public List<Reference> getPath() {"
+      },
+      {
+        "txt": "if (_path == null) { return Collections.emptyList(); } return Collections.unmodifiableList(_path); } public String getPathReference() { return getPathReference(new StringBuilder()).toString(); } public StringBuilder getPathReference(StringBuilder sb)"
+      },
+      {
+        "txt": "{ _appendPathDesc(sb); return sb; } public void prependPath(Object referrer, String fieldName) { Reference ref = new Reference(referrer, fieldName); prependPath(ref); } public void prependPath(Object referrer, int index)"
+      },
+      {
+        "txt": "{ Reference ref = new Reference(referrer, index); prependPath(ref); } public void prependPath(Reference r) { if (_path == null) { _path = new LinkedList<Reference>(); } if (_path.size() < MAX_REFS_TO_LIST) {"
+      },
+      {
+        "txt": "_path.addFirst(r); } } @Override // since 2.7.5 @JsonIgnore // as per [databind#1368] public Object getProcessor() { return _processor; } @Override public String getLocalizedMessage() { return _buildMessage(); }"
+      },
+      {
+        "txt": "@Override public String getMessage() { return _buildMessage(); } protected String _buildMessage() { String msg = super.getMessage(); if (_path == null) { return msg; }"
+      },
+      {
+        "txt": "StringBuilder sb = (msg == null) ? new StringBuilder() : new StringBuilder(msg); sb.append(\" (through reference chain: \"); sb = getPathReference(sb); sb.append(')'); return sb.toString(); } @Override public String toString() { return getClass().getName()+\": \"+getMessage();"
+      },
+      {
+        "txt": "} protected void _appendPathDesc(StringBuilder sb) { if (_path == null) { return; } Iterator<Reference> it = _path.iterator(); while (it.hasNext()) { sb.append(it.next().toString()); if (it.hasNext()) {"
+      },
+      {
+        "txt": "sb.append(\"->\"); } } }"
+      }
+    ]
+  }
+]

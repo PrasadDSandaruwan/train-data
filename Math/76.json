@@ -1,0 +1,992 @@
+[
+  {
+    "id": 2659,
+    "file_path": "src/main/java/org/apache/commons/math/linear/SingularValueDecompositionImpl.java",
+    "start-bug-line": 162,
+    "end-bug-line": 162,
+    "bug": "eigenDecomposition.getV().getSubMatrix(0, p - 1, 0, p - 1);",
+    "fix": "eigenDecomposition.getV().getSubMatrix(0, n - 1, 0, p - 1);",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.math.linear; import org.apache.commons.math.MathRuntimeException; import org.apache.commons.math.util.MathUtils; public class SingularValueDecompositionImpl implements SingularValueDecomposition { private int m;"
+      },
+      {
+        "txt": "private int n; private BiDiagonalTransformer transformer; private double[] mainBidiagonal; private double[] secondaryBidiagonal; private double[] mainTridiagonal; private double[] secondaryTridiagonal; private EigenDecomposition eigenDecomposition; private double[] singularValues; private RealMatrix cachedU; private RealMatrix cachedUt;"
+      },
+      {
+        "txt": "private RealMatrix cachedS; private RealMatrix cachedV; private RealMatrix cachedVt; public SingularValueDecompositionImpl(final RealMatrix matrix) throws InvalidMatrixException { this(matrix, Math.min(matrix.getRowDimension(), matrix.getColumnDimension())); } public SingularValueDecompositionImpl(final RealMatrix matrix, final int max) throws InvalidMatrixException { m = matrix.getRowDimension();"
+      },
+      {
+        "txt": "n = matrix.getColumnDimension(); cachedU = null; cachedS = null; cachedV = null; cachedVt = null; transformer = new BiDiagonalTransformer(matrix); mainBidiagonal = transformer.getMainDiagonalRef(); secondaryBidiagonal = transformer.getSecondaryDiagonalRef(); mainTridiagonal = new double[mainBidiagonal.length]; secondaryTridiagonal = new double[mainBidiagonal.length - 1];"
+      },
+      {
+        "txt": "double a = mainBidiagonal[0]; mainTridiagonal[0] = a * a; for (int i = 1; i < mainBidiagonal.length; ++i) { final double b = secondaryBidiagonal[i - 1]; secondaryTridiagonal[i - 1] = a * b; a = mainBidiagonal[i]; mainTridiagonal[i] = a * a + b * b; } eigenDecomposition = new EigenDecompositionImpl(mainTridiagonal, secondaryTridiagonal,"
+      },
+      {
+        "txt": "MathUtils.SAFE_MIN); final double[] eigenValues = eigenDecomposition.getRealEigenvalues(); int p = Math.min(max, eigenValues.length); while ((p > 0) && (eigenValues[p - 1] <= 0)) { --p; } singularValues = new double[p]; for (int i = 0; i < p; ++i) { singularValues[i] = Math.sqrt(eigenValues[i]); }"
+      },
+      {
+        "txt": "public RealMatrix getU() throws InvalidMatrixException { if (cachedU == null) { final int p = singularValues.length; if (m >= n) { final RealMatrix e = <extra_id_0> final double[][] eData = e.getData(); final double[][] wData = new double[m][p]; double[] ei1 = eData[0]; for (int i = 0; i < p - 1; ++i) { final double mi = mainBidiagonal[i]; final double[] ei0 = ei1;"
+      },
+      {
+        "txt": "final double mi = mainBidiagonal[i]; final double[] ei0 = ei1; final double[] wi = wData[i]; ei1 = eData[i + 1]; final double si = secondaryBidiagonal[i]; for (int j = 0; j < p; ++j) { wi[j] = (mi * ei0[j] + si * ei1[j]) / singularValues[j]; } } for (int j = 0; j < p; ++j) {"
+      },
+      {
+        "txt": "wData[p - 1][j] = ei1[j] * mainBidiagonal[p - 1] / singularValues[j]; } for (int i = p; i < m; ++i) { wData[i] = new double[p]; } cachedU = transformer.getU().multiply(MatrixUtils.createRealMatrix(wData)); } else { final RealMatrix e = eigenDecomposition.getV().getSubMatrix(0, m - 1, 0, p - 1);"
+      },
+      {
+        "txt": "cachedU = transformer.getU().multiply(e); } } return cachedU; } public RealMatrix getUT() throws InvalidMatrixException { if (cachedUt == null) { cachedUt = getU().transpose(); }"
+      },
+      {
+        "txt": "return cachedUt; } public RealMatrix getS() throws InvalidMatrixException { if (cachedS == null) { cachedS = MatrixUtils.createRealDiagonalMatrix(singularValues); } return cachedS; } public double[] getSingularValues()"
+      },
+      {
+        "txt": "throws InvalidMatrixException { return singularValues.clone(); } public RealMatrix getV() throws InvalidMatrixException { if (cachedV == null) { final int p = singularValues.length; if (m >= n) { final RealMatrix e = eigenDecomposition.getV().getSubMatrix(0, n - 1, 0, p - 1);"
+      },
+      {
+        "txt": "cachedV = transformer.getV().multiply(e); } else { final RealMatrix e = eigenDecomposition.getV().getSubMatrix(0, p - 1, 0, p - 1); final double[][] eData = e.getData(); final double[][] wData = new double[n][p]; double[] ei1 = eData[0]; for (int i = 0; i < p - 1; ++i) { final double mi = mainBidiagonal[i]; final double[] ei0 = ei1;"
+      },
+      {
+        "txt": "final double[] wi = wData[i]; ei1 = eData[i + 1]; final double si = secondaryBidiagonal[i]; for (int j = 0; j < p; ++j) { wi[j] = (mi * ei0[j] + si * ei1[j]) / singularValues[j]; } } for (int j = 0; j < p; ++j) { wData[p - 1][j] = ei1[j] * mainBidiagonal[p - 1] / singularValues[j]; }"
+      },
+      {
+        "txt": "for (int i = p; i < n; ++i) { wData[i] = new double[p]; } cachedV = transformer.getV().multiply(MatrixUtils.createRealMatrix(wData)); } } return cachedV; } public RealMatrix getVT()"
+      },
+      {
+        "txt": "throws InvalidMatrixException { if (cachedVt == null) { cachedVt = getV().transpose(); } return cachedVt; } public RealMatrix getCovariance(final double minSingularValue) { final int p = singularValues.length; int dimension = 0; while ((dimension < p) && (singularValues[dimension] >= minSingularValue)) {"
+      },
+      {
+        "txt": "++dimension; } if (dimension == 0) { throw MathRuntimeException.createIllegalArgumentException( \"cutoff singular value is {0}, should be at most {1}\", minSingularValue, singularValues[0]); } final double[][] data = new double[dimension][p]; getVT().walkInOptimizedOrder(new DefaultRealMatrixPreservingVisitor() { @Override"
+      },
+      {
+        "txt": "public void visit(final int row, final int column, final double value) { data[row][column] = value / singularValues[row]; } }, 0, dimension - 1, 0, p - 1); RealMatrix jv = new Array2DRowRealMatrix(data, false); return jv.transpose().multiply(jv); } public double getNorm() throws InvalidMatrixException { return singularValues[0];"
+      },
+      {
+        "txt": "} public double getConditionNumber() throws InvalidMatrixException { return singularValues[0] / singularValues[singularValues.length - 1]; } public int getRank() throws IllegalStateException { final double threshold = Math.max(m, n) * Math.ulp(singularValues[0]); for (int i = singularValues.length - 1; i >= 0; --i) { if (singularValues[i] > threshold) {"
+      },
+      {
+        "txt": "return i + 1; } } return 0; } public DecompositionSolver getSolver() { return new Solver(singularValues, getUT(), getV(), getRank() == Math.max(m, n)); } private static class Solver implements DecompositionSolver {"
+      },
+      {
+        "txt": "private final RealMatrix pseudoInverse; private boolean nonSingular; private Solver(final double[] singularValues, final RealMatrix uT, final RealMatrix v, final boolean nonSingular) { double[][] suT = uT.getData(); for (int i = 0; i < singularValues.length; ++i) { final double a = 1.0 / singularValues[i]; final double[] suTi = suT[i]; for (int j = 0; j < suTi.length; ++j) { suTi[j] *= a;"
+      },
+      {
+        "txt": "} } pseudoInverse = v.multiply(new Array2DRowRealMatrix(suT, false)); this.nonSingular = nonSingular; } public double[] solve(final double[] b) throws IllegalArgumentException { return pseudoInverse.operate(b); } public RealVector solve(final RealVector b)"
+      },
+      {
+        "txt": "throws IllegalArgumentException { return pseudoInverse.operate(b); } public RealMatrix solve(final RealMatrix b) throws IllegalArgumentException { return pseudoInverse.multiply(b); } public boolean isNonSingular() { return nonSingular; }"
+      },
+      {
+        "txt": "public RealMatrix getInverse() { return pseudoInverse; } }"
+      }
+    ]
+  },
+  {
+    "id": 2660,
+    "file_path": "src/main/java/org/apache/commons/math/linear/SingularValueDecompositionImpl.java",
+    "start-bug-line": 166,
+    "end-bug-line": 166,
+    "bug": "for (int i = 0; i < p - 1; ++i) {",
+    "fix": "for (int i = 0; i < p; ++i) {",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.math.linear; import org.apache.commons.math.MathRuntimeException; import org.apache.commons.math.util.MathUtils; public class SingularValueDecompositionImpl implements SingularValueDecomposition { private int m; private int n; private BiDiagonalTransformer transformer; private double[] mainBidiagonal; private double[] secondaryBidiagonal;"
+      },
+      {
+        "txt": "private double[] mainTridiagonal; private double[] secondaryTridiagonal; private EigenDecomposition eigenDecomposition; private double[] singularValues; private RealMatrix cachedU; private RealMatrix cachedUt; private RealMatrix cachedS; private RealMatrix cachedV; private RealMatrix cachedVt; public SingularValueDecompositionImpl(final RealMatrix matrix)"
+      },
+      {
+        "txt": "throws InvalidMatrixException { this(matrix, Math.min(matrix.getRowDimension(), matrix.getColumnDimension())); } public SingularValueDecompositionImpl(final RealMatrix matrix, final int max) throws InvalidMatrixException { m = matrix.getRowDimension(); n = matrix.getColumnDimension(); cachedU = null; cachedS = null; cachedV = null;"
+      },
+      {
+        "txt": "cachedVt = null; transformer = new BiDiagonalTransformer(matrix); mainBidiagonal = transformer.getMainDiagonalRef(); secondaryBidiagonal = transformer.getSecondaryDiagonalRef(); mainTridiagonal = new double[mainBidiagonal.length]; secondaryTridiagonal = new double[mainBidiagonal.length - 1]; double a = mainBidiagonal[0]; mainTridiagonal[0] = a * a; for (int i = 1; i < mainBidiagonal.length; ++i) { final double b = secondaryBidiagonal[i - 1];"
+      },
+      {
+        "txt": "secondaryTridiagonal[i - 1] = a * b; a = mainBidiagonal[i]; mainTridiagonal[i] = a * a + b * b; } eigenDecomposition = new EigenDecompositionImpl(mainTridiagonal, secondaryTridiagonal, MathUtils.SAFE_MIN); final double[] eigenValues = eigenDecomposition.getRealEigenvalues(); int p = Math.min(max, eigenValues.length); while ((p > 0) && (eigenValues[p - 1] <= 0)) {"
+      },
+      {
+        "txt": "--p; } singularValues = new double[p]; for (int i = 0; i < p; ++i) { singularValues[i] = Math.sqrt(eigenValues[i]); } } public RealMatrix getU() throws InvalidMatrixException { if (cachedU == null) {"
+      },
+      {
+        "txt": "if (m >= n) { final RealMatrix e = eigenDecomposition.getV().getSubMatrix(0, p - 1, 0, p - 1); final double[][] eData = e.getData(); final double[][] wData = new double[m][p]; double[] ei1 = eData[0]; <extra_id_0> final double mi = mainBidiagonal[i]; final double[] ei0 = ei1; final double[] wi = wData[i]; ei1 = eData[i + 1]; final double si = secondaryBidiagonal[i]; for (int j = 0; j < p; ++j) {"
+      },
+      {
+        "txt": "final double si = secondaryBidiagonal[i]; for (int j = 0; j < p; ++j) { wi[j] = (mi * ei0[j] + si * ei1[j]) / singularValues[j]; } } for (int j = 0; j < p; ++j) { wData[p - 1][j] = ei1[j] * mainBidiagonal[p - 1] / singularValues[j]; } for (int i = p; i < m; ++i) { wData[i] = new double[p];"
+      },
+      {
+        "txt": "} cachedU = transformer.getU().multiply(MatrixUtils.createRealMatrix(wData)); } else { final RealMatrix e = eigenDecomposition.getV().getSubMatrix(0, m - 1, 0, p - 1); cachedU = transformer.getU().multiply(e); } } return cachedU;"
+      },
+      {
+        "txt": "} public RealMatrix getUT() throws InvalidMatrixException { if (cachedUt == null) { cachedUt = getU().transpose(); } return cachedUt; } public RealMatrix getS() throws InvalidMatrixException {"
+      },
+      {
+        "txt": "if (cachedS == null) { cachedS = MatrixUtils.createRealDiagonalMatrix(singularValues); } return cachedS; } public double[] getSingularValues() throws InvalidMatrixException { return singularValues.clone(); } public RealMatrix getV()"
+      },
+      {
+        "txt": "throws InvalidMatrixException { if (cachedV == null) { final int p = singularValues.length; if (m >= n) { final RealMatrix e = eigenDecomposition.getV().getSubMatrix(0, n - 1, 0, p - 1); cachedV = transformer.getV().multiply(e); } else { final RealMatrix e = eigenDecomposition.getV().getSubMatrix(0, p - 1, 0, p - 1);"
+      },
+      {
+        "txt": "final double[][] eData = e.getData(); final double[][] wData = new double[n][p]; double[] ei1 = eData[0]; for (int i = 0; i < p - 1; ++i) { final double mi = mainBidiagonal[i]; final double[] ei0 = ei1; final double[] wi = wData[i]; ei1 = eData[i + 1]; final double si = secondaryBidiagonal[i]; for (int j = 0; j < p; ++j) {"
+      },
+      {
+        "txt": "wi[j] = (mi * ei0[j] + si * ei1[j]) / singularValues[j]; } } for (int j = 0; j < p; ++j) { wData[p - 1][j] = ei1[j] * mainBidiagonal[p - 1] / singularValues[j]; } for (int i = p; i < n; ++i) { wData[i] = new double[p]; } cachedV ="
+      },
+      {
+        "txt": "transformer.getV().multiply(MatrixUtils.createRealMatrix(wData)); } } return cachedV; } public RealMatrix getVT() throws InvalidMatrixException { if (cachedVt == null) { cachedVt = getV().transpose(); }"
+      },
+      {
+        "txt": "return cachedVt; } public RealMatrix getCovariance(final double minSingularValue) { final int p = singularValues.length; int dimension = 0; while ((dimension < p) && (singularValues[dimension] >= minSingularValue)) { ++dimension; } if (dimension == 0) { throw MathRuntimeException.createIllegalArgumentException("
+      },
+      {
+        "txt": "\"cutoff singular value is {0}, should be at most {1}\", minSingularValue, singularValues[0]); } final double[][] data = new double[dimension][p]; getVT().walkInOptimizedOrder(new DefaultRealMatrixPreservingVisitor() { @Override public void visit(final int row, final int column, final double value) { data[row][column] = value / singularValues[row]; } }, 0, dimension - 1, 0, p - 1);"
+      },
+      {
+        "txt": "RealMatrix jv = new Array2DRowRealMatrix(data, false); return jv.transpose().multiply(jv); } public double getNorm() throws InvalidMatrixException { return singularValues[0]; } public double getConditionNumber() throws InvalidMatrixException { return singularValues[0] / singularValues[singularValues.length - 1];"
+      },
+      {
+        "txt": "} public int getRank() throws IllegalStateException { final double threshold = Math.max(m, n) * Math.ulp(singularValues[0]); for (int i = singularValues.length - 1; i >= 0; --i) { if (singularValues[i] > threshold) { return i + 1; } } return 0;"
+      },
+      {
+        "txt": "} public DecompositionSolver getSolver() { return new Solver(singularValues, getUT(), getV(), getRank() == Math.max(m, n)); } private static class Solver implements DecompositionSolver { private final RealMatrix pseudoInverse; private boolean nonSingular; private Solver(final double[] singularValues, final RealMatrix uT, final RealMatrix v, final boolean nonSingular) {"
+      },
+      {
+        "txt": "double[][] suT = uT.getData(); for (int i = 0; i < singularValues.length; ++i) { final double a = 1.0 / singularValues[i]; final double[] suTi = suT[i]; for (int j = 0; j < suTi.length; ++j) { suTi[j] *= a; } } pseudoInverse = v.multiply(new Array2DRowRealMatrix(suT, false)); this.nonSingular = nonSingular;"
+      },
+      {
+        "txt": "} public double[] solve(final double[] b) throws IllegalArgumentException { return pseudoInverse.operate(b); } public RealVector solve(final RealVector b) throws IllegalArgumentException { return pseudoInverse.operate(b); } public RealMatrix solve(final RealMatrix b)"
+      },
+      {
+        "txt": "throws IllegalArgumentException { return pseudoInverse.multiply(b); } public boolean isNonSingular() { return nonSingular; } public RealMatrix getInverse() { return pseudoInverse; } }"
+      }
+    ]
+  },
+  {
+    "id": 2661,
+    "file_path": "src/main/java/org/apache/commons/math/linear/SingularValueDecompositionImpl.java",
+    "start-bug-line": 171,
+    "end-bug-line": 171,
+    "bug": "",
+    "fix": "if (i < n - 1) {",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.math.linear; import org.apache.commons.math.MathRuntimeException; import org.apache.commons.math.util.MathUtils;"
+      },
+      {
+        "txt": "public class SingularValueDecompositionImpl implements SingularValueDecomposition { private int m; private int n; private BiDiagonalTransformer transformer; private double[] mainBidiagonal; private double[] secondaryBidiagonal; private double[] mainTridiagonal; private double[] secondaryTridiagonal; private EigenDecomposition eigenDecomposition; private double[] singularValues;"
+      },
+      {
+        "txt": "private RealMatrix cachedU; private RealMatrix cachedUt; private RealMatrix cachedS; private RealMatrix cachedV; private RealMatrix cachedVt; public SingularValueDecompositionImpl(final RealMatrix matrix) throws InvalidMatrixException { this(matrix, Math.min(matrix.getRowDimension(), matrix.getColumnDimension())); } public SingularValueDecompositionImpl(final RealMatrix matrix, final int max)"
+      },
+      {
+        "txt": "throws InvalidMatrixException { m = matrix.getRowDimension(); n = matrix.getColumnDimension(); cachedU = null; cachedS = null; cachedV = null; cachedVt = null; transformer = new BiDiagonalTransformer(matrix); mainBidiagonal = transformer.getMainDiagonalRef(); secondaryBidiagonal = transformer.getSecondaryDiagonalRef();"
+      },
+      {
+        "txt": "mainTridiagonal = new double[mainBidiagonal.length]; secondaryTridiagonal = new double[mainBidiagonal.length - 1]; double a = mainBidiagonal[0]; mainTridiagonal[0] = a * a; for (int i = 1; i < mainBidiagonal.length; ++i) { final double b = secondaryBidiagonal[i - 1]; secondaryTridiagonal[i - 1] = a * b; a = mainBidiagonal[i]; mainTridiagonal[i] = a * a + b * b; }"
+      },
+      {
+        "txt": "eigenDecomposition = new EigenDecompositionImpl(mainTridiagonal, secondaryTridiagonal, MathUtils.SAFE_MIN); final double[] eigenValues = eigenDecomposition.getRealEigenvalues(); int p = Math.min(max, eigenValues.length); while ((p > 0) && (eigenValues[p - 1] <= 0)) { --p; } singularValues = new double[p]; for (int i = 0; i < p; ++i) {"
+      },
+      {
+        "txt": "singularValues[i] = Math.sqrt(eigenValues[i]); } } public RealMatrix getU() throws InvalidMatrixException { if (cachedU == null) { final int p = singularValues.length; if (m >= n) { final RealMatrix e = eigenDecomposition.getV().getSubMatrix(0, p - 1, 0, p - 1);"
+      },
+      {
+        "txt": "final double[][] wData = new double[m][p]; double[] ei1 = eData[0]; for (int i = 0; i < p - 1; ++i) { final double mi = mainBidiagonal[i]; final double[] ei0 = ei1; final double[] wi = wData[i]; <extra_id_0> final double si = secondaryBidiagonal[i]; for (int j = 0; j < p; ++j) { wi[j] = (mi * ei0[j] + si * ei1[j]) / singularValues[j]; } } for (int j = 0; j < p; ++j) {"
+      },
+      {
+        "txt": "} for (int j = 0; j < p; ++j) { wData[p - 1][j] = ei1[j] * mainBidiagonal[p - 1] / singularValues[j]; } for (int i = p; i < m; ++i) { wData[i] = new double[p]; } cachedU = transformer.getU().multiply(MatrixUtils.createRealMatrix(wData)); } else {"
+      },
+      {
+        "txt": "final RealMatrix e = eigenDecomposition.getV().getSubMatrix(0, m - 1, 0, p - 1); cachedU = transformer.getU().multiply(e); } } return cachedU; } public RealMatrix getUT() throws InvalidMatrixException { if (cachedUt == null) {"
+      },
+      {
+        "txt": "cachedUt = getU().transpose(); } return cachedUt; } public RealMatrix getS() throws InvalidMatrixException { if (cachedS == null) { cachedS = MatrixUtils.createRealDiagonalMatrix(singularValues); } return cachedS;"
+      },
+      {
+        "txt": "} public double[] getSingularValues() throws InvalidMatrixException { return singularValues.clone(); } public RealMatrix getV() throws InvalidMatrixException { if (cachedV == null) { final int p = singularValues.length; if (m >= n) {"
+      },
+      {
+        "txt": "final RealMatrix e = eigenDecomposition.getV().getSubMatrix(0, n - 1, 0, p - 1); cachedV = transformer.getV().multiply(e); } else { final RealMatrix e = eigenDecomposition.getV().getSubMatrix(0, p - 1, 0, p - 1); final double[][] eData = e.getData(); final double[][] wData = new double[n][p]; double[] ei1 = eData[0]; for (int i = 0; i < p - 1; ++i) {"
+      },
+      {
+        "txt": "final double mi = mainBidiagonal[i]; final double[] ei0 = ei1; final double[] wi = wData[i]; ei1 = eData[i + 1]; final double si = secondaryBidiagonal[i]; for (int j = 0; j < p; ++j) { wi[j] = (mi * ei0[j] + si * ei1[j]) / singularValues[j]; } } for (int j = 0; j < p; ++j) {"
+      },
+      {
+        "txt": "wData[p - 1][j] = ei1[j] * mainBidiagonal[p - 1] / singularValues[j]; } for (int i = p; i < n; ++i) { wData[i] = new double[p]; } cachedV = transformer.getV().multiply(MatrixUtils.createRealMatrix(wData)); } } return cachedV;"
+      },
+      {
+        "txt": "} public RealMatrix getVT() throws InvalidMatrixException { if (cachedVt == null) { cachedVt = getV().transpose(); } return cachedVt; } public RealMatrix getCovariance(final double minSingularValue) { final int p = singularValues.length;"
+      },
+      {
+        "txt": "int dimension = 0; while ((dimension < p) && (singularValues[dimension] >= minSingularValue)) { ++dimension; } if (dimension == 0) { throw MathRuntimeException.createIllegalArgumentException( \"cutoff singular value is {0}, should be at most {1}\", minSingularValue, singularValues[0]); } final double[][] data = new double[dimension][p];"
+      },
+      {
+        "txt": "getVT().walkInOptimizedOrder(new DefaultRealMatrixPreservingVisitor() { @Override public void visit(final int row, final int column, final double value) { data[row][column] = value / singularValues[row]; } }, 0, dimension - 1, 0, p - 1); RealMatrix jv = new Array2DRowRealMatrix(data, false); return jv.transpose().multiply(jv); } public double getNorm()"
+      },
+      {
+        "txt": "throws InvalidMatrixException { return singularValues[0]; } public double getConditionNumber() throws InvalidMatrixException { return singularValues[0] / singularValues[singularValues.length - 1]; } public int getRank() throws IllegalStateException { final double threshold = Math.max(m, n) * Math.ulp(singularValues[0]);"
+      },
+      {
+        "txt": "for (int i = singularValues.length - 1; i >= 0; --i) { if (singularValues[i] > threshold) { return i + 1; } } return 0; } public DecompositionSolver getSolver() { return new Solver(singularValues, getUT(), getV(), getRank() == Math.max(m, n));"
+      },
+      {
+        "txt": "} private static class Solver implements DecompositionSolver { private final RealMatrix pseudoInverse; private boolean nonSingular; private Solver(final double[] singularValues, final RealMatrix uT, final RealMatrix v, final boolean nonSingular) { double[][] suT = uT.getData(); for (int i = 0; i < singularValues.length; ++i) { final double a = 1.0 / singularValues[i]; final double[] suTi = suT[i];"
+      },
+      {
+        "txt": "for (int j = 0; j < suTi.length; ++j) { suTi[j] *= a; } } pseudoInverse = v.multiply(new Array2DRowRealMatrix(suT, false)); this.nonSingular = nonSingular; } public double[] solve(final double[] b) throws IllegalArgumentException { return pseudoInverse.operate(b);"
+      },
+      {
+        "txt": "} public RealVector solve(final RealVector b) throws IllegalArgumentException { return pseudoInverse.operate(b); } public RealMatrix solve(final RealMatrix b) throws IllegalArgumentException { return pseudoInverse.multiply(b); } public boolean isNonSingular() {"
+      },
+      {
+        "txt": "return nonSingular; } public RealMatrix getInverse() { return pseudoInverse; } }"
+      }
+    ]
+  },
+  {
+    "id": 2662,
+    "file_path": "src/main/java/org/apache/commons/math/linear/SingularValueDecompositionImpl.java",
+    "start-bug-line": 176,
+    "end-bug-line": 176,
+    "bug": "}",
+    "fix": "} else {",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.math.linear; import org.apache.commons.math.MathRuntimeException; import org.apache.commons.math.util.MathUtils; public class SingularValueDecompositionImpl implements SingularValueDecomposition { private int m; private int n; private BiDiagonalTransformer transformer; private double[] mainBidiagonal;"
+      },
+      {
+        "txt": "private double[] secondaryBidiagonal; private double[] mainTridiagonal; private double[] secondaryTridiagonal; private EigenDecomposition eigenDecomposition; private double[] singularValues; private RealMatrix cachedU; private RealMatrix cachedUt; private RealMatrix cachedS; private RealMatrix cachedV; private RealMatrix cachedVt;"
+      },
+      {
+        "txt": "public SingularValueDecompositionImpl(final RealMatrix matrix) throws InvalidMatrixException { this(matrix, Math.min(matrix.getRowDimension(), matrix.getColumnDimension())); } public SingularValueDecompositionImpl(final RealMatrix matrix, final int max) throws InvalidMatrixException { m = matrix.getRowDimension(); n = matrix.getColumnDimension(); cachedU = null; cachedS = null;"
+      },
+      {
+        "txt": "cachedV = null; cachedVt = null; transformer = new BiDiagonalTransformer(matrix); mainBidiagonal = transformer.getMainDiagonalRef(); secondaryBidiagonal = transformer.getSecondaryDiagonalRef(); mainTridiagonal = new double[mainBidiagonal.length]; secondaryTridiagonal = new double[mainBidiagonal.length - 1]; double a = mainBidiagonal[0]; mainTridiagonal[0] = a * a; for (int i = 1; i < mainBidiagonal.length; ++i) {"
+      },
+      {
+        "txt": "final double b = secondaryBidiagonal[i - 1]; secondaryTridiagonal[i - 1] = a * b; a = mainBidiagonal[i]; mainTridiagonal[i] = a * a + b * b; } eigenDecomposition = new EigenDecompositionImpl(mainTridiagonal, secondaryTridiagonal, MathUtils.SAFE_MIN); final double[] eigenValues = eigenDecomposition.getRealEigenvalues(); int p = Math.min(max, eigenValues.length);"
+      },
+      {
+        "txt": "while ((p > 0) && (eigenValues[p - 1] <= 0)) { --p; } singularValues = new double[p]; for (int i = 0; i < p; ++i) { singularValues[i] = Math.sqrt(eigenValues[i]); } } public RealMatrix getU() throws InvalidMatrixException {"
+      },
+      {
+        "txt": "if (cachedU == null) { final int p = singularValues.length; if (m >= n) { final RealMatrix e = eigenDecomposition.getV().getSubMatrix(0, p - 1, 0, p - 1); final double[][] eData = e.getData(); final double[][] wData = new double[m][p]; double[] ei1 = eData[0]; for (int i = 0; i < p - 1; ++i) { final double mi = mainBidiagonal[i];"
+      },
+      {
+        "txt": "final double[] wi = wData[i]; ei1 = eData[i + 1]; final double si = secondaryBidiagonal[i]; for (int j = 0; j < p; ++j) { wi[j] = (mi * ei0[j] + si * ei1[j]) / singularValues[j]; } <extra_id_0> for (int j = 0; j < p; ++j) { wData[p - 1][j] = ei1[j] * mainBidiagonal[p - 1] / singularValues[j]; } for (int i = p; i < m; ++i) { wData[i] = new double[p]; }"
+      },
+      {
+        "txt": "wData[i] = new double[p]; } cachedU = transformer.getU().multiply(MatrixUtils.createRealMatrix(wData)); } else { final RealMatrix e = eigenDecomposition.getV().getSubMatrix(0, m - 1, 0, p - 1); cachedU = transformer.getU().multiply(e); } }"
+      },
+      {
+        "txt": "return cachedU; } public RealMatrix getUT() throws InvalidMatrixException { if (cachedUt == null) { cachedUt = getU().transpose(); } return cachedUt; } public RealMatrix getS()"
+      },
+      {
+        "txt": "throws InvalidMatrixException { if (cachedS == null) { cachedS = MatrixUtils.createRealDiagonalMatrix(singularValues); } return cachedS; } public double[] getSingularValues() throws InvalidMatrixException { return singularValues.clone(); }"
+      },
+      {
+        "txt": "public RealMatrix getV() throws InvalidMatrixException { if (cachedV == null) { final int p = singularValues.length; if (m >= n) { final RealMatrix e = eigenDecomposition.getV().getSubMatrix(0, n - 1, 0, p - 1); cachedV = transformer.getV().multiply(e); } else { final RealMatrix e ="
+      },
+      {
+        "txt": "eigenDecomposition.getV().getSubMatrix(0, p - 1, 0, p - 1); final double[][] eData = e.getData(); final double[][] wData = new double[n][p]; double[] ei1 = eData[0]; for (int i = 0; i < p - 1; ++i) { final double mi = mainBidiagonal[i]; final double[] ei0 = ei1; final double[] wi = wData[i]; ei1 = eData[i + 1]; final double si = secondaryBidiagonal[i];"
+      },
+      {
+        "txt": "for (int j = 0; j < p; ++j) { wi[j] = (mi * ei0[j] + si * ei1[j]) / singularValues[j]; } } for (int j = 0; j < p; ++j) { wData[p - 1][j] = ei1[j] * mainBidiagonal[p - 1] / singularValues[j]; } for (int i = p; i < n; ++i) { wData[i] = new double[p]; }"
+      },
+      {
+        "txt": "cachedV = transformer.getV().multiply(MatrixUtils.createRealMatrix(wData)); } } return cachedV; } public RealMatrix getVT() throws InvalidMatrixException { if (cachedVt == null) { cachedVt = getV().transpose();"
+      },
+      {
+        "txt": "} return cachedVt; } public RealMatrix getCovariance(final double minSingularValue) { final int p = singularValues.length; int dimension = 0; while ((dimension < p) && (singularValues[dimension] >= minSingularValue)) { ++dimension; } if (dimension == 0) {"
+      },
+      {
+        "txt": "throw MathRuntimeException.createIllegalArgumentException( \"cutoff singular value is {0}, should be at most {1}\", minSingularValue, singularValues[0]); } final double[][] data = new double[dimension][p]; getVT().walkInOptimizedOrder(new DefaultRealMatrixPreservingVisitor() { @Override public void visit(final int row, final int column, final double value) { data[row][column] = value / singularValues[row]; }"
+      },
+      {
+        "txt": "}, 0, dimension - 1, 0, p - 1); RealMatrix jv = new Array2DRowRealMatrix(data, false); return jv.transpose().multiply(jv); } public double getNorm() throws InvalidMatrixException { return singularValues[0]; } public double getConditionNumber() throws InvalidMatrixException {"
+      },
+      {
+        "txt": "return singularValues[0] / singularValues[singularValues.length - 1]; } public int getRank() throws IllegalStateException { final double threshold = Math.max(m, n) * Math.ulp(singularValues[0]); for (int i = singularValues.length - 1; i >= 0; --i) { if (singularValues[i] > threshold) { return i + 1; } }"
+      },
+      {
+        "txt": "return 0; } public DecompositionSolver getSolver() { return new Solver(singularValues, getUT(), getV(), getRank() == Math.max(m, n)); } private static class Solver implements DecompositionSolver { private final RealMatrix pseudoInverse; private boolean nonSingular; private Solver(final double[] singularValues, final RealMatrix uT, final RealMatrix v,"
+      },
+      {
+        "txt": "final boolean nonSingular) { double[][] suT = uT.getData(); for (int i = 0; i < singularValues.length; ++i) { final double a = 1.0 / singularValues[i]; final double[] suTi = suT[i]; for (int j = 0; j < suTi.length; ++j) { suTi[j] *= a; } } pseudoInverse = v.multiply(new Array2DRowRealMatrix(suT, false));"
+      },
+      {
+        "txt": "this.nonSingular = nonSingular; } public double[] solve(final double[] b) throws IllegalArgumentException { return pseudoInverse.operate(b); } public RealVector solve(final RealVector b) throws IllegalArgumentException { return pseudoInverse.operate(b); }"
+      },
+      {
+        "txt": "public RealMatrix solve(final RealMatrix b) throws IllegalArgumentException { return pseudoInverse.multiply(b); } public boolean isNonSingular() { return nonSingular; } public RealMatrix getInverse() { return pseudoInverse; }"
+      }
+    ]
+  },
+  {
+    "id": 2663,
+    "file_path": "src/main/java/org/apache/commons/math/linear/SingularValueDecompositionImpl.java",
+    "start-bug-line": 178,
+    "end-bug-line": 178,
+    "bug": "wData[p - 1][j] = ei1[j] * mainBidiagonal[p - 1] / singularValues[j];",
+    "fix": "wi[j] = mi * ei0[j] / singularValues[j];",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.math.linear; import org.apache.commons.math.MathRuntimeException; import org.apache.commons.math.util.MathUtils; public class SingularValueDecompositionImpl implements SingularValueDecomposition { private int m; private int n; private BiDiagonalTransformer transformer; private double[] mainBidiagonal; private double[] secondaryBidiagonal; private double[] mainTridiagonal;"
+      },
+      {
+        "txt": "private double[] secondaryTridiagonal; private EigenDecomposition eigenDecomposition; private double[] singularValues; private RealMatrix cachedU; private RealMatrix cachedUt; private RealMatrix cachedS; private RealMatrix cachedV; private RealMatrix cachedVt; public SingularValueDecompositionImpl(final RealMatrix matrix) throws InvalidMatrixException {"
+      },
+      {
+        "txt": "this(matrix, Math.min(matrix.getRowDimension(), matrix.getColumnDimension())); } public SingularValueDecompositionImpl(final RealMatrix matrix, final int max) throws InvalidMatrixException { m = matrix.getRowDimension(); n = matrix.getColumnDimension(); cachedU = null; cachedS = null; cachedV = null; cachedVt = null;"
+      },
+      {
+        "txt": "transformer = new BiDiagonalTransformer(matrix); mainBidiagonal = transformer.getMainDiagonalRef(); secondaryBidiagonal = transformer.getSecondaryDiagonalRef(); mainTridiagonal = new double[mainBidiagonal.length]; secondaryTridiagonal = new double[mainBidiagonal.length - 1]; double a = mainBidiagonal[0]; mainTridiagonal[0] = a * a; for (int i = 1; i < mainBidiagonal.length; ++i) { final double b = secondaryBidiagonal[i - 1]; secondaryTridiagonal[i - 1] = a * b;"
+      },
+      {
+        "txt": "a = mainBidiagonal[i]; mainTridiagonal[i] = a * a + b * b; } eigenDecomposition = new EigenDecompositionImpl(mainTridiagonal, secondaryTridiagonal, MathUtils.SAFE_MIN); final double[] eigenValues = eigenDecomposition.getRealEigenvalues(); int p = Math.min(max, eigenValues.length); while ((p > 0) && (eigenValues[p - 1] <= 0)) { --p;"
+      },
+      {
+        "txt": "} singularValues = new double[p]; for (int i = 0; i < p; ++i) { singularValues[i] = Math.sqrt(eigenValues[i]); } } public RealMatrix getU() throws InvalidMatrixException { if (cachedU == null) { final int p = singularValues.length;"
+      },
+      {
+        "txt": "if (m >= n) { final RealMatrix e = eigenDecomposition.getV().getSubMatrix(0, p - 1, 0, p - 1); final double[][] eData = e.getData(); final double[][] wData = new double[m][p]; double[] ei1 = eData[0]; for (int i = 0; i < p - 1; ++i) { final double mi = mainBidiagonal[i]; final double[] ei0 = ei1; final double[] wi = wData[i];"
+      },
+      {
+        "txt": "final double si = secondaryBidiagonal[i]; for (int j = 0; j < p; ++j) { wi[j] = (mi * ei0[j] + si * ei1[j]) / singularValues[j]; } } for (int j = 0; j < p; ++j) { <extra_id_0> } for (int i = p; i < m; ++i) { wData[i] = new double[p]; } cachedU = transformer.getU().multiply(MatrixUtils.createRealMatrix(wData));"
+      },
+      {
+        "txt": "cachedU = transformer.getU().multiply(MatrixUtils.createRealMatrix(wData)); } else { final RealMatrix e = eigenDecomposition.getV().getSubMatrix(0, m - 1, 0, p - 1); cachedU = transformer.getU().multiply(e); } } return cachedU; }"
+      },
+      {
+        "txt": "public RealMatrix getUT() throws InvalidMatrixException { if (cachedUt == null) { cachedUt = getU().transpose(); } return cachedUt; } public RealMatrix getS() throws InvalidMatrixException { if (cachedS == null) {"
+      },
+      {
+        "txt": "cachedS = MatrixUtils.createRealDiagonalMatrix(singularValues); } return cachedS; } public double[] getSingularValues() throws InvalidMatrixException { return singularValues.clone(); } public RealMatrix getV() throws InvalidMatrixException {"
+      },
+      {
+        "txt": "if (cachedV == null) { final int p = singularValues.length; if (m >= n) { final RealMatrix e = eigenDecomposition.getV().getSubMatrix(0, n - 1, 0, p - 1); cachedV = transformer.getV().multiply(e); } else { final RealMatrix e = eigenDecomposition.getV().getSubMatrix(0, p - 1, 0, p - 1); final double[][] eData = e.getData();"
+      },
+      {
+        "txt": "final double[][] wData = new double[n][p]; double[] ei1 = eData[0]; for (int i = 0; i < p - 1; ++i) { final double mi = mainBidiagonal[i]; final double[] ei0 = ei1; final double[] wi = wData[i]; ei1 = eData[i + 1]; final double si = secondaryBidiagonal[i]; for (int j = 0; j < p; ++j) { wi[j] = (mi * ei0[j] + si * ei1[j]) / singularValues[j];"
+      },
+      {
+        "txt": "} } for (int j = 0; j < p; ++j) { wData[p - 1][j] = ei1[j] * mainBidiagonal[p - 1] / singularValues[j]; } for (int i = p; i < n; ++i) { wData[i] = new double[p]; } cachedV = transformer.getV().multiply(MatrixUtils.createRealMatrix(wData));"
+      },
+      {
+        "txt": "} } return cachedV; } public RealMatrix getVT() throws InvalidMatrixException { if (cachedVt == null) { cachedVt = getV().transpose(); } return cachedVt;"
+      },
+      {
+        "txt": "} public RealMatrix getCovariance(final double minSingularValue) { final int p = singularValues.length; int dimension = 0; while ((dimension < p) && (singularValues[dimension] >= minSingularValue)) { ++dimension; } if (dimension == 0) { throw MathRuntimeException.createIllegalArgumentException( \"cutoff singular value is {0}, should be at most {1}\","
+      },
+      {
+        "txt": "minSingularValue, singularValues[0]); } final double[][] data = new double[dimension][p]; getVT().walkInOptimizedOrder(new DefaultRealMatrixPreservingVisitor() { @Override public void visit(final int row, final int column, final double value) { data[row][column] = value / singularValues[row]; } }, 0, dimension - 1, 0, p - 1); RealMatrix jv = new Array2DRowRealMatrix(data, false);"
+      },
+      {
+        "txt": "return jv.transpose().multiply(jv); } public double getNorm() throws InvalidMatrixException { return singularValues[0]; } public double getConditionNumber() throws InvalidMatrixException { return singularValues[0] / singularValues[singularValues.length - 1]; }"
+      },
+      {
+        "txt": "public int getRank() throws IllegalStateException { final double threshold = Math.max(m, n) * Math.ulp(singularValues[0]); for (int i = singularValues.length - 1; i >= 0; --i) { if (singularValues[i] > threshold) { return i + 1; } } return 0; }"
+      },
+      {
+        "txt": "public DecompositionSolver getSolver() { return new Solver(singularValues, getUT(), getV(), getRank() == Math.max(m, n)); } private static class Solver implements DecompositionSolver { private final RealMatrix pseudoInverse; private boolean nonSingular; private Solver(final double[] singularValues, final RealMatrix uT, final RealMatrix v, final boolean nonSingular) { double[][] suT = uT.getData();"
+      },
+      {
+        "txt": "for (int i = 0; i < singularValues.length; ++i) { final double a = 1.0 / singularValues[i]; final double[] suTi = suT[i]; for (int j = 0; j < suTi.length; ++j) { suTi[j] *= a; } } pseudoInverse = v.multiply(new Array2DRowRealMatrix(suT, false)); this.nonSingular = nonSingular; }"
+      },
+      {
+        "txt": "public double[] solve(final double[] b) throws IllegalArgumentException { return pseudoInverse.operate(b); } public RealVector solve(final RealVector b) throws IllegalArgumentException { return pseudoInverse.operate(b); } public RealMatrix solve(final RealMatrix b) throws IllegalArgumentException {"
+      },
+      {
+        "txt": "return pseudoInverse.multiply(b); } public boolean isNonSingular() { return nonSingular; } public RealMatrix getInverse() { return pseudoInverse; } }"
+      }
+    ]
+  },
+  {
+    "id": 2664,
+    "file_path": "src/main/java/org/apache/commons/math/linear/SingularValueDecompositionImpl.java",
+    "start-bug-line": 180,
+    "end-bug-line": 180,
+    "bug": "",
+    "fix": "} }",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.math.linear; import org.apache.commons.math.MathRuntimeException;"
+      },
+      {
+        "txt": "import org.apache.commons.math.util.MathUtils; public class SingularValueDecompositionImpl implements SingularValueDecomposition { private int m; private int n; private BiDiagonalTransformer transformer; private double[] mainBidiagonal; private double[] secondaryBidiagonal; private double[] mainTridiagonal; private double[] secondaryTridiagonal; private EigenDecomposition eigenDecomposition;"
+      },
+      {
+        "txt": "private double[] singularValues; private RealMatrix cachedU; private RealMatrix cachedUt; private RealMatrix cachedS; private RealMatrix cachedV; private RealMatrix cachedVt; public SingularValueDecompositionImpl(final RealMatrix matrix) throws InvalidMatrixException { this(matrix, Math.min(matrix.getRowDimension(), matrix.getColumnDimension())); }"
+      },
+      {
+        "txt": "public SingularValueDecompositionImpl(final RealMatrix matrix, final int max) throws InvalidMatrixException { m = matrix.getRowDimension(); n = matrix.getColumnDimension(); cachedU = null; cachedS = null; cachedV = null; cachedVt = null; transformer = new BiDiagonalTransformer(matrix); mainBidiagonal = transformer.getMainDiagonalRef();"
+      },
+      {
+        "txt": "secondaryBidiagonal = transformer.getSecondaryDiagonalRef(); mainTridiagonal = new double[mainBidiagonal.length]; secondaryTridiagonal = new double[mainBidiagonal.length - 1]; double a = mainBidiagonal[0]; mainTridiagonal[0] = a * a; for (int i = 1; i < mainBidiagonal.length; ++i) { final double b = secondaryBidiagonal[i - 1]; secondaryTridiagonal[i - 1] = a * b; a = mainBidiagonal[i]; mainTridiagonal[i] = a * a + b * b;"
+      },
+      {
+        "txt": "} eigenDecomposition = new EigenDecompositionImpl(mainTridiagonal, secondaryTridiagonal, MathUtils.SAFE_MIN); final double[] eigenValues = eigenDecomposition.getRealEigenvalues(); int p = Math.min(max, eigenValues.length); while ((p > 0) && (eigenValues[p - 1] <= 0)) { --p; } singularValues = new double[p];"
+      },
+      {
+        "txt": "for (int i = 0; i < p; ++i) { singularValues[i] = Math.sqrt(eigenValues[i]); } } public RealMatrix getU() throws InvalidMatrixException { if (cachedU == null) { final int p = singularValues.length; if (m >= n) { final RealMatrix e ="
+      },
+      {
+        "txt": "eigenDecomposition.getV().getSubMatrix(0, p - 1, 0, p - 1); final double[][] eData = e.getData(); final double[][] wData = new double[m][p]; double[] ei1 = eData[0]; for (int i = 0; i < p - 1; ++i) { final double mi = mainBidiagonal[i]; final double[] ei0 = ei1; final double[] wi = wData[i]; ei1 = eData[i + 1]; final double si = secondaryBidiagonal[i];"
+      },
+      {
+        "txt": "wi[j] = (mi * ei0[j] + si * ei1[j]) / singularValues[j]; } } for (int j = 0; j < p; ++j) { wData[p - 1][j] = ei1[j] * mainBidiagonal[p - 1] / singularValues[j]; } <extra_id_0> for (int i = p; i < m; ++i) { wData[i] = new double[p]; } cachedU = transformer.getU().multiply(MatrixUtils.createRealMatrix(wData)); } else {"
+      },
+      {
+        "txt": "transformer.getU().multiply(MatrixUtils.createRealMatrix(wData)); } else { final RealMatrix e = eigenDecomposition.getV().getSubMatrix(0, m - 1, 0, p - 1); cachedU = transformer.getU().multiply(e); } } return cachedU; } public RealMatrix getUT()"
+      },
+      {
+        "txt": "throws InvalidMatrixException { if (cachedUt == null) { cachedUt = getU().transpose(); } return cachedUt; } public RealMatrix getS() throws InvalidMatrixException { if (cachedS == null) { cachedS = MatrixUtils.createRealDiagonalMatrix(singularValues);"
+      },
+      {
+        "txt": "} return cachedS; } public double[] getSingularValues() throws InvalidMatrixException { return singularValues.clone(); } public RealMatrix getV() throws InvalidMatrixException { if (cachedV == null) {"
+      },
+      {
+        "txt": "final int p = singularValues.length; if (m >= n) { final RealMatrix e = eigenDecomposition.getV().getSubMatrix(0, n - 1, 0, p - 1); cachedV = transformer.getV().multiply(e); } else { final RealMatrix e = eigenDecomposition.getV().getSubMatrix(0, p - 1, 0, p - 1); final double[][] eData = e.getData(); final double[][] wData = new double[n][p];"
+      },
+      {
+        "txt": "double[] ei1 = eData[0]; for (int i = 0; i < p - 1; ++i) { final double mi = mainBidiagonal[i]; final double[] ei0 = ei1; final double[] wi = wData[i]; ei1 = eData[i + 1]; final double si = secondaryBidiagonal[i]; for (int j = 0; j < p; ++j) { wi[j] = (mi * ei0[j] + si * ei1[j]) / singularValues[j]; }"
+      },
+      {
+        "txt": "} for (int j = 0; j < p; ++j) { wData[p - 1][j] = ei1[j] * mainBidiagonal[p - 1] / singularValues[j]; } for (int i = p; i < n; ++i) { wData[i] = new double[p]; } cachedV = transformer.getV().multiply(MatrixUtils.createRealMatrix(wData)); }"
+      },
+      {
+        "txt": "} return cachedV; } public RealMatrix getVT() throws InvalidMatrixException { if (cachedVt == null) { cachedVt = getV().transpose(); } return cachedVt; }"
+      },
+      {
+        "txt": "public RealMatrix getCovariance(final double minSingularValue) { final int p = singularValues.length; int dimension = 0; while ((dimension < p) && (singularValues[dimension] >= minSingularValue)) { ++dimension; } if (dimension == 0) { throw MathRuntimeException.createIllegalArgumentException( \"cutoff singular value is {0}, should be at most {1}\", minSingularValue, singularValues[0]);"
+      },
+      {
+        "txt": "} final double[][] data = new double[dimension][p]; getVT().walkInOptimizedOrder(new DefaultRealMatrixPreservingVisitor() { @Override public void visit(final int row, final int column, final double value) { data[row][column] = value / singularValues[row]; } }, 0, dimension - 1, 0, p - 1); RealMatrix jv = new Array2DRowRealMatrix(data, false); return jv.transpose().multiply(jv);"
+      },
+      {
+        "txt": "} public double getNorm() throws InvalidMatrixException { return singularValues[0]; } public double getConditionNumber() throws InvalidMatrixException { return singularValues[0] / singularValues[singularValues.length - 1]; } public int getRank()"
+      },
+      {
+        "txt": "throws IllegalStateException { final double threshold = Math.max(m, n) * Math.ulp(singularValues[0]); for (int i = singularValues.length - 1; i >= 0; --i) { if (singularValues[i] > threshold) { return i + 1; } } return 0; } public DecompositionSolver getSolver() {"
+      },
+      {
+        "txt": "return new Solver(singularValues, getUT(), getV(), getRank() == Math.max(m, n)); } private static class Solver implements DecompositionSolver { private final RealMatrix pseudoInverse; private boolean nonSingular; private Solver(final double[] singularValues, final RealMatrix uT, final RealMatrix v, final boolean nonSingular) { double[][] suT = uT.getData(); for (int i = 0; i < singularValues.length; ++i) {"
+      },
+      {
+        "txt": "final double a = 1.0 / singularValues[i]; final double[] suTi = suT[i]; for (int j = 0; j < suTi.length; ++j) { suTi[j] *= a; } } pseudoInverse = v.multiply(new Array2DRowRealMatrix(suT, false)); this.nonSingular = nonSingular; } public double[] solve(final double[] b)"
+      },
+      {
+        "txt": "throws IllegalArgumentException { return pseudoInverse.operate(b); } public RealVector solve(final RealVector b) throws IllegalArgumentException { return pseudoInverse.operate(b); } public RealMatrix solve(final RealMatrix b) throws IllegalArgumentException { return pseudoInverse.multiply(b);"
+      },
+      {
+        "txt": "} public boolean isNonSingular() { return nonSingular; } public RealMatrix getInverse() { return pseudoInverse; } }"
+      }
+    ]
+  },
+  {
+    "id": 2665,
+    "file_path": "src/main/java/org/apache/commons/math/linear/SingularValueDecompositionImpl.java",
+    "start-bug-line": 248,
+    "end-bug-line": 248,
+    "bug": "eigenDecomposition.getV().getSubMatrix(0, p - 1, 0, p - 1);",
+    "fix": "eigenDecomposition.getV().getSubMatrix(0, m - 1, 0, p - 1);",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.math.linear; import org.apache.commons.math.MathRuntimeException; import org.apache.commons.math.util.MathUtils;"
+      },
+      {
+        "txt": "public class SingularValueDecompositionImpl implements SingularValueDecomposition { private int m; private int n; private BiDiagonalTransformer transformer; private double[] mainBidiagonal; private double[] secondaryBidiagonal; private double[] mainTridiagonal; private double[] secondaryTridiagonal; private EigenDecomposition eigenDecomposition; private double[] singularValues;"
+      },
+      {
+        "txt": "private RealMatrix cachedU; private RealMatrix cachedUt; private RealMatrix cachedS; private RealMatrix cachedV; private RealMatrix cachedVt; public SingularValueDecompositionImpl(final RealMatrix matrix) throws InvalidMatrixException { this(matrix, Math.min(matrix.getRowDimension(), matrix.getColumnDimension())); } public SingularValueDecompositionImpl(final RealMatrix matrix, final int max)"
+      },
+      {
+        "txt": "throws InvalidMatrixException { m = matrix.getRowDimension(); n = matrix.getColumnDimension(); cachedU = null; cachedS = null; cachedV = null; cachedVt = null; transformer = new BiDiagonalTransformer(matrix); mainBidiagonal = transformer.getMainDiagonalRef(); secondaryBidiagonal = transformer.getSecondaryDiagonalRef();"
+      },
+      {
+        "txt": "mainTridiagonal = new double[mainBidiagonal.length]; secondaryTridiagonal = new double[mainBidiagonal.length - 1]; double a = mainBidiagonal[0]; mainTridiagonal[0] = a * a; for (int i = 1; i < mainBidiagonal.length; ++i) { final double b = secondaryBidiagonal[i - 1]; secondaryTridiagonal[i - 1] = a * b; a = mainBidiagonal[i]; mainTridiagonal[i] = a * a + b * b; }"
+      },
+      {
+        "txt": "eigenDecomposition = new EigenDecompositionImpl(mainTridiagonal, secondaryTridiagonal, MathUtils.SAFE_MIN); final double[] eigenValues = eigenDecomposition.getRealEigenvalues(); int p = Math.min(max, eigenValues.length); while ((p > 0) && (eigenValues[p - 1] <= 0)) { --p; } singularValues = new double[p]; for (int i = 0; i < p; ++i) {"
+      },
+      {
+        "txt": "singularValues[i] = Math.sqrt(eigenValues[i]); } } public RealMatrix getU() throws InvalidMatrixException { if (cachedU == null) { final int p = singularValues.length; if (m >= n) { final RealMatrix e = eigenDecomposition.getV().getSubMatrix(0, p - 1, 0, p - 1);"
+      },
+      {
+        "txt": "final double[][] eData = e.getData(); final double[][] wData = new double[m][p]; double[] ei1 = eData[0]; for (int i = 0; i < p - 1; ++i) { final double mi = mainBidiagonal[i]; final double[] ei0 = ei1; final double[] wi = wData[i]; ei1 = eData[i + 1]; final double si = secondaryBidiagonal[i]; for (int j = 0; j < p; ++j) {"
+      },
+      {
+        "txt": "wi[j] = (mi * ei0[j] + si * ei1[j]) / singularValues[j]; } } for (int j = 0; j < p; ++j) { wData[p - 1][j] = ei1[j] * mainBidiagonal[p - 1] / singularValues[j]; } for (int i = p; i < m; ++i) { wData[i] = new double[p]; } cachedU ="
+      },
+      {
+        "txt": "transformer.getU().multiply(MatrixUtils.createRealMatrix(wData)); } else { final RealMatrix e = eigenDecomposition.getV().getSubMatrix(0, m - 1, 0, p - 1); cachedU = transformer.getU().multiply(e); } } return cachedU; } public RealMatrix getUT()"
+      },
+      {
+        "txt": "throws InvalidMatrixException { if (cachedUt == null) { cachedUt = getU().transpose(); } return cachedUt; } public RealMatrix getS() throws InvalidMatrixException { if (cachedS == null) { cachedS = MatrixUtils.createRealDiagonalMatrix(singularValues);"
+      },
+      {
+        "txt": "} return cachedS; } public double[] getSingularValues() throws InvalidMatrixException { return singularValues.clone(); } public RealMatrix getV() throws InvalidMatrixException { if (cachedV == null) {"
+      },
+      {
+        "txt": "if (m >= n) { final RealMatrix e = eigenDecomposition.getV().getSubMatrix(0, n - 1, 0, p - 1); cachedV = transformer.getV().multiply(e); } else { final RealMatrix e = <extra_id_0> final double[][] eData = e.getData(); final double[][] wData = new double[n][p]; double[] ei1 = eData[0]; for (int i = 0; i < p - 1; ++i) { final double mi = mainBidiagonal[i]; final double[] ei0 = ei1;"
+      },
+      {
+        "txt": "final double mi = mainBidiagonal[i]; final double[] ei0 = ei1; final double[] wi = wData[i]; ei1 = eData[i + 1]; final double si = secondaryBidiagonal[i]; for (int j = 0; j < p; ++j) { wi[j] = (mi * ei0[j] + si * ei1[j]) / singularValues[j]; } } for (int j = 0; j < p; ++j) {"
+      },
+      {
+        "txt": "wData[p - 1][j] = ei1[j] * mainBidiagonal[p - 1] / singularValues[j]; } for (int i = p; i < n; ++i) { wData[i] = new double[p]; } cachedV = transformer.getV().multiply(MatrixUtils.createRealMatrix(wData)); } } return cachedV;"
+      },
+      {
+        "txt": "} public RealMatrix getVT() throws InvalidMatrixException { if (cachedVt == null) { cachedVt = getV().transpose(); } return cachedVt; } public RealMatrix getCovariance(final double minSingularValue) { final int p = singularValues.length;"
+      },
+      {
+        "txt": "int dimension = 0; while ((dimension < p) && (singularValues[dimension] >= minSingularValue)) { ++dimension; } if (dimension == 0) { throw MathRuntimeException.createIllegalArgumentException( \"cutoff singular value is {0}, should be at most {1}\", minSingularValue, singularValues[0]); } final double[][] data = new double[dimension][p];"
+      },
+      {
+        "txt": "getVT().walkInOptimizedOrder(new DefaultRealMatrixPreservingVisitor() { @Override public void visit(final int row, final int column, final double value) { data[row][column] = value / singularValues[row]; } }, 0, dimension - 1, 0, p - 1); RealMatrix jv = new Array2DRowRealMatrix(data, false); return jv.transpose().multiply(jv); } public double getNorm()"
+      },
+      {
+        "txt": "throws InvalidMatrixException { return singularValues[0]; } public double getConditionNumber() throws InvalidMatrixException { return singularValues[0] / singularValues[singularValues.length - 1]; } public int getRank() throws IllegalStateException { final double threshold = Math.max(m, n) * Math.ulp(singularValues[0]);"
+      },
+      {
+        "txt": "for (int i = singularValues.length - 1; i >= 0; --i) { if (singularValues[i] > threshold) { return i + 1; } } return 0; } public DecompositionSolver getSolver() { return new Solver(singularValues, getUT(), getV(), getRank() == Math.max(m, n));"
+      },
+      {
+        "txt": "} private static class Solver implements DecompositionSolver { private final RealMatrix pseudoInverse; private boolean nonSingular; private Solver(final double[] singularValues, final RealMatrix uT, final RealMatrix v, final boolean nonSingular) { double[][] suT = uT.getData(); for (int i = 0; i < singularValues.length; ++i) { final double a = 1.0 / singularValues[i]; final double[] suTi = suT[i];"
+      },
+      {
+        "txt": "for (int j = 0; j < suTi.length; ++j) { suTi[j] *= a; } } pseudoInverse = v.multiply(new Array2DRowRealMatrix(suT, false)); this.nonSingular = nonSingular; } public double[] solve(final double[] b) throws IllegalArgumentException { return pseudoInverse.operate(b);"
+      },
+      {
+        "txt": "} public RealVector solve(final RealVector b) throws IllegalArgumentException { return pseudoInverse.operate(b); } public RealMatrix solve(final RealMatrix b) throws IllegalArgumentException { return pseudoInverse.multiply(b); } public boolean isNonSingular() {"
+      },
+      {
+        "txt": "return nonSingular; } public RealMatrix getInverse() { return pseudoInverse; } }"
+      }
+    ]
+  },
+  {
+    "id": 2666,
+    "file_path": "src/main/java/org/apache/commons/math/linear/SingularValueDecompositionImpl.java",
+    "start-bug-line": 252,
+    "end-bug-line": 252,
+    "bug": "for (int i = 0; i < p - 1; ++i) {",
+    "fix": "for (int i = 0; i < p; ++i) {",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.math.linear; import org.apache.commons.math.MathRuntimeException; import org.apache.commons.math.util.MathUtils; public class SingularValueDecompositionImpl implements SingularValueDecomposition { private int m; private int n; private BiDiagonalTransformer transformer;"
+      },
+      {
+        "txt": "private double[] mainBidiagonal; private double[] secondaryBidiagonal; private double[] mainTridiagonal; private double[] secondaryTridiagonal; private EigenDecomposition eigenDecomposition; private double[] singularValues; private RealMatrix cachedU; private RealMatrix cachedUt; private RealMatrix cachedS; private RealMatrix cachedV;"
+      },
+      {
+        "txt": "private RealMatrix cachedVt; public SingularValueDecompositionImpl(final RealMatrix matrix) throws InvalidMatrixException { this(matrix, Math.min(matrix.getRowDimension(), matrix.getColumnDimension())); } public SingularValueDecompositionImpl(final RealMatrix matrix, final int max) throws InvalidMatrixException { m = matrix.getRowDimension(); n = matrix.getColumnDimension(); cachedU = null;"
+      },
+      {
+        "txt": "cachedS = null; cachedV = null; cachedVt = null; transformer = new BiDiagonalTransformer(matrix); mainBidiagonal = transformer.getMainDiagonalRef(); secondaryBidiagonal = transformer.getSecondaryDiagonalRef(); mainTridiagonal = new double[mainBidiagonal.length]; secondaryTridiagonal = new double[mainBidiagonal.length - 1]; double a = mainBidiagonal[0]; mainTridiagonal[0] = a * a;"
+      },
+      {
+        "txt": "for (int i = 1; i < mainBidiagonal.length; ++i) { final double b = secondaryBidiagonal[i - 1]; secondaryTridiagonal[i - 1] = a * b; a = mainBidiagonal[i]; mainTridiagonal[i] = a * a + b * b; } eigenDecomposition = new EigenDecompositionImpl(mainTridiagonal, secondaryTridiagonal, MathUtils.SAFE_MIN); final double[] eigenValues = eigenDecomposition.getRealEigenvalues();"
+      },
+      {
+        "txt": "int p = Math.min(max, eigenValues.length); while ((p > 0) && (eigenValues[p - 1] <= 0)) { --p; } singularValues = new double[p]; for (int i = 0; i < p; ++i) { singularValues[i] = Math.sqrt(eigenValues[i]); } } public RealMatrix getU()"
+      },
+      {
+        "txt": "throws InvalidMatrixException { if (cachedU == null) { final int p = singularValues.length; if (m >= n) { final RealMatrix e = eigenDecomposition.getV().getSubMatrix(0, p - 1, 0, p - 1); final double[][] eData = e.getData(); final double[][] wData = new double[m][p]; double[] ei1 = eData[0]; for (int i = 0; i < p - 1; ++i) {"
+      },
+      {
+        "txt": "final double mi = mainBidiagonal[i]; final double[] ei0 = ei1; final double[] wi = wData[i]; ei1 = eData[i + 1]; final double si = secondaryBidiagonal[i]; for (int j = 0; j < p; ++j) { wi[j] = (mi * ei0[j] + si * ei1[j]) / singularValues[j]; } } for (int j = 0; j < p; ++j) {"
+      },
+      {
+        "txt": "wData[p - 1][j] = ei1[j] * mainBidiagonal[p - 1] / singularValues[j]; } for (int i = p; i < m; ++i) { wData[i] = new double[p]; } cachedU = transformer.getU().multiply(MatrixUtils.createRealMatrix(wData)); } else { final RealMatrix e = eigenDecomposition.getV().getSubMatrix(0, m - 1, 0, p - 1);"
+      },
+      {
+        "txt": "cachedU = transformer.getU().multiply(e); } } return cachedU; } public RealMatrix getUT() throws InvalidMatrixException { if (cachedUt == null) { cachedUt = getU().transpose(); }"
+      },
+      {
+        "txt": "return cachedUt; } public RealMatrix getS() throws InvalidMatrixException { if (cachedS == null) { cachedS = MatrixUtils.createRealDiagonalMatrix(singularValues); } return cachedS; } public double[] getSingularValues()"
+      },
+      {
+        "txt": "throws InvalidMatrixException { return singularValues.clone(); } public RealMatrix getV() throws InvalidMatrixException { if (cachedV == null) { final int p = singularValues.length; if (m >= n) { final RealMatrix e = eigenDecomposition.getV().getSubMatrix(0, n - 1, 0, p - 1);"
+      },
+      {
+        "txt": "} else { final RealMatrix e = eigenDecomposition.getV().getSubMatrix(0, p - 1, 0, p - 1); final double[][] eData = e.getData(); final double[][] wData = new double[n][p]; double[] ei1 = eData[0]; <extra_id_0> final double mi = mainBidiagonal[i]; final double[] ei0 = ei1; final double[] wi = wData[i]; ei1 = eData[i + 1]; final double si = secondaryBidiagonal[i]; for (int j = 0; j < p; ++j) {"
+      },
+      {
+        "txt": "final double si = secondaryBidiagonal[i]; for (int j = 0; j < p; ++j) { wi[j] = (mi * ei0[j] + si * ei1[j]) / singularValues[j]; } } for (int j = 0; j < p; ++j) { wData[p - 1][j] = ei1[j] * mainBidiagonal[p - 1] / singularValues[j]; } for (int i = p; i < n; ++i) { wData[i] = new double[p];"
+      },
+      {
+        "txt": "} cachedV = transformer.getV().multiply(MatrixUtils.createRealMatrix(wData)); } } return cachedV; } public RealMatrix getVT() throws InvalidMatrixException { if (cachedVt == null) {"
+      },
+      {
+        "txt": "cachedVt = getV().transpose(); } return cachedVt; } public RealMatrix getCovariance(final double minSingularValue) { final int p = singularValues.length; int dimension = 0; while ((dimension < p) && (singularValues[dimension] >= minSingularValue)) { ++dimension; }"
+      },
+      {
+        "txt": "if (dimension == 0) { throw MathRuntimeException.createIllegalArgumentException( \"cutoff singular value is {0}, should be at most {1}\", minSingularValue, singularValues[0]); } final double[][] data = new double[dimension][p]; getVT().walkInOptimizedOrder(new DefaultRealMatrixPreservingVisitor() { @Override public void visit(final int row, final int column, final double value) { data[row][column] = value / singularValues[row];"
+      },
+      {
+        "txt": "} }, 0, dimension - 1, 0, p - 1); RealMatrix jv = new Array2DRowRealMatrix(data, false); return jv.transpose().multiply(jv); } public double getNorm() throws InvalidMatrixException { return singularValues[0]; } public double getConditionNumber()"
+      },
+      {
+        "txt": "throws InvalidMatrixException { return singularValues[0] / singularValues[singularValues.length - 1]; } public int getRank() throws IllegalStateException { final double threshold = Math.max(m, n) * Math.ulp(singularValues[0]); for (int i = singularValues.length - 1; i >= 0; --i) { if (singularValues[i] > threshold) { return i + 1; }"
+      },
+      {
+        "txt": "} return 0; } public DecompositionSolver getSolver() { return new Solver(singularValues, getUT(), getV(), getRank() == Math.max(m, n)); } private static class Solver implements DecompositionSolver { private final RealMatrix pseudoInverse; private boolean nonSingular;"
+      },
+      {
+        "txt": "private Solver(final double[] singularValues, final RealMatrix uT, final RealMatrix v, final boolean nonSingular) { double[][] suT = uT.getData(); for (int i = 0; i < singularValues.length; ++i) { final double a = 1.0 / singularValues[i]; final double[] suTi = suT[i]; for (int j = 0; j < suTi.length; ++j) { suTi[j] *= a; } }"
+      },
+      {
+        "txt": "pseudoInverse = v.multiply(new Array2DRowRealMatrix(suT, false)); this.nonSingular = nonSingular; } public double[] solve(final double[] b) throws IllegalArgumentException { return pseudoInverse.operate(b); } public RealVector solve(final RealVector b) throws IllegalArgumentException { return pseudoInverse.operate(b);"
+      },
+      {
+        "txt": "} public RealMatrix solve(final RealMatrix b) throws IllegalArgumentException { return pseudoInverse.multiply(b); } public boolean isNonSingular() { return nonSingular; } public RealMatrix getInverse() { return pseudoInverse;"
+      },
+      {
+        "txt": "} }"
+      }
+    ]
+  },
+  {
+    "id": 2667,
+    "file_path": "src/main/java/org/apache/commons/math/linear/SingularValueDecompositionImpl.java",
+    "start-bug-line": 256,
+    "end-bug-line": 256,
+    "bug": "",
+    "fix": "if (i < m - 1) {",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "import org.apache.commons.math.MathRuntimeException; import org.apache.commons.math.util.MathUtils; public class SingularValueDecompositionImpl implements SingularValueDecomposition { private int m; private int n; private BiDiagonalTransformer transformer; private double[] mainBidiagonal; private double[] secondaryBidiagonal; private double[] mainTridiagonal; private double[] secondaryTridiagonal;"
+      },
+      {
+        "txt": "private EigenDecomposition eigenDecomposition; private double[] singularValues; private RealMatrix cachedU; private RealMatrix cachedUt; private RealMatrix cachedS; private RealMatrix cachedV; private RealMatrix cachedVt; public SingularValueDecompositionImpl(final RealMatrix matrix) throws InvalidMatrixException { this(matrix, Math.min(matrix.getRowDimension(), matrix.getColumnDimension()));"
+      },
+      {
+        "txt": "} public SingularValueDecompositionImpl(final RealMatrix matrix, final int max) throws InvalidMatrixException { m = matrix.getRowDimension(); n = matrix.getColumnDimension(); cachedU = null; cachedS = null; cachedV = null; cachedVt = null; transformer = new BiDiagonalTransformer(matrix);"
+      },
+      {
+        "txt": "mainBidiagonal = transformer.getMainDiagonalRef(); secondaryBidiagonal = transformer.getSecondaryDiagonalRef(); mainTridiagonal = new double[mainBidiagonal.length]; secondaryTridiagonal = new double[mainBidiagonal.length - 1]; double a = mainBidiagonal[0]; mainTridiagonal[0] = a * a; for (int i = 1; i < mainBidiagonal.length; ++i) { final double b = secondaryBidiagonal[i - 1]; secondaryTridiagonal[i - 1] = a * b; a = mainBidiagonal[i];"
+      },
+      {
+        "txt": "mainTridiagonal[i] = a * a + b * b; } eigenDecomposition = new EigenDecompositionImpl(mainTridiagonal, secondaryTridiagonal, MathUtils.SAFE_MIN); final double[] eigenValues = eigenDecomposition.getRealEigenvalues(); int p = Math.min(max, eigenValues.length); while ((p > 0) && (eigenValues[p - 1] <= 0)) { --p; }"
+      },
+      {
+        "txt": "singularValues = new double[p]; for (int i = 0; i < p; ++i) { singularValues[i] = Math.sqrt(eigenValues[i]); } } public RealMatrix getU() throws InvalidMatrixException { if (cachedU == null) { final int p = singularValues.length; if (m >= n) {"
+      },
+      {
+        "txt": "final RealMatrix e = eigenDecomposition.getV().getSubMatrix(0, p - 1, 0, p - 1); final double[][] eData = e.getData(); final double[][] wData = new double[m][p]; double[] ei1 = eData[0]; for (int i = 0; i < p - 1; ++i) { final double mi = mainBidiagonal[i]; final double[] ei0 = ei1; final double[] wi = wData[i]; ei1 = eData[i + 1];"
+      },
+      {
+        "txt": "final double si = secondaryBidiagonal[i]; for (int j = 0; j < p; ++j) { wi[j] = (mi * ei0[j] + si * ei1[j]) / singularValues[j]; } } for (int j = 0; j < p; ++j) { wData[p - 1][j] = ei1[j] * mainBidiagonal[p - 1] / singularValues[j]; } for (int i = p; i < m; ++i) { wData[i] = new double[p];"
+      },
+      {
+        "txt": "} cachedU = transformer.getU().multiply(MatrixUtils.createRealMatrix(wData)); } else { final RealMatrix e = eigenDecomposition.getV().getSubMatrix(0, m - 1, 0, p - 1); cachedU = transformer.getU().multiply(e); } } return cachedU;"
+      },
+      {
+        "txt": "} public RealMatrix getUT() throws InvalidMatrixException { if (cachedUt == null) { cachedUt = getU().transpose(); } return cachedUt; } public RealMatrix getS() throws InvalidMatrixException {"
+      },
+      {
+        "txt": "if (cachedS == null) { cachedS = MatrixUtils.createRealDiagonalMatrix(singularValues); } return cachedS; } public double[] getSingularValues() throws InvalidMatrixException { return singularValues.clone(); } public RealMatrix getV()"
+      },
+      {
+        "txt": "throws InvalidMatrixException { if (cachedV == null) { final int p = singularValues.length; if (m >= n) { final RealMatrix e = eigenDecomposition.getV().getSubMatrix(0, n - 1, 0, p - 1); cachedV = transformer.getV().multiply(e); } else { final RealMatrix e = eigenDecomposition.getV().getSubMatrix(0, p - 1, 0, p - 1);"
+      },
+      {
+        "txt": "final double[][] wData = new double[n][p]; double[] ei1 = eData[0]; for (int i = 0; i < p - 1; ++i) { final double mi = mainBidiagonal[i]; final double[] ei0 = ei1; final double[] wi = wData[i]; <extra_id_0> final double si = secondaryBidiagonal[i]; for (int j = 0; j < p; ++j) { wi[j] = (mi * ei0[j] + si * ei1[j]) / singularValues[j]; } } for (int j = 0; j < p; ++j) {"
+      },
+      {
+        "txt": "} for (int j = 0; j < p; ++j) { wData[p - 1][j] = ei1[j] * mainBidiagonal[p - 1] / singularValues[j]; } for (int i = p; i < n; ++i) { wData[i] = new double[p]; } cachedV = transformer.getV().multiply(MatrixUtils.createRealMatrix(wData)); }"
+      },
+      {
+        "txt": "} return cachedV; } public RealMatrix getVT() throws InvalidMatrixException { if (cachedVt == null) { cachedVt = getV().transpose(); } return cachedVt; }"
+      },
+      {
+        "txt": "public RealMatrix getCovariance(final double minSingularValue) { final int p = singularValues.length; int dimension = 0; while ((dimension < p) && (singularValues[dimension] >= minSingularValue)) { ++dimension; } if (dimension == 0) { throw MathRuntimeException.createIllegalArgumentException( \"cutoff singular value is {0}, should be at most {1}\", minSingularValue, singularValues[0]);"
+      },
+      {
+        "txt": "} final double[][] data = new double[dimension][p]; getVT().walkInOptimizedOrder(new DefaultRealMatrixPreservingVisitor() { @Override public void visit(final int row, final int column, final double value) { data[row][column] = value / singularValues[row]; } }, 0, dimension - 1, 0, p - 1); RealMatrix jv = new Array2DRowRealMatrix(data, false); return jv.transpose().multiply(jv);"
+      },
+      {
+        "txt": "} public double getNorm() throws InvalidMatrixException { return singularValues[0]; } public double getConditionNumber() throws InvalidMatrixException { return singularValues[0] / singularValues[singularValues.length - 1]; } public int getRank()"
+      },
+      {
+        "txt": "throws IllegalStateException { final double threshold = Math.max(m, n) * Math.ulp(singularValues[0]); for (int i = singularValues.length - 1; i >= 0; --i) { if (singularValues[i] > threshold) { return i + 1; } } return 0; } public DecompositionSolver getSolver() {"
+      },
+      {
+        "txt": "return new Solver(singularValues, getUT(), getV(), getRank() == Math.max(m, n)); } private static class Solver implements DecompositionSolver { private final RealMatrix pseudoInverse; private boolean nonSingular; private Solver(final double[] singularValues, final RealMatrix uT, final RealMatrix v, final boolean nonSingular) { double[][] suT = uT.getData(); for (int i = 0; i < singularValues.length; ++i) {"
+      },
+      {
+        "txt": "final double a = 1.0 / singularValues[i]; final double[] suTi = suT[i]; for (int j = 0; j < suTi.length; ++j) { suTi[j] *= a; } } pseudoInverse = v.multiply(new Array2DRowRealMatrix(suT, false)); this.nonSingular = nonSingular; } public double[] solve(final double[] b)"
+      },
+      {
+        "txt": "throws IllegalArgumentException { return pseudoInverse.operate(b); } public RealVector solve(final RealVector b) throws IllegalArgumentException { return pseudoInverse.operate(b); } public RealMatrix solve(final RealMatrix b) throws IllegalArgumentException { return pseudoInverse.multiply(b);"
+      },
+      {
+        "txt": "} public boolean isNonSingular() { return nonSingular; } public RealMatrix getInverse() { return pseudoInverse; } }"
+      }
+    ]
+  },
+  {
+    "id": 2668,
+    "file_path": "src/main/java/org/apache/commons/math/linear/SingularValueDecompositionImpl.java",
+    "start-bug-line": 261,
+    "end-bug-line": 261,
+    "bug": "}",
+    "fix": "} else {",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.math.linear; import org.apache.commons.math.MathRuntimeException; import org.apache.commons.math.util.MathUtils; public class SingularValueDecompositionImpl implements SingularValueDecomposition { private int m; private int n;"
+      },
+      {
+        "txt": "private BiDiagonalTransformer transformer; private double[] mainBidiagonal; private double[] secondaryBidiagonal; private double[] mainTridiagonal; private double[] secondaryTridiagonal; private EigenDecomposition eigenDecomposition; private double[] singularValues; private RealMatrix cachedU; private RealMatrix cachedUt; private RealMatrix cachedS;"
+      },
+      {
+        "txt": "private RealMatrix cachedV; private RealMatrix cachedVt; public SingularValueDecompositionImpl(final RealMatrix matrix) throws InvalidMatrixException { this(matrix, Math.min(matrix.getRowDimension(), matrix.getColumnDimension())); } public SingularValueDecompositionImpl(final RealMatrix matrix, final int max) throws InvalidMatrixException { m = matrix.getRowDimension(); n = matrix.getColumnDimension();"
+      },
+      {
+        "txt": "cachedU = null; cachedS = null; cachedV = null; cachedVt = null; transformer = new BiDiagonalTransformer(matrix); mainBidiagonal = transformer.getMainDiagonalRef(); secondaryBidiagonal = transformer.getSecondaryDiagonalRef(); mainTridiagonal = new double[mainBidiagonal.length]; secondaryTridiagonal = new double[mainBidiagonal.length - 1]; double a = mainBidiagonal[0];"
+      },
+      {
+        "txt": "mainTridiagonal[0] = a * a; for (int i = 1; i < mainBidiagonal.length; ++i) { final double b = secondaryBidiagonal[i - 1]; secondaryTridiagonal[i - 1] = a * b; a = mainBidiagonal[i]; mainTridiagonal[i] = a * a + b * b; } eigenDecomposition = new EigenDecompositionImpl(mainTridiagonal, secondaryTridiagonal, MathUtils.SAFE_MIN);"
+      },
+      {
+        "txt": "final double[] eigenValues = eigenDecomposition.getRealEigenvalues(); int p = Math.min(max, eigenValues.length); while ((p > 0) && (eigenValues[p - 1] <= 0)) { --p; } singularValues = new double[p]; for (int i = 0; i < p; ++i) { singularValues[i] = Math.sqrt(eigenValues[i]); } }"
+      },
+      {
+        "txt": "public RealMatrix getU() throws InvalidMatrixException { if (cachedU == null) { final int p = singularValues.length; if (m >= n) { final RealMatrix e = eigenDecomposition.getV().getSubMatrix(0, p - 1, 0, p - 1); final double[][] eData = e.getData(); final double[][] wData = new double[m][p]; double[] ei1 = eData[0];"
+      },
+      {
+        "txt": "for (int i = 0; i < p - 1; ++i) { final double mi = mainBidiagonal[i]; final double[] ei0 = ei1; final double[] wi = wData[i]; ei1 = eData[i + 1]; final double si = secondaryBidiagonal[i]; for (int j = 0; j < p; ++j) { wi[j] = (mi * ei0[j] + si * ei1[j]) / singularValues[j]; } }"
+      },
+      {
+        "txt": "for (int j = 0; j < p; ++j) { wData[p - 1][j] = ei1[j] * mainBidiagonal[p - 1] / singularValues[j]; } for (int i = p; i < m; ++i) { wData[i] = new double[p]; } cachedU = transformer.getU().multiply(MatrixUtils.createRealMatrix(wData)); } else { final RealMatrix e ="
+      },
+      {
+        "txt": "eigenDecomposition.getV().getSubMatrix(0, m - 1, 0, p - 1); cachedU = transformer.getU().multiply(e); } } return cachedU; } public RealMatrix getUT() throws InvalidMatrixException { if (cachedUt == null) { cachedUt = getU().transpose();"
+      },
+      {
+        "txt": "} return cachedUt; } public RealMatrix getS() throws InvalidMatrixException { if (cachedS == null) { cachedS = MatrixUtils.createRealDiagonalMatrix(singularValues); } return cachedS; }"
+      },
+      {
+        "txt": "public double[] getSingularValues() throws InvalidMatrixException { return singularValues.clone(); } public RealMatrix getV() throws InvalidMatrixException { if (cachedV == null) { final int p = singularValues.length; if (m >= n) { final RealMatrix e ="
+      },
+      {
+        "txt": "eigenDecomposition.getV().getSubMatrix(0, n - 1, 0, p - 1); cachedV = transformer.getV().multiply(e); } else { final RealMatrix e = eigenDecomposition.getV().getSubMatrix(0, p - 1, 0, p - 1); final double[][] eData = e.getData(); final double[][] wData = new double[n][p]; double[] ei1 = eData[0]; for (int i = 0; i < p - 1; ++i) { final double mi = mainBidiagonal[i];"
+      },
+      {
+        "txt": "final double[] wi = wData[i]; ei1 = eData[i + 1]; final double si = secondaryBidiagonal[i]; for (int j = 0; j < p; ++j) { wi[j] = (mi * ei0[j] + si * ei1[j]) / singularValues[j]; } <extra_id_0> for (int j = 0; j < p; ++j) { wData[p - 1][j] = ei1[j] * mainBidiagonal[p - 1] / singularValues[j]; } for (int i = p; i < n; ++i) { wData[i] = new double[p]; }"
+      },
+      {
+        "txt": "wData[i] = new double[p]; } cachedV = transformer.getV().multiply(MatrixUtils.createRealMatrix(wData)); } } return cachedV; } public RealMatrix getVT() throws InvalidMatrixException {"
+      },
+      {
+        "txt": "if (cachedVt == null) { cachedVt = getV().transpose(); } return cachedVt; } public RealMatrix getCovariance(final double minSingularValue) { final int p = singularValues.length; int dimension = 0; while ((dimension < p) && (singularValues[dimension] >= minSingularValue)) { ++dimension;"
+      },
+      {
+        "txt": "} if (dimension == 0) { throw MathRuntimeException.createIllegalArgumentException( \"cutoff singular value is {0}, should be at most {1}\", minSingularValue, singularValues[0]); } final double[][] data = new double[dimension][p]; getVT().walkInOptimizedOrder(new DefaultRealMatrixPreservingVisitor() { @Override public void visit(final int row, final int column, final double value) {"
+      },
+      {
+        "txt": "data[row][column] = value / singularValues[row]; } }, 0, dimension - 1, 0, p - 1); RealMatrix jv = new Array2DRowRealMatrix(data, false); return jv.transpose().multiply(jv); } public double getNorm() throws InvalidMatrixException { return singularValues[0]; }"
+      },
+      {
+        "txt": "public double getConditionNumber() throws InvalidMatrixException { return singularValues[0] / singularValues[singularValues.length - 1]; } public int getRank() throws IllegalStateException { final double threshold = Math.max(m, n) * Math.ulp(singularValues[0]); for (int i = singularValues.length - 1; i >= 0; --i) { if (singularValues[i] > threshold) { return i + 1;"
+      },
+      {
+        "txt": "} } return 0; } public DecompositionSolver getSolver() { return new Solver(singularValues, getUT(), getV(), getRank() == Math.max(m, n)); } private static class Solver implements DecompositionSolver { private final RealMatrix pseudoInverse;"
+      },
+      {
+        "txt": "private boolean nonSingular; private Solver(final double[] singularValues, final RealMatrix uT, final RealMatrix v, final boolean nonSingular) { double[][] suT = uT.getData(); for (int i = 0; i < singularValues.length; ++i) { final double a = 1.0 / singularValues[i]; final double[] suTi = suT[i]; for (int j = 0; j < suTi.length; ++j) { suTi[j] *= a; }"
+      },
+      {
+        "txt": "} pseudoInverse = v.multiply(new Array2DRowRealMatrix(suT, false)); this.nonSingular = nonSingular; } public double[] solve(final double[] b) throws IllegalArgumentException { return pseudoInverse.operate(b); } public RealVector solve(final RealVector b) throws IllegalArgumentException {"
+      },
+      {
+        "txt": "return pseudoInverse.operate(b); } public RealMatrix solve(final RealMatrix b) throws IllegalArgumentException { return pseudoInverse.multiply(b); } public boolean isNonSingular() { return nonSingular; } public RealMatrix getInverse() {"
+      },
+      {
+        "txt": "return pseudoInverse; } }"
+      }
+    ]
+  },
+  {
+    "id": 2669,
+    "file_path": "src/main/java/org/apache/commons/math/linear/SingularValueDecompositionImpl.java",
+    "start-bug-line": 263,
+    "end-bug-line": 263,
+    "bug": "wData[p - 1][j] = ei1[j] * mainBidiagonal[p - 1] / singularValues[j];",
+    "fix": "wi[j] = mi * ei0[j] / singularValues[j];",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.math.linear; import org.apache.commons.math.MathRuntimeException; import org.apache.commons.math.util.MathUtils; public class SingularValueDecompositionImpl implements SingularValueDecomposition { private int m; private int n; private BiDiagonalTransformer transformer; private double[] mainBidiagonal;"
+      },
+      {
+        "txt": "private double[] secondaryBidiagonal; private double[] mainTridiagonal; private double[] secondaryTridiagonal; private EigenDecomposition eigenDecomposition; private double[] singularValues; private RealMatrix cachedU; private RealMatrix cachedUt; private RealMatrix cachedS; private RealMatrix cachedV; private RealMatrix cachedVt;"
+      },
+      {
+        "txt": "public SingularValueDecompositionImpl(final RealMatrix matrix) throws InvalidMatrixException { this(matrix, Math.min(matrix.getRowDimension(), matrix.getColumnDimension())); } public SingularValueDecompositionImpl(final RealMatrix matrix, final int max) throws InvalidMatrixException { m = matrix.getRowDimension(); n = matrix.getColumnDimension(); cachedU = null; cachedS = null;"
+      },
+      {
+        "txt": "cachedV = null; cachedVt = null; transformer = new BiDiagonalTransformer(matrix); mainBidiagonal = transformer.getMainDiagonalRef(); secondaryBidiagonal = transformer.getSecondaryDiagonalRef(); mainTridiagonal = new double[mainBidiagonal.length]; secondaryTridiagonal = new double[mainBidiagonal.length - 1]; double a = mainBidiagonal[0]; mainTridiagonal[0] = a * a; for (int i = 1; i < mainBidiagonal.length; ++i) {"
+      },
+      {
+        "txt": "final double b = secondaryBidiagonal[i - 1]; secondaryTridiagonal[i - 1] = a * b; a = mainBidiagonal[i]; mainTridiagonal[i] = a * a + b * b; } eigenDecomposition = new EigenDecompositionImpl(mainTridiagonal, secondaryTridiagonal, MathUtils.SAFE_MIN); final double[] eigenValues = eigenDecomposition.getRealEigenvalues(); int p = Math.min(max, eigenValues.length);"
+      },
+      {
+        "txt": "while ((p > 0) && (eigenValues[p - 1] <= 0)) { --p; } singularValues = new double[p]; for (int i = 0; i < p; ++i) { singularValues[i] = Math.sqrt(eigenValues[i]); } } public RealMatrix getU() throws InvalidMatrixException {"
+      },
+      {
+        "txt": "if (cachedU == null) { final int p = singularValues.length; if (m >= n) { final RealMatrix e = eigenDecomposition.getV().getSubMatrix(0, p - 1, 0, p - 1); final double[][] eData = e.getData(); final double[][] wData = new double[m][p]; double[] ei1 = eData[0]; for (int i = 0; i < p - 1; ++i) { final double mi = mainBidiagonal[i];"
+      },
+      {
+        "txt": "final double[] ei0 = ei1; final double[] wi = wData[i]; ei1 = eData[i + 1]; final double si = secondaryBidiagonal[i]; for (int j = 0; j < p; ++j) { wi[j] = (mi * ei0[j] + si * ei1[j]) / singularValues[j]; } } for (int j = 0; j < p; ++j) { wData[p - 1][j] = ei1[j] * mainBidiagonal[p - 1] / singularValues[j];"
+      },
+      {
+        "txt": "} for (int i = p; i < m; ++i) { wData[i] = new double[p]; } cachedU = transformer.getU().multiply(MatrixUtils.createRealMatrix(wData)); } else { final RealMatrix e = eigenDecomposition.getV().getSubMatrix(0, m - 1, 0, p - 1); cachedU = transformer.getU().multiply(e);"
+      },
+      {
+        "txt": "} } return cachedU; } public RealMatrix getUT() throws InvalidMatrixException { if (cachedUt == null) { cachedUt = getU().transpose(); } return cachedUt;"
+      },
+      {
+        "txt": "} public RealMatrix getS() throws InvalidMatrixException { if (cachedS == null) { cachedS = MatrixUtils.createRealDiagonalMatrix(singularValues); } return cachedS; } public double[] getSingularValues() throws InvalidMatrixException {"
+      },
+      {
+        "txt": "return singularValues.clone(); } public RealMatrix getV() throws InvalidMatrixException { if (cachedV == null) { final int p = singularValues.length; if (m >= n) { final RealMatrix e = eigenDecomposition.getV().getSubMatrix(0, n - 1, 0, p - 1); cachedV = transformer.getV().multiply(e);"
+      },
+      {
+        "txt": "} else { final RealMatrix e = eigenDecomposition.getV().getSubMatrix(0, p - 1, 0, p - 1); final double[][] eData = e.getData(); final double[][] wData = new double[n][p]; double[] ei1 = eData[0]; for (int i = 0; i < p - 1; ++i) { final double mi = mainBidiagonal[i]; final double[] ei0 = ei1; final double[] wi = wData[i];"
+      },
+      {
+        "txt": "final double si = secondaryBidiagonal[i]; for (int j = 0; j < p; ++j) { wi[j] = (mi * ei0[j] + si * ei1[j]) / singularValues[j]; } } for (int j = 0; j < p; ++j) { <extra_id_0> } for (int i = p; i < n; ++i) { wData[i] = new double[p]; } cachedV = transformer.getV().multiply(MatrixUtils.createRealMatrix(wData));"
+      },
+      {
+        "txt": "cachedV = transformer.getV().multiply(MatrixUtils.createRealMatrix(wData)); } } return cachedV; } public RealMatrix getVT() throws InvalidMatrixException { if (cachedVt == null) { cachedVt = getV().transpose();"
+      },
+      {
+        "txt": "} return cachedVt; } public RealMatrix getCovariance(final double minSingularValue) { final int p = singularValues.length; int dimension = 0; while ((dimension < p) && (singularValues[dimension] >= minSingularValue)) { ++dimension; } if (dimension == 0) {"
+      },
+      {
+        "txt": "throw MathRuntimeException.createIllegalArgumentException( \"cutoff singular value is {0}, should be at most {1}\", minSingularValue, singularValues[0]); } final double[][] data = new double[dimension][p]; getVT().walkInOptimizedOrder(new DefaultRealMatrixPreservingVisitor() { @Override public void visit(final int row, final int column, final double value) { data[row][column] = value / singularValues[row]; }"
+      },
+      {
+        "txt": "}, 0, dimension - 1, 0, p - 1); RealMatrix jv = new Array2DRowRealMatrix(data, false); return jv.transpose().multiply(jv); } public double getNorm() throws InvalidMatrixException { return singularValues[0]; } public double getConditionNumber() throws InvalidMatrixException {"
+      },
+      {
+        "txt": "return singularValues[0] / singularValues[singularValues.length - 1]; } public int getRank() throws IllegalStateException { final double threshold = Math.max(m, n) * Math.ulp(singularValues[0]); for (int i = singularValues.length - 1; i >= 0; --i) { if (singularValues[i] > threshold) { return i + 1; } }"
+      },
+      {
+        "txt": "return 0; } public DecompositionSolver getSolver() { return new Solver(singularValues, getUT(), getV(), getRank() == Math.max(m, n)); } private static class Solver implements DecompositionSolver { private final RealMatrix pseudoInverse; private boolean nonSingular; private Solver(final double[] singularValues, final RealMatrix uT, final RealMatrix v,"
+      },
+      {
+        "txt": "final boolean nonSingular) { double[][] suT = uT.getData(); for (int i = 0; i < singularValues.length; ++i) { final double a = 1.0 / singularValues[i]; final double[] suTi = suT[i]; for (int j = 0; j < suTi.length; ++j) { suTi[j] *= a; } } pseudoInverse = v.multiply(new Array2DRowRealMatrix(suT, false));"
+      },
+      {
+        "txt": "this.nonSingular = nonSingular; } public double[] solve(final double[] b) throws IllegalArgumentException { return pseudoInverse.operate(b); } public RealVector solve(final RealVector b) throws IllegalArgumentException { return pseudoInverse.operate(b); }"
+      },
+      {
+        "txt": "public RealMatrix solve(final RealMatrix b) throws IllegalArgumentException { return pseudoInverse.multiply(b); } public boolean isNonSingular() { return nonSingular; } public RealMatrix getInverse() { return pseudoInverse; }"
+      }
+    ]
+  },
+  {
+    "id": 2670,
+    "file_path": "src/main/java/org/apache/commons/math/linear/SingularValueDecompositionImpl.java",
+    "start-bug-line": 265,
+    "end-bug-line": 265,
+    "bug": "",
+    "fix": "} }",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.math.linear; import org.apache.commons.math.MathRuntimeException; import org.apache.commons.math.util.MathUtils; public class SingularValueDecompositionImpl implements SingularValueDecomposition { private int m; private int n; private BiDiagonalTransformer transformer; private double[] mainBidiagonal; private double[] secondaryBidiagonal; private double[] mainTridiagonal;"
+      },
+      {
+        "txt": "private double[] secondaryTridiagonal; private EigenDecomposition eigenDecomposition; private double[] singularValues; private RealMatrix cachedU; private RealMatrix cachedUt; private RealMatrix cachedS; private RealMatrix cachedV; private RealMatrix cachedVt; public SingularValueDecompositionImpl(final RealMatrix matrix) throws InvalidMatrixException {"
+      },
+      {
+        "txt": "this(matrix, Math.min(matrix.getRowDimension(), matrix.getColumnDimension())); } public SingularValueDecompositionImpl(final RealMatrix matrix, final int max) throws InvalidMatrixException { m = matrix.getRowDimension(); n = matrix.getColumnDimension(); cachedU = null; cachedS = null; cachedV = null; cachedVt = null;"
+      },
+      {
+        "txt": "transformer = new BiDiagonalTransformer(matrix); mainBidiagonal = transformer.getMainDiagonalRef(); secondaryBidiagonal = transformer.getSecondaryDiagonalRef(); mainTridiagonal = new double[mainBidiagonal.length]; secondaryTridiagonal = new double[mainBidiagonal.length - 1]; double a = mainBidiagonal[0]; mainTridiagonal[0] = a * a; for (int i = 1; i < mainBidiagonal.length; ++i) { final double b = secondaryBidiagonal[i - 1]; secondaryTridiagonal[i - 1] = a * b;"
+      },
+      {
+        "txt": "a = mainBidiagonal[i]; mainTridiagonal[i] = a * a + b * b; } eigenDecomposition = new EigenDecompositionImpl(mainTridiagonal, secondaryTridiagonal, MathUtils.SAFE_MIN); final double[] eigenValues = eigenDecomposition.getRealEigenvalues(); int p = Math.min(max, eigenValues.length); while ((p > 0) && (eigenValues[p - 1] <= 0)) { --p;"
+      },
+      {
+        "txt": "} singularValues = new double[p]; for (int i = 0; i < p; ++i) { singularValues[i] = Math.sqrt(eigenValues[i]); } } public RealMatrix getU() throws InvalidMatrixException { if (cachedU == null) { final int p = singularValues.length;"
+      },
+      {
+        "txt": "if (m >= n) { final RealMatrix e = eigenDecomposition.getV().getSubMatrix(0, p - 1, 0, p - 1); final double[][] eData = e.getData(); final double[][] wData = new double[m][p]; double[] ei1 = eData[0]; for (int i = 0; i < p - 1; ++i) { final double mi = mainBidiagonal[i]; final double[] ei0 = ei1; final double[] wi = wData[i];"
+      },
+      {
+        "txt": "ei1 = eData[i + 1]; final double si = secondaryBidiagonal[i]; for (int j = 0; j < p; ++j) { wi[j] = (mi * ei0[j] + si * ei1[j]) / singularValues[j]; } } for (int j = 0; j < p; ++j) { wData[p - 1][j] = ei1[j] * mainBidiagonal[p - 1] / singularValues[j]; } for (int i = p; i < m; ++i) {"
+      },
+      {
+        "txt": "wData[i] = new double[p]; } cachedU = transformer.getU().multiply(MatrixUtils.createRealMatrix(wData)); } else { final RealMatrix e = eigenDecomposition.getV().getSubMatrix(0, m - 1, 0, p - 1); cachedU = transformer.getU().multiply(e); } }"
+      },
+      {
+        "txt": "return cachedU; } public RealMatrix getUT() throws InvalidMatrixException { if (cachedUt == null) { cachedUt = getU().transpose(); } return cachedUt; } public RealMatrix getS()"
+      },
+      {
+        "txt": "throws InvalidMatrixException { if (cachedS == null) { cachedS = MatrixUtils.createRealDiagonalMatrix(singularValues); } return cachedS; } public double[] getSingularValues() throws InvalidMatrixException { return singularValues.clone(); }"
+      },
+      {
+        "txt": "public RealMatrix getV() throws InvalidMatrixException { if (cachedV == null) { final int p = singularValues.length; if (m >= n) { final RealMatrix e = eigenDecomposition.getV().getSubMatrix(0, n - 1, 0, p - 1); cachedV = transformer.getV().multiply(e); } else { final RealMatrix e ="
+      },
+      {
+        "txt": "eigenDecomposition.getV().getSubMatrix(0, p - 1, 0, p - 1); final double[][] eData = e.getData(); final double[][] wData = new double[n][p]; double[] ei1 = eData[0]; for (int i = 0; i < p - 1; ++i) { final double mi = mainBidiagonal[i]; final double[] ei0 = ei1; final double[] wi = wData[i]; ei1 = eData[i + 1]; final double si = secondaryBidiagonal[i];"
+      },
+      {
+        "txt": "wi[j] = (mi * ei0[j] + si * ei1[j]) / singularValues[j]; } } for (int j = 0; j < p; ++j) { wData[p - 1][j] = ei1[j] * mainBidiagonal[p - 1] / singularValues[j]; } <extra_id_0> wData[i] = new double[p]; } cachedV = transformer.getV().multiply(MatrixUtils.createRealMatrix(wData)); } }"
+      },
+      {
+        "txt": "} } return cachedV; } public RealMatrix getVT() throws InvalidMatrixException { if (cachedVt == null) { cachedVt = getV().transpose(); } return cachedVt;"
+      },
+      {
+        "txt": "} public RealMatrix getCovariance(final double minSingularValue) { final int p = singularValues.length; int dimension = 0; while ((dimension < p) && (singularValues[dimension] >= minSingularValue)) { ++dimension; } if (dimension == 0) { throw MathRuntimeException.createIllegalArgumentException( \"cutoff singular value is {0}, should be at most {1}\","
+      },
+      {
+        "txt": "minSingularValue, singularValues[0]); } final double[][] data = new double[dimension][p]; getVT().walkInOptimizedOrder(new DefaultRealMatrixPreservingVisitor() { @Override public void visit(final int row, final int column, final double value) { data[row][column] = value / singularValues[row]; } }, 0, dimension - 1, 0, p - 1); RealMatrix jv = new Array2DRowRealMatrix(data, false);"
+      },
+      {
+        "txt": "return jv.transpose().multiply(jv); } public double getNorm() throws InvalidMatrixException { return singularValues[0]; } public double getConditionNumber() throws InvalidMatrixException { return singularValues[0] / singularValues[singularValues.length - 1]; }"
+      },
+      {
+        "txt": "public int getRank() throws IllegalStateException { final double threshold = Math.max(m, n) * Math.ulp(singularValues[0]); for (int i = singularValues.length - 1; i >= 0; --i) { if (singularValues[i] > threshold) { return i + 1; } } return 0; }"
+      },
+      {
+        "txt": "public DecompositionSolver getSolver() { return new Solver(singularValues, getUT(), getV(), getRank() == Math.max(m, n)); } private static class Solver implements DecompositionSolver { private final RealMatrix pseudoInverse; private boolean nonSingular; private Solver(final double[] singularValues, final RealMatrix uT, final RealMatrix v, final boolean nonSingular) { double[][] suT = uT.getData();"
+      },
+      {
+        "txt": "for (int i = 0; i < singularValues.length; ++i) { final double a = 1.0 / singularValues[i]; final double[] suTi = suT[i]; for (int j = 0; j < suTi.length; ++j) { suTi[j] *= a; } } pseudoInverse = v.multiply(new Array2DRowRealMatrix(suT, false)); this.nonSingular = nonSingular; }"
+      },
+      {
+        "txt": "public double[] solve(final double[] b) throws IllegalArgumentException { return pseudoInverse.operate(b); } public RealVector solve(final RealVector b) throws IllegalArgumentException { return pseudoInverse.operate(b); } public RealMatrix solve(final RealMatrix b) throws IllegalArgumentException {"
+      },
+      {
+        "txt": "return pseudoInverse.multiply(b); } public boolean isNonSingular() { return nonSingular; } public RealMatrix getInverse() { return pseudoInverse; } }"
+      }
+    ]
+  }
+]

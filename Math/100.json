@@ -1,0 +1,155 @@
+[
+  {
+    "id": 2733,
+    "file_path": "src/java/org/apache/commons/math/estimation/AbstractEstimator.java",
+    "start-bug-line": 166,
+    "end-bug-line": 166,
+    "bug": "final int cols = problem.getAllParameters().length;",
+    "fix": "final int cols = problem.getUnboundParameters().length;",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.math.estimation; import java.util.Arrays; import org.apache.commons.math.linear.InvalidMatrixException; import org.apache.commons.math.linear.RealMatrixImpl; public abstract class AbstractEstimator implements Estimator { protected AbstractEstimator() { } public final void setMaxCostEval(int maxCostEval) { this.maxCostEval = maxCostEval; }"
+      },
+      {
+        "txt": "public final int getCostEvaluations() { return costEvaluations; } public final int getJacobianEvaluations() { return jacobianEvaluations; } protected void updateJacobian() { incrementJacobianEvaluationsCounter(); Arrays.fill(jacobian, 0); for (int i = 0, index = 0; i < rows; i++) {"
+      },
+      {
+        "txt": "WeightedMeasurement wm = measurements[i]; double factor = -Math.sqrt(wm.getWeight()); for (int j = 0; j < cols; ++j) { jacobian[index++] = factor * wm.getPartial(parameters[j]); } } } protected final void incrementJacobianEvaluationsCounter() { ++jacobianEvaluations; }"
+      },
+      {
+        "txt": "protected void updateResidualsAndCost() throws EstimationException { if (++costEvaluations > maxCostEval) { throw new EstimationException(\"maximal number of evaluations exceeded ({0})\", new Object[] { new Integer(maxCostEval) }); } cost = 0; for (int i = 0, index = 0; i < rows; i++, index += cols) { WeightedMeasurement wm = measurements[i]; double residual = wm.getResidual();"
+      },
+      {
+        "txt": "residuals[i] = Math.sqrt(wm.getWeight()) * residual; cost += wm.getWeight() * residual * residual; } cost = Math.sqrt(cost); } public double getRMS(EstimationProblem problem) { WeightedMeasurement[] wm = problem.getMeasurements(); double criterion = 0; for (int i = 0; i < wm.length; ++i) { double residual = wm[i].getResidual();"
+      },
+      {
+        "txt": "criterion += wm[i].getWeight() * residual * residual; } return Math.sqrt(criterion / wm.length); } public double getChiSquare(EstimationProblem problem) { WeightedMeasurement[] wm = problem.getMeasurements(); double chiSquare = 0; for (int i = 0; i < wm.length; ++i) { double residual = wm[i].getResidual(); chiSquare += residual * residual / wm[i].getWeight();"
+      },
+      {
+        "txt": "return chiSquare; } public double[][] getCovariances(EstimationProblem problem) throws EstimationException { updateJacobian(); final int rows = problem.getMeasurements().length; <extra_id_0> final int max = cols * rows; double[][] jTj = new double[cols][cols]; for (int i = 0; i < cols; ++i) { for (int j = i; j < cols; ++j) { double sum = 0; for (int k = 0; k < max; k += cols) {"
+      },
+      {
+        "txt": "double sum = 0; for (int k = 0; k < max; k += cols) { sum += jacobian[k + i] * jacobian[k + j]; } jTj[i][j] = sum; jTj[j][i] = sum; } } try { return new RealMatrixImpl(jTj).inverse().getData();"
+      },
+      {
+        "txt": "} catch (InvalidMatrixException ime) { throw new EstimationException(\"unable to compute covariances: singular problem\", new Object[0]); } } public double[] guessParametersErrors(EstimationProblem problem) throws EstimationException { int m = problem.getMeasurements().length; int p = problem.getAllParameters().length; if (m <= p) {"
+      },
+      {
+        "txt": "throw new EstimationException(\"no degrees of freedom ({0} measurements, {1} parameters)\", new Object[] { new Integer(m), new Integer(p)}); } double[] errors = new double[problem.getAllParameters().length]; final double c = Math.sqrt(getChiSquare(problem) / (m - p)); double[][] covar = getCovariances(problem); for (int i = 0; i < errors.length; ++i) { errors[i] = Math.sqrt(covar[i][i]) * c; } return errors;"
+      },
+      {
+        "txt": "} protected void initializeEstimate(EstimationProblem problem) { costEvaluations = 0; jacobianEvaluations = 0; measurements = problem.getMeasurements(); parameters = problem.getUnboundParameters(); rows = measurements.length; cols = parameters.length; jacobian = new double[rows * cols]; residuals = new double[rows];"
+      },
+      {
+        "txt": "cost = Double.POSITIVE_INFINITY; } public abstract void estimate(EstimationProblem problem) throws EstimationException; protected WeightedMeasurement[] measurements; protected EstimatedParameter[] parameters; protected double[] jacobian; protected int cols; protected int rows; protected double[] residuals;"
+      },
+      {
+        "txt": "protected double cost; private int maxCostEval; private int costEvaluations; private int jacobianEvaluations;"
+      }
+    ]
+  },
+  {
+    "id": 2734,
+    "file_path": "src/java/org/apache/commons/math/estimation/AbstractEstimator.java",
+    "start-bug-line": 202,
+    "end-bug-line": 202,
+    "bug": "int p = problem.getAllParameters().length;",
+    "fix": "int p = problem.getUnboundParameters().length;",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.math.estimation; import java.util.Arrays; import org.apache.commons.math.linear.InvalidMatrixException;"
+      },
+      {
+        "txt": "import org.apache.commons.math.linear.RealMatrixImpl; public abstract class AbstractEstimator implements Estimator { protected AbstractEstimator() { } public final void setMaxCostEval(int maxCostEval) { this.maxCostEval = maxCostEval; } public final int getCostEvaluations() { return costEvaluations; }"
+      },
+      {
+        "txt": "public final int getJacobianEvaluations() { return jacobianEvaluations; } protected void updateJacobian() { incrementJacobianEvaluationsCounter(); Arrays.fill(jacobian, 0); for (int i = 0, index = 0; i < rows; i++) { WeightedMeasurement wm = measurements[i]; double factor = -Math.sqrt(wm.getWeight()); for (int j = 0; j < cols; ++j) {"
+      },
+      {
+        "txt": "jacobian[index++] = factor * wm.getPartial(parameters[j]); } } } protected final void incrementJacobianEvaluationsCounter() { ++jacobianEvaluations; } protected void updateResidualsAndCost() throws EstimationException { if (++costEvaluations > maxCostEval) {"
+      },
+      {
+        "txt": "throw new EstimationException(\"maximal number of evaluations exceeded ({0})\", new Object[] { new Integer(maxCostEval) }); } cost = 0; for (int i = 0, index = 0; i < rows; i++, index += cols) { WeightedMeasurement wm = measurements[i]; double residual = wm.getResidual(); residuals[i] = Math.sqrt(wm.getWeight()) * residual; cost += wm.getWeight() * residual * residual; }"
+      },
+      {
+        "txt": "cost = Math.sqrt(cost); } public double getRMS(EstimationProblem problem) { WeightedMeasurement[] wm = problem.getMeasurements(); double criterion = 0; for (int i = 0; i < wm.length; ++i) { double residual = wm[i].getResidual(); criterion += wm[i].getWeight() * residual * residual; } return Math.sqrt(criterion / wm.length);"
+      },
+      {
+        "txt": "} public double getChiSquare(EstimationProblem problem) { WeightedMeasurement[] wm = problem.getMeasurements(); double chiSquare = 0; for (int i = 0; i < wm.length; ++i) { double residual = wm[i].getResidual(); chiSquare += residual * residual / wm[i].getWeight(); } return chiSquare; }"
+      },
+      {
+        "txt": "public double[][] getCovariances(EstimationProblem problem) throws EstimationException { updateJacobian(); final int rows = problem.getMeasurements().length; final int cols = problem.getAllParameters().length; final int max = cols * rows; double[][] jTj = new double[cols][cols]; for (int i = 0; i < cols; ++i) { for (int j = i; j < cols; ++j) { double sum = 0;"
+      },
+      {
+        "txt": "for (int k = 0; k < max; k += cols) { sum += jacobian[k + i] * jacobian[k + j]; } jTj[i][j] = sum; jTj[j][i] = sum; } } try { return new RealMatrixImpl(jTj).inverse().getData(); } catch (InvalidMatrixException ime) {"
+      },
+      {
+        "txt": "new Object[0]); } } public double[] guessParametersErrors(EstimationProblem problem) throws EstimationException { int m = problem.getMeasurements().length; <extra_id_0> if (m <= p) { throw new EstimationException(\"no degrees of freedom ({0} measurements, {1} parameters)\", new Object[] { new Integer(m), new Integer(p)}); } double[] errors = new double[problem.getAllParameters().length]; final double c = Math.sqrt(getChiSquare(problem) / (m - p));"
+      },
+      {
+        "txt": "double[] errors = new double[problem.getAllParameters().length]; final double c = Math.sqrt(getChiSquare(problem) / (m - p)); double[][] covar = getCovariances(problem); for (int i = 0; i < errors.length; ++i) { errors[i] = Math.sqrt(covar[i][i]) * c; } return errors; } protected void initializeEstimate(EstimationProblem problem) { costEvaluations = 0;"
+      },
+      {
+        "txt": "jacobianEvaluations = 0; measurements = problem.getMeasurements(); parameters = problem.getUnboundParameters(); rows = measurements.length; cols = parameters.length; jacobian = new double[rows * cols]; residuals = new double[rows]; cost = Double.POSITIVE_INFINITY; } public abstract void estimate(EstimationProblem problem)"
+      },
+      {
+        "txt": "throws EstimationException; protected WeightedMeasurement[] measurements; protected EstimatedParameter[] parameters; protected double[] jacobian; protected int cols; protected int rows; protected double[] residuals; protected double cost; private int maxCostEval; private int costEvaluations;"
+      }
+    ]
+  },
+  {
+    "id": 2735,
+    "file_path": "src/java/org/apache/commons/math/estimation/AbstractEstimator.java",
+    "start-bug-line": 207,
+    "end-bug-line": 207,
+    "bug": "double[] errors = new double[problem.getAllParameters().length];",
+    "fix": "double[] errors = new double[problem.getUnboundParameters().length];",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.math.estimation; import java.util.Arrays; import org.apache.commons.math.linear.InvalidMatrixException; import org.apache.commons.math.linear.RealMatrixImpl; public abstract class AbstractEstimator implements Estimator { protected AbstractEstimator() { } public final void setMaxCostEval(int maxCostEval) {"
+      },
+      {
+        "txt": "this.maxCostEval = maxCostEval; } public final int getCostEvaluations() { return costEvaluations; } public final int getJacobianEvaluations() { return jacobianEvaluations; } protected void updateJacobian() { incrementJacobianEvaluationsCounter();"
+      },
+      {
+        "txt": "Arrays.fill(jacobian, 0); for (int i = 0, index = 0; i < rows; i++) { WeightedMeasurement wm = measurements[i]; double factor = -Math.sqrt(wm.getWeight()); for (int j = 0; j < cols; ++j) { jacobian[index++] = factor * wm.getPartial(parameters[j]); } } } protected final void incrementJacobianEvaluationsCounter() {"
+      },
+      {
+        "txt": "++jacobianEvaluations; } protected void updateResidualsAndCost() throws EstimationException { if (++costEvaluations > maxCostEval) { throw new EstimationException(\"maximal number of evaluations exceeded ({0})\", new Object[] { new Integer(maxCostEval) }); } cost = 0; for (int i = 0, index = 0; i < rows; i++, index += cols) {"
+      },
+      {
+        "txt": "WeightedMeasurement wm = measurements[i]; double residual = wm.getResidual(); residuals[i] = Math.sqrt(wm.getWeight()) * residual; cost += wm.getWeight() * residual * residual; } cost = Math.sqrt(cost); } public double getRMS(EstimationProblem problem) { WeightedMeasurement[] wm = problem.getMeasurements(); double criterion = 0;"
+      },
+      {
+        "txt": "for (int i = 0; i < wm.length; ++i) { double residual = wm[i].getResidual(); criterion += wm[i].getWeight() * residual * residual; } return Math.sqrt(criterion / wm.length); } public double getChiSquare(EstimationProblem problem) { WeightedMeasurement[] wm = problem.getMeasurements(); double chiSquare = 0; for (int i = 0; i < wm.length; ++i) {"
+      },
+      {
+        "txt": "double residual = wm[i].getResidual(); chiSquare += residual * residual / wm[i].getWeight(); } return chiSquare; } public double[][] getCovariances(EstimationProblem problem) throws EstimationException { updateJacobian(); final int rows = problem.getMeasurements().length; final int cols = problem.getAllParameters().length;"
+      },
+      {
+        "txt": "final int max = cols * rows; double[][] jTj = new double[cols][cols]; for (int i = 0; i < cols; ++i) { for (int j = i; j < cols; ++j) { double sum = 0; for (int k = 0; k < max; k += cols) { sum += jacobian[k + i] * jacobian[k + j]; } jTj[i][j] = sum; jTj[j][i] = sum;"
+      },
+      {
+        "txt": "} } try { return new RealMatrixImpl(jTj).inverse().getData(); } catch (InvalidMatrixException ime) { throw new EstimationException(\"unable to compute covariances: singular problem\", new Object[0]); } } public double[] guessParametersErrors(EstimationProblem problem)"
+      },
+      {
+        "txt": "int m = problem.getMeasurements().length; int p = problem.getAllParameters().length; if (m <= p) { throw new EstimationException(\"no degrees of freedom ({0} measurements, {1} parameters)\", new Object[] { new Integer(m), new Integer(p)}); } <extra_id_0> final double c = Math.sqrt(getChiSquare(problem) / (m - p)); double[][] covar = getCovariances(problem); for (int i = 0; i < errors.length; ++i) { errors[i] = Math.sqrt(covar[i][i]) * c; } return errors;"
+      },
+      {
+        "txt": "} return errors; } protected void initializeEstimate(EstimationProblem problem) { costEvaluations = 0; jacobianEvaluations = 0; measurements = problem.getMeasurements(); parameters = problem.getUnboundParameters(); rows = measurements.length; cols = parameters.length;"
+      },
+      {
+        "txt": "jacobian = new double[rows * cols]; residuals = new double[rows]; cost = Double.POSITIVE_INFINITY; } public abstract void estimate(EstimationProblem problem) throws EstimationException; protected WeightedMeasurement[] measurements; protected EstimatedParameter[] parameters; protected double[] jacobian; protected int cols;"
+      },
+      {
+        "txt": "protected int rows; protected double[] residuals; protected double cost; private int maxCostEval; private int costEvaluations; private int jacobianEvaluations;"
+      }
+    ]
+  }
+]

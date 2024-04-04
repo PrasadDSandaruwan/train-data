@@ -1,0 +1,230 @@
+[
+  {
+    "id": 1035,
+    "file_path": "src/main/java/org/apache/commons/compress/archivers/tar/TarArchiveOutputStream.java",
+    "start-bug-line": 457,
+    "end-bug-line": 457,
+    "bug": "",
+    "fix": "while (name.endsWith(\"/\")) {",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.compress.archivers.tar; import java.io.File; import java.io.IOException; import java.io.OutputStream; import java.io.StringWriter; import java.nio.ByteBuffer; import java.util.HashMap; import java.util.Map; import org.apache.commons.compress.archivers.ArchiveEntry;"
+      },
+      {
+        "txt": "import org.apache.commons.compress.archivers.ArchiveOutputStream; import org.apache.commons.compress.archivers.zip.ZipEncoding; import org.apache.commons.compress.archivers.zip.ZipEncodingHelper; import org.apache.commons.compress.utils.CharsetNames; import org.apache.commons.compress.utils.CountingOutputStream; public class TarArchiveOutputStream extends ArchiveOutputStream { public static final int LONGFILE_ERROR = 0; public static final int LONGFILE_TRUNCATE = 1; public static final int LONGFILE_GNU = 2; public static final int LONGFILE_POSIX = 3;"
+      },
+      {
+        "txt": "public static final int BIGNUMBER_ERROR = 0; public static final int BIGNUMBER_STAR = 1; public static final int BIGNUMBER_POSIX = 2; private long currSize; private String currName; private long currBytes; private final byte[] recordBuf; private int assemLen; private final byte[] assemBuf; protected final TarBuffer buffer;"
+      },
+      {
+        "txt": "private int longFileMode = LONGFILE_ERROR; private int bigNumberMode = BIGNUMBER_ERROR; private boolean closed = false; private boolean haveUnclosedEntry = false; private boolean finished = false; private final OutputStream out; private final ZipEncoding encoding; private boolean addPaxHeadersForNonAsciiNames = false; private static final ZipEncoding ASCII = ZipEncodingHelper.getZipEncoding(\"ASCII\");"
+      },
+      {
+        "txt": "public TarArchiveOutputStream(OutputStream os) { this(os, TarBuffer.DEFAULT_BLKSIZE, TarBuffer.DEFAULT_RCDSIZE); } public TarArchiveOutputStream(OutputStream os, String encoding) { this(os, TarBuffer.DEFAULT_BLKSIZE, TarBuffer.DEFAULT_RCDSIZE, encoding); } public TarArchiveOutputStream(OutputStream os, int blockSize) { this(os, blockSize, TarBuffer.DEFAULT_RCDSIZE); } public TarArchiveOutputStream(OutputStream os, int blockSize,"
+      },
+      {
+        "txt": "String encoding) { this(os, blockSize, TarBuffer.DEFAULT_RCDSIZE, encoding); } public TarArchiveOutputStream(OutputStream os, int blockSize, int recordSize) { this(os, blockSize, recordSize, null); } public TarArchiveOutputStream(OutputStream os, int blockSize, int recordSize, String encoding) { out = new CountingOutputStream(os); this.encoding = ZipEncodingHelper.getZipEncoding(encoding);"
+      },
+      {
+        "txt": "this.buffer = new TarBuffer(out, blockSize, recordSize); this.assemLen = 0; this.assemBuf = new byte[recordSize]; this.recordBuf = new byte[recordSize]; } public void setLongFileMode(int longFileMode) { this.longFileMode = longFileMode; } public void setBigNumberMode(int bigNumberMode) { this.bigNumberMode = bigNumberMode;"
+      },
+      {
+        "txt": "} public void setAddPaxHeadersForNonAsciiNames(boolean b) { addPaxHeadersForNonAsciiNames = b; } @Deprecated @Override public int getCount() { return (int) getBytesWritten(); } @Override"
+      },
+      {
+        "txt": "public long getBytesWritten() { return ((CountingOutputStream) out).getBytesWritten(); } @Override public void finish() throws IOException { if (finished) { throw new IOException(\"This archive has already been finished\"); } if (haveUnclosedEntry) { throw new IOException(\"This archives contains unclosed entries.\");"
+      },
+      {
+        "txt": "} writeEOFRecord(); writeEOFRecord(); buffer.flushBlock(); finished = true; } @Override public void close() throws IOException { if(!finished) { finish();"
+      },
+      {
+        "txt": "} if (!closed) { buffer.close(); out.close(); closed = true; } } public int getRecordSize() { return buffer.getRecordSize(); }"
+      },
+      {
+        "txt": "@Override public void putArchiveEntry(ArchiveEntry archiveEntry) throws IOException { if(finished) { throw new IOException(\"Stream has already been finished\"); } TarArchiveEntry entry = (TarArchiveEntry) archiveEntry; Map<String, String> paxHeaders = new HashMap<String, String>(); final String entryName = entry.getName(); final ByteBuffer encodedName = encoding.encode(entryName); final int nameLen = encodedName.limit() - encodedName.position();"
+      },
+      {
+        "txt": "boolean paxHeaderContainsPath = false; if (nameLen >= TarConstants.NAMELEN) { if (longFileMode == LONGFILE_POSIX) { paxHeaders.put(\"path\", entryName); paxHeaderContainsPath = true; } else if (longFileMode == LONGFILE_GNU) { TarArchiveEntry longLinkEntry = new TarArchiveEntry(TarConstants.GNU_LONGLINK, TarConstants.LF_GNUTYPE_LONGNAME); longLinkEntry.setSize(nameLen + 1); // +1 for NUL putArchiveEntry(longLinkEntry);"
+      },
+      {
+        "txt": "write(encodedName.array(), encodedName.arrayOffset(), nameLen); write(0); // NUL terminator closeArchiveEntry(); } else if (longFileMode != LONGFILE_TRUNCATE) { throw new RuntimeException(\"file name '\" + entryName + \"' is too long ( > \" + TarConstants.NAMELEN + \" bytes)\"); } } if (bigNumberMode == BIGNUMBER_POSIX) {"
+      },
+      {
+        "txt": "addPaxHeadersForBigNumbers(paxHeaders, entry); } else if (bigNumberMode != BIGNUMBER_STAR) { failForBigNumbers(entry); } if (addPaxHeadersForNonAsciiNames && !paxHeaderContainsPath && !ASCII.canEncode(entryName)) { paxHeaders.put(\"path\", entryName); } if (addPaxHeadersForNonAsciiNames && (entry.isLink() || entry.isSymbolicLink())"
+      },
+      {
+        "txt": "&& !ASCII.canEncode(entry.getLinkName())) { paxHeaders.put(\"linkpath\", entry.getLinkName()); } if (paxHeaders.size() > 0) { writePaxHeaders(entryName, paxHeaders); } entry.writeEntryHeader(recordBuf, encoding, bigNumberMode == BIGNUMBER_STAR); buffer.writeRecord(recordBuf); currBytes = 0;"
+      },
+      {
+        "txt": "if (entry.isDirectory()) { currSize = 0; } else { currSize = entry.getSize(); } currName = entryName; haveUnclosedEntry = true; } @Override public void closeArchiveEntry() throws IOException {"
+      },
+      {
+        "txt": "if (finished) { throw new IOException(\"Stream has already been finished\"); } if (!haveUnclosedEntry){ throw new IOException(\"No current entry to close\"); } if (assemLen > 0) { for (int i = assemLen; i < assemBuf.length; ++i) { assemBuf[i] = 0; }"
+      },
+      {
+        "txt": "buffer.writeRecord(assemBuf); currBytes += assemLen; assemLen = 0; } if (currBytes < currSize) { throw new IOException(\"entry '\" + currName + \"' closed at '\" + currBytes + \"' before the '\" + currSize + \"' bytes specified in the header were written\"); }"
+      },
+      {
+        "txt": "haveUnclosedEntry = false; } @Override public void write(byte[] wBuf, int wOffset, int numToWrite) throws IOException { if ((currBytes + numToWrite) > currSize) { throw new IOException(\"request to write '\" + numToWrite + \"' bytes exceeds size in header of '\" + currSize + \"' bytes for entry '\" + currName + \"'\"); }"
+      },
+      {
+        "txt": "if (assemLen > 0) { if ((assemLen + numToWrite) >= recordBuf.length) { int aLen = recordBuf.length - assemLen; System.arraycopy(assemBuf, 0, recordBuf, 0, assemLen); System.arraycopy(wBuf, wOffset, recordBuf, assemLen, aLen); buffer.writeRecord(recordBuf); currBytes += recordBuf.length; wOffset += aLen;"
+      },
+      {
+        "txt": "numToWrite -= aLen; assemLen = 0; } else { System.arraycopy(wBuf, wOffset, assemBuf, assemLen, numToWrite); wOffset += numToWrite; assemLen += numToWrite; numToWrite = 0; } }"
+      },
+      {
+        "txt": "while (numToWrite > 0) { if (numToWrite < recordBuf.length) { System.arraycopy(wBuf, wOffset, assemBuf, assemLen, numToWrite); assemLen += numToWrite; break; } buffer.writeRecord(wBuf, wOffset); int num = recordBuf.length; currBytes += num;"
+      },
+      {
+        "txt": "wOffset += num; } } void writePaxHeaders(String entryName, Map<String, String> headers) throws IOException { String name = \"./PaxHeaders.X/\" + stripTo7Bits(entryName); <extra_id_0> if (name.length() >= TarConstants.NAMELEN) { name = name.substring(0, TarConstants.NAMELEN - 1); } TarArchiveEntry pex = new TarArchiveEntry(name, TarConstants.LF_PAX_EXTENDED_HEADER_LC); StringWriter w = new StringWriter();"
+      },
+      {
+        "txt": "TarConstants.LF_PAX_EXTENDED_HEADER_LC); StringWriter w = new StringWriter(); for (Map.Entry<String, String> h : headers.entrySet()) { String key = h.getKey(); String value = h.getValue(); int len = key.length() + value.length() + 3 /* blank, equals and newline */ + 2 /* guess 9 < actual length < 100 */; String line = len + \" \" + key + \"=\" + value + \"\\n\"; int actualLength = line.getBytes(CharsetNames.UTF_8).length;"
+      },
+      {
+        "txt": "while (len != actualLength) { len = actualLength; line = len + \" \" + key + \"=\" + value + \"\\n\"; actualLength = line.getBytes(CharsetNames.UTF_8).length; } w.write(line); } byte[] data = w.toString().getBytes(CharsetNames.UTF_8); pex.setSize(data.length); putArchiveEntry(pex);"
+      },
+      {
+        "txt": "write(data); closeArchiveEntry(); } private String stripTo7Bits(String name) { final int length = name.length(); StringBuffer result = new StringBuffer(length); for (int i = 0; i < length; i++) { char stripped = (char) (name.charAt(i) & 0x7F); if (stripped != 0) { // would be read as Trailing null result.append(stripped);"
+      },
+      {
+        "txt": "} } return result.toString(); } private void writeEOFRecord() throws IOException { for (int i = 0; i < recordBuf.length; ++i) { recordBuf[i] = 0; } buffer.writeRecord(recordBuf); }"
+      },
+      {
+        "txt": "@Override public void flush() throws IOException { out.flush(); } @Override public ArchiveEntry createArchiveEntry(File inputFile, String entryName) throws IOException { if(finished) { throw new IOException(\"Stream has already been finished\"); }"
+      },
+      {
+        "txt": "return new TarArchiveEntry(inputFile, entryName); } private void addPaxHeadersForBigNumbers(Map<String, String> paxHeaders, TarArchiveEntry entry) { addPaxHeaderForBigNumber(paxHeaders, \"size\", entry.getSize(), TarConstants.MAXSIZE); addPaxHeaderForBigNumber(paxHeaders, \"gid\", entry.getGroupId(), TarConstants.MAXID); addPaxHeaderForBigNumber(paxHeaders, \"mtime\", entry.getModTime().getTime() / 1000,"
+      },
+      {
+        "txt": "TarConstants.MAXSIZE); addPaxHeaderForBigNumber(paxHeaders, \"uid\", entry.getUserId(), TarConstants.MAXID); addPaxHeaderForBigNumber(paxHeaders, \"SCHILY.devmajor\", entry.getDevMajor(), TarConstants.MAXID); addPaxHeaderForBigNumber(paxHeaders, \"SCHILY.devminor\", entry.getDevMinor(), TarConstants.MAXID); failForBigNumber(\"mode\", entry.getMode(), TarConstants.MAXID); } private void addPaxHeaderForBigNumber(Map<String, String> paxHeaders,"
+      },
+      {
+        "txt": "String header, long value, long maxValue) { if (value < 0 || value > maxValue) { paxHeaders.put(header, String.valueOf(value)); } } private void failForBigNumbers(TarArchiveEntry entry) { failForBigNumber(\"entry size\", entry.getSize(), TarConstants.MAXSIZE); failForBigNumber(\"group id\", entry.getGroupId(), TarConstants.MAXID); failForBigNumber(\"last modification time\","
+      },
+      {
+        "txt": "entry.getModTime().getTime() / 1000, TarConstants.MAXSIZE); failForBigNumber(\"user id\", entry.getUserId(), TarConstants.MAXID); failForBigNumber(\"mode\", entry.getMode(), TarConstants.MAXID); failForBigNumber(\"major device number\", entry.getDevMajor(), TarConstants.MAXID); failForBigNumber(\"minor device number\", entry.getDevMinor(), TarConstants.MAXID); } private void failForBigNumber(String field, long value, long maxValue) {"
+      },
+      {
+        "txt": "if (value < 0 || value > maxValue) { throw new RuntimeException(field + \" '\" + value + \"' is too big ( > \" + maxValue + \" )\"); } }"
+      }
+    ]
+  },
+  {
+    "id": 1036,
+    "file_path": "src/main/java/org/apache/commons/compress/archivers/tar/TarArchiveOutputStream.java",
+    "start-bug-line": 459,
+    "end-bug-line": 459,
+    "bug": "",
+    "fix": "name = name.substring(0, name.length() - 1); }",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.compress.archivers.tar; import java.io.File; import java.io.IOException; import java.io.OutputStream; import java.io.StringWriter; import java.nio.ByteBuffer; import java.util.HashMap; import java.util.Map; import org.apache.commons.compress.archivers.ArchiveEntry;"
+      },
+      {
+        "txt": "import org.apache.commons.compress.archivers.ArchiveOutputStream; import org.apache.commons.compress.archivers.zip.ZipEncoding; import org.apache.commons.compress.archivers.zip.ZipEncodingHelper; import org.apache.commons.compress.utils.CharsetNames; import org.apache.commons.compress.utils.CountingOutputStream; public class TarArchiveOutputStream extends ArchiveOutputStream { public static final int LONGFILE_ERROR = 0; public static final int LONGFILE_TRUNCATE = 1; public static final int LONGFILE_GNU = 2; public static final int LONGFILE_POSIX = 3;"
+      },
+      {
+        "txt": "public static final int BIGNUMBER_ERROR = 0; public static final int BIGNUMBER_STAR = 1; public static final int BIGNUMBER_POSIX = 2; private long currSize; private String currName; private long currBytes; private final byte[] recordBuf; private int assemLen; private final byte[] assemBuf; protected final TarBuffer buffer;"
+      },
+      {
+        "txt": "private int longFileMode = LONGFILE_ERROR; private int bigNumberMode = BIGNUMBER_ERROR; private boolean closed = false; private boolean haveUnclosedEntry = false; private boolean finished = false; private final OutputStream out; private final ZipEncoding encoding; private boolean addPaxHeadersForNonAsciiNames = false; private static final ZipEncoding ASCII = ZipEncodingHelper.getZipEncoding(\"ASCII\");"
+      },
+      {
+        "txt": "public TarArchiveOutputStream(OutputStream os) { this(os, TarBuffer.DEFAULT_BLKSIZE, TarBuffer.DEFAULT_RCDSIZE); } public TarArchiveOutputStream(OutputStream os, String encoding) { this(os, TarBuffer.DEFAULT_BLKSIZE, TarBuffer.DEFAULT_RCDSIZE, encoding); } public TarArchiveOutputStream(OutputStream os, int blockSize) { this(os, blockSize, TarBuffer.DEFAULT_RCDSIZE); } public TarArchiveOutputStream(OutputStream os, int blockSize,"
+      },
+      {
+        "txt": "String encoding) { this(os, blockSize, TarBuffer.DEFAULT_RCDSIZE, encoding); } public TarArchiveOutputStream(OutputStream os, int blockSize, int recordSize) { this(os, blockSize, recordSize, null); } public TarArchiveOutputStream(OutputStream os, int blockSize, int recordSize, String encoding) { out = new CountingOutputStream(os); this.encoding = ZipEncodingHelper.getZipEncoding(encoding);"
+      },
+      {
+        "txt": "this.buffer = new TarBuffer(out, blockSize, recordSize); this.assemLen = 0; this.assemBuf = new byte[recordSize]; this.recordBuf = new byte[recordSize]; } public void setLongFileMode(int longFileMode) { this.longFileMode = longFileMode; } public void setBigNumberMode(int bigNumberMode) { this.bigNumberMode = bigNumberMode;"
+      },
+      {
+        "txt": "} public void setAddPaxHeadersForNonAsciiNames(boolean b) { addPaxHeadersForNonAsciiNames = b; } @Deprecated @Override public int getCount() { return (int) getBytesWritten(); } @Override"
+      },
+      {
+        "txt": "public long getBytesWritten() { return ((CountingOutputStream) out).getBytesWritten(); } @Override public void finish() throws IOException { if (finished) { throw new IOException(\"This archive has already been finished\"); } if (haveUnclosedEntry) { throw new IOException(\"This archives contains unclosed entries.\");"
+      },
+      {
+        "txt": "} writeEOFRecord(); writeEOFRecord(); buffer.flushBlock(); finished = true; } @Override public void close() throws IOException { if(!finished) { finish();"
+      },
+      {
+        "txt": "} if (!closed) { buffer.close(); out.close(); closed = true; } } public int getRecordSize() { return buffer.getRecordSize(); }"
+      },
+      {
+        "txt": "@Override public void putArchiveEntry(ArchiveEntry archiveEntry) throws IOException { if(finished) { throw new IOException(\"Stream has already been finished\"); } TarArchiveEntry entry = (TarArchiveEntry) archiveEntry; Map<String, String> paxHeaders = new HashMap<String, String>(); final String entryName = entry.getName(); final ByteBuffer encodedName = encoding.encode(entryName); final int nameLen = encodedName.limit() - encodedName.position();"
+      },
+      {
+        "txt": "boolean paxHeaderContainsPath = false; if (nameLen >= TarConstants.NAMELEN) { if (longFileMode == LONGFILE_POSIX) { paxHeaders.put(\"path\", entryName); paxHeaderContainsPath = true; } else if (longFileMode == LONGFILE_GNU) { TarArchiveEntry longLinkEntry = new TarArchiveEntry(TarConstants.GNU_LONGLINK, TarConstants.LF_GNUTYPE_LONGNAME); longLinkEntry.setSize(nameLen + 1); // +1 for NUL putArchiveEntry(longLinkEntry);"
+      },
+      {
+        "txt": "write(encodedName.array(), encodedName.arrayOffset(), nameLen); write(0); // NUL terminator closeArchiveEntry(); } else if (longFileMode != LONGFILE_TRUNCATE) { throw new RuntimeException(\"file name '\" + entryName + \"' is too long ( > \" + TarConstants.NAMELEN + \" bytes)\"); } } if (bigNumberMode == BIGNUMBER_POSIX) {"
+      },
+      {
+        "txt": "addPaxHeadersForBigNumbers(paxHeaders, entry); } else if (bigNumberMode != BIGNUMBER_STAR) { failForBigNumbers(entry); } if (addPaxHeadersForNonAsciiNames && !paxHeaderContainsPath && !ASCII.canEncode(entryName)) { paxHeaders.put(\"path\", entryName); } if (addPaxHeadersForNonAsciiNames && (entry.isLink() || entry.isSymbolicLink())"
+      },
+      {
+        "txt": "&& !ASCII.canEncode(entry.getLinkName())) { paxHeaders.put(\"linkpath\", entry.getLinkName()); } if (paxHeaders.size() > 0) { writePaxHeaders(entryName, paxHeaders); } entry.writeEntryHeader(recordBuf, encoding, bigNumberMode == BIGNUMBER_STAR); buffer.writeRecord(recordBuf); currBytes = 0;"
+      },
+      {
+        "txt": "if (entry.isDirectory()) { currSize = 0; } else { currSize = entry.getSize(); } currName = entryName; haveUnclosedEntry = true; } @Override public void closeArchiveEntry() throws IOException {"
+      },
+      {
+        "txt": "if (finished) { throw new IOException(\"Stream has already been finished\"); } if (!haveUnclosedEntry){ throw new IOException(\"No current entry to close\"); } if (assemLen > 0) { for (int i = assemLen; i < assemBuf.length; ++i) { assemBuf[i] = 0; }"
+      },
+      {
+        "txt": "buffer.writeRecord(assemBuf); currBytes += assemLen; assemLen = 0; } if (currBytes < currSize) { throw new IOException(\"entry '\" + currName + \"' closed at '\" + currBytes + \"' before the '\" + currSize + \"' bytes specified in the header were written\"); }"
+      },
+      {
+        "txt": "haveUnclosedEntry = false; } @Override public void write(byte[] wBuf, int wOffset, int numToWrite) throws IOException { if ((currBytes + numToWrite) > currSize) { throw new IOException(\"request to write '\" + numToWrite + \"' bytes exceeds size in header of '\" + currSize + \"' bytes for entry '\" + currName + \"'\"); }"
+      },
+      {
+        "txt": "if (assemLen > 0) { if ((assemLen + numToWrite) >= recordBuf.length) { int aLen = recordBuf.length - assemLen; System.arraycopy(assemBuf, 0, recordBuf, 0, assemLen); System.arraycopy(wBuf, wOffset, recordBuf, assemLen, aLen); buffer.writeRecord(recordBuf); currBytes += recordBuf.length; wOffset += aLen;"
+      },
+      {
+        "txt": "numToWrite -= aLen; assemLen = 0; } else { System.arraycopy(wBuf, wOffset, assemBuf, assemLen, numToWrite); wOffset += numToWrite; assemLen += numToWrite; numToWrite = 0; } }"
+      },
+      {
+        "txt": "while (numToWrite > 0) { if (numToWrite < recordBuf.length) { System.arraycopy(wBuf, wOffset, assemBuf, assemLen, numToWrite); assemLen += numToWrite; break; } buffer.writeRecord(wBuf, wOffset); int num = recordBuf.length; currBytes += num;"
+      },
+      {
+        "txt": "wOffset += num; } } void writePaxHeaders(String entryName, Map<String, String> headers) throws IOException { String name = \"./PaxHeaders.X/\" + stripTo7Bits(entryName); <extra_id_0> name = name.substring(0, TarConstants.NAMELEN - 1); } TarArchiveEntry pex = new TarArchiveEntry(name, TarConstants.LF_PAX_EXTENDED_HEADER_LC); StringWriter w = new StringWriter(); for (Map.Entry<String, String> h : headers.entrySet()) {"
+      },
+      {
+        "txt": "StringWriter w = new StringWriter(); for (Map.Entry<String, String> h : headers.entrySet()) { String key = h.getKey(); String value = h.getValue(); int len = key.length() + value.length() + 3 /* blank, equals and newline */ + 2 /* guess 9 < actual length < 100 */; String line = len + \" \" + key + \"=\" + value + \"\\n\"; int actualLength = line.getBytes(CharsetNames.UTF_8).length; while (len != actualLength) {"
+      },
+      {
+        "txt": "len = actualLength; line = len + \" \" + key + \"=\" + value + \"\\n\"; actualLength = line.getBytes(CharsetNames.UTF_8).length; } w.write(line); } byte[] data = w.toString().getBytes(CharsetNames.UTF_8); pex.setSize(data.length); putArchiveEntry(pex); write(data);"
+      },
+      {
+        "txt": "closeArchiveEntry(); } private String stripTo7Bits(String name) { final int length = name.length(); StringBuffer result = new StringBuffer(length); for (int i = 0; i < length; i++) { char stripped = (char) (name.charAt(i) & 0x7F); if (stripped != 0) { // would be read as Trailing null result.append(stripped); }"
+      },
+      {
+        "txt": "} return result.toString(); } private void writeEOFRecord() throws IOException { for (int i = 0; i < recordBuf.length; ++i) { recordBuf[i] = 0; } buffer.writeRecord(recordBuf); } @Override"
+      },
+      {
+        "txt": "public void flush() throws IOException { out.flush(); } @Override public ArchiveEntry createArchiveEntry(File inputFile, String entryName) throws IOException { if(finished) { throw new IOException(\"Stream has already been finished\"); } return new TarArchiveEntry(inputFile, entryName);"
+      },
+      {
+        "txt": "} private void addPaxHeadersForBigNumbers(Map<String, String> paxHeaders, TarArchiveEntry entry) { addPaxHeaderForBigNumber(paxHeaders, \"size\", entry.getSize(), TarConstants.MAXSIZE); addPaxHeaderForBigNumber(paxHeaders, \"gid\", entry.getGroupId(), TarConstants.MAXID); addPaxHeaderForBigNumber(paxHeaders, \"mtime\", entry.getModTime().getTime() / 1000, TarConstants.MAXSIZE);"
+      },
+      {
+        "txt": "addPaxHeaderForBigNumber(paxHeaders, \"uid\", entry.getUserId(), TarConstants.MAXID); addPaxHeaderForBigNumber(paxHeaders, \"SCHILY.devmajor\", entry.getDevMajor(), TarConstants.MAXID); addPaxHeaderForBigNumber(paxHeaders, \"SCHILY.devminor\", entry.getDevMinor(), TarConstants.MAXID); failForBigNumber(\"mode\", entry.getMode(), TarConstants.MAXID); } private void addPaxHeaderForBigNumber(Map<String, String> paxHeaders, String header, long value,"
+      },
+      {
+        "txt": "long maxValue) { if (value < 0 || value > maxValue) { paxHeaders.put(header, String.valueOf(value)); } } private void failForBigNumbers(TarArchiveEntry entry) { failForBigNumber(\"entry size\", entry.getSize(), TarConstants.MAXSIZE); failForBigNumber(\"group id\", entry.getGroupId(), TarConstants.MAXID); failForBigNumber(\"last modification time\", entry.getModTime().getTime() / 1000,"
+      },
+      {
+        "txt": "TarConstants.MAXSIZE); failForBigNumber(\"user id\", entry.getUserId(), TarConstants.MAXID); failForBigNumber(\"mode\", entry.getMode(), TarConstants.MAXID); failForBigNumber(\"major device number\", entry.getDevMajor(), TarConstants.MAXID); failForBigNumber(\"minor device number\", entry.getDevMinor(), TarConstants.MAXID); } private void failForBigNumber(String field, long value, long maxValue) { if (value < 0 || value > maxValue) {"
+      },
+      {
+        "txt": "throw new RuntimeException(field + \" '\" + value + \"' is too big ( > \" + maxValue + \" )\"); } }"
+      }
+    ]
+  }
+]

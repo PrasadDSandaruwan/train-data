@@ -1,0 +1,965 @@
+[
+  {
+    "id": 831,
+    "file_path": "src/com/google/javascript/rhino/jstype/JSTypeRegistry.java",
+    "start-bug-line": 698,
+    "end-bug-line": 698,
+    "bug": "",
+    "fix": "RecordType maybeRecordType = greatestSubtype.toMaybeRecordType(); if (maybeRecordType != null && maybeRecordType.isSynthetic()) { continue; }",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.google.javascript.rhino.jstype; import static com.google.javascript.rhino.jstype.JSTypeNative.ALL_TYPE; import static com.google.javascript.rhino.jstype.JSTypeNative.ARRAY_TYPE; import static com.google.javascript.rhino.jstype.JSTypeNative.NO_TYPE; import static com.google.javascript.rhino.jstype.JSTypeNative.UNKNOWN_TYPE; import static com.google.javascript.rhino.jstype.JSTypeNative.VOID_TYPE; import com.google.common.annotations.VisibleForTesting; import com.google.common.base.Preconditions;"
+      },
+      {
+        "txt": "import com.google.common.collect.ArrayListMultimap; import com.google.common.collect.ImmutableList; import com.google.common.collect.LinkedHashMultimap; import com.google.common.collect.Lists; import com.google.common.collect.Maps; import com.google.common.collect.Multimap; import com.google.javascript.rhino.ErrorReporter; import com.google.javascript.rhino.Node; import com.google.javascript.rhino.ScriptRuntime; import com.google.javascript.rhino.Token;"
+      },
+      {
+        "txt": "import com.google.javascript.rhino.jstype.RecordTypeBuilder.RecordProperty; import java.io.Serializable; import java.util.Collection; import java.util.HashMap; import java.util.HashSet; import java.util.List; import java.util.Map; import java.util.Set; public class JSTypeRegistry implements Serializable { private static final long serialVersionUID = 1L;"
+      },
+      {
+        "txt": "private static final int PROPERTY_CHECKING_UNION_SIZE = 3000; private final transient ErrorReporter reporter; private final JSType[] nativeTypes; private final Map<String, JSType> namesToTypes; private final Set<String> namespaces = new HashSet<String>(); private final Set<String> nonNullableTypeNames = new HashSet<String>(); private final Set<String> forwardDeclaredTypes = new HashSet<String>(); private final Map<String, UnionTypeBuilder> typesIndexedByProperty = Maps.newHashMap(); private final Map<String, Map<String, ObjectType>>"
+      },
+      {
+        "txt": "eachRefTypeIndexedByProperty = Maps.newHashMap(); private final Map<String, JSType> greatestSubtypeByProperty = Maps.newHashMap(); private final Multimap<String, FunctionType> interfaceToImplementors = LinkedHashMultimap.create(); private final Multimap<StaticScope<JSType>, NamedType> unresolvedNamedTypes = ArrayListMultimap.create(); private final Multimap<StaticScope<JSType>, NamedType> resolvedNamedTypes = ArrayListMultimap.create(); private boolean lastGeneration = true;"
+      },
+      {
+        "txt": "private String templateTypeName; private TemplateType templateType; private final boolean tolerateUndefinedValues; public static enum ResolveMode { LAZY_EXPRESSIONS, LAZY_NAMES, IMMEDIATE } private ResolveMode resolveMode = ResolveMode.LAZY_NAMES; public JSTypeRegistry(ErrorReporter reporter) {"
+      },
+      {
+        "txt": "this(reporter, false); } public JSTypeRegistry( ErrorReporter reporter, boolean tolerateUndefinedValues) { this.reporter = reporter; nativeTypes = new JSType[JSTypeNative.values().length]; namesToTypes = new HashMap<String, JSType>(); resetForTypeCheck(); this.tolerateUndefinedValues = tolerateUndefinedValues; }"
+      },
+      {
+        "txt": "public void setResolveMode(ResolveMode mode) { this.resolveMode = mode; } ResolveMode getResolveMode() { return resolveMode; } public ErrorReporter getErrorReporter() { return reporter; } public boolean shouldTolerateUndefinedValues() {"
+      },
+      {
+        "txt": "return tolerateUndefinedValues; } public void resetForTypeCheck() { typesIndexedByProperty.clear(); eachRefTypeIndexedByProperty.clear(); initializeBuiltInTypes(); namesToTypes.clear(); namespaces.clear(); initializeRegistry(); }"
+      },
+      {
+        "txt": "private void initializeBuiltInTypes() { BooleanType BOOLEAN_TYPE = new BooleanType(this); registerNativeType(JSTypeNative.BOOLEAN_TYPE, BOOLEAN_TYPE); NullType NULL_TYPE = new NullType(this); registerNativeType(JSTypeNative.NULL_TYPE, NULL_TYPE); NumberType NUMBER_TYPE = new NumberType(this); registerNativeType(JSTypeNative.NUMBER_TYPE, NUMBER_TYPE); StringType STRING_TYPE = new StringType(this); registerNativeType(JSTypeNative.STRING_TYPE, STRING_TYPE); UnknownType UNKNOWN_TYPE = new UnknownType(this, false);"
+      },
+      {
+        "txt": "registerNativeType(JSTypeNative.UNKNOWN_TYPE, UNKNOWN_TYPE); registerNativeType( JSTypeNative.CHECKED_UNKNOWN_TYPE, new UnknownType(this, true)); VoidType VOID_TYPE = new VoidType(this); registerNativeType(JSTypeNative.VOID_TYPE, VOID_TYPE); AllType ALL_TYPE = new AllType(this); registerNativeType(JSTypeNative.ALL_TYPE, ALL_TYPE); PrototypeObjectType TOP_LEVEL_PROTOTYPE = new PrototypeObjectType(this, null, null, true); registerNativeType(JSTypeNative.TOP_LEVEL_PROTOTYPE, TOP_LEVEL_PROTOTYPE);"
+      },
+      {
+        "txt": "FunctionType OBJECT_FUNCTION_TYPE = new FunctionType(this, \"Object\", null, createArrowType(createOptionalParameters(ALL_TYPE), UNKNOWN_TYPE), null, null, true, true); OBJECT_FUNCTION_TYPE.setPrototype(TOP_LEVEL_PROTOTYPE, null); registerNativeType(JSTypeNative.OBJECT_FUNCTION_TYPE, OBJECT_FUNCTION_TYPE); ObjectType OBJECT_TYPE = OBJECT_FUNCTION_TYPE.getInstanceType(); registerNativeType(JSTypeNative.OBJECT_TYPE, OBJECT_TYPE); ObjectType OBJECT_PROTOTYPE = OBJECT_FUNCTION_TYPE.getPrototype(); registerNativeType(JSTypeNative.OBJECT_PROTOTYPE, OBJECT_PROTOTYPE);"
+      },
+      {
+        "txt": "FunctionType FUNCTION_FUNCTION_TYPE = new FunctionType(this, \"Function\", null, createArrowType( createParametersWithVarArgs(ALL_TYPE), UNKNOWN_TYPE), null, null, true, true); FUNCTION_FUNCTION_TYPE.setPrototypeBasedOn(OBJECT_TYPE); registerNativeType( JSTypeNative.FUNCTION_FUNCTION_TYPE, FUNCTION_FUNCTION_TYPE); ObjectType FUNCTION_PROTOTYPE = FUNCTION_FUNCTION_TYPE.getPrototype(); registerNativeType(JSTypeNative.FUNCTION_PROTOTYPE, FUNCTION_PROTOTYPE);"
+      },
+      {
+        "txt": "NoType NO_TYPE = new NoType(this); registerNativeType(JSTypeNative.NO_TYPE, NO_TYPE); NoObjectType NO_OBJECT_TYPE = new NoObjectType(this); registerNativeType(JSTypeNative.NO_OBJECT_TYPE, NO_OBJECT_TYPE); NoObjectType NO_RESOLVED_TYPE = new NoResolvedType(this); registerNativeType(JSTypeNative.NO_RESOLVED_TYPE, NO_RESOLVED_TYPE); FunctionType ARRAY_FUNCTION_TYPE = new FunctionType(this, \"Array\", null, createArrowType(createParametersWithVarArgs(ALL_TYPE), null), null, null, true, true);"
+      },
+      {
+        "txt": "ARRAY_FUNCTION_TYPE.getInternalArrowType().returnType = ARRAY_FUNCTION_TYPE.getInstanceType(); ObjectType arrayPrototype = ARRAY_FUNCTION_TYPE.getPrototype(); registerNativeType(JSTypeNative.ARRAY_FUNCTION_TYPE, ARRAY_FUNCTION_TYPE); ObjectType ARRAY_TYPE = ARRAY_FUNCTION_TYPE.getInstanceType(); registerNativeType(JSTypeNative.ARRAY_TYPE, ARRAY_TYPE); FunctionType BOOLEAN_OBJECT_FUNCTION_TYPE = new FunctionType(this, \"Boolean\", null, createArrowType(createParameters(false, ALL_TYPE), BOOLEAN_TYPE), null, null, true, true);"
+      },
+      {
+        "txt": "ObjectType booleanPrototype = BOOLEAN_OBJECT_FUNCTION_TYPE.getPrototype(); registerNativeType( JSTypeNative.BOOLEAN_OBJECT_FUNCTION_TYPE, BOOLEAN_OBJECT_FUNCTION_TYPE); ObjectType BOOLEAN_OBJECT_TYPE = BOOLEAN_OBJECT_FUNCTION_TYPE.getInstanceType(); registerNativeType(JSTypeNative.BOOLEAN_OBJECT_TYPE, BOOLEAN_OBJECT_TYPE); FunctionType DATE_FUNCTION_TYPE = new FunctionType(this, \"Date\", null, createArrowType("
+      },
+      {
+        "txt": "createOptionalParameters(UNKNOWN_TYPE, UNKNOWN_TYPE, UNKNOWN_TYPE, UNKNOWN_TYPE, UNKNOWN_TYPE, UNKNOWN_TYPE, UNKNOWN_TYPE), STRING_TYPE), null, null, true, true); ObjectType datePrototype = DATE_FUNCTION_TYPE.getPrototype(); registerNativeType(JSTypeNative.DATE_FUNCTION_TYPE, DATE_FUNCTION_TYPE); ObjectType DATE_TYPE = DATE_FUNCTION_TYPE.getInstanceType(); registerNativeType(JSTypeNative.DATE_TYPE, DATE_TYPE); FunctionType ERROR_FUNCTION_TYPE = new ErrorFunctionType(this, \"Error\"); registerNativeType(JSTypeNative.ERROR_FUNCTION_TYPE, ERROR_FUNCTION_TYPE);"
+      },
+      {
+        "txt": "ObjectType ERROR_TYPE = ERROR_FUNCTION_TYPE.getInstanceType(); registerNativeType(JSTypeNative.ERROR_TYPE, ERROR_TYPE); FunctionType EVAL_ERROR_FUNCTION_TYPE = new ErrorFunctionType(this, \"EvalError\"); EVAL_ERROR_FUNCTION_TYPE.setPrototypeBasedOn(ERROR_TYPE); registerNativeType( JSTypeNative.EVAL_ERROR_FUNCTION_TYPE, EVAL_ERROR_FUNCTION_TYPE); ObjectType EVAL_ERROR_TYPE = EVAL_ERROR_FUNCTION_TYPE.getInstanceType(); registerNativeType(JSTypeNative.EVAL_ERROR_TYPE, EVAL_ERROR_TYPE); FunctionType RANGE_ERROR_FUNCTION_TYPE ="
+      },
+      {
+        "txt": "new ErrorFunctionType(this, \"RangeError\"); RANGE_ERROR_FUNCTION_TYPE.setPrototypeBasedOn(ERROR_TYPE); registerNativeType( JSTypeNative.RANGE_ERROR_FUNCTION_TYPE, RANGE_ERROR_FUNCTION_TYPE); ObjectType RANGE_ERROR_TYPE = RANGE_ERROR_FUNCTION_TYPE.getInstanceType(); registerNativeType(JSTypeNative.RANGE_ERROR_TYPE, RANGE_ERROR_TYPE); FunctionType REFERENCE_ERROR_FUNCTION_TYPE = new ErrorFunctionType(this, \"ReferenceError\"); REFERENCE_ERROR_FUNCTION_TYPE.setPrototypeBasedOn(ERROR_TYPE); registerNativeType("
+      },
+      {
+        "txt": "JSTypeNative.REFERENCE_ERROR_FUNCTION_TYPE, REFERENCE_ERROR_FUNCTION_TYPE); ObjectType REFERENCE_ERROR_TYPE = REFERENCE_ERROR_FUNCTION_TYPE.getInstanceType(); registerNativeType(JSTypeNative.REFERENCE_ERROR_TYPE, REFERENCE_ERROR_TYPE); FunctionType SYNTAX_ERROR_FUNCTION_TYPE = new ErrorFunctionType(this, \"SyntaxError\"); SYNTAX_ERROR_FUNCTION_TYPE.setPrototypeBasedOn(ERROR_TYPE); registerNativeType( JSTypeNative.SYNTAX_ERROR_FUNCTION_TYPE, SYNTAX_ERROR_FUNCTION_TYPE);"
+      },
+      {
+        "txt": "ObjectType SYNTAX_ERROR_TYPE = SYNTAX_ERROR_FUNCTION_TYPE.getInstanceType(); registerNativeType(JSTypeNative.SYNTAX_ERROR_TYPE, SYNTAX_ERROR_TYPE); FunctionType TYPE_ERROR_FUNCTION_TYPE = new ErrorFunctionType(this, \"TypeError\"); TYPE_ERROR_FUNCTION_TYPE.setPrototypeBasedOn(ERROR_TYPE); registerNativeType( JSTypeNative.TYPE_ERROR_FUNCTION_TYPE, TYPE_ERROR_FUNCTION_TYPE); ObjectType TYPE_ERROR_TYPE = TYPE_ERROR_FUNCTION_TYPE.getInstanceType(); registerNativeType(JSTypeNative.TYPE_ERROR_TYPE, TYPE_ERROR_TYPE); FunctionType URI_ERROR_FUNCTION_TYPE ="
+      },
+      {
+        "txt": "new ErrorFunctionType(this, \"URIError\"); URI_ERROR_FUNCTION_TYPE.setPrototypeBasedOn(ERROR_TYPE); registerNativeType( JSTypeNative.URI_ERROR_FUNCTION_TYPE, URI_ERROR_FUNCTION_TYPE); ObjectType URI_ERROR_TYPE = URI_ERROR_FUNCTION_TYPE.getInstanceType(); registerNativeType(JSTypeNative.URI_ERROR_TYPE, URI_ERROR_TYPE); FunctionType NUMBER_OBJECT_FUNCTION_TYPE = new FunctionType(this, \"Number\", null, createArrowType(createParameters(false, ALL_TYPE), NUMBER_TYPE), null, null, true, true);"
+      },
+      {
+        "txt": "ObjectType numberPrototype = NUMBER_OBJECT_FUNCTION_TYPE.getPrototype(); registerNativeType( JSTypeNative.NUMBER_OBJECT_FUNCTION_TYPE, NUMBER_OBJECT_FUNCTION_TYPE); ObjectType NUMBER_OBJECT_TYPE = NUMBER_OBJECT_FUNCTION_TYPE.getInstanceType(); registerNativeType(JSTypeNative.NUMBER_OBJECT_TYPE, NUMBER_OBJECT_TYPE); FunctionType REGEXP_FUNCTION_TYPE = new FunctionType(this, \"RegExp\", null, createArrowType(createOptionalParameters(ALL_TYPE, ALL_TYPE)), null, null, true, true);"
+      },
+      {
+        "txt": "REGEXP_FUNCTION_TYPE.getInternalArrowType().returnType = REGEXP_FUNCTION_TYPE.getInstanceType(); ObjectType regexpPrototype = REGEXP_FUNCTION_TYPE.getPrototype(); registerNativeType(JSTypeNative.REGEXP_FUNCTION_TYPE, REGEXP_FUNCTION_TYPE); ObjectType REGEXP_TYPE = REGEXP_FUNCTION_TYPE.getInstanceType(); registerNativeType(JSTypeNative.REGEXP_TYPE, REGEXP_TYPE); FunctionType STRING_OBJECT_FUNCTION_TYPE = new FunctionType(this, \"String\", null, createArrowType(createParameters(false, ALL_TYPE), STRING_TYPE), null, null, true, true);"
+      },
+      {
+        "txt": "ObjectType stringPrototype = STRING_OBJECT_FUNCTION_TYPE.getPrototype(); registerNativeType( JSTypeNative.STRING_OBJECT_FUNCTION_TYPE, STRING_OBJECT_FUNCTION_TYPE); ObjectType STRING_OBJECT_TYPE = STRING_OBJECT_FUNCTION_TYPE.getInstanceType(); registerNativeType( JSTypeNative.STRING_OBJECT_TYPE, STRING_OBJECT_TYPE); JSType OBJECT_NUMBER_STRING = createUnionType(OBJECT_TYPE, NUMBER_TYPE, STRING_TYPE); registerNativeType(JSTypeNative.OBJECT_NUMBER_STRING, OBJECT_NUMBER_STRING);"
+      },
+      {
+        "txt": "JSType OBJECT_NUMBER_STRING_BOOLEAN = createUnionType(OBJECT_TYPE, NUMBER_TYPE, STRING_TYPE, BOOLEAN_TYPE); registerNativeType(JSTypeNative.OBJECT_NUMBER_STRING_BOOLEAN, OBJECT_NUMBER_STRING_BOOLEAN); JSType NUMBER_STRING_BOOLEAN = createUnionType(NUMBER_TYPE, STRING_TYPE, BOOLEAN_TYPE); registerNativeType(JSTypeNative.NUMBER_STRING_BOOLEAN, NUMBER_STRING_BOOLEAN); JSType NUMBER_STRING = createUnionType(NUMBER_TYPE, STRING_TYPE); registerNativeType(JSTypeNative.NUMBER_STRING, NUMBER_STRING);"
+      },
+      {
+        "txt": "JSType STRING_VALUE_OR_OBJECT_TYPE = createUnionType(STRING_OBJECT_TYPE, STRING_TYPE); registerNativeType( JSTypeNative.STRING_VALUE_OR_OBJECT_TYPE, STRING_VALUE_OR_OBJECT_TYPE); JSType NUMBER_VALUE_OR_OBJECT_TYPE = createUnionType(NUMBER_OBJECT_TYPE, NUMBER_TYPE); registerNativeType( JSTypeNative.NUMBER_VALUE_OR_OBJECT_TYPE, NUMBER_VALUE_OR_OBJECT_TYPE); FunctionType U2U_FUNCTION_TYPE = createFunctionType(UNKNOWN_TYPE, true, UNKNOWN_TYPE);"
+      },
+      {
+        "txt": "registerNativeType(JSTypeNative.U2U_FUNCTION_TYPE, U2U_FUNCTION_TYPE); FunctionType U2U_CONSTRUCTOR_TYPE = new FunctionType(this, \"Function\", null, createArrowType( createParametersWithVarArgs(UNKNOWN_TYPE), UNKNOWN_TYPE), NO_OBJECT_TYPE, null, true, true) { private static final long serialVersionUID = 1L; @Override public FunctionType getConstructor() { return registry.getNativeFunctionType("
+      },
+      {
+        "txt": "JSTypeNative.FUNCTION_FUNCTION_TYPE); } }; registerNativeType(JSTypeNative.U2U_CONSTRUCTOR_TYPE, U2U_CONSTRUCTOR_TYPE); registerNativeType( JSTypeNative.FUNCTION_INSTANCE_TYPE, U2U_CONSTRUCTOR_TYPE); FUNCTION_FUNCTION_TYPE.setInstanceType(U2U_CONSTRUCTOR_TYPE); U2U_CONSTRUCTOR_TYPE.setImplicitPrototype(FUNCTION_PROTOTYPE); FunctionType LEAST_FUNCTION_TYPE = createFunctionType(NO_TYPE, true, ALL_TYPE);"
+      },
+      {
+        "txt": "registerNativeType(JSTypeNative.LEAST_FUNCTION_TYPE, LEAST_FUNCTION_TYPE); FunctionType GLOBAL_THIS_CTOR = new FunctionType(this, \"global this\", null, createArrowType(createParameters(false, ALL_TYPE), NUMBER_TYPE), null, null, true, true); ObjectType GLOBAL_THIS = GLOBAL_THIS_CTOR.getInstanceType(); registerNativeType(JSTypeNative.GLOBAL_THIS, GLOBAL_THIS); FunctionType GREATEST_FUNCTION_TYPE = createFunctionType(ALL_TYPE, true, NO_TYPE); registerNativeType(JSTypeNative.GREATEST_FUNCTION_TYPE,"
+      },
+      {
+        "txt": "GREATEST_FUNCTION_TYPE); registerPropertyOnType(\"prototype\", OBJECT_FUNCTION_TYPE); } private void initializeRegistry() { register(getNativeType(JSTypeNative.ARRAY_TYPE)); register(getNativeType(JSTypeNative.BOOLEAN_OBJECT_TYPE)); register(getNativeType(JSTypeNative.BOOLEAN_TYPE)); register(getNativeType(JSTypeNative.DATE_TYPE)); register(getNativeType(JSTypeNative.NULL_TYPE)); register(getNativeType(JSTypeNative.NULL_TYPE), \"Null\");"
+      },
+      {
+        "txt": "register(getNativeType(JSTypeNative.NUMBER_OBJECT_TYPE)); register(getNativeType(JSTypeNative.NUMBER_TYPE)); register(getNativeType(JSTypeNative.OBJECT_TYPE)); register(getNativeType(JSTypeNative.ERROR_TYPE)); register(getNativeType(JSTypeNative.URI_ERROR_TYPE)); register(getNativeType(JSTypeNative.EVAL_ERROR_TYPE)); register(getNativeType(JSTypeNative.TYPE_ERROR_TYPE)); register(getNativeType(JSTypeNative.RANGE_ERROR_TYPE)); register(getNativeType(JSTypeNative.REFERENCE_ERROR_TYPE)); register(getNativeType(JSTypeNative.SYNTAX_ERROR_TYPE));"
+      },
+      {
+        "txt": "register(getNativeType(JSTypeNative.REGEXP_TYPE)); register(getNativeType(JSTypeNative.STRING_OBJECT_TYPE)); register(getNativeType(JSTypeNative.STRING_TYPE)); register(getNativeType(JSTypeNative.VOID_TYPE)); register(getNativeType(JSTypeNative.VOID_TYPE), \"Undefined\"); register(getNativeType(JSTypeNative.VOID_TYPE), \"void\"); register(getNativeType(JSTypeNative.FUNCTION_INSTANCE_TYPE), \"Function\"); } private void register(JSType type) { register(type, type.toString());"
+      },
+      {
+        "txt": "} private void register(JSType type, String name) { namesToTypes.put(name, type); while (name.indexOf('.') > 0) { name = name.substring(0, name.lastIndexOf('.')); namespaces.add(name); } } private void registerNativeType(JSTypeNative typeId, JSType type) { nativeTypes[typeId.ordinal()] = type;"
+      },
+      {
+        "txt": "} public void registerPropertyOnType(String propertyName, JSType type) { UnionTypeBuilder typeSet = typesIndexedByProperty.get(propertyName); if (typeSet == null) { typeSet = new UnionTypeBuilder(this, PROPERTY_CHECKING_UNION_SIZE); typesIndexedByProperty.put(propertyName, typeSet); } typeSet.addAlternate(type); addReferenceTypeIndexedByProperty(propertyName, type); greatestSubtypeByProperty.remove(propertyName);"
+      },
+      {
+        "txt": "} private void addReferenceTypeIndexedByProperty( String propertyName, JSType type) { if (type instanceof ObjectType && ((ObjectType) type).hasReferenceName()) { Map<String, ObjectType> typeSet = eachRefTypeIndexedByProperty.get(propertyName); if (typeSet == null) { typeSet = Maps.newHashMap(); eachRefTypeIndexedByProperty.put(propertyName, typeSet); }"
+      },
+      {
+        "txt": "ObjectType objType = (ObjectType) type; typeSet.put(objType.getReferenceName(), objType); } else if (type instanceof NamedType) { addReferenceTypeIndexedByProperty( propertyName, ((NamedType) type).getReferencedType()); } else if (type.isUnionType()) { for (JSType alternate : type.toMaybeUnionType().getAlternates()) { addReferenceTypeIndexedByProperty(propertyName, alternate); } }"
+      },
+      {
+        "txt": "} public void unregisterPropertyOnType(String propertyName, JSType type) { Map<String, ObjectType> typeSet = eachRefTypeIndexedByProperty.get(propertyName); if (typeSet != null) { typeSet.remove(type.toObjectType().getReferenceName()); } } public JSType getGreatestSubtypeWithProperty( JSType type, String propertyName) {"
+      },
+      {
+        "txt": "if (greatestSubtypeByProperty.containsKey(propertyName)) { return greatestSubtypeByProperty.get(propertyName) .getGreatestSubtype(type); } if (typesIndexedByProperty.containsKey(propertyName)) { JSType built = typesIndexedByProperty.get(propertyName).build(); greatestSubtypeByProperty.put(propertyName, built); return built.getGreatestSubtype(type); } return getNativeType(NO_TYPE);"
+      },
+      {
+        "txt": "public boolean canPropertyBeDefined(JSType type, String propertyName) { if (typesIndexedByProperty.containsKey(propertyName)) { for (JSType alt : typesIndexedByProperty.get(propertyName).getAlternates()) { JSType greatestSubtype = alt.getGreatestSubtype(type); if (!greatestSubtype.isEmptyType()) { <extra_id_0> return true; } } } return false; }"
+      },
+      {
+        "txt": "return false; } public Iterable<JSType> getTypesWithProperty(String propertyName) { if (typesIndexedByProperty.containsKey(propertyName)) { return typesIndexedByProperty.get(propertyName).getAlternates(); } else { return ImmutableList.of(); } } public Iterable<ObjectType> getEachReferenceTypeWithProperty("
+      },
+      {
+        "txt": "String propertyName) { if (eachRefTypeIndexedByProperty.containsKey(propertyName)) { return eachRefTypeIndexedByProperty.get(propertyName).values(); } else { return ImmutableList.of(); } } ObjectType findCommonSuperObject(ObjectType a, ObjectType b) { List<ObjectType> stackA = getSuperStack(a); List<ObjectType> stackB = getSuperStack(b);"
+      },
+      {
+        "txt": "ObjectType result = getNativeObjectType(JSTypeNative.OBJECT_TYPE); while (!stackA.isEmpty() && !stackB.isEmpty()) { ObjectType currentA = stackA.remove(stackA.size() - 1); ObjectType currentB = stackB.remove(stackB.size() - 1); if (currentA.isEquivalentTo(currentB)) { result = currentA; } else { return result; } }"
+      },
+      {
+        "txt": "return result; } private static List<ObjectType> getSuperStack(ObjectType a) { List<ObjectType> stack = Lists.newArrayListWithExpectedSize(5); for (ObjectType current = a; current != null; current = current.getImplicitPrototype()) { stack.add(current); } return stack;"
+      },
+      {
+        "txt": "} public void incrementGeneration() { for (NamedType type : resolvedNamedTypes.values()) { type.clearResolved(); } unresolvedNamedTypes.putAll(resolvedNamedTypes); resolvedNamedTypes.clear(); } boolean isLastGeneration() { return lastGeneration;"
+      },
+      {
+        "txt": "} public void setLastGeneration(boolean lastGeneration) { this.lastGeneration = lastGeneration; } void registerTypeImplementingInterface( FunctionType type, ObjectType interfaceInstance) { interfaceToImplementors.put(interfaceInstance.getReferenceName(), type); } public Collection<FunctionType> getDirectImplementors( ObjectType interfaceInstance) {"
+      },
+      {
+        "txt": "return interfaceToImplementors.get(interfaceInstance.getReferenceName()); } public boolean declareType(String name, JSType t) { if (namesToTypes.containsKey(name)) { return false; } register(t, name); return true; } public void overwriteDeclaredType(String name, JSType t) {"
+      },
+      {
+        "txt": "Preconditions.checkState(namesToTypes.containsKey(name)); register(t, name); } public void forwardDeclareType(String name) { forwardDeclaredTypes.add(name); } public boolean isForwardDeclaredType(String name) { return forwardDeclaredTypes.contains(name); } public boolean hasNamespace(String name) {"
+      },
+      {
+        "txt": "return namespaces.contains(name); } public JSType getType(String jsTypeName) { if (jsTypeName.equals(templateTypeName)) { return templateType; } return namesToTypes.get(jsTypeName); } public JSType getNativeType(JSTypeNative typeId) { return nativeTypes[typeId.ordinal()];"
+      },
+      {
+        "txt": "} public ObjectType getNativeObjectType(JSTypeNative typeId) { return (ObjectType) getNativeType(typeId); } public FunctionType getNativeFunctionType(JSTypeNative typeId) { return (FunctionType) getNativeType(typeId); } public JSType getType(StaticScope<JSType> scope, String jsTypeName, String sourceName, int lineno, int charno) { JSType type = getType(jsTypeName);"
+      },
+      {
+        "txt": "if (type == null) { NamedType namedType = new NamedType(this, jsTypeName, sourceName, lineno, charno); unresolvedNamedTypes.put(scope, namedType); type = namedType; } return type; } public void clearNamedTypes() { resolvedNamedTypes.clear();"
+      },
+      {
+        "txt": "unresolvedNamedTypes.clear(); } public void resolveTypesInScope(StaticScope<JSType> scope) { for (NamedType type : unresolvedNamedTypes.get(scope)) { type.resolve(reporter, scope); } resolvedNamedTypes.putAll(scope, unresolvedNamedTypes.removeAll(scope)); if (scope != null && scope.getParentScope() == null) { PrototypeObjectType globalThis = (PrototypeObjectType) getNativeType( JSTypeNative.GLOBAL_THIS);"
+      },
+      {
+        "txt": "JSType windowType = getType(\"Window\"); if (globalThis.isUnknownType()) { ObjectType windowObjType = ObjectType.cast(windowType); if (windowObjType != null) { globalThis.setImplicitPrototype(windowObjType); } else { globalThis.setImplicitPrototype( getNativeObjectType(JSTypeNative.OBJECT_TYPE)); } }"
+      },
+      {
+        "txt": "} } public JSType createOptionalType(JSType type) { if (type instanceof UnknownType || type.isAllType()) { return type; } else { return createUnionType(type, getNativeType(JSTypeNative.VOID_TYPE)); } } public JSType createDefaultObjectUnion(JSType type) {"
+      },
+      {
+        "txt": "return shouldTolerateUndefinedValues() ? createOptionalNullableType(type) : createNullableType(type); } public JSType createNullableType(JSType type) { return createUnionType(type, getNativeType(JSTypeNative.NULL_TYPE)); } public JSType createOptionalNullableType(JSType type) { return createUnionType(type, getNativeType(JSTypeNative.VOID_TYPE), getNativeType(JSTypeNative.NULL_TYPE));"
+      },
+      {
+        "txt": "} public JSType createUnionType(JSType... variants) { UnionTypeBuilder builder = new UnionTypeBuilder(this); for (JSType type : variants) { builder.addAlternate(type); } return builder.build(); } public JSType createUnionType(JSTypeNative... variants) { UnionTypeBuilder builder = new UnionTypeBuilder(this);"
+      },
+      {
+        "txt": "for (JSTypeNative typeId : variants) { builder.addAlternate(getNativeType(typeId)); } return builder.build(); } public EnumType createEnumType( String name, Node source, JSType elementsType) { return new EnumType(this, name, source, elementsType); } ArrowType createArrowType(Node parametersNode, JSType returnType) {"
+      },
+      {
+        "txt": "return new ArrowType(this, parametersNode, returnType); } ArrowType createArrowType(Node parametersNode) { return new ArrowType(this, parametersNode, null); } public FunctionType createFunctionType( JSType returnType, JSType... parameterTypes) { return createFunctionType(returnType, createParameters(parameterTypes)); } public FunctionType createFunctionTypeWithVarArgs("
+      },
+      {
+        "txt": "JSType returnType, List<JSType> parameterTypes) { return createFunctionType( returnType, createParametersWithVarArgs(parameterTypes)); } public FunctionType createFunctionType( JSType returnType, List<JSType> parameterTypes) { return createFunctionType(returnType, createParameters(parameterTypes)); } public FunctionType createFunctionTypeWithVarArgs( JSType returnType, JSType... parameterTypes) {"
+      },
+      {
+        "txt": "return createFunctionType( returnType, createParametersWithVarArgs(parameterTypes)); } public FunctionType createConstructorType( JSType returnType, JSType... parameterTypes) { return createConstructorType( null, null, createParameters(parameterTypes), returnType); } public FunctionType createConstructorTypeWithVarArgs( JSType returnType, JSType... parameterTypes) {"
+      },
+      {
+        "txt": "return createConstructorType( null, null, createParametersWithVarArgs(parameterTypes), returnType); } public JSType createFunctionType(ObjectType instanceType, JSType returnType, List<JSType> parameterTypes) { return new FunctionBuilder(this) .withParamsNode(createParameters(parameterTypes)) .withReturnType(returnType) .withTypeOfThis(instanceType) .build();"
+      },
+      {
+        "txt": "} public JSType createFunctionTypeWithVarArgs(ObjectType instanceType, JSType returnType, List<JSType> parameterTypes) { return new FunctionBuilder(this) .withParamsNode(createParametersWithVarArgs(parameterTypes)) .withReturnType(returnType) .withTypeOfThis(instanceType) .build(); } public Node createParameters(List<JSType> parameterTypes) {"
+      },
+      {
+        "txt": "return createParameters( parameterTypes.toArray(new JSType[parameterTypes.size()])); } public Node createParametersWithVarArgs(List<JSType> parameterTypes) { return createParametersWithVarArgs( parameterTypes.toArray(new JSType[parameterTypes.size()])); } public Node createParameters(JSType... parameterTypes) { return createParameters(false, parameterTypes); }"
+      },
+      {
+        "txt": "public Node createParametersWithVarArgs(JSType... parameterTypes) { return createParameters(true, parameterTypes); } public Node createOptionalParameters(JSType... parameterTypes) { FunctionParamBuilder builder = new FunctionParamBuilder(this); builder.addOptionalParams(parameterTypes); return builder.build(); } private Node createParameters(boolean lastVarArgs, JSType... parameterTypes) { FunctionParamBuilder builder = new FunctionParamBuilder(this);"
+      },
+      {
+        "txt": "int max = parameterTypes.length - 1; for (int i = 0; i <= max; i++) { if (lastVarArgs && i == max) { builder.addVarArgs(parameterTypes[i]); } else { builder.addRequiredParams(parameterTypes[i]); } } return builder.build(); }"
+      },
+      {
+        "txt": "public FunctionType createFunctionType(JSType returnType, boolean lastVarArgs, JSType... parameterTypes) { if (lastVarArgs) { return createFunctionTypeWithVarArgs(returnType, parameterTypes); } else { return createFunctionType(returnType, parameterTypes); } } public FunctionType createFunctionTypeWithNewReturnType( FunctionType existingFunctionType, JSType returnType) {"
+      },
+      {
+        "txt": "return new FunctionBuilder(this) .copyFromOtherFunction(existingFunctionType) .withReturnType(returnType) .build(); } public FunctionType createFunctionTypeWithNewThisType( FunctionType existingFunctionType, ObjectType thisType) { return new FunctionBuilder(this) .copyFromOtherFunction(existingFunctionType) .withTypeOfThis(thisType)"
+      },
+      {
+        "txt": ".build(); } public FunctionType createFunctionType( JSType returnType, Node parameters) { return new FunctionBuilder(this) .withParamsNode(parameters) .withReturnType(returnType) .build(); } public FunctionType createConstructorType(JSType returnType,"
+      },
+      {
+        "txt": "boolean lastVarArgs, JSType... parameterTypes) { if (lastVarArgs) { return createConstructorTypeWithVarArgs(returnType, parameterTypes); } else { return createConstructorType(returnType, parameterTypes); } } public ObjectType createObjectType(ObjectType implicitPrototype) { return createObjectType(null, null, implicitPrototype); }"
+      },
+      {
+        "txt": "public RecordType createRecordType(Map<String, RecordProperty> properties) { return new RecordType(this, properties); } public ObjectType createObjectType(String name, Node n, ObjectType implicitPrototype) { return new PrototypeObjectType(this, name, implicitPrototype); } public ObjectType createAnonymousObjectType() { PrototypeObjectType type = new PrototypeObjectType(this, null, null);"
+      },
+      {
+        "txt": "type.setPrettyPrint(true); return type; } public boolean resetImplicitPrototype( JSType type, ObjectType newImplicitProto) { if (type instanceof PrototypeObjectType) { PrototypeObjectType poType = (PrototypeObjectType) type; poType.clearCachedValues(); poType.setImplicitPrototype(newImplicitProto); return true;"
+      },
+      {
+        "txt": "} return false; } ObjectType createNativeAnonymousObjectType() { PrototypeObjectType type = new PrototypeObjectType(this, null, null, true); type.setPrettyPrint(true); return type; } public FunctionType createConstructorType(String name, Node source,"
+      },
+      {
+        "txt": "Node parameters, JSType returnType) { return new FunctionType(this, name, source, createArrowType(parameters, returnType), null, null, true, false); } public FunctionType createInterfaceType(String name, Node source) { return FunctionType.forInterface(this, name, source); } public ParameterizedType createParameterizedType( ObjectType objectType, JSType parameterType) {"
+      },
+      {
+        "txt": "return new ParameterizedType(this, objectType, parameterType); } @VisibleForTesting public JSType createNamedType(String reference, String sourceName, int lineno, int charno) { return new NamedType(this, reference, sourceName, lineno, charno); } public void identifyNonNullableName(String name) { Preconditions.checkNotNull(name); nonNullableTypeNames.add(name);"
+      },
+      {
+        "txt": "} public JSType createFromTypeNodes(Node n, String sourceName, StaticScope<JSType> scope) { if (resolveMode == ResolveMode.LAZY_EXPRESSIONS) { boolean hasNames = hasTypeName(n); if (hasNames) { return new UnresolvedTypeExpression(this, n, sourceName); } } return createFromTypeNodesInternal(n, sourceName, scope);"
+      },
+      {
+        "txt": "} private boolean hasTypeName(Node n) { if (n.getType() == Token.STRING) { return true; } for (Node child = n.getFirstChild(); child != null; child = child.getNext()) { if (hasTypeName(child)) { return true; }"
+      },
+      {
+        "txt": "} return false; } private JSType createFromTypeNodesInternal(Node n, String sourceName, StaticScope<JSType> scope) { switch (n.getType()) { case Token.LC: // Record type. return createRecordTypeFromNodes( n.getFirstChild(), sourceName, scope); case Token.BANG: // Not nullable"
+      },
+      {
+        "txt": "return createFromTypeNodesInternal( n.getFirstChild(), sourceName, scope) .restrictByNotNullOrUndefined(); case Token.QMARK: // Nullable or unknown Node firstChild = n.getFirstChild(); if (firstChild == null) { return getNativeType(UNKNOWN_TYPE); } return createDefaultObjectUnion( createFromTypeNodesInternal("
+      },
+      {
+        "txt": "firstChild, sourceName, scope)); case Token.EQUALS: // Optional return createOptionalType( createFromTypeNodesInternal( n.getFirstChild(), sourceName, scope)); case Token.ELLIPSIS: // Var args return createOptionalType( createFromTypeNodesInternal( n.getFirstChild(), sourceName, scope)); case Token.STAR: // The AllType"
+      },
+      {
+        "txt": "return getNativeType(ALL_TYPE); case Token.LB: // Array type return getNativeType(ARRAY_TYPE); case Token.PIPE: // Union type UnionTypeBuilder builder = new UnionTypeBuilder(this); for (Node child = n.getFirstChild(); child != null; child = child.getNext()) { builder.addAlternate( createFromTypeNodesInternal(child, sourceName, scope)); }"
+      },
+      {
+        "txt": "return builder.build(); case Token.EMPTY: // When the return value of a function is not specified return getNativeType(UNKNOWN_TYPE); case Token.VOID: // Only allowed in the return value of a function. return getNativeType(VOID_TYPE); case Token.STRING: JSType namedType = getType(scope, n.getString(), sourceName, n.getLineno(), n.getCharno()); if (resolveMode != ResolveMode.LAZY_NAMES) { namedType = namedType.resolveInternal(reporter, scope);"
+      },
+      {
+        "txt": "} if ((namedType instanceof ObjectType) && !(nonNullableTypeNames.contains(n.getString()))) { Node typeList = n.getFirstChild(); if (typeList != null && (\"Array\".equals(n.getString()) || \"Object\".equals(n.getString()))) { JSType parameterType = createFromTypeNodesInternal( typeList.getLastChild(), sourceName, scope);"
+      },
+      {
+        "txt": "namedType = new ParameterizedType( this, (ObjectType) namedType, parameterType); if (typeList.hasMoreThanOneChild()) { JSType indexType = createFromTypeNodesInternal( typeList.getFirstChild(), sourceName, scope); namedType = new IndexedType( this, (ObjectType) namedType, indexType); } }"
+      },
+      {
+        "txt": "return createDefaultObjectUnion(namedType); } else { return namedType; } case Token.FUNCTION: ObjectType thisType = null; boolean isConstructor = false; Node current = n.getFirstChild(); if (current.getType() == Token.THIS || current.getType() == Token.NEW) {"
+      },
+      {
+        "txt": "Node contextNode = current.getFirstChild(); thisType = ObjectType.cast( createFromTypeNodesInternal( contextNode, sourceName, scope) .restrictByNotNullOrUndefined()); if (thisType == null) { reporter.warning( ScriptRuntime.getMessage0( current.getType() == Token.THIS ?"
+      },
+      {
+        "txt": "\"msg.jsdoc.function.thisnotobject\" : \"msg.jsdoc.function.newnotobject\"), sourceName, contextNode.getLineno(), contextNode.getCharno()); } isConstructor = current.getType() == Token.NEW; current = current.getNext(); } FunctionParamBuilder paramBuilder = new FunctionParamBuilder(this); if (current.getType() == Token.PARAM_LIST) {"
+      },
+      {
+        "txt": "Node args = current.getFirstChild(); for (Node arg = current.getFirstChild(); arg != null; arg = arg.getNext()) { if (arg.getType() == Token.ELLIPSIS) { if (arg.getChildCount() == 0) { paramBuilder.addVarArgs(getNativeType(UNKNOWN_TYPE)); } else { paramBuilder.addVarArgs( createFromTypeNodesInternal( arg.getFirstChild(), sourceName, scope));"
+      },
+      {
+        "txt": "} } else { JSType type = createFromTypeNodesInternal( arg, sourceName, scope); if (arg.getType() == Token.EQUALS) { boolean addSuccess = paramBuilder.addOptionalParams(type); if (!addSuccess) { reporter.warning( ScriptRuntime.getMessage0(\"msg.jsdoc.function.varargs\"), sourceName, arg.getLineno(), arg.getCharno());"
+      },
+      {
+        "txt": "} } else { paramBuilder.addRequiredParams(type); } } } current = current.getNext(); } JSType returnType = createFromTypeNodesInternal(current, sourceName, scope);"
+      },
+      {
+        "txt": "return new FunctionBuilder(this) .withParams(paramBuilder) .withReturnType(returnType) .withTypeOfThis(thisType) .setIsConstructor(isConstructor) .build(); } throw new IllegalStateException( \"Unexpected node in type expression: \" + n.toString()); }"
+      },
+      {
+        "txt": "private JSType createRecordTypeFromNodes(Node n, String sourceName, StaticScope<JSType> scope) { RecordTypeBuilder builder = new RecordTypeBuilder(this); for (Node fieldTypeNode = n.getFirstChild(); fieldTypeNode != null; fieldTypeNode = fieldTypeNode.getNext()) { Node fieldNameNode = fieldTypeNode; boolean hasType = false; if (fieldTypeNode.getType() == Token.COLON) { fieldNameNode = fieldTypeNode.getFirstChild();"
+      },
+      {
+        "txt": "hasType = true; } String fieldName = fieldNameNode.getString(); if (fieldName.startsWith(\"'\") || fieldName.startsWith(\"\\\"\")) { fieldName = fieldName.substring(1, fieldName.length() - 1); } JSType fieldType = null; if (hasType) { fieldType = createFromTypeNodesInternal( fieldTypeNode.getLastChild(), sourceName, scope);"
+      },
+      {
+        "txt": "} else { fieldType = getNativeType(JSTypeNative.UNKNOWN_TYPE); } if (builder.addProperty(fieldName, fieldType, fieldNameNode) == null) { reporter.warning( \"Duplicate record field \" + fieldName, sourceName, n.getLineno(), fieldNameNode.getCharno()); } }"
+      },
+      {
+        "txt": "return builder.build(); } public void setTemplateTypeName(String name) { templateTypeName = name; templateType = new TemplateType(this, name); } public void clearTemplateTypeName() { templateTypeName = null; templateType = null; }"
+      }
+    ]
+  },
+  {
+    "id": 832,
+    "file_path": "src/com/google/javascript/rhino/jstype/ObjectType.java",
+    "start-bug-line": 290,
+    "end-bug-line": 290,
+    "bug": "",
+    "fix": "public final boolean defineSynthesizedProperty(String propertyName, JSType type, Node propertyNode) { return defineProperty(propertyName, type, false, propertyNode); }",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.google.javascript.rhino.jstype; import static com.google.javascript.rhino.jstype.TernaryValue.FALSE; import static com.google.javascript.rhino.jstype.TernaryValue.UNKNOWN; import com.google.common.collect.ImmutableSet; import com.google.common.collect.Sets; import com.google.javascript.rhino.JSDocInfo; import com.google.javascript.rhino.Node; import com.google.javascript.rhino.jstype.StaticReference; import com.google.javascript.rhino.jstype.StaticSlot; import java.io.Serializable;"
+      },
+      {
+        "txt": "import java.util.Set; public abstract class ObjectType extends JSType implements StaticScope<JSType> { private boolean visited; private JSDocInfo docInfo = null; private boolean unknown = true; ObjectType(JSTypeRegistry registry) { super(registry); } @Override public Node getRootNode() { return null; }"
+      },
+      {
+        "txt": "@Override public ObjectType getParentScope() { return getImplicitPrototype(); } @Override public abstract Property getSlot(String name); @Override public Property getOwnSlot(String name) { if (hasOwnProperty(name)) { return getSlot(name);"
+      },
+      {
+        "txt": "} return null; } @Override public ObjectType getTypeOfThis() { return null; } public JSType getParameterType() { return null; }"
+      },
+      {
+        "txt": "public JSType getIndexType() { return null; } @Override public JSDocInfo getJSDocInfo() { if (docInfo != null) { return docInfo; } else if (getImplicitPrototype() != null) { return getImplicitPrototype().getJSDocInfo(); } else {"
+      },
+      {
+        "txt": "return super.getJSDocInfo(); } } public void setJSDocInfo(JSDocInfo info) { docInfo = info; } final boolean detectImplicitPrototypeCycle() { this.visited = true; ObjectType p = getImplicitPrototype(); while (p != null) {"
+      },
+      {
+        "txt": "if (p.visited) { return true; } else { p.visited = true; } p = p.getImplicitPrototype(); } p = this; do { p.visited = false;"
+      },
+      {
+        "txt": "p = p.getImplicitPrototype(); } while (p != null); return false; } public abstract String getReferenceName(); public String getNormalizedReferenceName() { String name = getReferenceName(); if (name != null) { int pos = name.indexOf(\"(\"); if (pos != -1) {"
+      },
+      {
+        "txt": "return name.substring(0, pos); } } return name; } @Override public String getDisplayName() { return getNormalizedReferenceName(); } public static String createDelegateSuffix(String suffix) {"
+      },
+      {
+        "txt": "return \"(\" + suffix + \")\"; } public boolean hasReferenceName() { return false; } @Override public TernaryValue testForEquality(JSType that) { TernaryValue result = super.testForEquality(that); if (result != null) { return result;"
+      },
+      {
+        "txt": "} if (that.isSubtype( getNativeType(JSTypeNative.OBJECT_NUMBER_STRING_BOOLEAN))) { return UNKNOWN; } else { return FALSE; } } public abstract FunctionType getConstructor(); public abstract ObjectType getImplicitPrototype();"
+      },
+      {
+        "txt": "JSType type, Node propertyNode) { boolean result = defineProperty(propertyName, type, false, propertyNode); registry.registerPropertyOnType(propertyName, this); return result; } <extra_id_0> public final boolean defineInferredProperty(String propertyName, JSType type, Node propertyNode) { if (hasProperty(propertyName)) { JSType originalType = getPropertyType(propertyName); type = originalType == null ? type : originalType.getLeastSupertype(type);"
+      },
+      {
+        "txt": "type = originalType == null ? type : originalType.getLeastSupertype(type); } boolean result = defineProperty(propertyName, type, true, propertyNode); registry.registerPropertyOnType(propertyName, this); return result; } abstract boolean defineProperty(String propertyName, JSType type, boolean inferred, Node propertyNode);"
+      },
+      {
+        "txt": "public boolean removeProperty(String propertyName) { return false; } public Node getPropertyNode(String propertyName) { return null; } public JSDocInfo getOwnPropertyJSDocInfo(String propertyName) { return null; } public void setPropertyJSDocInfo(String propertyName, JSDocInfo info) {"
+      },
+      {
+        "txt": "} @Override public JSType findPropertyType(String propertyName) { return hasProperty(propertyName) ? getPropertyType(propertyName) : null; } public abstract JSType getPropertyType(String propertyName); public abstract boolean hasProperty(String propertyName); public boolean hasOwnProperty(String propertyName) { return hasProperty(propertyName);"
+      },
+      {
+        "txt": "} public Set<String> getOwnPropertyNames() { return ImmutableSet.of(); } public abstract boolean isPropertyTypeInferred(String propertyName); public abstract boolean isPropertyTypeDeclared(String propertyName); boolean hasOwnDeclaredProperty(String name) { return hasOwnProperty(name) && isPropertyTypeDeclared(name); } public boolean isPropertyInExterns(String propertyName) {"
+      },
+      {
+        "txt": "return false; } public abstract int getPropertiesCount(); public Set<String> getPropertyNames() { Set<String> props = Sets.newTreeSet(); collectPropertyNames(props); return props; } abstract void collectPropertyNames(Set<String> props); @Override"
+      },
+      {
+        "txt": "public <T> T visit(Visitor<T> visitor) { return visitor.caseObjectType(this); } final boolean isImplicitPrototype(ObjectType prototype) { for (ObjectType current = this; current != null; current = current.getImplicitPrototype()) { if (current.isEquivalentTo(prototype)) { return true; }"
+      },
+      {
+        "txt": "} return false; } @Override public BooleanLiteralSet getPossibleToBooleanOutcomes() { return BooleanLiteralSet.TRUE; } @Override public boolean isUnknownType() { if (unknown) {"
+      },
+      {
+        "txt": "ObjectType implicitProto = getImplicitPrototype(); if (implicitProto == null || implicitProto.isNativeObjectType()) { unknown = false; for (ObjectType interfaceType : getCtorExtendedInterfaces()) { if (interfaceType.isUnknownType()) { unknown = true; break; } }"
+      },
+      {
+        "txt": "} else { unknown = implicitProto.isUnknownType(); } } return unknown; } @Override public boolean isObject() { return true; }"
+      },
+      {
+        "txt": "public boolean hasCachedValues() { return !unknown; } public void clearCachedValues() { unknown = true; } public boolean isNativeObjectType() { return false; } public static ObjectType cast(JSType type) {"
+      },
+      {
+        "txt": "return type == null ? null : type.toObjectType(); } @Override public final boolean isFunctionPrototypeType() { return getOwnerFunction() != null; } public FunctionType getOwnerFunction() { return null; } void setOwnerFunction(FunctionType type) {}"
+      },
+      {
+        "txt": "public Iterable<ObjectType> getCtorImplementedInterfaces() { return ImmutableSet.of(); } public Iterable<ObjectType> getCtorExtendedInterfaces() { return ImmutableSet.of(); } public static final class Property implements Serializable, StaticSlot<JSType>, StaticReference<JSType> { private static final long serialVersionUID = 1L; private final String name;"
+      },
+      {
+        "txt": "private JSType type; private final boolean inferred; private Node propertyNode; private JSDocInfo docInfo = null; Property(String name, JSType type, boolean inferred, Node propertyNode) { this.name = name; this.type = type; this.inferred = inferred; this.propertyNode = propertyNode;"
+      },
+      {
+        "txt": "} @Override public String getName() { return name; } @Override public Node getNode() { return propertyNode; } @Override"
+      },
+      {
+        "txt": "public StaticSourceFile getSourceFile() { return propertyNode == null ? null : propertyNode.getStaticSourceFile(); } @Override public Property getSymbol() { return this; } @Override public Property getDeclaration() { return propertyNode == null ? null : this;"
+      },
+      {
+        "txt": "} @Override public JSType getType() { return type; } @Override public boolean isTypeInferred() { return inferred; } boolean isFromExterns() {"
+      },
+      {
+        "txt": "return propertyNode == null ? false : propertyNode.isFromExterns(); } void setType(JSType type) { this.type = type; } @Override public JSDocInfo getJSDocInfo() { return this.docInfo; } void setJSDocInfo(JSDocInfo info) { this.docInfo = info;"
+      },
+      {
+        "txt": "} public void setNode(Node n) { this.propertyNode = n; } }"
+      }
+    ]
+  },
+  {
+    "id": 833,
+    "file_path": "src/com/google/javascript/rhino/jstype/RecordType.java",
+    "start-bug-line": 68,
+    "end-bug-line": 68,
+    "bug": "",
+    "fix": "private final boolean declared;",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.google.javascript.rhino.jstype; import com.google.common.collect.Maps; import com.google.javascript.rhino.ErrorReporter; import com.google.javascript.rhino.Node;"
+      },
+      {
+        "txt": "import java.util.Map; import java.util.Set; import java.util.SortedMap; class RecordType extends PrototypeObjectType { private static final long serialVersionUID = 1L; private final SortedMap<String, JSType> properties = Maps.newTreeMap(); <extra_id_0> RecordType(JSTypeRegistry registry, Map<String, RecordProperty> properties) { super(registry, null, null); setPrettyPrint(true); for (String property : properties.keySet()) { RecordProperty prop = properties.get(property); if (prop == null) {"
+      },
+      {
+        "txt": "RecordProperty prop = properties.get(property); if (prop == null) { throw new IllegalStateException( \"RecordProperty associated with a property should not be null!\"); } defineDeclaredProperty( property, prop.getType(), prop.getPropertyNode()); } isFrozen = true; }"
+      },
+      {
+        "txt": "@Override public boolean isEquivalentTo(JSType other) { if (!other.isRecordType()) { return false; } RecordType otherRecord = other.toMaybeRecordType(); if (otherRecord == this) { return true; } Set<String> keySet = properties.keySet();"
+      },
+      {
+        "txt": "Map<String, JSType> otherProps = otherRecord.properties; if (!otherProps.keySet().equals(keySet)) { return false; } for (String key : keySet) { if (!otherProps.get(key).isEquivalentTo(properties.get(key))) { return false; } } return true;"
+      },
+      {
+        "txt": "} @Override public ObjectType getImplicitPrototype() { return registry.getNativeObjectType(JSTypeNative.OBJECT_TYPE); } @Override boolean defineProperty(String propertyName, JSType type, boolean inferred, Node propertyNode) { if (isFrozen) { return false;"
+      },
+      {
+        "txt": "} if (!inferred) { properties.put(propertyName, type); } return super.defineProperty(propertyName, type, inferred, propertyNode); } JSType getGreatestSubtypeHelper(JSType that) { if (that.isRecordType()) { RecordType thatRecord = that.toMaybeRecordType();"
+      },
+      {
+        "txt": "RecordTypeBuilder builder = new RecordTypeBuilder(registry); for (String property : properties.keySet()) { if (thatRecord.hasProperty(property) && !thatRecord.getPropertyType(property).isEquivalentTo( getPropertyType(property))) { return registry.getNativeObjectType(JSTypeNative.NO_TYPE); } builder.addProperty(property, getPropertyType(property), getPropertyNode(property)); }"
+      },
+      {
+        "txt": "for (String property : thatRecord.properties.keySet()) { if (!hasProperty(property)) { builder.addProperty(property, thatRecord.getPropertyType(property), thatRecord.getPropertyNode(property)); } } return builder.build(); } JSType greatestSubtype = registry.getNativeType( JSTypeNative.NO_OBJECT_TYPE);"
+      },
+      {
+        "txt": "JSType thatRestrictedToObj = registry.getNativeType(JSTypeNative.OBJECT_TYPE) .getGreatestSubtype(that); if (!thatRestrictedToObj.isEmptyType()) { for (Map.Entry<String, JSType> entry : properties.entrySet()) { String propName = entry.getKey(); JSType propType = entry.getValue(); UnionTypeBuilder builder = new UnionTypeBuilder(registry); for (ObjectType alt : registry.getEachReferenceTypeWithProperty(propName)) {"
+      },
+      {
+        "txt": "JSType altPropType = alt.getPropertyType(propName); if (altPropType != null && !alt.isEquivalentTo(this) && alt.isSubtype(that) && (propType.isUnknownType() || altPropType.isUnknownType() || altPropType.isEquivalentTo(propType))) { builder.addAlternate(alt); } } greatestSubtype = greatestSubtype.getLeastSupertype(builder.build()); }"
+      },
+      {
+        "txt": "} return greatestSubtype; } @Override RecordType toMaybeRecordType() { return this; } @Override public boolean isSubtype(JSType that) { if (JSType.isSubtypeHelper(this, that)) {"
+      },
+      {
+        "txt": "return true; } if (registry.getNativeObjectType( JSTypeNative.OBJECT_TYPE).isSubtype(that)) { return true; } if (!that.isRecordType()) { return false; } return RecordType.isSubtype(this, that.toMaybeRecordType());"
+      },
+      {
+        "txt": "} static boolean isSubtype(ObjectType typeA, RecordType typeB) { for (String property : typeB.properties.keySet()) { if (!typeA.hasProperty(property)) { return false; } JSType propA = typeA.getPropertyType(property); JSType propB = typeB.getPropertyType(property); if (!propA.isUnknownType() && !propB.isUnknownType()) { if (typeA.isPropertyTypeDeclared(property)) {"
+      },
+      {
+        "txt": "if (!propA.isEquivalentTo(propB)) { return false; } } else { if (!propA.isSubtype(propB)) { return false; } } } }"
+      },
+      {
+        "txt": "return true; } @Override JSType resolveInternal(ErrorReporter t, StaticScope<JSType> scope) { for (Map.Entry<String, JSType> entry : properties.entrySet()) { JSType type = entry.getValue(); JSType resolvedType = type.resolve(t, scope); if (type != resolvedType) { properties.put(entry.getKey(), resolvedType); }"
+      },
+      {
+        "txt": "} return super.resolveInternal(t, scope); }"
+      }
+    ]
+  },
+  {
+    "id": 834,
+    "file_path": "src/com/google/javascript/rhino/jstype/RecordType.java",
+    "start-bug-line": 70,
+    "end-bug-line": 70,
+    "bug": "",
+    "fix": "RecordType(JSTypeRegistry registry, Map<String, RecordProperty> properties) { this(registry, properties, true); }",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.google.javascript.rhino.jstype; import com.google.common.collect.Maps; import com.google.javascript.rhino.ErrorReporter; import com.google.javascript.rhino.Node; import com.google.javascript.rhino.jstype.RecordTypeBuilder.RecordProperty;"
+      },
+      {
+        "txt": "import java.util.Set; import java.util.SortedMap; class RecordType extends PrototypeObjectType { private static final long serialVersionUID = 1L; private final SortedMap<String, JSType> properties = Maps.newTreeMap(); private boolean isFrozen = false; <extra_id_0> RecordType(JSTypeRegistry registry, Map<String, RecordProperty> properties) { super(registry, null, null); setPrettyPrint(true); for (String property : properties.keySet()) { RecordProperty prop = properties.get(property); if (prop == null) {"
+      },
+      {
+        "txt": "RecordProperty prop = properties.get(property); if (prop == null) { throw new IllegalStateException( \"RecordProperty associated with a property should not be null!\"); } defineDeclaredProperty( property, prop.getType(), prop.getPropertyNode()); } isFrozen = true; }"
+      },
+      {
+        "txt": "@Override public boolean isEquivalentTo(JSType other) { if (!other.isRecordType()) { return false; } RecordType otherRecord = other.toMaybeRecordType(); if (otherRecord == this) { return true; } Set<String> keySet = properties.keySet();"
+      },
+      {
+        "txt": "Map<String, JSType> otherProps = otherRecord.properties; if (!otherProps.keySet().equals(keySet)) { return false; } for (String key : keySet) { if (!otherProps.get(key).isEquivalentTo(properties.get(key))) { return false; } } return true;"
+      },
+      {
+        "txt": "} @Override public ObjectType getImplicitPrototype() { return registry.getNativeObjectType(JSTypeNative.OBJECT_TYPE); } @Override boolean defineProperty(String propertyName, JSType type, boolean inferred, Node propertyNode) { if (isFrozen) { return false;"
+      },
+      {
+        "txt": "} if (!inferred) { properties.put(propertyName, type); } return super.defineProperty(propertyName, type, inferred, propertyNode); } JSType getGreatestSubtypeHelper(JSType that) { if (that.isRecordType()) { RecordType thatRecord = that.toMaybeRecordType();"
+      },
+      {
+        "txt": "RecordTypeBuilder builder = new RecordTypeBuilder(registry); for (String property : properties.keySet()) { if (thatRecord.hasProperty(property) && !thatRecord.getPropertyType(property).isEquivalentTo( getPropertyType(property))) { return registry.getNativeObjectType(JSTypeNative.NO_TYPE); } builder.addProperty(property, getPropertyType(property), getPropertyNode(property)); }"
+      },
+      {
+        "txt": "for (String property : thatRecord.properties.keySet()) { if (!hasProperty(property)) { builder.addProperty(property, thatRecord.getPropertyType(property), thatRecord.getPropertyNode(property)); } } return builder.build(); } JSType greatestSubtype = registry.getNativeType( JSTypeNative.NO_OBJECT_TYPE);"
+      },
+      {
+        "txt": "JSType thatRestrictedToObj = registry.getNativeType(JSTypeNative.OBJECT_TYPE) .getGreatestSubtype(that); if (!thatRestrictedToObj.isEmptyType()) { for (Map.Entry<String, JSType> entry : properties.entrySet()) { String propName = entry.getKey(); JSType propType = entry.getValue(); UnionTypeBuilder builder = new UnionTypeBuilder(registry); for (ObjectType alt : registry.getEachReferenceTypeWithProperty(propName)) {"
+      },
+      {
+        "txt": "JSType altPropType = alt.getPropertyType(propName); if (altPropType != null && !alt.isEquivalentTo(this) && alt.isSubtype(that) && (propType.isUnknownType() || altPropType.isUnknownType() || altPropType.isEquivalentTo(propType))) { builder.addAlternate(alt); } } greatestSubtype = greatestSubtype.getLeastSupertype(builder.build()); }"
+      },
+      {
+        "txt": "} return greatestSubtype; } @Override RecordType toMaybeRecordType() { return this; } @Override public boolean isSubtype(JSType that) { if (JSType.isSubtypeHelper(this, that)) {"
+      },
+      {
+        "txt": "return true; } if (registry.getNativeObjectType( JSTypeNative.OBJECT_TYPE).isSubtype(that)) { return true; } if (!that.isRecordType()) { return false; } return RecordType.isSubtype(this, that.toMaybeRecordType());"
+      },
+      {
+        "txt": "} static boolean isSubtype(ObjectType typeA, RecordType typeB) { for (String property : typeB.properties.keySet()) { if (!typeA.hasProperty(property)) { return false; } JSType propA = typeA.getPropertyType(property); JSType propB = typeB.getPropertyType(property); if (!propA.isUnknownType() && !propB.isUnknownType()) { if (typeA.isPropertyTypeDeclared(property)) {"
+      },
+      {
+        "txt": "if (!propA.isEquivalentTo(propB)) { return false; } } else { if (!propA.isSubtype(propB)) { return false; } } } }"
+      },
+      {
+        "txt": "return true; } @Override JSType resolveInternal(ErrorReporter t, StaticScope<JSType> scope) { for (Map.Entry<String, JSType> entry : properties.entrySet()) { JSType type = entry.getValue(); JSType resolvedType = type.resolve(t, scope); if (type != resolvedType) { properties.put(entry.getKey(), resolvedType); }"
+      },
+      {
+        "txt": "} return super.resolveInternal(t, scope); }"
+      }
+    ]
+  },
+  {
+    "id": 835,
+    "file_path": "src/com/google/javascript/rhino/jstype/RecordType.java",
+    "start-bug-line": 83,
+    "end-bug-line": 83,
+    "bug": "RecordType(JSTypeRegistry registry, Map<String, RecordProperty> properties) {",
+    "fix": "RecordType(JSTypeRegistry registry, Map<String, RecordProperty> properties, boolean declared) {",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.google.javascript.rhino.jstype; import com.google.common.collect.Maps; import com.google.javascript.rhino.ErrorReporter; import com.google.javascript.rhino.Node; import com.google.javascript.rhino.jstype.RecordTypeBuilder.RecordProperty;"
+      },
+      {
+        "txt": "import java.util.Set; import java.util.SortedMap; class RecordType extends PrototypeObjectType { private static final long serialVersionUID = 1L; private final SortedMap<String, JSType> properties = Maps.newTreeMap(); private boolean isFrozen = false; <extra_id_0> super(registry, null, null); setPrettyPrint(true); for (String property : properties.keySet()) { RecordProperty prop = properties.get(property); if (prop == null) { throw new IllegalStateException("
+      },
+      {
+        "txt": "if (prop == null) { throw new IllegalStateException( \"RecordProperty associated with a property should not be null!\"); } defineDeclaredProperty( property, prop.getType(), prop.getPropertyNode()); } isFrozen = true; } @Override"
+      },
+      {
+        "txt": "public boolean isEquivalentTo(JSType other) { if (!other.isRecordType()) { return false; } RecordType otherRecord = other.toMaybeRecordType(); if (otherRecord == this) { return true; } Set<String> keySet = properties.keySet(); Map<String, JSType> otherProps = otherRecord.properties;"
+      },
+      {
+        "txt": "if (!otherProps.keySet().equals(keySet)) { return false; } for (String key : keySet) { if (!otherProps.get(key).isEquivalentTo(properties.get(key))) { return false; } } return true; }"
+      },
+      {
+        "txt": "@Override public ObjectType getImplicitPrototype() { return registry.getNativeObjectType(JSTypeNative.OBJECT_TYPE); } @Override boolean defineProperty(String propertyName, JSType type, boolean inferred, Node propertyNode) { if (isFrozen) { return false; }"
+      },
+      {
+        "txt": "if (!inferred) { properties.put(propertyName, type); } return super.defineProperty(propertyName, type, inferred, propertyNode); } JSType getGreatestSubtypeHelper(JSType that) { if (that.isRecordType()) { RecordType thatRecord = that.toMaybeRecordType(); RecordTypeBuilder builder = new RecordTypeBuilder(registry);"
+      },
+      {
+        "txt": "for (String property : properties.keySet()) { if (thatRecord.hasProperty(property) && !thatRecord.getPropertyType(property).isEquivalentTo( getPropertyType(property))) { return registry.getNativeObjectType(JSTypeNative.NO_TYPE); } builder.addProperty(property, getPropertyType(property), getPropertyNode(property)); } for (String property : thatRecord.properties.keySet()) {"
+      },
+      {
+        "txt": "if (!hasProperty(property)) { builder.addProperty(property, thatRecord.getPropertyType(property), thatRecord.getPropertyNode(property)); } } return builder.build(); } JSType greatestSubtype = registry.getNativeType( JSTypeNative.NO_OBJECT_TYPE); JSType thatRestrictedToObj ="
+      },
+      {
+        "txt": "registry.getNativeType(JSTypeNative.OBJECT_TYPE) .getGreatestSubtype(that); if (!thatRestrictedToObj.isEmptyType()) { for (Map.Entry<String, JSType> entry : properties.entrySet()) { String propName = entry.getKey(); JSType propType = entry.getValue(); UnionTypeBuilder builder = new UnionTypeBuilder(registry); for (ObjectType alt : registry.getEachReferenceTypeWithProperty(propName)) { JSType altPropType = alt.getPropertyType(propName);"
+      },
+      {
+        "txt": "if (altPropType != null && !alt.isEquivalentTo(this) && alt.isSubtype(that) && (propType.isUnknownType() || altPropType.isUnknownType() || altPropType.isEquivalentTo(propType))) { builder.addAlternate(alt); } } greatestSubtype = greatestSubtype.getLeastSupertype(builder.build()); } }"
+      },
+      {
+        "txt": "return greatestSubtype; } @Override RecordType toMaybeRecordType() { return this; } @Override public boolean isSubtype(JSType that) { if (JSType.isSubtypeHelper(this, that)) { return true;"
+      },
+      {
+        "txt": "} if (registry.getNativeObjectType( JSTypeNative.OBJECT_TYPE).isSubtype(that)) { return true; } if (!that.isRecordType()) { return false; } return RecordType.isSubtype(this, that.toMaybeRecordType()); }"
+      },
+      {
+        "txt": "static boolean isSubtype(ObjectType typeA, RecordType typeB) { for (String property : typeB.properties.keySet()) { if (!typeA.hasProperty(property)) { return false; } JSType propA = typeA.getPropertyType(property); JSType propB = typeB.getPropertyType(property); if (!propA.isUnknownType() && !propB.isUnknownType()) { if (typeA.isPropertyTypeDeclared(property)) { if (!propA.isEquivalentTo(propB)) {"
+      },
+      {
+        "txt": "return false; } } else { if (!propA.isSubtype(propB)) { return false; } } } } return true;"
+      },
+      {
+        "txt": "} @Override JSType resolveInternal(ErrorReporter t, StaticScope<JSType> scope) { for (Map.Entry<String, JSType> entry : properties.entrySet()) { JSType type = entry.getValue(); JSType resolvedType = type.resolve(t, scope); if (type != resolvedType) { properties.put(entry.getKey(), resolvedType); } }"
+      },
+      {
+        "txt": "return super.resolveInternal(t, scope); }"
+      }
+    ]
+  },
+  {
+    "id": 836,
+    "file_path": "src/com/google/javascript/rhino/jstype/RecordType.java",
+    "start-bug-line": 86,
+    "end-bug-line": 86,
+    "bug": "",
+    "fix": "this.declared = declared;",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.google.javascript.rhino.jstype; import com.google.common.collect.Maps; import com.google.javascript.rhino.ErrorReporter; import com.google.javascript.rhino.Node; import com.google.javascript.rhino.jstype.RecordTypeBuilder.RecordProperty; import java.util.Map; import java.util.Set; import java.util.SortedMap;"
+      },
+      {
+        "txt": "private static final long serialVersionUID = 1L; private final SortedMap<String, JSType> properties = Maps.newTreeMap(); private boolean isFrozen = false; RecordType(JSTypeRegistry registry, Map<String, RecordProperty> properties) { super(registry, null, null); setPrettyPrint(true); <extra_id_0> for (String property : properties.keySet()) { RecordProperty prop = properties.get(property); if (prop == null) { throw new IllegalStateException( \"RecordProperty associated with a property should not be null!\"); }"
+      },
+      {
+        "txt": "\"RecordProperty associated with a property should not be null!\"); } defineDeclaredProperty( property, prop.getType(), prop.getPropertyNode()); } isFrozen = true; } @Override public boolean isEquivalentTo(JSType other) { if (!other.isRecordType()) {"
+      },
+      {
+        "txt": "return false; } RecordType otherRecord = other.toMaybeRecordType(); if (otherRecord == this) { return true; } Set<String> keySet = properties.keySet(); Map<String, JSType> otherProps = otherRecord.properties; if (!otherProps.keySet().equals(keySet)) { return false;"
+      },
+      {
+        "txt": "} for (String key : keySet) { if (!otherProps.get(key).isEquivalentTo(properties.get(key))) { return false; } } return true; } @Override public ObjectType getImplicitPrototype() {"
+      },
+      {
+        "txt": "return registry.getNativeObjectType(JSTypeNative.OBJECT_TYPE); } @Override boolean defineProperty(String propertyName, JSType type, boolean inferred, Node propertyNode) { if (isFrozen) { return false; } if (!inferred) { properties.put(propertyName, type);"
+      },
+      {
+        "txt": "} return super.defineProperty(propertyName, type, inferred, propertyNode); } JSType getGreatestSubtypeHelper(JSType that) { if (that.isRecordType()) { RecordType thatRecord = that.toMaybeRecordType(); RecordTypeBuilder builder = new RecordTypeBuilder(registry); for (String property : properties.keySet()) { if (thatRecord.hasProperty(property) &&"
+      },
+      {
+        "txt": "!thatRecord.getPropertyType(property).isEquivalentTo( getPropertyType(property))) { return registry.getNativeObjectType(JSTypeNative.NO_TYPE); } builder.addProperty(property, getPropertyType(property), getPropertyNode(property)); } for (String property : thatRecord.properties.keySet()) { if (!hasProperty(property)) { builder.addProperty(property, thatRecord.getPropertyType(property),"
+      },
+      {
+        "txt": "thatRecord.getPropertyNode(property)); } } return builder.build(); } JSType greatestSubtype = registry.getNativeType( JSTypeNative.NO_OBJECT_TYPE); JSType thatRestrictedToObj = registry.getNativeType(JSTypeNative.OBJECT_TYPE) .getGreatestSubtype(that);"
+      },
+      {
+        "txt": "if (!thatRestrictedToObj.isEmptyType()) { for (Map.Entry<String, JSType> entry : properties.entrySet()) { String propName = entry.getKey(); JSType propType = entry.getValue(); UnionTypeBuilder builder = new UnionTypeBuilder(registry); for (ObjectType alt : registry.getEachReferenceTypeWithProperty(propName)) { JSType altPropType = alt.getPropertyType(propName); if (altPropType != null && !alt.isEquivalentTo(this) && alt.isSubtype(that) &&"
+      },
+      {
+        "txt": "(propType.isUnknownType() || altPropType.isUnknownType() || altPropType.isEquivalentTo(propType))) { builder.addAlternate(alt); } } greatestSubtype = greatestSubtype.getLeastSupertype(builder.build()); } } return greatestSubtype; }"
+      },
+      {
+        "txt": "@Override RecordType toMaybeRecordType() { return this; } @Override public boolean isSubtype(JSType that) { if (JSType.isSubtypeHelper(this, that)) { return true; } if (registry.getNativeObjectType("
+      },
+      {
+        "txt": "JSTypeNative.OBJECT_TYPE).isSubtype(that)) { return true; } if (!that.isRecordType()) { return false; } return RecordType.isSubtype(this, that.toMaybeRecordType()); } static boolean isSubtype(ObjectType typeA, RecordType typeB) { for (String property : typeB.properties.keySet()) {"
+      },
+      {
+        "txt": "if (!typeA.hasProperty(property)) { return false; } JSType propA = typeA.getPropertyType(property); JSType propB = typeB.getPropertyType(property); if (!propA.isUnknownType() && !propB.isUnknownType()) { if (typeA.isPropertyTypeDeclared(property)) { if (!propA.isEquivalentTo(propB)) { return false; }"
+      },
+      {
+        "txt": "} else { if (!propA.isSubtype(propB)) { return false; } } } } return true; } @Override"
+      },
+      {
+        "txt": "JSType resolveInternal(ErrorReporter t, StaticScope<JSType> scope) { for (Map.Entry<String, JSType> entry : properties.entrySet()) { JSType type = entry.getValue(); JSType resolvedType = type.resolve(t, scope); if (type != resolvedType) { properties.put(entry.getKey(), resolvedType); } } return super.resolveInternal(t, scope); }"
+      }
+    ]
+  },
+  {
+    "id": 837,
+    "file_path": "src/com/google/javascript/rhino/jstype/RecordType.java",
+    "start-bug-line": 93,
+    "end-bug-line": 93,
+    "bug": "",
+    "fix": "if (declared) {",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.google.javascript.rhino.jstype; import com.google.common.collect.Maps; import com.google.javascript.rhino.ErrorReporter; import com.google.javascript.rhino.Node;"
+      },
+      {
+        "txt": "import com.google.javascript.rhino.jstype.RecordTypeBuilder.RecordProperty; import java.util.Map; import java.util.Set; import java.util.SortedMap; class RecordType extends PrototypeObjectType { private static final long serialVersionUID = 1L; private final SortedMap<String, JSType> properties = Maps.newTreeMap(); private boolean isFrozen = false; RecordType(JSTypeRegistry registry, Map<String, RecordProperty> properties) { super(registry, null, null);"
+      },
+      {
+        "txt": "for (String property : properties.keySet()) { RecordProperty prop = properties.get(property); if (prop == null) { throw new IllegalStateException( \"RecordProperty associated with a property should not be null!\"); } <extra_id_0> property, prop.getType(), prop.getPropertyNode()); } isFrozen = true; } @Override public boolean isEquivalentTo(JSType other) {"
+      },
+      {
+        "txt": "@Override public boolean isEquivalentTo(JSType other) { if (!other.isRecordType()) { return false; } RecordType otherRecord = other.toMaybeRecordType(); if (otherRecord == this) { return true; } Set<String> keySet = properties.keySet();"
+      },
+      {
+        "txt": "Map<String, JSType> otherProps = otherRecord.properties; if (!otherProps.keySet().equals(keySet)) { return false; } for (String key : keySet) { if (!otherProps.get(key).isEquivalentTo(properties.get(key))) { return false; } } return true;"
+      },
+      {
+        "txt": "} @Override public ObjectType getImplicitPrototype() { return registry.getNativeObjectType(JSTypeNative.OBJECT_TYPE); } @Override boolean defineProperty(String propertyName, JSType type, boolean inferred, Node propertyNode) { if (isFrozen) { return false;"
+      },
+      {
+        "txt": "} if (!inferred) { properties.put(propertyName, type); } return super.defineProperty(propertyName, type, inferred, propertyNode); } JSType getGreatestSubtypeHelper(JSType that) { if (that.isRecordType()) { RecordType thatRecord = that.toMaybeRecordType();"
+      },
+      {
+        "txt": "RecordTypeBuilder builder = new RecordTypeBuilder(registry); for (String property : properties.keySet()) { if (thatRecord.hasProperty(property) && !thatRecord.getPropertyType(property).isEquivalentTo( getPropertyType(property))) { return registry.getNativeObjectType(JSTypeNative.NO_TYPE); } builder.addProperty(property, getPropertyType(property), getPropertyNode(property)); }"
+      },
+      {
+        "txt": "for (String property : thatRecord.properties.keySet()) { if (!hasProperty(property)) { builder.addProperty(property, thatRecord.getPropertyType(property), thatRecord.getPropertyNode(property)); } } return builder.build(); } JSType greatestSubtype = registry.getNativeType( JSTypeNative.NO_OBJECT_TYPE);"
+      },
+      {
+        "txt": "JSType thatRestrictedToObj = registry.getNativeType(JSTypeNative.OBJECT_TYPE) .getGreatestSubtype(that); if (!thatRestrictedToObj.isEmptyType()) { for (Map.Entry<String, JSType> entry : properties.entrySet()) { String propName = entry.getKey(); JSType propType = entry.getValue(); UnionTypeBuilder builder = new UnionTypeBuilder(registry); for (ObjectType alt : registry.getEachReferenceTypeWithProperty(propName)) {"
+      },
+      {
+        "txt": "JSType altPropType = alt.getPropertyType(propName); if (altPropType != null && !alt.isEquivalentTo(this) && alt.isSubtype(that) && (propType.isUnknownType() || altPropType.isUnknownType() || altPropType.isEquivalentTo(propType))) { builder.addAlternate(alt); } } greatestSubtype = greatestSubtype.getLeastSupertype(builder.build()); }"
+      },
+      {
+        "txt": "} return greatestSubtype; } @Override RecordType toMaybeRecordType() { return this; } @Override public boolean isSubtype(JSType that) { if (JSType.isSubtypeHelper(this, that)) {"
+      },
+      {
+        "txt": "return true; } if (registry.getNativeObjectType( JSTypeNative.OBJECT_TYPE).isSubtype(that)) { return true; } if (!that.isRecordType()) { return false; } return RecordType.isSubtype(this, that.toMaybeRecordType());"
+      },
+      {
+        "txt": "} static boolean isSubtype(ObjectType typeA, RecordType typeB) { for (String property : typeB.properties.keySet()) { if (!typeA.hasProperty(property)) { return false; } JSType propA = typeA.getPropertyType(property); JSType propB = typeB.getPropertyType(property); if (!propA.isUnknownType() && !propB.isUnknownType()) { if (typeA.isPropertyTypeDeclared(property)) {"
+      },
+      {
+        "txt": "if (!propA.isEquivalentTo(propB)) { return false; } } else { if (!propA.isSubtype(propB)) { return false; } } } }"
+      },
+      {
+        "txt": "return true; } @Override JSType resolveInternal(ErrorReporter t, StaticScope<JSType> scope) { for (Map.Entry<String, JSType> entry : properties.entrySet()) { JSType type = entry.getValue(); JSType resolvedType = type.resolve(t, scope); if (type != resolvedType) { properties.put(entry.getKey(), resolvedType); }"
+      },
+      {
+        "txt": "} return super.resolveInternal(t, scope); }"
+      }
+    ]
+  },
+  {
+    "id": 838,
+    "file_path": "src/com/google/javascript/rhino/jstype/RecordType.java",
+    "start-bug-line": 95,
+    "end-bug-line": 95,
+    "bug": "",
+    "fix": "} else { defineSynthesizedProperty( property, prop.getType(), prop.getPropertyNode()); }",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.google.javascript.rhino.jstype; import com.google.common.collect.Maps; import com.google.javascript.rhino.ErrorReporter; import com.google.javascript.rhino.Node; import com.google.javascript.rhino.jstype.RecordTypeBuilder.RecordProperty; import java.util.Map;"
+      },
+      {
+        "txt": "import java.util.Set; import java.util.SortedMap; class RecordType extends PrototypeObjectType { private static final long serialVersionUID = 1L; private final SortedMap<String, JSType> properties = Maps.newTreeMap(); private boolean isFrozen = false; RecordType(JSTypeRegistry registry, Map<String, RecordProperty> properties) { super(registry, null, null); setPrettyPrint(true); for (String property : properties.keySet()) {"
+      },
+      {
+        "txt": "if (prop == null) { throw new IllegalStateException( \"RecordProperty associated with a property should not be null!\"); } defineDeclaredProperty( property, prop.getType(), prop.getPropertyNode()); <extra_id_0> isFrozen = true; } @Override public boolean isEquivalentTo(JSType other) { if (!other.isRecordType()) { return false;"
+      },
+      {
+        "txt": "if (!other.isRecordType()) { return false; } RecordType otherRecord = other.toMaybeRecordType(); if (otherRecord == this) { return true; } Set<String> keySet = properties.keySet(); Map<String, JSType> otherProps = otherRecord.properties; if (!otherProps.keySet().equals(keySet)) {"
+      },
+      {
+        "txt": "return false; } for (String key : keySet) { if (!otherProps.get(key).isEquivalentTo(properties.get(key))) { return false; } } return true; } @Override"
+      },
+      {
+        "txt": "public ObjectType getImplicitPrototype() { return registry.getNativeObjectType(JSTypeNative.OBJECT_TYPE); } @Override boolean defineProperty(String propertyName, JSType type, boolean inferred, Node propertyNode) { if (isFrozen) { return false; } if (!inferred) {"
+      },
+      {
+        "txt": "properties.put(propertyName, type); } return super.defineProperty(propertyName, type, inferred, propertyNode); } JSType getGreatestSubtypeHelper(JSType that) { if (that.isRecordType()) { RecordType thatRecord = that.toMaybeRecordType(); RecordTypeBuilder builder = new RecordTypeBuilder(registry); for (String property : properties.keySet()) {"
+      },
+      {
+        "txt": "if (thatRecord.hasProperty(property) && !thatRecord.getPropertyType(property).isEquivalentTo( getPropertyType(property))) { return registry.getNativeObjectType(JSTypeNative.NO_TYPE); } builder.addProperty(property, getPropertyType(property), getPropertyNode(property)); } for (String property : thatRecord.properties.keySet()) { if (!hasProperty(property)) {"
+      },
+      {
+        "txt": "builder.addProperty(property, thatRecord.getPropertyType(property), thatRecord.getPropertyNode(property)); } } return builder.build(); } JSType greatestSubtype = registry.getNativeType( JSTypeNative.NO_OBJECT_TYPE); JSType thatRestrictedToObj = registry.getNativeType(JSTypeNative.OBJECT_TYPE)"
+      },
+      {
+        "txt": ".getGreatestSubtype(that); if (!thatRestrictedToObj.isEmptyType()) { for (Map.Entry<String, JSType> entry : properties.entrySet()) { String propName = entry.getKey(); JSType propType = entry.getValue(); UnionTypeBuilder builder = new UnionTypeBuilder(registry); for (ObjectType alt : registry.getEachReferenceTypeWithProperty(propName)) { JSType altPropType = alt.getPropertyType(propName); if (altPropType != null && !alt.isEquivalentTo(this) &&"
+      },
+      {
+        "txt": "alt.isSubtype(that) && (propType.isUnknownType() || altPropType.isUnknownType() || altPropType.isEquivalentTo(propType))) { builder.addAlternate(alt); } } greatestSubtype = greatestSubtype.getLeastSupertype(builder.build()); } } return greatestSubtype;"
+      },
+      {
+        "txt": "} @Override RecordType toMaybeRecordType() { return this; } @Override public boolean isSubtype(JSType that) { if (JSType.isSubtypeHelper(this, that)) { return true; }"
+      },
+      {
+        "txt": "if (registry.getNativeObjectType( JSTypeNative.OBJECT_TYPE).isSubtype(that)) { return true; } if (!that.isRecordType()) { return false; } return RecordType.isSubtype(this, that.toMaybeRecordType()); } static boolean isSubtype(ObjectType typeA, RecordType typeB) {"
+      },
+      {
+        "txt": "for (String property : typeB.properties.keySet()) { if (!typeA.hasProperty(property)) { return false; } JSType propA = typeA.getPropertyType(property); JSType propB = typeB.getPropertyType(property); if (!propA.isUnknownType() && !propB.isUnknownType()) { if (typeA.isPropertyTypeDeclared(property)) { if (!propA.isEquivalentTo(propB)) { return false;"
+      },
+      {
+        "txt": "} } else { if (!propA.isSubtype(propB)) { return false; } } } } return true; }"
+      },
+      {
+        "txt": "@Override JSType resolveInternal(ErrorReporter t, StaticScope<JSType> scope) { for (Map.Entry<String, JSType> entry : properties.entrySet()) { JSType type = entry.getValue(); JSType resolvedType = type.resolve(t, scope); if (type != resolvedType) { properties.put(entry.getKey(), resolvedType); } } return super.resolveInternal(t, scope);"
+      }
+    ]
+  },
+  {
+    "id": 839,
+    "file_path": "src/com/google/javascript/rhino/jstype/RecordType.java",
+    "start-bug-line": 102,
+    "end-bug-line": 102,
+    "bug": "",
+    "fix": "boolean isSynthetic() { return !declared; }",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.google.javascript.rhino.jstype; import com.google.common.collect.Maps; import com.google.javascript.rhino.ErrorReporter; import com.google.javascript.rhino.Node; import com.google.javascript.rhino.jstype.RecordTypeBuilder.RecordProperty; import java.util.Map; import java.util.Set; import java.util.SortedMap; class RecordType extends PrototypeObjectType {"
+      },
+      {
+        "txt": "private static final long serialVersionUID = 1L; private final SortedMap<String, JSType> properties = Maps.newTreeMap(); private boolean isFrozen = false; RecordType(JSTypeRegistry registry, Map<String, RecordProperty> properties) { super(registry, null, null); setPrettyPrint(true); for (String property : properties.keySet()) { RecordProperty prop = properties.get(property); if (prop == null) { throw new IllegalStateException("
+      },
+      {
+        "txt": "} defineDeclaredProperty( property, prop.getType(), prop.getPropertyNode()); } isFrozen = true; } <extra_id_0> @Override public boolean isEquivalentTo(JSType other) { if (!other.isRecordType()) { return false; } RecordType otherRecord = other.toMaybeRecordType();"
+      },
+      {
+        "txt": "} RecordType otherRecord = other.toMaybeRecordType(); if (otherRecord == this) { return true; } Set<String> keySet = properties.keySet(); Map<String, JSType> otherProps = otherRecord.properties; if (!otherProps.keySet().equals(keySet)) { return false; }"
+      },
+      {
+        "txt": "for (String key : keySet) { if (!otherProps.get(key).isEquivalentTo(properties.get(key))) { return false; } } return true; } @Override public ObjectType getImplicitPrototype() { return registry.getNativeObjectType(JSTypeNative.OBJECT_TYPE);"
+      },
+      {
+        "txt": "} @Override boolean defineProperty(String propertyName, JSType type, boolean inferred, Node propertyNode) { if (isFrozen) { return false; } if (!inferred) { properties.put(propertyName, type); }"
+      },
+      {
+        "txt": "return super.defineProperty(propertyName, type, inferred, propertyNode); } JSType getGreatestSubtypeHelper(JSType that) { if (that.isRecordType()) { RecordType thatRecord = that.toMaybeRecordType(); RecordTypeBuilder builder = new RecordTypeBuilder(registry); for (String property : properties.keySet()) { if (thatRecord.hasProperty(property) && !thatRecord.getPropertyType(property).isEquivalentTo("
+      },
+      {
+        "txt": "getPropertyType(property))) { return registry.getNativeObjectType(JSTypeNative.NO_TYPE); } builder.addProperty(property, getPropertyType(property), getPropertyNode(property)); } for (String property : thatRecord.properties.keySet()) { if (!hasProperty(property)) { builder.addProperty(property, thatRecord.getPropertyType(property), thatRecord.getPropertyNode(property));"
+      },
+      {
+        "txt": "} } return builder.build(); } JSType greatestSubtype = registry.getNativeType( JSTypeNative.NO_OBJECT_TYPE); JSType thatRestrictedToObj = registry.getNativeType(JSTypeNative.OBJECT_TYPE) .getGreatestSubtype(that); if (!thatRestrictedToObj.isEmptyType()) {"
+      },
+      {
+        "txt": "for (Map.Entry<String, JSType> entry : properties.entrySet()) { String propName = entry.getKey(); JSType propType = entry.getValue(); UnionTypeBuilder builder = new UnionTypeBuilder(registry); for (ObjectType alt : registry.getEachReferenceTypeWithProperty(propName)) { JSType altPropType = alt.getPropertyType(propName); if (altPropType != null && !alt.isEquivalentTo(this) && alt.isSubtype(that) && (propType.isUnknownType() || altPropType.isUnknownType() ||"
+      },
+      {
+        "txt": "altPropType.isEquivalentTo(propType))) { builder.addAlternate(alt); } } greatestSubtype = greatestSubtype.getLeastSupertype(builder.build()); } } return greatestSubtype; } @Override"
+      },
+      {
+        "txt": "RecordType toMaybeRecordType() { return this; } @Override public boolean isSubtype(JSType that) { if (JSType.isSubtypeHelper(this, that)) { return true; } if (registry.getNativeObjectType( JSTypeNative.OBJECT_TYPE).isSubtype(that)) {"
+      },
+      {
+        "txt": "return true; } if (!that.isRecordType()) { return false; } return RecordType.isSubtype(this, that.toMaybeRecordType()); } static boolean isSubtype(ObjectType typeA, RecordType typeB) { for (String property : typeB.properties.keySet()) { if (!typeA.hasProperty(property)) {"
+      },
+      {
+        "txt": "return false; } JSType propA = typeA.getPropertyType(property); JSType propB = typeB.getPropertyType(property); if (!propA.isUnknownType() && !propB.isUnknownType()) { if (typeA.isPropertyTypeDeclared(property)) { if (!propA.isEquivalentTo(propB)) { return false; } } else {"
+      },
+      {
+        "txt": "if (!propA.isSubtype(propB)) { return false; } } } } return true; } @Override JSType resolveInternal(ErrorReporter t, StaticScope<JSType> scope) {"
+      },
+      {
+        "txt": "for (Map.Entry<String, JSType> entry : properties.entrySet()) { JSType type = entry.getValue(); JSType resolvedType = type.resolve(t, scope); if (type != resolvedType) { properties.put(entry.getKey(), resolvedType); } } return super.resolveInternal(t, scope); }"
+      }
+    ]
+  },
+  {
+    "id": 840,
+    "file_path": "src/com/google/javascript/rhino/jstype/RecordType.java",
+    "start-bug-line": 152,
+    "end-bug-line": 152,
+    "bug": "",
+    "fix": "builder.setSynthesized(true);",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.google.javascript.rhino.jstype; import com.google.common.collect.Maps; import com.google.javascript.rhino.ErrorReporter; import com.google.javascript.rhino.Node; import com.google.javascript.rhino.jstype.RecordTypeBuilder.RecordProperty; import java.util.Map; import java.util.Set; import java.util.SortedMap; class RecordType extends PrototypeObjectType { private static final long serialVersionUID = 1L;"
+      },
+      {
+        "txt": "private final SortedMap<String, JSType> properties = Maps.newTreeMap(); private boolean isFrozen = false; RecordType(JSTypeRegistry registry, Map<String, RecordProperty> properties) { super(registry, null, null); setPrettyPrint(true); for (String property : properties.keySet()) { RecordProperty prop = properties.get(property); if (prop == null) { throw new IllegalStateException( \"RecordProperty associated with a property should not be null!\");"
+      },
+      {
+        "txt": "} defineDeclaredProperty( property, prop.getType(), prop.getPropertyNode()); } isFrozen = true; } @Override public boolean isEquivalentTo(JSType other) { if (!other.isRecordType()) { return false;"
+      },
+      {
+        "txt": "} RecordType otherRecord = other.toMaybeRecordType(); if (otherRecord == this) { return true; } Set<String> keySet = properties.keySet(); Map<String, JSType> otherProps = otherRecord.properties; if (!otherProps.keySet().equals(keySet)) { return false; }"
+      },
+      {
+        "txt": "for (String key : keySet) { if (!otherProps.get(key).isEquivalentTo(properties.get(key))) { return false; } } return true; } @Override public ObjectType getImplicitPrototype() { return registry.getNativeObjectType(JSTypeNative.OBJECT_TYPE);"
+      },
+      {
+        "txt": "} @Override boolean defineProperty(String propertyName, JSType type, boolean inferred, Node propertyNode) { if (isFrozen) { return false; } if (!inferred) { properties.put(propertyName, type); }"
+      },
+      {
+        "txt": "propertyNode); } JSType getGreatestSubtypeHelper(JSType that) { if (that.isRecordType()) { RecordType thatRecord = that.toMaybeRecordType(); RecordTypeBuilder builder = new RecordTypeBuilder(registry); <extra_id_0> for (String property : properties.keySet()) { if (thatRecord.hasProperty(property) && !thatRecord.getPropertyType(property).isEquivalentTo( getPropertyType(property))) { return registry.getNativeObjectType(JSTypeNative.NO_TYPE); }"
+      },
+      {
+        "txt": "return registry.getNativeObjectType(JSTypeNative.NO_TYPE); } builder.addProperty(property, getPropertyType(property), getPropertyNode(property)); } for (String property : thatRecord.properties.keySet()) { if (!hasProperty(property)) { builder.addProperty(property, thatRecord.getPropertyType(property), thatRecord.getPropertyNode(property)); }"
+      },
+      {
+        "txt": "} return builder.build(); } JSType greatestSubtype = registry.getNativeType( JSTypeNative.NO_OBJECT_TYPE); JSType thatRestrictedToObj = registry.getNativeType(JSTypeNative.OBJECT_TYPE) .getGreatestSubtype(that); if (!thatRestrictedToObj.isEmptyType()) { for (Map.Entry<String, JSType> entry : properties.entrySet()) {"
+      },
+      {
+        "txt": "String propName = entry.getKey(); JSType propType = entry.getValue(); UnionTypeBuilder builder = new UnionTypeBuilder(registry); for (ObjectType alt : registry.getEachReferenceTypeWithProperty(propName)) { JSType altPropType = alt.getPropertyType(propName); if (altPropType != null && !alt.isEquivalentTo(this) && alt.isSubtype(that) && (propType.isUnknownType() || altPropType.isUnknownType() || altPropType.isEquivalentTo(propType))) {"
+      },
+      {
+        "txt": "builder.addAlternate(alt); } } greatestSubtype = greatestSubtype.getLeastSupertype(builder.build()); } } return greatestSubtype; } @Override RecordType toMaybeRecordType() {"
+      },
+      {
+        "txt": "return this; } @Override public boolean isSubtype(JSType that) { if (JSType.isSubtypeHelper(this, that)) { return true; } if (registry.getNativeObjectType( JSTypeNative.OBJECT_TYPE).isSubtype(that)) { return true;"
+      },
+      {
+        "txt": "} if (!that.isRecordType()) { return false; } return RecordType.isSubtype(this, that.toMaybeRecordType()); } static boolean isSubtype(ObjectType typeA, RecordType typeB) { for (String property : typeB.properties.keySet()) { if (!typeA.hasProperty(property)) { return false;"
+      },
+      {
+        "txt": "} JSType propA = typeA.getPropertyType(property); JSType propB = typeB.getPropertyType(property); if (!propA.isUnknownType() && !propB.isUnknownType()) { if (typeA.isPropertyTypeDeclared(property)) { if (!propA.isEquivalentTo(propB)) { return false; } } else { if (!propA.isSubtype(propB)) {"
+      },
+      {
+        "txt": "return false; } } } } return true; } @Override JSType resolveInternal(ErrorReporter t, StaticScope<JSType> scope) { for (Map.Entry<String, JSType> entry : properties.entrySet()) {"
+      },
+      {
+        "txt": "JSType type = entry.getValue(); JSType resolvedType = type.resolve(t, scope); if (type != resolvedType) { properties.put(entry.getKey(), resolvedType); } } return super.resolveInternal(t, scope); }"
+      }
+    ]
+  },
+  {
+    "id": 841,
+    "file_path": "src/com/google/javascript/rhino/jstype/RecordTypeBuilder.java",
+    "start-bug-line": 54,
+    "end-bug-line": 54,
+    "bug": "",
+    "fix": "private boolean isDeclared = true;",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "import com.google.common.collect.Maps; import com.google.javascript.rhino.Node; import java.util.Collections; import java.util.HashMap; public class RecordTypeBuilder { private boolean isEmpty = true; <extra_id_0> private final HashMap<String, RecordProperty> properties = Maps.newHashMap(); public RecordTypeBuilder(JSTypeRegistry registry) { this.registry = registry; } public RecordTypeBuilder addProperty(String name, JSType type, Node propertyNode) {"
+      },
+      {
+        "txt": "public RecordTypeBuilder addProperty(String name, JSType type, Node propertyNode) { isEmpty = false; if (properties.containsKey(name)) { return null; } properties.put(name, new RecordProperty(type, propertyNode)); return this; } public JSType build() {"
+      },
+      {
+        "txt": "if (isEmpty) { return registry.getNativeObjectType(JSTypeNative.OBJECT_TYPE); } return new RecordType( registry, Collections.unmodifiableMap(properties)); } static class RecordProperty { private final JSType type; private final Node propertyNode; RecordProperty(JSType type, Node propertyNode) {"
+      },
+      {
+        "txt": "this.type = type; this.propertyNode = propertyNode; } public JSType getType() { return type; } public Node getPropertyNode() { return propertyNode; } }"
+      }
+    ]
+  },
+  {
+    "id": 842,
+    "file_path": "src/com/google/javascript/rhino/jstype/RecordTypeBuilder.java",
+    "start-bug-line": 62,
+    "end-bug-line": 62,
+    "bug": "",
+    "fix": "void setSynthesized(boolean synthesized) { isDeclared = !synthesized; }",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.google.javascript.rhino.jstype; import com.google.common.collect.Maps; import com.google.javascript.rhino.Node; import java.util.Collections; import java.util.HashMap;"
+      },
+      {
+        "txt": "private boolean isEmpty = true; private final JSTypeRegistry registry; private final HashMap<String, RecordProperty> properties = Maps.newHashMap(); public RecordTypeBuilder(JSTypeRegistry registry) { this.registry = registry; } <extra_id_0> public RecordTypeBuilder addProperty(String name, JSType type, Node propertyNode) { isEmpty = false; if (properties.containsKey(name)) { return null; }"
+      },
+      {
+        "txt": "return null; } properties.put(name, new RecordProperty(type, propertyNode)); return this; } public JSType build() { if (isEmpty) { return registry.getNativeObjectType(JSTypeNative.OBJECT_TYPE); } return new RecordType("
+      },
+      {
+        "txt": "registry, Collections.unmodifiableMap(properties)); } static class RecordProperty { private final JSType type; private final Node propertyNode; RecordProperty(JSType type, Node propertyNode) { this.type = type; this.propertyNode = propertyNode; } public JSType getType() {"
+      },
+      {
+        "txt": "return type; } public Node getPropertyNode() { return propertyNode; } }"
+      }
+    ]
+  },
+  {
+    "id": 843,
+    "file_path": "src/com/google/javascript/rhino/jstype/RecordTypeBuilder.java",
+    "start-bug-line": 92,
+    "end-bug-line": 92,
+    "bug": "registry, Collections.unmodifiableMap(properties));",
+    "fix": "registry, Collections.unmodifiableMap(properties), isDeclared);",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.google.javascript.rhino.jstype; import com.google.common.collect.Maps; import com.google.javascript.rhino.Node; import java.util.Collections; import java.util.HashMap; public class RecordTypeBuilder { private boolean isEmpty = true; private final JSTypeRegistry registry; private final HashMap<String, RecordProperty> properties = Maps.newHashMap();"
+      },
+      {
+        "txt": "public RecordTypeBuilder(JSTypeRegistry registry) { this.registry = registry; } public RecordTypeBuilder addProperty(String name, JSType type, Node propertyNode) { isEmpty = false; if (properties.containsKey(name)) { return null; } properties.put(name, new RecordProperty(type, propertyNode));"
+      },
+      {
+        "txt": "} public JSType build() { if (isEmpty) { return registry.getNativeObjectType(JSTypeNative.OBJECT_TYPE); } return new RecordType( <extra_id_0> } static class RecordProperty { private final JSType type; private final Node propertyNode; RecordProperty(JSType type, Node propertyNode) { this.type = type;"
+      },
+      {
+        "txt": "RecordProperty(JSType type, Node propertyNode) { this.type = type; this.propertyNode = propertyNode; } public JSType getType() { return type; } public Node getPropertyNode() { return propertyNode; }"
+      }
+    ]
+  }
+]

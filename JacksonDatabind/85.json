@@ -1,0 +1,428 @@
+[
+  {
+    "id": 1703,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/ser/std/DateTimeSerializerBase.java",
+    "start-bug-line": 67,
+    "end-bug-line": 72,
+    "bug": "if ((shape == JsonFormat.Shape.STRING) || format.hasPattern() || format.hasLocale() || format.hasTimeZone()) { TimeZone tz = format.getTimeZone(); final String pattern = format.hasPattern() ? format.getPattern() : StdDateFormat.DATE_FORMAT_STR_ISO8601;",
+    "fix": "if (format.hasPattern()) {",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind.ser.std; import java.io.IOException; import java.lang.reflect.Type; import java.text.DateFormat; import java.text.SimpleDateFormat; import java.util.Locale; import java.util.TimeZone;"
+      },
+      {
+        "txt": "import com.fasterxml.jackson.annotation.JsonFormat; import com.fasterxml.jackson.core.JsonGenerator; import com.fasterxml.jackson.core.JsonParser; import com.fasterxml.jackson.databind.*; import com.fasterxml.jackson.databind.jsonFormatVisitors.*; import com.fasterxml.jackson.databind.ser.ContextualSerializer; import com.fasterxml.jackson.databind.util.StdDateFormat; @SuppressWarnings(\"serial\") public abstract class DateTimeSerializerBase<T> extends StdScalarSerializer<T>"
+      },
+      {
+        "txt": "implements ContextualSerializer { protected final Boolean _useTimestamp; protected final DateFormat _customFormat; protected DateTimeSerializerBase(Class<T> type, Boolean useTimestamp, DateFormat customFormat) { super(type); _useTimestamp = useTimestamp; _customFormat = customFormat;"
+      },
+      {
+        "txt": "} public abstract DateTimeSerializerBase<T> withFormat(Boolean timestamp, DateFormat customFormat); @Override public JsonSerializer<?> createContextual(SerializerProvider serializers, BeanProperty property) throws JsonMappingException { if (property == null) { return this; } JsonFormat.Value format = findFormatOverrides(serializers, property, handledType());"
+      },
+      {
+        "txt": "return this; } JsonFormat.Shape shape = format.getShape(); if (shape.isNumeric()) { return withFormat(Boolean.TRUE, null); } <extra_id_0> final Locale loc = format.hasLocale() ? format.getLocale() : serializers.getLocale(); SimpleDateFormat df = new SimpleDateFormat(pattern, loc); if (tz == null) { tz = serializers.getTimeZone();"
+      },
+      {
+        "txt": "if (tz == null) { tz = serializers.getTimeZone(); } df.setTimeZone(tz); return withFormat(Boolean.FALSE, df); } return this; } @Deprecated @Override"
+      },
+      {
+        "txt": "public boolean isEmpty(T value) { return (value == null) || (_timestamp(value) == 0L); } @Override public boolean isEmpty(SerializerProvider serializers, T value) { return (value == null) || (_timestamp(value) == 0L); } protected abstract long _timestamp(T value); @Override public JsonNode getSchema(SerializerProvider serializers, Type typeHint) {"
+      },
+      {
+        "txt": "return createSchemaNode(_asTimestamp(serializers) ? \"number\" : \"string\", true); } @Override public void acceptJsonFormatVisitor(JsonFormatVisitorWrapper visitor, JavaType typeHint) throws JsonMappingException { _acceptJsonFormatVisitor(visitor, typeHint, _asTimestamp(visitor.getProvider())); } @Override public abstract void serialize(T value, JsonGenerator gen, SerializerProvider serializers) throws IOException;"
+      },
+      {
+        "txt": "protected boolean _asTimestamp(SerializerProvider serializers) { if (_useTimestamp != null) { return _useTimestamp.booleanValue(); } if (_customFormat == null) { if (serializers != null) { return serializers.isEnabled(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS); } throw new IllegalArgumentException(\"Null SerializerProvider passed for \"+handledType().getName());"
+      },
+      {
+        "txt": "} return false; } protected void _acceptJsonFormatVisitor(JsonFormatVisitorWrapper visitor, JavaType typeHint, boolean asNumber) throws JsonMappingException { if (asNumber) { visitIntFormat(visitor, typeHint, JsonParser.NumberType.LONG, JsonValueFormat.UTC_MILLISEC); } else {"
+      },
+      {
+        "txt": "visitStringFormat(visitor, typeHint, JsonValueFormat.DATE_TIME); } }"
+      }
+    ]
+  },
+  {
+    "id": 1704,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/ser/std/DateTimeSerializerBase.java",
+    "start-bug-line": 76,
+    "end-bug-line": 79,
+    "bug": "SimpleDateFormat df = new SimpleDateFormat(pattern, loc); if (tz == null) { tz = serializers.getTimeZone(); }",
+    "fix": "SimpleDateFormat df = new SimpleDateFormat(format.getPattern(), loc); TimeZone tz = format.hasTimeZone() ? format.getTimeZone() : serializers.getTimeZone();",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind.ser.std; import java.io.IOException; import java.lang.reflect.Type; import java.text.DateFormat; import java.text.SimpleDateFormat; import java.util.Locale;"
+      },
+      {
+        "txt": "import java.util.TimeZone; import com.fasterxml.jackson.annotation.JsonFormat; import com.fasterxml.jackson.core.JsonGenerator; import com.fasterxml.jackson.core.JsonParser; import com.fasterxml.jackson.databind.*; import com.fasterxml.jackson.databind.jsonFormatVisitors.*; import com.fasterxml.jackson.databind.ser.ContextualSerializer; import com.fasterxml.jackson.databind.util.StdDateFormat; @SuppressWarnings(\"serial\") public abstract class DateTimeSerializerBase<T>"
+      },
+      {
+        "txt": "extends StdScalarSerializer<T> implements ContextualSerializer { protected final Boolean _useTimestamp; protected final DateFormat _customFormat; protected DateTimeSerializerBase(Class<T> type, Boolean useTimestamp, DateFormat customFormat) { super(type); _useTimestamp = useTimestamp;"
+      },
+      {
+        "txt": "_customFormat = customFormat; } public abstract DateTimeSerializerBase<T> withFormat(Boolean timestamp, DateFormat customFormat); @Override public JsonSerializer<?> createContextual(SerializerProvider serializers, BeanProperty property) throws JsonMappingException { if (property == null) { return this; }"
+      },
+      {
+        "txt": "JsonFormat.Value format = findFormatOverrides(serializers, property, handledType()); if (format == null) { return this; } JsonFormat.Shape shape = format.getShape(); if (shape.isNumeric()) { return withFormat(Boolean.TRUE, null); } if ((shape == JsonFormat.Shape.STRING) || format.hasPattern() || format.hasLocale() || format.hasTimeZone()) {"
+      },
+      {
+        "txt": "final String pattern = format.hasPattern() ? format.getPattern() : StdDateFormat.DATE_FORMAT_STR_ISO8601; final Locale loc = format.hasLocale() ? format.getLocale() : serializers.getLocale(); <extra_id_0> df.setTimeZone(tz); return withFormat(Boolean.FALSE, df); } return this; } @Deprecated"
+      },
+      {
+        "txt": "} @Deprecated @Override public boolean isEmpty(T value) { return (value == null) || (_timestamp(value) == 0L); } @Override public boolean isEmpty(SerializerProvider serializers, T value) { return (value == null) || (_timestamp(value) == 0L); }"
+      },
+      {
+        "txt": "protected abstract long _timestamp(T value); @Override public JsonNode getSchema(SerializerProvider serializers, Type typeHint) { return createSchemaNode(_asTimestamp(serializers) ? \"number\" : \"string\", true); } @Override public void acceptJsonFormatVisitor(JsonFormatVisitorWrapper visitor, JavaType typeHint) throws JsonMappingException { _acceptJsonFormatVisitor(visitor, typeHint, _asTimestamp(visitor.getProvider())); }"
+      },
+      {
+        "txt": "@Override public abstract void serialize(T value, JsonGenerator gen, SerializerProvider serializers) throws IOException; protected boolean _asTimestamp(SerializerProvider serializers) { if (_useTimestamp != null) { return _useTimestamp.booleanValue(); } if (_customFormat == null) { if (serializers != null) {"
+      },
+      {
+        "txt": "return serializers.isEnabled(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS); } throw new IllegalArgumentException(\"Null SerializerProvider passed for \"+handledType().getName()); } return false; } protected void _acceptJsonFormatVisitor(JsonFormatVisitorWrapper visitor, JavaType typeHint, boolean asNumber) throws JsonMappingException { if (asNumber) {"
+      },
+      {
+        "txt": "visitIntFormat(visitor, typeHint, JsonParser.NumberType.LONG, JsonValueFormat.UTC_MILLISEC); } else { visitStringFormat(visitor, typeHint, JsonValueFormat.DATE_TIME); } }"
+      }
+    ]
+  },
+  {
+    "id": 1705,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/ser/std/DateTimeSerializerBase.java",
+    "start-bug-line": 85,
+    "end-bug-line": 85,
+    "bug": "",
+    "fix": "final boolean hasLocale = format.hasLocale(); final boolean hasTZ = format.hasTimeZone(); final boolean asString = (shape == JsonFormat.Shape.STRING);",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind.ser.std; import java.io.IOException; import java.lang.reflect.Type;"
+      },
+      {
+        "txt": "import java.text.DateFormat; import java.text.SimpleDateFormat; import java.util.Locale; import java.util.TimeZone; import com.fasterxml.jackson.annotation.JsonFormat; import com.fasterxml.jackson.core.JsonGenerator; import com.fasterxml.jackson.core.JsonParser; import com.fasterxml.jackson.databind.*; import com.fasterxml.jackson.databind.jsonFormatVisitors.*; import com.fasterxml.jackson.databind.ser.ContextualSerializer;"
+      },
+      {
+        "txt": "import com.fasterxml.jackson.databind.util.StdDateFormat; @SuppressWarnings(\"serial\") public abstract class DateTimeSerializerBase<T> extends StdScalarSerializer<T> implements ContextualSerializer { protected final Boolean _useTimestamp; protected final DateFormat _customFormat; protected DateTimeSerializerBase(Class<T> type, Boolean useTimestamp, DateFormat customFormat)"
+      },
+      {
+        "txt": "{ super(type); _useTimestamp = useTimestamp; _customFormat = customFormat; } public abstract DateTimeSerializerBase<T> withFormat(Boolean timestamp, DateFormat customFormat); @Override public JsonSerializer<?> createContextual(SerializerProvider serializers, BeanProperty property) throws JsonMappingException {"
+      },
+      {
+        "txt": "if (property == null) { return this; } JsonFormat.Value format = findFormatOverrides(serializers, property, handledType()); if (format == null) { return this; } JsonFormat.Shape shape = format.getShape(); if (shape.isNumeric()) { return withFormat(Boolean.TRUE, null);"
+      },
+      {
+        "txt": "} if ((shape == JsonFormat.Shape.STRING) || format.hasPattern() || format.hasLocale() || format.hasTimeZone()) { TimeZone tz = format.getTimeZone(); final String pattern = format.hasPattern() ? format.getPattern() : StdDateFormat.DATE_FORMAT_STR_ISO8601; final Locale loc = format.hasLocale() ? format.getLocale() : serializers.getLocale();"
+      },
+      {
+        "txt": "if (tz == null) { tz = serializers.getTimeZone(); } df.setTimeZone(tz); return withFormat(Boolean.FALSE, df); } <extra_id_0> return this; } @Deprecated @Override public boolean isEmpty(T value) { return (value == null) || (_timestamp(value) == 0L);"
+      },
+      {
+        "txt": "public boolean isEmpty(T value) { return (value == null) || (_timestamp(value) == 0L); } @Override public boolean isEmpty(SerializerProvider serializers, T value) { return (value == null) || (_timestamp(value) == 0L); } protected abstract long _timestamp(T value); @Override public JsonNode getSchema(SerializerProvider serializers, Type typeHint) {"
+      },
+      {
+        "txt": "return createSchemaNode(_asTimestamp(serializers) ? \"number\" : \"string\", true); } @Override public void acceptJsonFormatVisitor(JsonFormatVisitorWrapper visitor, JavaType typeHint) throws JsonMappingException { _acceptJsonFormatVisitor(visitor, typeHint, _asTimestamp(visitor.getProvider())); } @Override public abstract void serialize(T value, JsonGenerator gen, SerializerProvider serializers) throws IOException;"
+      },
+      {
+        "txt": "protected boolean _asTimestamp(SerializerProvider serializers) { if (_useTimestamp != null) { return _useTimestamp.booleanValue(); } if (_customFormat == null) { if (serializers != null) { return serializers.isEnabled(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS); } throw new IllegalArgumentException(\"Null SerializerProvider passed for \"+handledType().getName());"
+      },
+      {
+        "txt": "} return false; } protected void _acceptJsonFormatVisitor(JsonFormatVisitorWrapper visitor, JavaType typeHint, boolean asNumber) throws JsonMappingException { if (asNumber) { visitIntFormat(visitor, typeHint, JsonParser.NumberType.LONG, JsonValueFormat.UTC_MILLISEC); } else {"
+      },
+      {
+        "txt": "visitStringFormat(visitor, typeHint, JsonValueFormat.DATE_TIME); } }"
+      }
+    ]
+  },
+  {
+    "id": 1706,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/ser/std/DateTimeSerializerBase.java",
+    "start-bug-line": 86,
+    "end-bug-line": 86,
+    "bug": "",
+    "fix": "if (!hasLocale && !hasTZ && !asString) { return this; }",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind.ser.std; import java.io.IOException; import java.lang.reflect.Type;"
+      },
+      {
+        "txt": "import java.text.DateFormat; import java.text.SimpleDateFormat; import java.util.Locale; import java.util.TimeZone; import com.fasterxml.jackson.annotation.JsonFormat; import com.fasterxml.jackson.core.JsonGenerator; import com.fasterxml.jackson.core.JsonParser; import com.fasterxml.jackson.databind.*; import com.fasterxml.jackson.databind.jsonFormatVisitors.*; import com.fasterxml.jackson.databind.ser.ContextualSerializer;"
+      },
+      {
+        "txt": "import com.fasterxml.jackson.databind.util.StdDateFormat; @SuppressWarnings(\"serial\") public abstract class DateTimeSerializerBase<T> extends StdScalarSerializer<T> implements ContextualSerializer { protected final Boolean _useTimestamp; protected final DateFormat _customFormat; protected DateTimeSerializerBase(Class<T> type, Boolean useTimestamp, DateFormat customFormat)"
+      },
+      {
+        "txt": "{ super(type); _useTimestamp = useTimestamp; _customFormat = customFormat; } public abstract DateTimeSerializerBase<T> withFormat(Boolean timestamp, DateFormat customFormat); @Override public JsonSerializer<?> createContextual(SerializerProvider serializers, BeanProperty property) throws JsonMappingException {"
+      },
+      {
+        "txt": "if (property == null) { return this; } JsonFormat.Value format = findFormatOverrides(serializers, property, handledType()); if (format == null) { return this; } JsonFormat.Shape shape = format.getShape(); if (shape.isNumeric()) { return withFormat(Boolean.TRUE, null);"
+      },
+      {
+        "txt": "} if ((shape == JsonFormat.Shape.STRING) || format.hasPattern() || format.hasLocale() || format.hasTimeZone()) { TimeZone tz = format.getTimeZone(); final String pattern = format.hasPattern() ? format.getPattern() : StdDateFormat.DATE_FORMAT_STR_ISO8601; final Locale loc = format.hasLocale() ? format.getLocale() : serializers.getLocale();"
+      },
+      {
+        "txt": "if (tz == null) { tz = serializers.getTimeZone(); } df.setTimeZone(tz); return withFormat(Boolean.FALSE, df); } <extra_id_0> return this; } @Deprecated @Override public boolean isEmpty(T value) { return (value == null) || (_timestamp(value) == 0L);"
+      },
+      {
+        "txt": "public boolean isEmpty(T value) { return (value == null) || (_timestamp(value) == 0L); } @Override public boolean isEmpty(SerializerProvider serializers, T value) { return (value == null) || (_timestamp(value) == 0L); } protected abstract long _timestamp(T value); @Override public JsonNode getSchema(SerializerProvider serializers, Type typeHint) {"
+      },
+      {
+        "txt": "return createSchemaNode(_asTimestamp(serializers) ? \"number\" : \"string\", true); } @Override public void acceptJsonFormatVisitor(JsonFormatVisitorWrapper visitor, JavaType typeHint) throws JsonMappingException { _acceptJsonFormatVisitor(visitor, typeHint, _asTimestamp(visitor.getProvider())); } @Override public abstract void serialize(T value, JsonGenerator gen, SerializerProvider serializers) throws IOException;"
+      },
+      {
+        "txt": "protected boolean _asTimestamp(SerializerProvider serializers) { if (_useTimestamp != null) { return _useTimestamp.booleanValue(); } if (_customFormat == null) { if (serializers != null) { return serializers.isEnabled(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS); } throw new IllegalArgumentException(\"Null SerializerProvider passed for \"+handledType().getName());"
+      },
+      {
+        "txt": "} return false; } protected void _acceptJsonFormatVisitor(JsonFormatVisitorWrapper visitor, JavaType typeHint, boolean asNumber) throws JsonMappingException { if (asNumber) { visitIntFormat(visitor, typeHint, JsonParser.NumberType.LONG, JsonValueFormat.UTC_MILLISEC); } else {"
+      },
+      {
+        "txt": "visitStringFormat(visitor, typeHint, JsonValueFormat.DATE_TIME); } }"
+      }
+    ]
+  },
+  {
+    "id": 1707,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/ser/std/DateTimeSerializerBase.java",
+    "start-bug-line": 87,
+    "end-bug-line": 87,
+    "bug": "",
+    "fix": "DateFormat df0 = serializers.getConfig().getDateFormat();",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind.ser.std; import java.io.IOException; import java.lang.reflect.Type;"
+      },
+      {
+        "txt": "import java.text.DateFormat; import java.text.SimpleDateFormat; import java.util.Locale; import java.util.TimeZone; import com.fasterxml.jackson.annotation.JsonFormat; import com.fasterxml.jackson.core.JsonGenerator; import com.fasterxml.jackson.core.JsonParser; import com.fasterxml.jackson.databind.*; import com.fasterxml.jackson.databind.jsonFormatVisitors.*; import com.fasterxml.jackson.databind.ser.ContextualSerializer;"
+      },
+      {
+        "txt": "import com.fasterxml.jackson.databind.util.StdDateFormat; @SuppressWarnings(\"serial\") public abstract class DateTimeSerializerBase<T> extends StdScalarSerializer<T> implements ContextualSerializer { protected final Boolean _useTimestamp; protected final DateFormat _customFormat; protected DateTimeSerializerBase(Class<T> type, Boolean useTimestamp, DateFormat customFormat)"
+      },
+      {
+        "txt": "{ super(type); _useTimestamp = useTimestamp; _customFormat = customFormat; } public abstract DateTimeSerializerBase<T> withFormat(Boolean timestamp, DateFormat customFormat); @Override public JsonSerializer<?> createContextual(SerializerProvider serializers, BeanProperty property) throws JsonMappingException {"
+      },
+      {
+        "txt": "if (property == null) { return this; } JsonFormat.Value format = findFormatOverrides(serializers, property, handledType()); if (format == null) { return this; } JsonFormat.Shape shape = format.getShape(); if (shape.isNumeric()) { return withFormat(Boolean.TRUE, null);"
+      },
+      {
+        "txt": "} if ((shape == JsonFormat.Shape.STRING) || format.hasPattern() || format.hasLocale() || format.hasTimeZone()) { TimeZone tz = format.getTimeZone(); final String pattern = format.hasPattern() ? format.getPattern() : StdDateFormat.DATE_FORMAT_STR_ISO8601; final Locale loc = format.hasLocale() ? format.getLocale() : serializers.getLocale();"
+      },
+      {
+        "txt": "if (tz == null) { tz = serializers.getTimeZone(); } df.setTimeZone(tz); return withFormat(Boolean.FALSE, df); } <extra_id_0> return this; } @Deprecated @Override public boolean isEmpty(T value) { return (value == null) || (_timestamp(value) == 0L);"
+      },
+      {
+        "txt": "public boolean isEmpty(T value) { return (value == null) || (_timestamp(value) == 0L); } @Override public boolean isEmpty(SerializerProvider serializers, T value) { return (value == null) || (_timestamp(value) == 0L); } protected abstract long _timestamp(T value); @Override public JsonNode getSchema(SerializerProvider serializers, Type typeHint) {"
+      },
+      {
+        "txt": "return createSchemaNode(_asTimestamp(serializers) ? \"number\" : \"string\", true); } @Override public void acceptJsonFormatVisitor(JsonFormatVisitorWrapper visitor, JavaType typeHint) throws JsonMappingException { _acceptJsonFormatVisitor(visitor, typeHint, _asTimestamp(visitor.getProvider())); } @Override public abstract void serialize(T value, JsonGenerator gen, SerializerProvider serializers) throws IOException;"
+      },
+      {
+        "txt": "protected boolean _asTimestamp(SerializerProvider serializers) { if (_useTimestamp != null) { return _useTimestamp.booleanValue(); } if (_customFormat == null) { if (serializers != null) { return serializers.isEnabled(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS); } throw new IllegalArgumentException(\"Null SerializerProvider passed for \"+handledType().getName());"
+      },
+      {
+        "txt": "} return false; } protected void _acceptJsonFormatVisitor(JsonFormatVisitorWrapper visitor, JavaType typeHint, boolean asNumber) throws JsonMappingException { if (asNumber) { visitIntFormat(visitor, typeHint, JsonParser.NumberType.LONG, JsonValueFormat.UTC_MILLISEC); } else {"
+      },
+      {
+        "txt": "visitStringFormat(visitor, typeHint, JsonValueFormat.DATE_TIME); } }"
+      }
+    ]
+  },
+  {
+    "id": 1708,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/ser/std/DateTimeSerializerBase.java",
+    "start-bug-line": 88,
+    "end-bug-line": 88,
+    "bug": "",
+    "fix": "if (df0 instanceof StdDateFormat) { StdDateFormat std = (StdDateFormat) df0; if (format.hasLocale()) { std = std.withLocale(format.getLocale()); } if (format.hasTimeZone()) { std = std.withTimeZone(format.getTimeZone()); } return withFormat(Boolean.FALSE, std); }",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind.ser.std; import java.io.IOException; import java.lang.reflect.Type;"
+      },
+      {
+        "txt": "import java.text.DateFormat; import java.text.SimpleDateFormat; import java.util.Locale; import java.util.TimeZone; import com.fasterxml.jackson.annotation.JsonFormat; import com.fasterxml.jackson.core.JsonGenerator; import com.fasterxml.jackson.core.JsonParser; import com.fasterxml.jackson.databind.*; import com.fasterxml.jackson.databind.jsonFormatVisitors.*; import com.fasterxml.jackson.databind.ser.ContextualSerializer;"
+      },
+      {
+        "txt": "import com.fasterxml.jackson.databind.util.StdDateFormat; @SuppressWarnings(\"serial\") public abstract class DateTimeSerializerBase<T> extends StdScalarSerializer<T> implements ContextualSerializer { protected final Boolean _useTimestamp; protected final DateFormat _customFormat; protected DateTimeSerializerBase(Class<T> type, Boolean useTimestamp, DateFormat customFormat)"
+      },
+      {
+        "txt": "{ super(type); _useTimestamp = useTimestamp; _customFormat = customFormat; } public abstract DateTimeSerializerBase<T> withFormat(Boolean timestamp, DateFormat customFormat); @Override public JsonSerializer<?> createContextual(SerializerProvider serializers, BeanProperty property) throws JsonMappingException {"
+      },
+      {
+        "txt": "if (property == null) { return this; } JsonFormat.Value format = findFormatOverrides(serializers, property, handledType()); if (format == null) { return this; } JsonFormat.Shape shape = format.getShape(); if (shape.isNumeric()) { return withFormat(Boolean.TRUE, null);"
+      },
+      {
+        "txt": "} if ((shape == JsonFormat.Shape.STRING) || format.hasPattern() || format.hasLocale() || format.hasTimeZone()) { TimeZone tz = format.getTimeZone(); final String pattern = format.hasPattern() ? format.getPattern() : StdDateFormat.DATE_FORMAT_STR_ISO8601; final Locale loc = format.hasLocale() ? format.getLocale() : serializers.getLocale();"
+      },
+      {
+        "txt": "if (tz == null) { tz = serializers.getTimeZone(); } df.setTimeZone(tz); return withFormat(Boolean.FALSE, df); } <extra_id_0> return this; } @Deprecated @Override public boolean isEmpty(T value) { return (value == null) || (_timestamp(value) == 0L);"
+      },
+      {
+        "txt": "public boolean isEmpty(T value) { return (value == null) || (_timestamp(value) == 0L); } @Override public boolean isEmpty(SerializerProvider serializers, T value) { return (value == null) || (_timestamp(value) == 0L); } protected abstract long _timestamp(T value); @Override public JsonNode getSchema(SerializerProvider serializers, Type typeHint) {"
+      },
+      {
+        "txt": "return createSchemaNode(_asTimestamp(serializers) ? \"number\" : \"string\", true); } @Override public void acceptJsonFormatVisitor(JsonFormatVisitorWrapper visitor, JavaType typeHint) throws JsonMappingException { _acceptJsonFormatVisitor(visitor, typeHint, _asTimestamp(visitor.getProvider())); } @Override public abstract void serialize(T value, JsonGenerator gen, SerializerProvider serializers) throws IOException;"
+      },
+      {
+        "txt": "protected boolean _asTimestamp(SerializerProvider serializers) { if (_useTimestamp != null) { return _useTimestamp.booleanValue(); } if (_customFormat == null) { if (serializers != null) { return serializers.isEnabled(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS); } throw new IllegalArgumentException(\"Null SerializerProvider passed for \"+handledType().getName());"
+      },
+      {
+        "txt": "} return false; } protected void _acceptJsonFormatVisitor(JsonFormatVisitorWrapper visitor, JavaType typeHint, boolean asNumber) throws JsonMappingException { if (asNumber) { visitIntFormat(visitor, typeHint, JsonParser.NumberType.LONG, JsonValueFormat.UTC_MILLISEC); } else {"
+      },
+      {
+        "txt": "visitStringFormat(visitor, typeHint, JsonValueFormat.DATE_TIME); } }"
+      }
+    ]
+  },
+  {
+    "id": 1709,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/ser/std/DateTimeSerializerBase.java",
+    "start-bug-line": 92,
+    "end-bug-line": 92,
+    "bug": "",
+    "fix": "if (!(df0 instanceof SimpleDateFormat)) {",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind.ser.std; import java.io.IOException; import java.lang.reflect.Type;"
+      },
+      {
+        "txt": "import java.text.DateFormat; import java.text.SimpleDateFormat; import java.util.Locale; import java.util.TimeZone; import com.fasterxml.jackson.annotation.JsonFormat; import com.fasterxml.jackson.core.JsonGenerator; import com.fasterxml.jackson.core.JsonParser; import com.fasterxml.jackson.databind.*; import com.fasterxml.jackson.databind.jsonFormatVisitors.*; import com.fasterxml.jackson.databind.ser.ContextualSerializer;"
+      },
+      {
+        "txt": "import com.fasterxml.jackson.databind.util.StdDateFormat; @SuppressWarnings(\"serial\") public abstract class DateTimeSerializerBase<T> extends StdScalarSerializer<T> implements ContextualSerializer { protected final Boolean _useTimestamp; protected final DateFormat _customFormat; protected DateTimeSerializerBase(Class<T> type, Boolean useTimestamp, DateFormat customFormat)"
+      },
+      {
+        "txt": "{ super(type); _useTimestamp = useTimestamp; _customFormat = customFormat; } public abstract DateTimeSerializerBase<T> withFormat(Boolean timestamp, DateFormat customFormat); @Override public JsonSerializer<?> createContextual(SerializerProvider serializers, BeanProperty property) throws JsonMappingException {"
+      },
+      {
+        "txt": "if (property == null) { return this; } JsonFormat.Value format = findFormatOverrides(serializers, property, handledType()); if (format == null) { return this; } JsonFormat.Shape shape = format.getShape(); if (shape.isNumeric()) { return withFormat(Boolean.TRUE, null);"
+      },
+      {
+        "txt": "} if ((shape == JsonFormat.Shape.STRING) || format.hasPattern() || format.hasLocale() || format.hasTimeZone()) { TimeZone tz = format.getTimeZone(); final String pattern = format.hasPattern() ? format.getPattern() : StdDateFormat.DATE_FORMAT_STR_ISO8601; final Locale loc = format.hasLocale() ? format.getLocale() : serializers.getLocale();"
+      },
+      {
+        "txt": "if (tz == null) { tz = serializers.getTimeZone(); } df.setTimeZone(tz); return withFormat(Boolean.FALSE, df); } <extra_id_0> return this; } @Deprecated @Override public boolean isEmpty(T value) { return (value == null) || (_timestamp(value) == 0L);"
+      },
+      {
+        "txt": "public boolean isEmpty(T value) { return (value == null) || (_timestamp(value) == 0L); } @Override public boolean isEmpty(SerializerProvider serializers, T value) { return (value == null) || (_timestamp(value) == 0L); } protected abstract long _timestamp(T value); @Override public JsonNode getSchema(SerializerProvider serializers, Type typeHint) {"
+      },
+      {
+        "txt": "return createSchemaNode(_asTimestamp(serializers) ? \"number\" : \"string\", true); } @Override public void acceptJsonFormatVisitor(JsonFormatVisitorWrapper visitor, JavaType typeHint) throws JsonMappingException { _acceptJsonFormatVisitor(visitor, typeHint, _asTimestamp(visitor.getProvider())); } @Override public abstract void serialize(T value, JsonGenerator gen, SerializerProvider serializers) throws IOException;"
+      },
+      {
+        "txt": "protected boolean _asTimestamp(SerializerProvider serializers) { if (_useTimestamp != null) { return _useTimestamp.booleanValue(); } if (_customFormat == null) { if (serializers != null) { return serializers.isEnabled(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS); } throw new IllegalArgumentException(\"Null SerializerProvider passed for \"+handledType().getName());"
+      },
+      {
+        "txt": "} return false; } protected void _acceptJsonFormatVisitor(JsonFormatVisitorWrapper visitor, JavaType typeHint, boolean asNumber) throws JsonMappingException { if (asNumber) { visitIntFormat(visitor, typeHint, JsonParser.NumberType.LONG, JsonValueFormat.UTC_MILLISEC); } else {"
+      },
+      {
+        "txt": "visitStringFormat(visitor, typeHint, JsonValueFormat.DATE_TIME); } }"
+      }
+    ]
+  },
+  {
+    "id": 1710,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/ser/std/DateTimeSerializerBase.java",
+    "start-bug-line": 93,
+    "end-bug-line": 93,
+    "bug": "",
+    "fix": "serializers.reportMappingProblem( \"Configured `DateFormat` (%s) not a `SimpleDateFormat`; can not configure `Locale` or `TimeZone`\", df0.getClass().getName()); } SimpleDateFormat df = (SimpleDateFormat) df0; if (hasLocale) {",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind.ser.std; import java.io.IOException; import java.lang.reflect.Type;"
+      },
+      {
+        "txt": "import java.text.DateFormat; import java.text.SimpleDateFormat; import java.util.Locale; import java.util.TimeZone; import com.fasterxml.jackson.annotation.JsonFormat; import com.fasterxml.jackson.core.JsonGenerator; import com.fasterxml.jackson.core.JsonParser; import com.fasterxml.jackson.databind.*; import com.fasterxml.jackson.databind.jsonFormatVisitors.*; import com.fasterxml.jackson.databind.ser.ContextualSerializer;"
+      },
+      {
+        "txt": "import com.fasterxml.jackson.databind.util.StdDateFormat; @SuppressWarnings(\"serial\") public abstract class DateTimeSerializerBase<T> extends StdScalarSerializer<T> implements ContextualSerializer { protected final Boolean _useTimestamp; protected final DateFormat _customFormat; protected DateTimeSerializerBase(Class<T> type, Boolean useTimestamp, DateFormat customFormat)"
+      },
+      {
+        "txt": "{ super(type); _useTimestamp = useTimestamp; _customFormat = customFormat; } public abstract DateTimeSerializerBase<T> withFormat(Boolean timestamp, DateFormat customFormat); @Override public JsonSerializer<?> createContextual(SerializerProvider serializers, BeanProperty property) throws JsonMappingException {"
+      },
+      {
+        "txt": "if (property == null) { return this; } JsonFormat.Value format = findFormatOverrides(serializers, property, handledType()); if (format == null) { return this; } JsonFormat.Shape shape = format.getShape(); if (shape.isNumeric()) { return withFormat(Boolean.TRUE, null);"
+      },
+      {
+        "txt": "} if ((shape == JsonFormat.Shape.STRING) || format.hasPattern() || format.hasLocale() || format.hasTimeZone()) { TimeZone tz = format.getTimeZone(); final String pattern = format.hasPattern() ? format.getPattern() : StdDateFormat.DATE_FORMAT_STR_ISO8601; final Locale loc = format.hasLocale() ? format.getLocale() : serializers.getLocale();"
+      },
+      {
+        "txt": "if (tz == null) { tz = serializers.getTimeZone(); } df.setTimeZone(tz); return withFormat(Boolean.FALSE, df); } <extra_id_0> return this; } @Deprecated @Override public boolean isEmpty(T value) { return (value == null) || (_timestamp(value) == 0L);"
+      },
+      {
+        "txt": "public boolean isEmpty(T value) { return (value == null) || (_timestamp(value) == 0L); } @Override public boolean isEmpty(SerializerProvider serializers, T value) { return (value == null) || (_timestamp(value) == 0L); } protected abstract long _timestamp(T value); @Override public JsonNode getSchema(SerializerProvider serializers, Type typeHint) {"
+      },
+      {
+        "txt": "return createSchemaNode(_asTimestamp(serializers) ? \"number\" : \"string\", true); } @Override public void acceptJsonFormatVisitor(JsonFormatVisitorWrapper visitor, JavaType typeHint) throws JsonMappingException { _acceptJsonFormatVisitor(visitor, typeHint, _asTimestamp(visitor.getProvider())); } @Override public abstract void serialize(T value, JsonGenerator gen, SerializerProvider serializers) throws IOException;"
+      },
+      {
+        "txt": "protected boolean _asTimestamp(SerializerProvider serializers) { if (_useTimestamp != null) { return _useTimestamp.booleanValue(); } if (_customFormat == null) { if (serializers != null) { return serializers.isEnabled(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS); } throw new IllegalArgumentException(\"Null SerializerProvider passed for \"+handledType().getName());"
+      },
+      {
+        "txt": "} return false; } protected void _acceptJsonFormatVisitor(JsonFormatVisitorWrapper visitor, JavaType typeHint, boolean asNumber) throws JsonMappingException { if (asNumber) { visitIntFormat(visitor, typeHint, JsonParser.NumberType.LONG, JsonValueFormat.UTC_MILLISEC); } else {"
+      },
+      {
+        "txt": "visitStringFormat(visitor, typeHint, JsonValueFormat.DATE_TIME); } }"
+      }
+    ]
+  },
+  {
+    "id": 1711,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/ser/std/DateTimeSerializerBase.java",
+    "start-bug-line": 94,
+    "end-bug-line": 94,
+    "bug": "return this;",
+    "fix": "df = new SimpleDateFormat(df.toPattern(), format.getLocale()); } else { df = (SimpleDateFormat) df.clone(); } TimeZone newTz = format.getTimeZone(); boolean changeTZ = (newTz != null) && !newTz.equals(df.getTimeZone()); if (changeTZ) { df.setTimeZone(newTz); } return withFormat(Boolean.FALSE, df);",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind.ser.std; import java.io.IOException; import java.lang.reflect.Type;"
+      },
+      {
+        "txt": "import java.text.DateFormat; import java.text.SimpleDateFormat; import java.util.Locale; import java.util.TimeZone; import com.fasterxml.jackson.annotation.JsonFormat; import com.fasterxml.jackson.core.JsonGenerator; import com.fasterxml.jackson.core.JsonParser; import com.fasterxml.jackson.databind.*; import com.fasterxml.jackson.databind.jsonFormatVisitors.*; import com.fasterxml.jackson.databind.ser.ContextualSerializer;"
+      },
+      {
+        "txt": "import com.fasterxml.jackson.databind.util.StdDateFormat; @SuppressWarnings(\"serial\") public abstract class DateTimeSerializerBase<T> extends StdScalarSerializer<T> implements ContextualSerializer { protected final Boolean _useTimestamp; protected final DateFormat _customFormat; protected DateTimeSerializerBase(Class<T> type, Boolean useTimestamp, DateFormat customFormat)"
+      },
+      {
+        "txt": "{ super(type); _useTimestamp = useTimestamp; _customFormat = customFormat; } public abstract DateTimeSerializerBase<T> withFormat(Boolean timestamp, DateFormat customFormat); @Override public JsonSerializer<?> createContextual(SerializerProvider serializers, BeanProperty property) throws JsonMappingException {"
+      },
+      {
+        "txt": "if (property == null) { return this; } JsonFormat.Value format = findFormatOverrides(serializers, property, handledType()); if (format == null) { return this; } JsonFormat.Shape shape = format.getShape(); if (shape.isNumeric()) { return withFormat(Boolean.TRUE, null);"
+      },
+      {
+        "txt": "} if ((shape == JsonFormat.Shape.STRING) || format.hasPattern() || format.hasLocale() || format.hasTimeZone()) { TimeZone tz = format.getTimeZone(); final String pattern = format.hasPattern() ? format.getPattern() : StdDateFormat.DATE_FORMAT_STR_ISO8601; final Locale loc = format.hasLocale() ? format.getLocale() : serializers.getLocale();"
+      },
+      {
+        "txt": "if (tz == null) { tz = serializers.getTimeZone(); } df.setTimeZone(tz); return withFormat(Boolean.FALSE, df); } <extra_id_0> } @Deprecated @Override public boolean isEmpty(T value) { return (value == null) || (_timestamp(value) == 0L); }"
+      },
+      {
+        "txt": "return (value == null) || (_timestamp(value) == 0L); } @Override public boolean isEmpty(SerializerProvider serializers, T value) { return (value == null) || (_timestamp(value) == 0L); } protected abstract long _timestamp(T value); @Override public JsonNode getSchema(SerializerProvider serializers, Type typeHint) { return createSchemaNode(_asTimestamp(serializers) ? \"number\" : \"string\", true);"
+      },
+      {
+        "txt": "} @Override public void acceptJsonFormatVisitor(JsonFormatVisitorWrapper visitor, JavaType typeHint) throws JsonMappingException { _acceptJsonFormatVisitor(visitor, typeHint, _asTimestamp(visitor.getProvider())); } @Override public abstract void serialize(T value, JsonGenerator gen, SerializerProvider serializers) throws IOException; protected boolean _asTimestamp(SerializerProvider serializers)"
+      },
+      {
+        "txt": "{ if (_useTimestamp != null) { return _useTimestamp.booleanValue(); } if (_customFormat == null) { if (serializers != null) { return serializers.isEnabled(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS); } throw new IllegalArgumentException(\"Null SerializerProvider passed for \"+handledType().getName()); }"
+      },
+      {
+        "txt": "return false; } protected void _acceptJsonFormatVisitor(JsonFormatVisitorWrapper visitor, JavaType typeHint, boolean asNumber) throws JsonMappingException { if (asNumber) { visitIntFormat(visitor, typeHint, JsonParser.NumberType.LONG, JsonValueFormat.UTC_MILLISEC); } else { visitStringFormat(visitor, typeHint, JsonValueFormat.DATE_TIME);"
+      },
+      {
+        "txt": "} }"
+      }
+    ]
+  }
+]

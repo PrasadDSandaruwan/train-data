@@ -1,0 +1,191 @@
+[
+  {
+    "id": 1788,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/node/TreeTraversingParser.java",
+    "start-bug-line": 308,
+    "end-bug-line": 308,
+    "bug": "",
+    "fix": "if (!node.canConvertToInt()) { reportOverflowInt(); }",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind.node; import java.io.IOException; import java.io.OutputStream; import java.math.BigDecimal;"
+      },
+      {
+        "txt": "import java.math.BigInteger; import com.fasterxml.jackson.core.*; import com.fasterxml.jackson.core.base.ParserMinimalBase; import com.fasterxml.jackson.databind.JsonNode; public class TreeTraversingParser extends ParserMinimalBase { protected ObjectCodec _objectCodec; protected NodeCursor _nodeCursor; protected JsonToken _nextToken; protected boolean _startContainer;"
+      },
+      {
+        "txt": "protected boolean _closed; public TreeTraversingParser(JsonNode n) { this(n, null); } public TreeTraversingParser(JsonNode n, ObjectCodec codec) { super(0); _objectCodec = codec; if (n.isArray()) { _nextToken = JsonToken.START_ARRAY; _nodeCursor = new NodeCursor.ArrayCursor(n, null); } else if (n.isObject()) {"
+      },
+      {
+        "txt": "_nextToken = JsonToken.START_OBJECT; _nodeCursor = new NodeCursor.ObjectCursor(n, null); } else { // value node _nodeCursor = new NodeCursor.RootCursor(n, null); } } @Override public void setCodec(ObjectCodec c) { _objectCodec = c; }"
+      },
+      {
+        "txt": "@Override public ObjectCodec getCodec() { return _objectCodec; } @Override public Version version() { return com.fasterxml.jackson.databind.cfg.PackageVersion.VERSION; } @Override public void close() throws IOException"
+      },
+      {
+        "txt": "{ if (!_closed) { _closed = true; _nodeCursor = null; _currToken = null; } } @Override public JsonToken nextToken() throws IOException, JsonParseException {"
+      },
+      {
+        "txt": "if (_nextToken != null) { _currToken = _nextToken; _nextToken = null; return _currToken; } if (_startContainer) { _startContainer = false; if (!_nodeCursor.currentHasChildren()) { _currToken = (_currToken == JsonToken.START_OBJECT) ? JsonToken.END_OBJECT : JsonToken.END_ARRAY;"
+      },
+      {
+        "txt": "return _currToken; } _nodeCursor = _nodeCursor.iterateChildren(); _currToken = _nodeCursor.nextToken(); if (_currToken == JsonToken.START_OBJECT || _currToken == JsonToken.START_ARRAY) { _startContainer = true; } return _currToken; } if (_nodeCursor == null) {"
+      },
+      {
+        "txt": "_closed = true; // if not already set return null; } _currToken = _nodeCursor.nextToken(); if (_currToken != null) { if (_currToken == JsonToken.START_OBJECT || _currToken == JsonToken.START_ARRAY) { _startContainer = true; } return _currToken; }"
+      },
+      {
+        "txt": "_currToken = _nodeCursor.endToken(); _nodeCursor = _nodeCursor.getParent(); return _currToken; } @Override public JsonParser skipChildren() throws IOException, JsonParseException { if (_currToken == JsonToken.START_OBJECT) { _startContainer = false; _currToken = JsonToken.END_OBJECT;"
+      },
+      {
+        "txt": "} else if (_currToken == JsonToken.START_ARRAY) { _startContainer = false; _currToken = JsonToken.END_ARRAY; } return this; } @Override public boolean isClosed() { return _closed; }"
+      },
+      {
+        "txt": "@Override public String getCurrentName() { return (_nodeCursor == null) ? null : _nodeCursor.getCurrentName(); } @Override public void overrideCurrentName(String name) { if (_nodeCursor != null) { _nodeCursor.overrideCurrentName(name); }"
+      },
+      {
+        "txt": "} @Override public JsonStreamContext getParsingContext() { return _nodeCursor; } @Override public JsonLocation getTokenLocation() { return JsonLocation.NA; } @Override"
+      },
+      {
+        "txt": "public JsonLocation getCurrentLocation() { return JsonLocation.NA; } @Override public String getText() { if (_closed) { return null; } switch (_currToken) {"
+      },
+      {
+        "txt": "case FIELD_NAME: return _nodeCursor.getCurrentName(); case VALUE_STRING: return currentNode().textValue(); case VALUE_NUMBER_INT: case VALUE_NUMBER_FLOAT: return String.valueOf(currentNode().numberValue()); case VALUE_EMBEDDED_OBJECT: JsonNode n = currentNode(); if (n != null && n.isBinary()) {"
+      },
+      {
+        "txt": "return n.asText(); } default: return (_currToken == null) ? null : _currToken.asString(); } } @Override public char[] getTextCharacters() throws IOException, JsonParseException { return getText().toCharArray(); }"
+      },
+      {
+        "txt": "@Override public int getTextLength() throws IOException, JsonParseException { return getText().length(); } @Override public int getTextOffset() throws IOException, JsonParseException { return 0; } @Override public boolean hasTextCharacters() {"
+      },
+      {
+        "txt": "return false; } @Override public NumberType getNumberType() throws IOException { JsonNode n = currentNumericNode(); return (n == null) ? null : n.numberType(); } @Override public BigInteger getBigIntegerValue() throws IOException {"
+      },
+      {
+        "txt": "return currentNumericNode().bigIntegerValue(); } @Override public BigDecimal getDecimalValue() throws IOException { return currentNumericNode().decimalValue(); } @Override public double getDoubleValue() throws IOException { return currentNumericNode().doubleValue(); }"
+      },
+      {
+        "txt": "public float getFloatValue() throws IOException { return (float) currentNumericNode().doubleValue(); } @Override public int getIntValue() throws IOException { final NumericNode node = (NumericNode) currentNumericNode(); <extra_id_0> } @Override public long getLongValue() throws IOException { final NumericNode node = (NumericNode) currentNumericNode(); return node.longValue(); }"
+      },
+      {
+        "txt": "return node.longValue(); } @Override public Number getNumberValue() throws IOException { return currentNumericNode().numberValue(); } @Override public Object getEmbeddedObject() { if (!_closed) {"
+      },
+      {
+        "txt": "JsonNode n = currentNode(); if (n != null) { if (n.isPojo()) { return ((POJONode) n).getPojo(); } if (n.isBinary()) { return ((BinaryNode) n).binaryValue(); } } }"
+      },
+      {
+        "txt": "return null; } @Override public boolean isNaN() { if (!_closed) { JsonNode n = currentNode(); if (n instanceof NumericNode) { return ((NumericNode) n).isNaN(); } }"
+      },
+      {
+        "txt": "return false; } @Override public byte[] getBinaryValue(Base64Variant b64variant) throws IOException, JsonParseException { JsonNode n = currentNode(); if (n != null) { if (n instanceof TextNode) { return ((TextNode) n).getBinaryValue(b64variant);"
+      },
+      {
+        "txt": "} return n.binaryValue(); } return null; } @Override public int readBinaryValue(Base64Variant b64variant, OutputStream out) throws IOException, JsonParseException { byte[] data = getBinaryValue(b64variant);"
+      },
+      {
+        "txt": "if (data != null) { out.write(data, 0, data.length); return data.length; } return 0; } protected JsonNode currentNode() { if (_closed || _nodeCursor == null) { return null; }"
+      },
+      {
+        "txt": "return _nodeCursor.currentNode(); } protected JsonNode currentNumericNode() throws JsonParseException { JsonNode n = currentNode(); if (n == null || !n.isNumber()) { JsonToken t = (n == null) ? null : n.asToken(); throw _constructError(\"Current token (\"+t+\") not numeric, cannot use numeric value accessors\"); }"
+      },
+      {
+        "txt": "return n; } @Override protected void _handleEOF() throws JsonParseException { _throwInternal(); // should never get called }"
+      }
+    ]
+  },
+  {
+    "id": 1789,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/node/TreeTraversingParser.java",
+    "start-bug-line": 314,
+    "end-bug-line": 314,
+    "bug": "",
+    "fix": "if (!node.canConvertToInt()) { reportOverflowLong(); }",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind.node; import java.io.IOException; import java.io.OutputStream; import java.math.BigDecimal; import java.math.BigInteger; import com.fasterxml.jackson.core.*; import com.fasterxml.jackson.core.base.ParserMinimalBase; import com.fasterxml.jackson.databind.JsonNode; public class TreeTraversingParser extends ParserMinimalBase"
+      },
+      {
+        "txt": "{ protected ObjectCodec _objectCodec; protected NodeCursor _nodeCursor; protected JsonToken _nextToken; protected boolean _startContainer; protected boolean _closed; public TreeTraversingParser(JsonNode n) { this(n, null); } public TreeTraversingParser(JsonNode n, ObjectCodec codec) { super(0);"
+      },
+      {
+        "txt": "_objectCodec = codec; if (n.isArray()) { _nextToken = JsonToken.START_ARRAY; _nodeCursor = new NodeCursor.ArrayCursor(n, null); } else if (n.isObject()) { _nextToken = JsonToken.START_OBJECT; _nodeCursor = new NodeCursor.ObjectCursor(n, null); } else { // value node _nodeCursor = new NodeCursor.RootCursor(n, null); }"
+      },
+      {
+        "txt": "} @Override public void setCodec(ObjectCodec c) { _objectCodec = c; } @Override public ObjectCodec getCodec() { return _objectCodec; } @Override"
+      },
+      {
+        "txt": "public Version version() { return com.fasterxml.jackson.databind.cfg.PackageVersion.VERSION; } @Override public void close() throws IOException { if (!_closed) { _closed = true; _nodeCursor = null; _currToken = null;"
+      },
+      {
+        "txt": "} } @Override public JsonToken nextToken() throws IOException, JsonParseException { if (_nextToken != null) { _currToken = _nextToken; _nextToken = null; return _currToken; }"
+      },
+      {
+        "txt": "if (_startContainer) { _startContainer = false; if (!_nodeCursor.currentHasChildren()) { _currToken = (_currToken == JsonToken.START_OBJECT) ? JsonToken.END_OBJECT : JsonToken.END_ARRAY; return _currToken; } _nodeCursor = _nodeCursor.iterateChildren(); _currToken = _nodeCursor.nextToken(); if (_currToken == JsonToken.START_OBJECT || _currToken == JsonToken.START_ARRAY) {"
+      },
+      {
+        "txt": "_startContainer = true; } return _currToken; } if (_nodeCursor == null) { _closed = true; // if not already set return null; } _currToken = _nodeCursor.nextToken(); if (_currToken != null) {"
+      },
+      {
+        "txt": "if (_currToken == JsonToken.START_OBJECT || _currToken == JsonToken.START_ARRAY) { _startContainer = true; } return _currToken; } _currToken = _nodeCursor.endToken(); _nodeCursor = _nodeCursor.getParent(); return _currToken; } @Override"
+      },
+      {
+        "txt": "public JsonParser skipChildren() throws IOException, JsonParseException { if (_currToken == JsonToken.START_OBJECT) { _startContainer = false; _currToken = JsonToken.END_OBJECT; } else if (_currToken == JsonToken.START_ARRAY) { _startContainer = false; _currToken = JsonToken.END_ARRAY; } return this;"
+      },
+      {
+        "txt": "} @Override public boolean isClosed() { return _closed; } @Override public String getCurrentName() { return (_nodeCursor == null) ? null : _nodeCursor.getCurrentName(); } @Override"
+      },
+      {
+        "txt": "public void overrideCurrentName(String name) { if (_nodeCursor != null) { _nodeCursor.overrideCurrentName(name); } } @Override public JsonStreamContext getParsingContext() { return _nodeCursor; }"
+      },
+      {
+        "txt": "@Override public JsonLocation getTokenLocation() { return JsonLocation.NA; } @Override public JsonLocation getCurrentLocation() { return JsonLocation.NA; } @Override public String getText()"
+      },
+      {
+        "txt": "{ if (_closed) { return null; } switch (_currToken) { case FIELD_NAME: return _nodeCursor.getCurrentName(); case VALUE_STRING: return currentNode().textValue(); case VALUE_NUMBER_INT:"
+      },
+      {
+        "txt": "case VALUE_NUMBER_FLOAT: return String.valueOf(currentNode().numberValue()); case VALUE_EMBEDDED_OBJECT: JsonNode n = currentNode(); if (n != null && n.isBinary()) { return n.asText(); } default: return (_currToken == null) ? null : _currToken.asString(); }"
+      },
+      {
+        "txt": "} @Override public char[] getTextCharacters() throws IOException, JsonParseException { return getText().toCharArray(); } @Override public int getTextLength() throws IOException, JsonParseException { return getText().length(); } @Override"
+      },
+      {
+        "txt": "public int getTextOffset() throws IOException, JsonParseException { return 0; } @Override public boolean hasTextCharacters() { return false; } @Override public NumberType getNumberType() throws IOException { JsonNode n = currentNumericNode();"
+      },
+      {
+        "txt": "return (n == null) ? null : n.numberType(); } @Override public BigInteger getBigIntegerValue() throws IOException { return currentNumericNode().bigIntegerValue(); } @Override public BigDecimal getDecimalValue() throws IOException { return currentNumericNode().decimalValue();"
+      },
+      {
+        "txt": "} @Override public double getDoubleValue() throws IOException { return currentNumericNode().doubleValue(); } @Override public float getFloatValue() throws IOException { return (float) currentNumericNode().doubleValue(); } @Override"
+      },
+      {
+        "txt": "final NumericNode node = (NumericNode) currentNumericNode(); return node.intValue(); } @Override public long getLongValue() throws IOException { final NumericNode node = (NumericNode) currentNumericNode(); <extra_id_0> } @Override public Number getNumberValue() throws IOException { return currentNumericNode().numberValue(); } @Override"
+      },
+      {
+        "txt": "} @Override public Object getEmbeddedObject() { if (!_closed) { JsonNode n = currentNode(); if (n != null) { if (n.isPojo()) { return ((POJONode) n).getPojo(); }"
+      },
+      {
+        "txt": "if (n.isBinary()) { return ((BinaryNode) n).binaryValue(); } } } return null; } @Override public boolean isNaN() { if (!_closed) {"
+      },
+      {
+        "txt": "JsonNode n = currentNode(); if (n instanceof NumericNode) { return ((NumericNode) n).isNaN(); } } return false; } @Override public byte[] getBinaryValue(Base64Variant b64variant) throws IOException, JsonParseException"
+      },
+      {
+        "txt": "{ JsonNode n = currentNode(); if (n != null) { if (n instanceof TextNode) { return ((TextNode) n).getBinaryValue(b64variant); } return n.binaryValue(); } return null; }"
+      },
+      {
+        "txt": "@Override public int readBinaryValue(Base64Variant b64variant, OutputStream out) throws IOException, JsonParseException { byte[] data = getBinaryValue(b64variant); if (data != null) { out.write(data, 0, data.length); return data.length; } return 0;"
+      },
+      {
+        "txt": "} protected JsonNode currentNode() { if (_closed || _nodeCursor == null) { return null; } return _nodeCursor.currentNode(); } protected JsonNode currentNumericNode() throws JsonParseException {"
+      },
+      {
+        "txt": "JsonNode n = currentNode(); if (n == null || !n.isNumber()) { JsonToken t = (n == null) ? null : n.asToken(); throw _constructError(\"Current token (\"+t+\") not numeric, cannot use numeric value accessors\"); } return n; } @Override protected void _handleEOF() throws JsonParseException { _throwInternal(); // should never get called"
+      }
+    ]
+  }
+]

@@ -1,0 +1,68 @@
+[
+  {
+    "id": 284,
+    "file_path": "src/com/google/javascript/jscomp/CodeConsumer.java",
+    "start-bug-line": 245,
+    "end-bug-line": 245,
+    "bug": "if (x < 0 && prev == '-') {",
+    "fix": "if ((x < 0 || negativeZero) && prev == '-') {",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.google.javascript.jscomp; import com.google.javascript.rhino.Node; abstract class CodeConsumer {"
+      },
+      {
+        "txt": "boolean statementNeedsEnded = false; boolean statementStarted = false; boolean sawFunction = false; void startSourceMapping(Node node) { } void endSourceMapping(Node node) { } boolean continueProcessing() { return true; }"
+      },
+      {
+        "txt": "abstract char getLastChar(); void addIdentifier(String identifier) { add(identifier); } abstract void append(String str); void appendBlockStart() { append(\"{\"); } void appendBlockEnd() { append(\"}\");"
+      },
+      {
+        "txt": "} void startNewLine() { } void maybeLineBreak() { maybeCutLine(); } void maybeCutLine() { } void endLine() { }"
+      },
+      {
+        "txt": "void notePreferredLineBreak() { } void beginBlock() { if (statementNeedsEnded) { append(\";\"); maybeLineBreak(); } appendBlockStart(); endLine(); statementNeedsEnded = false;"
+      },
+      {
+        "txt": "} void endBlock() { endBlock(false); } void endBlock(boolean shouldEndLine) { appendBlockEnd(); if (shouldEndLine) { endLine(); } statementNeedsEnded = false;"
+      },
+      {
+        "txt": "} void listSeparator() { add(\",\"); maybeLineBreak(); } void endStatement() { endStatement(false); } void endStatement(boolean needSemiColon) { if (needSemiColon) {"
+      },
+      {
+        "txt": "append(\";\"); maybeLineBreak(); statementNeedsEnded = false; } else if (statementStarted) { statementNeedsEnded = true; } } void maybeEndStatement() { if (statementNeedsEnded) { append(\";\");"
+      },
+      {
+        "txt": "maybeLineBreak(); endLine(); statementNeedsEnded = false; } statementStarted = true; } void endFunction() { endFunction(false); } void endFunction(boolean statementContext) {"
+      },
+      {
+        "txt": "sawFunction = true; if (statementContext) { endLine(); } } void beginCaseBody() { append(\":\"); } void endCaseBody() { }"
+      },
+      {
+        "txt": "void add(String newcode) { maybeEndStatement(); if (newcode.length() == 0) { return; } char c = newcode.charAt(0); if ((isWordChar(c) || c == '\\\\') && isWordChar(getLastChar())) { append(\" \"); } else if (c == '/' && getLastChar() == '/') {"
+      },
+      {
+        "txt": "append(\" \"); } append(newcode); } void appendOp(String op, boolean binOp) { append(op); } void addOp(String op, boolean binOp) { maybeEndStatement(); char first = op.charAt(0);"
+      },
+      {
+        "txt": "char prev = getLastChar(); if ((first == '+' || first == '-') && prev == first) { append(\" \"); } else if (Character.isLetter(first) && isWordChar(prev)) { append(\" \"); } else if (prev == '-' && first == '>') { append(\" \"); } appendOp(op, binOp);"
+      },
+      {
+        "txt": "maybeCutLine(); } } void addNumber(double x) { char prev = getLastChar(); boolean negativeZero = isNegativeZero(x); <extra_id_0> add(\" \"); } if ((long) x == x && !negativeZero) { long value = (long) x; long mantissa = value; int exp = 0;"
+      },
+      {
+        "txt": "long mantissa = value; int exp = 0; if (Math.abs(x) >= 100) { while (mantissa / 10 * Math.pow(10, exp + 1) == value) { mantissa /= 10; exp++; } } if (exp > 2) { add(Long.toString(mantissa) + \"E\" + Integer.toString(exp));"
+      },
+      {
+        "txt": "} else { add(Long.toString(value)); } } else { add(String.valueOf(x)); } } static boolean isNegativeZero(double x) { return x == 0.0 && Math.copySign(1, x) == -1.0; }"
+      },
+      {
+        "txt": "static boolean isWordChar(char ch) { return (ch == '_' || ch == '$' || Character.isLetterOrDigit(ch)); } boolean shouldPreserveExtraBlocks() { return false; } boolean breakAfterBlockFor(Node n, boolean statementContext) { return statementContext;"
+      },
+      {
+        "txt": "} void endFile() {}"
+      }
+    ]
+  }
+]

@@ -1,0 +1,581 @@
+[
+  {
+    "id": 896,
+    "file_path": "src/com/google/javascript/jscomp/CodeGenerator.java",
+    "start-bug-line": 130,
+    "end-bug-line": 135,
+    "bug": "if (last.getType() == type && NodeUtil.isAssociative(type)) { addExpr(first, p, context); cc.addOp(opstr, true); addExpr(last, p, rhsContext); } else if (NodeUtil.isAssignmentOp(n) && NodeUtil.isAssignmentOp(last)) {",
+    "fix": "if (NodeUtil.isAssignmentOp(n) && NodeUtil.isAssignmentOp(last)) {",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.google.javascript.jscomp; import com.google.common.base.Charsets; import com.google.common.base.Preconditions; import com.google.common.collect.Maps; import com.google.javascript.jscomp.CompilerOptions.LanguageMode; import com.google.javascript.rhino.Node; import com.google.javascript.rhino.Token; import com.google.javascript.rhino.TokenStream; import java.io.IOException;"
+      },
+      {
+        "txt": "import java.nio.charset.Charset; import java.nio.charset.CharsetEncoder; import java.util.Map; class CodeGenerator { private static final String LT_ESCAPED = \"\\\\x3c\"; private static final String GT_ESCAPED = \"\\\\x3e\"; private final Map<String, String> escapedJsStrings = Maps.newHashMap(); private static final char[] HEX_CHARS = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f' };"
+      },
+      {
+        "txt": "private final CodeConsumer cc; private final CharsetEncoder outputCharsetEncoder; private final boolean preferSingleQuotes; private final boolean trustedStrings; private final LanguageMode languageMode; private CodeGenerator(CodeConsumer consumer) { cc = consumer; outputCharsetEncoder = null; preferSingleQuotes = false; trustedStrings = true;"
+      },
+      {
+        "txt": "languageMode = LanguageMode.ECMASCRIPT5; } static CodeGenerator forCostEstimation(CodeConsumer consumer) { return new CodeGenerator(consumer); } CodeGenerator( CodeConsumer consumer, CompilerOptions options) { cc = consumer; Charset outputCharset = options.getOutputCharset();"
+      },
+      {
+        "txt": "if (outputCharset == null || outputCharset == Charsets.US_ASCII) { this.outputCharsetEncoder = null; } else { this.outputCharsetEncoder = outputCharset.newEncoder(); } this.preferSingleQuotes = options.preferSingleQuotes; this.trustedStrings = options.trustedStrings; this.languageMode = options.getLanguageOut(); } public void tagAsStrict() {"
+      },
+      {
+        "txt": "add(\"'use strict';\"); } void add(String str) { cc.add(str); } private void addIdentifier(String identifier) { cc.addIdentifier(identifierEscape(identifier)); } void add(Node n) { add(n, Context.OTHER);"
+      },
+      {
+        "txt": "} void add(Node n, Context context) { if (!cc.continueProcessing()) { return; } int type = n.getType(); String opstr = NodeUtil.opToStr(type); int childCount = n.getChildCount(); Node first = n.getFirstChild(); Node last = n.getLastChild();"
+      },
+      {
+        "txt": "Preconditions.checkState( childCount == 2, \"Bad binary operator \\\"%s\\\": expected 2 arguments but got %s\", opstr, childCount); int p = NodeUtil.precedence(type); Context rhsContext = getContextForNoInOperator(context); <extra_id_0> addExpr(first, p, context); cc.addOp(opstr, true); addExpr(last, p, rhsContext); } else { unrollBinaryOperator(n, type, opstr, context, rhsContext, p, p + 1); }"
+      },
+      {
+        "txt": "unrollBinaryOperator(n, type, opstr, context, rhsContext, p, p + 1); } return; } cc.startSourceMapping(n); switch (type) { case Token.TRY: { Preconditions.checkState(first.getNext().isBlock() && !first.getNext().hasMoreThanOneChild()); Preconditions.checkState(childCount >= 2 && childCount <= 3);"
+      },
+      {
+        "txt": "add(\"try\"); add(first, Context.PRESERVE_BLOCK); Node catchblock = first.getNext().getFirstChild(); if (catchblock != null) { add(catchblock); } if (childCount == 3) { add(\"finally\"); add(last, Context.PRESERVE_BLOCK); }"
+      },
+      {
+        "txt": "break; } case Token.CATCH: Preconditions.checkState(childCount == 2); add(\"catch(\"); add(first); add(\")\"); add(last, Context.PRESERVE_BLOCK); break; case Token.THROW:"
+      },
+      {
+        "txt": "Preconditions.checkState(childCount == 1); add(\"throw\"); add(first); cc.endStatement(true); break; case Token.RETURN: add(\"return\"); if (childCount == 1) { add(first); } else {"
+      },
+      {
+        "txt": "Preconditions.checkState(childCount == 0); } cc.endStatement(); break; case Token.VAR: if (first != null) { add(\"var \"); addList(first, false, getContextForNoInOperator(context)); } break;"
+      },
+      {
+        "txt": "case Token.LABEL_NAME: Preconditions.checkState(!n.getString().isEmpty()); addIdentifier(n.getString()); break; case Token.NAME: if (first == null || first.isEmpty()) { addIdentifier(n.getString()); } else { Preconditions.checkState(childCount == 1); addIdentifier(n.getString());"
+      },
+      {
+        "txt": "cc.addOp(\"=\", true); if (first.isComma()) { addExpr(first, NodeUtil.precedence(Token.ASSIGN), Context.OTHER); } else { addExpr(first, 0, getContextForNoInOperator(context)); } } break; case Token.ARRAYLIT: add(\"[\");"
+      },
+      {
+        "txt": "addArrayList(first); add(\"]\"); break; case Token.PARAM_LIST: add(\"(\"); addList(first); add(\")\"); break; case Token.COMMA: Preconditions.checkState(childCount == 2);"
+      },
+      {
+        "txt": "unrollBinaryOperator(n, Token.COMMA, \",\", context, getContextForNoInOperator(context), 0, 0); break; case Token.NUMBER: Preconditions.checkState(childCount == 0); cc.addNumber(n.getDouble()); break; case Token.TYPEOF: case Token.VOID: case Token.NOT:"
+      },
+      {
+        "txt": "case Token.BITNOT: case Token.POS: { Preconditions.checkState(childCount == 1); cc.addOp(NodeUtil.opToStrNoFail(type), false); addExpr(first, NodeUtil.precedence(type), Context.OTHER); break; } case Token.NEG: { Preconditions.checkState(childCount == 1); if (n.getFirstChild().isNumber()) {"
+      },
+      {
+        "txt": "cc.addNumber(-n.getFirstChild().getDouble()); } else { cc.addOp(NodeUtil.opToStrNoFail(type), false); addExpr(first, NodeUtil.precedence(type), Context.OTHER); } break; } case Token.HOOK: { Preconditions.checkState(childCount == 3); int p = NodeUtil.precedence(type);"
+      },
+      {
+        "txt": "Context rhsContext = getContextForNoInOperator(context); addExpr(first, p + 1, context); cc.addOp(\"?\", true); addExpr(first.getNext(), 1, rhsContext); cc.addOp(\":\", true); addExpr(last, 1, rhsContext); break; } case Token.REGEXP: if (!first.isString() ||"
+      },
+      {
+        "txt": "!last.isString()) { throw new Error(\"Expected children to be strings\"); } String regexp = regexpEscape(first.getString(), outputCharsetEncoder); if (childCount == 2) { add(regexp + last.getString()); } else { Preconditions.checkState(childCount == 1); add(regexp); }"
+      },
+      {
+        "txt": "break; case Token.FUNCTION: if (n.getClass() != Node.class) { throw new Error(\"Unexpected Node subclass.\"); } Preconditions.checkState(childCount == 3); boolean funcNeedsParens = (context == Context.START_OF_EXPR); if (funcNeedsParens) { add(\"(\"); }"
+      },
+      {
+        "txt": "add(\"function\"); add(first); add(first.getNext()); add(last, Context.PRESERVE_BLOCK); cc.endFunction(context == Context.STATEMENT); if (funcNeedsParens) { add(\")\"); } break; case Token.GETTER_DEF:"
+      },
+      {
+        "txt": "case Token.SETTER_DEF: Preconditions.checkState(n.getParent().isObjectLit()); Preconditions.checkState(childCount == 1); Preconditions.checkState(first.isFunction()); Preconditions.checkState(first.getFirstChild().getString().isEmpty()); if (type == Token.GETTER_DEF) { Preconditions.checkState(!first.getChildAtIndex(1).hasChildren()); add(\"get \"); } else { Preconditions.checkState(first.getChildAtIndex(1).hasOneChild());"
+      },
+      {
+        "txt": "add(\"set \"); } String name = n.getString(); Node fn = first; Node parameters = fn.getChildAtIndex(1); Node body = fn.getLastChild(); if (!n.isQuotedString() && TokenStream.isJSIdentifier(name) && NodeUtil.isLatin(name)) { add(name);"
+      },
+      {
+        "txt": "} else { double d = getSimpleNumber(name); if (!Double.isNaN(d)) { cc.addNumber(d); } else { addJsString(n); } } add(parameters); add(body, Context.PRESERVE_BLOCK);"
+      },
+      {
+        "txt": "break; case Token.SCRIPT: case Token.BLOCK: { if (n.getClass() != Node.class) { throw new Error(\"Unexpected Node subclass.\"); } boolean preserveBlock = context == Context.PRESERVE_BLOCK; if (preserveBlock) { cc.beginBlock(); }"
+      },
+      {
+        "txt": "boolean preferLineBreaks = type == Token.SCRIPT || (type == Token.BLOCK && !preserveBlock && n.getParent() != null && n.getParent().isScript()); for (Node c = first; c != null; c = c.getNext()) { add(c, Context.STATEMENT); if (c.isVar()) { cc.endStatement();"
+      },
+      {
+        "txt": "} if (c.isFunction()) { cc.maybeLineBreak(); } if (preferLineBreaks) { cc.notePreferredLineBreak(); } } if (preserveBlock) { cc.endBlock(cc.breakAfterBlockFor(n, context == Context.STATEMENT));"
+      },
+      {
+        "txt": "} break; } case Token.FOR: if (childCount == 4) { add(\"for(\"); if (first.isVar()) { add(first, Context.IN_FOR_INIT_CLAUSE); } else { addExpr(first, 0, Context.IN_FOR_INIT_CLAUSE);"
+      },
+      {
+        "txt": "} add(\";\"); add(first.getNext()); add(\";\"); add(first.getNext().getNext()); add(\")\"); addNonEmptyStatement( last, getContextForNonEmptyExpression(context), false); } else { Preconditions.checkState(childCount == 3);"
+      },
+      {
+        "txt": "add(\"for(\"); add(first); add(\"in\"); add(first.getNext()); add(\")\"); addNonEmptyStatement( last, getContextForNonEmptyExpression(context), false); } break; case Token.DO:"
+      },
+      {
+        "txt": "Preconditions.checkState(childCount == 2); add(\"do\"); addNonEmptyStatement(first, Context.OTHER, false); add(\"while(\"); add(last); add(\")\"); cc.endStatement(); break; case Token.WHILE: Preconditions.checkState(childCount == 2);"
+      },
+      {
+        "txt": "add(\"while(\"); add(first); add(\")\"); addNonEmptyStatement( last, getContextForNonEmptyExpression(context), false); break; case Token.EMPTY: Preconditions.checkState(childCount == 0); break; case Token.GETPROP: {"
+      },
+      {
+        "txt": "Preconditions.checkState( childCount == 2, \"Bad GETPROP: expected 2 children, but got %s\", childCount); Preconditions.checkState( last.isString(), \"Bad GETPROP: RHS should be STRING\"); boolean needsParens = (first.isNumber()); if (needsParens) { add(\"(\"); }"
+      },
+      {
+        "txt": "addExpr(first, NodeUtil.precedence(type), context); if (needsParens) { add(\")\"); } if (this.languageMode == LanguageMode.ECMASCRIPT3 && TokenStream.isKeyword(last.getString())) { add(\"[\"); add(last); add(\"]\"); } else {"
+      },
+      {
+        "txt": "add(\".\"); addIdentifier(last.getString()); } break; } case Token.GETELEM: Preconditions.checkState( childCount == 2, \"Bad GETELEM: expected 2 children but got %s\", childCount); addExpr(first, NodeUtil.precedence(type), context);"
+      },
+      {
+        "txt": "add(\"[\"); add(first.getNext()); add(\"]\"); break; case Token.WITH: Preconditions.checkState(childCount == 2); add(\"with(\"); add(first); add(\")\"); addNonEmptyStatement("
+      },
+      {
+        "txt": "last, getContextForNonEmptyExpression(context), false); break; case Token.INC: case Token.DEC: { Preconditions.checkState(childCount == 1); String o = type == Token.INC ? \"++\" : \"--\"; int postProp = n.getIntProp(Node.INCRDECR_PROP); if (postProp != 0) { addExpr(first, NodeUtil.precedence(type), context); cc.addOp(o, false);"
+      },
+      {
+        "txt": "} else { cc.addOp(o, false); add(first); } break; } case Token.CALL: if (isIndirectEval(first) || n.getBooleanProp(Node.FREE_CALL) && NodeUtil.isGet(first)) { add(\"(0,\");"
+      },
+      {
+        "txt": "addExpr(first, NodeUtil.precedence(Token.COMMA), Context.OTHER); add(\")\"); } else { addExpr(first, NodeUtil.precedence(type), context); } add(\"(\"); addList(first.getNext()); add(\")\"); break; case Token.IF:"
+      },
+      {
+        "txt": "boolean hasElse = childCount == 3; boolean ambiguousElseClause = context == Context.BEFORE_DANGLING_ELSE && !hasElse; if (ambiguousElseClause) { cc.beginBlock(); } add(\"if(\"); add(first); add(\")\"); if (hasElse) {"
+      },
+      {
+        "txt": "addNonEmptyStatement( first.getNext(), Context.BEFORE_DANGLING_ELSE, false); add(\"else\"); addNonEmptyStatement( last, getContextForNonEmptyExpression(context), false); } else { addNonEmptyStatement(first.getNext(), Context.OTHER, false); Preconditions.checkState(childCount == 2); } if (ambiguousElseClause) {"
+      },
+      {
+        "txt": "cc.endBlock(); } break; case Token.NULL: Preconditions.checkState(childCount == 0); cc.addConstant(\"null\"); break; case Token.THIS: Preconditions.checkState(childCount == 0); add(\"this\");"
+      },
+      {
+        "txt": "break; case Token.FALSE: Preconditions.checkState(childCount == 0); cc.addConstant(\"false\"); break; case Token.TRUE: Preconditions.checkState(childCount == 0); cc.addConstant(\"true\"); break; case Token.CONTINUE:"
+      },
+      {
+        "txt": "Preconditions.checkState(childCount <= 1); add(\"continue\"); if (childCount == 1) { if (!first.isLabelName()) { throw new Error(\"Unexpected token type. Should be LABEL_NAME.\"); } add(\" \"); add(first); } cc.endStatement();"
+      },
+      {
+        "txt": "break; case Token.DEBUGGER: Preconditions.checkState(childCount == 0); add(\"debugger\"); cc.endStatement(); break; case Token.BREAK: Preconditions.checkState(childCount <= 1); add(\"break\"); if (childCount == 1) {"
+      },
+      {
+        "txt": "if (!first.isLabelName()) { throw new Error(\"Unexpected token type. Should be LABEL_NAME.\"); } add(\" \"); add(first); } cc.endStatement(); break; case Token.EXPR_RESULT: Preconditions.checkState(childCount == 1);"
+      },
+      {
+        "txt": "add(first, Context.START_OF_EXPR); cc.endStatement(); break; case Token.NEW: add(\"new \"); int precedence = NodeUtil.precedence(type); if (NodeUtil.containsType( first, Token.CALL, NodeUtil.MATCH_NOT_FUNCTION)) { precedence = NodeUtil.precedence(first.getType()) + 1; }"
+      },
+      {
+        "txt": "addExpr(first, precedence, Context.OTHER); Node next = first.getNext(); if (next != null) { add(\"(\"); addList(next); add(\")\"); } break; case Token.STRING_KEY: Preconditions.checkState("
+      },
+      {
+        "txt": "childCount == 1, \"Object lit key must have 1 child\"); addJsString(n); break; case Token.STRING: Preconditions.checkState( childCount == 0, \"A string may not have children\"); addJsString(n); break; case Token.DELPROP: Preconditions.checkState(childCount == 1);"
+      },
+      {
+        "txt": "add(\"delete \"); add(first); break; case Token.OBJECTLIT: { boolean needsParens = (context == Context.START_OF_EXPR); if (needsParens) { add(\"(\"); } add(\"{\"); for (Node c = first; c != null; c = c.getNext()) {"
+      },
+      {
+        "txt": "if (c != first) { cc.listSeparator(); } if (c.isGetterDef() || c.isSetterDef()) { add(c); } else { Preconditions.checkState(c.isStringKey()); String key = c.getString(); if (!c.isQuotedString() && !(languageMode == LanguageMode.ECMASCRIPT3"
+      },
+      {
+        "txt": "&& TokenStream.isKeyword(key)) && TokenStream.isJSIdentifier(key) && NodeUtil.isLatin(key)) { add(key); } else { double d = getSimpleNumber(key); if (!Double.isNaN(d)) { cc.addNumber(d); } else { addExpr(c, 1, Context.OTHER);"
+      },
+      {
+        "txt": "} } add(\":\"); addExpr(c.getFirstChild(), 1, Context.OTHER); } } add(\"}\"); if (needsParens) { add(\")\"); }"
+      },
+      {
+        "txt": "break; } case Token.SWITCH: add(\"switch(\"); add(first); add(\")\"); cc.beginBlock(); addAllSiblings(first.getNext()); cc.endBlock(context == Context.STATEMENT); break;"
+      },
+      {
+        "txt": "case Token.CASE: Preconditions.checkState(childCount == 2); add(\"case \"); add(first); addCaseBody(last); break; case Token.DEFAULT_CASE: Preconditions.checkState(childCount == 1); add(\"default\"); addCaseBody(first);"
+      },
+      {
+        "txt": "break; case Token.LABEL: Preconditions.checkState(childCount == 2); if (!first.isLabelName()) { throw new Error(\"Unexpected token type. Should be LABEL_NAME.\"); } add(first); add(\":\"); addNonEmptyStatement( last, getContextForNonEmptyExpression(context), true);"
+      },
+      {
+        "txt": "break; case Token.CAST: add(\"(\"); add(first); add(\")\"); break; default: throw new Error(\"Unknown type \" + type + \"\\n\" + n.toStringTree()); } cc.endSourceMapping(n);"
+      },
+      {
+        "txt": "} private void unrollBinaryOperator( Node n, int op, String opStr, Context context, Context rhsContext, int leftPrecedence, int rightPrecedence) { Node firstNonOperator = n.getFirstChild(); while (firstNonOperator.getType() == op) { firstNonOperator = firstNonOperator.getFirstChild(); } addExpr(firstNonOperator, leftPrecedence, context); Node current = firstNonOperator;"
+      },
+      {
+        "txt": "do { current = current.getParent(); cc.addOp(opStr, true); addExpr(current.getFirstChild().getNext(), rightPrecedence, rhsContext); } while (current != n); } static boolean isSimpleNumber(String s) { int len = s.length(); if (len == 0) { return false;"
+      },
+      {
+        "txt": "} for (int index = 0; index < len; index++) { char c = s.charAt(index); if (c < '0' || c > '9') { return false; } } return len == 1 || s.charAt(0) != '0'; } static double getSimpleNumber(String s) {"
+      },
+      {
+        "txt": "if (isSimpleNumber(s)) { try { long l = Long.parseLong(s); if (l < NodeUtil.MAX_POSITIVE_INTEGER_NUMBER) { return l; } } catch (NumberFormatException e) { } } return Double.NaN;"
+      },
+      {
+        "txt": "} private boolean isIndirectEval(Node n) { return n.isName() && \"eval\".equals(n.getString()) && !n.getBooleanProp(Node.DIRECT_EVAL); } private void addNonEmptyStatement( Node n, Context context, boolean allowNonBlockChild) { Node nodeToProcess = n; if (!allowNonBlockChild && !n.isBlock()) { throw new Error(\"Missing BLOCK child.\");"
+      },
+      {
+        "txt": "} if (n.isBlock()) { int count = getNonEmptyChildCount(n, 2); if (count == 0) { if (cc.shouldPreserveExtraBlocks()) { cc.beginBlock(); cc.endBlock(cc.breakAfterBlockFor(n, context == Context.STATEMENT)); } else { cc.endStatement(true); }"
+      },
+      {
+        "txt": "return; } if (count == 1) { Node firstAndOnlyChild = getFirstNonEmptyChild(n); boolean alwaysWrapInBlock = cc.shouldPreserveExtraBlocks(); if (alwaysWrapInBlock || isOneExactlyFunctionOrDo(firstAndOnlyChild)) { cc.beginBlock(); add(firstAndOnlyChild, Context.STATEMENT); cc.maybeLineBreak(); cc.endBlock(cc.breakAfterBlockFor(n, context == Context.STATEMENT));"
+      },
+      {
+        "txt": "return; } else { nodeToProcess = firstAndOnlyChild; } } if (count > 1) { context = Context.PRESERVE_BLOCK; } } if (nodeToProcess.isEmpty()) {"
+      },
+      {
+        "txt": "cc.endStatement(true); } else { add(nodeToProcess, context); if (nodeToProcess.isVar()) { cc.endStatement(); } } } private boolean isOneExactlyFunctionOrDo(Node n) { if (n.isLabel()) {"
+      },
+      {
+        "txt": "Node labeledStatement = n.getLastChild(); if (!labeledStatement.isBlock()) { return isOneExactlyFunctionOrDo(labeledStatement); } else { if (getNonEmptyChildCount(n, 2) == 1) { return isOneExactlyFunctionOrDo(getFirstNonEmptyChild(n)); } else { return false; } }"
+      },
+      {
+        "txt": "} else { return (n.isFunction() || n.isDo()); } } private void addExpr(Node n, int minPrecedence, Context context) { if ((NodeUtil.precedence(n.getType()) < minPrecedence) || ((context == Context.IN_FOR_INIT_CLAUSE) && n.isIn())){ add(\"(\"); add(n, Context.OTHER); add(\")\");"
+      },
+      {
+        "txt": "} else { add(n, context); } } void addList(Node firstInList) { addList(firstInList, true, Context.OTHER); } void addList(Node firstInList, boolean isArrayOrFunctionArgument) { addList(firstInList, isArrayOrFunctionArgument, Context.OTHER); }"
+      },
+      {
+        "txt": "void addList(Node firstInList, boolean isArrayOrFunctionArgument, Context lhsContext) { for (Node n = firstInList; n != null; n = n.getNext()) { boolean isFirst = n == firstInList; if (isFirst) { addExpr(n, isArrayOrFunctionArgument ? 1 : 0, lhsContext); } else { cc.listSeparator(); addExpr(n, isArrayOrFunctionArgument ? 1 : 0, getContextForNoInOperator(lhsContext));"
+      },
+      {
+        "txt": "} } } void addArrayList(Node firstInList) { boolean lastWasEmpty = false; for (Node n = firstInList; n != null; n = n.getNext()) { if (n != firstInList) { cc.listSeparator(); } addExpr(n, 1, Context.OTHER);"
+      },
+      {
+        "txt": "lastWasEmpty = n.isEmpty(); } if (lastWasEmpty) { cc.listSeparator(); } } void addCaseBody(Node caseBody) { cc.beginCaseBody(); add(caseBody); cc.endCaseBody();"
+      },
+      {
+        "txt": "} void addAllSiblings(Node n) { for (Node c = n; c != null; c = c.getNext()) { add(c); } } private void addJsString(Node n) { String s = n.getString(); boolean useSlashV = n.getBooleanProp(Node.SLASH_V); if (useSlashV) {"
+      },
+      {
+        "txt": "add(jsString(n.getString(), useSlashV)); } else { String cached = escapedJsStrings.get(s); if (cached == null) { cached = jsString(n.getString(), useSlashV); escapedJsStrings.put(s, cached); } add(cached); } }"
+      },
+      {
+        "txt": "private String jsString(String s, boolean useSlashV) { int singleq = 0, doubleq = 0; for (int i = 0; i < s.length(); i++) { switch (s.charAt(i)) { case '\"': doubleq++; break; case '\\'': singleq++; break; } } String doublequote, singlequote; char quote;"
+      },
+      {
+        "txt": "if (preferSingleQuotes ? (singleq <= doubleq) : (singleq < doubleq)) { quote = '\\''; doublequote = \"\\\"\"; singlequote = \"\\\\\\'\"; } else { quote = '\\\"'; doublequote = \"\\\\\\\"\"; singlequote = \"\\'\"; }"
+      },
+      {
+        "txt": "return strEscape(s, quote, doublequote, singlequote, \"\\\\\\\\\", outputCharsetEncoder, useSlashV, false); } String regexpEscape(String s, CharsetEncoder outputCharsetEncoder) { return strEscape(s, '/', \"\\\"\", \"'\", \"\\\\\", outputCharsetEncoder, false, true); } String escapeToDoubleQuotedJsString(String s) { return strEscape(s, '\"', \"\\\\\\\"\", \"\\'\", \"\\\\\\\\\", null, false, false); } they want Latin/ASCII characters only."
+      },
+      {
+        "txt": "String regexpEscape(String s) { return regexpEscape(s, null); } private String strEscape( String s, char quote, String doublequoteEscape, String singlequoteEscape, String backslashEscape, CharsetEncoder outputCharsetEncoder,"
+      },
+      {
+        "txt": "boolean useSlashV, boolean isRegexp) { StringBuilder sb = new StringBuilder(s.length() + 2); sb.append(quote); for (int i = 0; i < s.length(); i++) { char c = s.charAt(i); switch (c) { case '\\0': sb.append(\"\\\\x00\"); break; case '\\u000B': if (useSlashV) {"
+      },
+      {
+        "txt": "sb.append(\"\\\\v\"); } else { sb.append(\"\\\\x0B\"); } break; case '\\b': sb.append(\"\\\\b\"); break; case '\\f': sb.append(\"\\\\f\"); break; case '\\n': sb.append(\"\\\\n\"); break; case '\\r': sb.append(\"\\\\r\"); break; case '\\t': sb.append(\"\\\\t\"); break;"
+      },
+      {
+        "txt": "case '\\\\': sb.append(backslashEscape); break; case '\\\"': sb.append(doublequoteEscape); break; case '\\'': sb.append(singlequoteEscape); break; case '\\u2028': sb.append(\"\\\\u2028\"); break; case '\\u2029': sb.append(\"\\\\u2029\"); break; case '=': if (trustedStrings || isRegexp) { sb.append(c); } else { sb.append(\"\\\\x3d\");"
+      },
+      {
+        "txt": "} break; case '&': if (trustedStrings || isRegexp) { sb.append(c); } else { sb.append(\"\\\\x26\"); } break; case '>':"
+      },
+      {
+        "txt": "if (!trustedStrings && !isRegexp) { sb.append(GT_ESCAPED); break; } if (i >= 2 && ((s.charAt(i - 1) == '-' && s.charAt(i - 2) == '-') || (s.charAt(i - 1) == ']' && s.charAt(i - 2) == ']'))) { sb.append(GT_ESCAPED); } else { sb.append(c);"
+      },
+      {
+        "txt": "} break; case '<': if (!trustedStrings && !isRegexp) { sb.append(LT_ESCAPED); break; } final String endScript = \"/script\"; final String startComment = \"!--\"; if (s.regionMatches(true, i + 1, endScript, 0,"
+      },
+      {
+        "txt": "endScript.length())) { sb.append(LT_ESCAPED); } else if (s.regionMatches(false, i + 1, startComment, 0, startComment.length())) { sb.append(LT_ESCAPED); } else { sb.append(c); } break; default:"
+      },
+      {
+        "txt": "if (outputCharsetEncoder != null) { if (outputCharsetEncoder.canEncode(c)) { sb.append(c); } else { appendHexJavaScriptRepresentation(sb, c); } } else { if (c > 0x1f && c < 0x7f) { sb.append(c); } else {"
+      },
+      {
+        "txt": "appendHexJavaScriptRepresentation(sb, c); } } } } sb.append(quote); return sb.toString(); } static String identifierEscape(String s) { if (NodeUtil.isLatin(s)) {"
+      },
+      {
+        "txt": "return s; } StringBuilder sb = new StringBuilder(); for (int i = 0; i < s.length(); i++) { char c = s.charAt(i); if (c > 0x1F && c < 0x7F) { sb.append(c); } else { appendHexJavaScriptRepresentation(sb, c); }"
+      },
+      {
+        "txt": "} return sb.toString(); } private static int getNonEmptyChildCount(Node n, int maxCount) { int i = 0; Node c = n.getFirstChild(); for (; c != null && i < maxCount; c = c.getNext()) { if (c.isBlock()) { i += getNonEmptyChildCount(c, maxCount - i); } else if (!c.isEmpty()) {"
+      },
+      {
+        "txt": "i++; } } return i; } private static Node getFirstNonEmptyChild(Node n) { for (Node c = n.getFirstChild(); c != null; c = c.getNext()) { if (c.isBlock()) { Node result = getFirstNonEmptyChild(c); if (result != null) {"
+      },
+      {
+        "txt": "return result; } } else if (!c.isEmpty()) { return c; } } return null; } enum Context { STATEMENT,"
+      },
+      {
+        "txt": "BEFORE_DANGLING_ELSE, // a hack to resolve the else-clause ambiguity START_OF_EXPR, PRESERVE_BLOCK, IN_FOR_INIT_CLAUSE, OTHER } private Context getContextForNonEmptyExpression(Context currentContext) { return currentContext == Context.BEFORE_DANGLING_ELSE ? Context.BEFORE_DANGLING_ELSE : Context.OTHER; }"
+      },
+      {
+        "txt": "private Context getContextForNoInOperator(Context context) { return (context == Context.IN_FOR_INIT_CLAUSE ? Context.IN_FOR_INIT_CLAUSE : Context.OTHER); } private static void appendHexJavaScriptRepresentation( StringBuilder sb, char c) { try { appendHexJavaScriptRepresentation(c, sb); } catch (IOException ex) { throw new RuntimeException(ex);"
+      },
+      {
+        "txt": "} } private static void appendHexJavaScriptRepresentation( int codePoint, Appendable out) throws IOException { if (Character.isSupplementaryCodePoint(codePoint)) { char[] surrogates = Character.toChars(codePoint); appendHexJavaScriptRepresentation(surrogates[0], out); appendHexJavaScriptRepresentation(surrogates[1], out); return;"
+      },
+      {
+        "txt": "} out.append(\"\\\\u\") .append(HEX_CHARS[(codePoint >>> 12) & 0xf]) .append(HEX_CHARS[(codePoint >>> 8) & 0xf]) .append(HEX_CHARS[(codePoint >>> 4) & 0xf]) .append(HEX_CHARS[codePoint & 0xf]); }"
+      }
+    ]
+  },
+  {
+    "id": 897,
+    "file_path": "src/com/google/javascript/jscomp/PeepholeSubstituteAlternateSyntax.java",
+    "start-bug-line": 102,
+    "end-bug-line": 102,
+    "bug": "",
+    "fix": "case Token.MUL: case Token.AND: case Token.OR: case Token.BITOR: case Token.BITXOR: case Token.BITAND: return tryRotateAssociativeOperator(node);",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.google.javascript.jscomp; import com.google.common.base.Joiner; import com.google.common.base.Preconditions; import com.google.common.collect.ImmutableSet; import com.google.javascript.jscomp.CodingConvention.Bind;"
+      },
+      {
+        "txt": "import com.google.javascript.rhino.IR; import com.google.javascript.rhino.Node; import com.google.javascript.rhino.Token; import java.util.regex.Pattern; class PeepholeSubstituteAlternateSyntax extends AbstractPeepholeOptimization { private static final CodeGenerator REGEXP_ESCAPER = CodeGenerator.forCostEstimation( null /* blow up if we try to produce code */); private final boolean late;"
+      },
+      {
+        "txt": "private static final int STRING_SPLIT_OVERHEAD = \".split('.')\".length(); static final DiagnosticType INVALID_REGULAR_EXPRESSION_FLAGS = DiagnosticType.warning( \"JSC_INVALID_REGULAR_EXPRESSION_FLAGS\", \"Invalid flags to RegExp constructor: {0}\"); PeepholeSubstituteAlternateSyntax(boolean late) { this.late = late; } @Override @SuppressWarnings(\"fallthrough\")"
+      },
+      {
+        "txt": "public Node optimizeSubtree(Node node) { switch(node.getType()) { case Token.TRUE: case Token.FALSE: return reduceTrueFalse(node); case Token.NEW: node = tryFoldStandardConstructors(node); if (!node.isCall()) { return node; }"
+      },
+      {
+        "txt": "case Token.CALL: Node result = tryFoldLiteralConstructor(node); if (result == node) { result = tryFoldSimpleFunctionCall(node); if (result == node) { result = tryFoldImmediateCallToBoundFunction(node); } } return result; case Token.RETURN:"
+      },
+      {
+        "txt": "case Token.COMMA: return trySplitComma(node); case Token.NAME: return tryReplaceUndefined(node); case Token.ARRAYLIT: return tryMinimizeArrayLiteral(node); <extra_id_0> default: return node; //Nothing changed } } private Node tryFoldSimpleFunctionCall(Node n) { Preconditions.checkState(n.isCall());"
+      },
+      {
+        "txt": "private Node tryFoldSimpleFunctionCall(Node n) { Preconditions.checkState(n.isCall()); Node callTarget = n.getFirstChild(); if (callTarget != null && callTarget.isName() && callTarget.getString().equals(\"String\")) { Node value = callTarget.getNext(); if (value != null && value.getNext() == null && NodeUtil.isImmutableValue(value)) { Node addition = IR.add( IR.string(\"\").srcref(callTarget),"
+      },
+      {
+        "txt": "value.detachFromParent()); n.getParent().replaceChild(n, addition); reportCodeChange(); return addition; } } return n; } private Node tryFoldImmediateCallToBoundFunction(Node n) { Preconditions.checkState(n.isCall());"
+      },
+      {
+        "txt": "Node callTarget = n.getFirstChild(); Bind bind = getCodingConvention().describeFunctionBind(callTarget, false); if (bind != null) { bind.target.detachFromParent(); n.replaceChild(callTarget, bind.target); callTarget = bind.target; addParameterAfter(bind.parameters, callTarget); if (bind.thisValue != null && !NodeUtil.isUndefined(bind.thisValue)) { Node newCallTarget = IR.getprop( callTarget.cloneTree(),"
+      },
+      {
+        "txt": "IR.string(\"call\").srcref(callTarget)); n.replaceChild(callTarget, newCallTarget); n.addChildAfter(bind.thisValue.cloneTree(), newCallTarget); n.putBooleanProp(Node.FREE_CALL, false); } else { n.putBooleanProp(Node.FREE_CALL, true); } reportCodeChange(); } return n;"
+      },
+      {
+        "txt": "} private void addParameterAfter(Node parameterList, Node after) { if (parameterList != null) { addParameterAfter(parameterList.getNext(), after); after.getParent().addChildAfter(parameterList.cloneTree(), after); } } private Node trySplitComma(Node n) { if (late) { return n;"
+      },
+      {
+        "txt": "} Node parent = n.getParent(); Node left = n.getFirstChild(); Node right = n.getLastChild(); if (parent.isExprResult() && !parent.getParent().isLabel()) { n.detachChildren(); parent.replaceChild(n, left); Node newStatement = IR.exprResult(right); newStatement.copyInformationFrom(n);"
+      },
+      {
+        "txt": "parent.getParent().addChildAfter(newStatement, parent); reportCodeChange(); return left; } else { return n; } } private Node tryReplaceUndefined(Node n) { if (isASTNormalized() && NodeUtil.isUndefined(n)"
+      },
+      {
+        "txt": "&& !NodeUtil.isLValue(n)) { Node replacement = NodeUtil.newUndefinedNode(n); n.getParent().replaceChild(n, replacement); reportCodeChange(); return replacement; } return n; } private Node tryReduceReturn(Node n) { Node result = n.getFirstChild();"
+      },
+      {
+        "txt": "if (result != null) { switch (result.getType()) { case Token.VOID: Node operand = result.getFirstChild(); if (!mayHaveSideEffects(operand)) { n.removeFirstChild(); reportCodeChange(); } break; case Token.NAME:"
+      },
+      {
+        "txt": "String name = result.getString(); if (name.equals(\"undefined\")) { n.removeFirstChild(); reportCodeChange(); } break; } } return n; }"
+      },
+      {
+        "txt": "private static final ImmutableSet<String> STANDARD_OBJECT_CONSTRUCTORS = ImmutableSet.of( \"Object\", \"Array\", \"RegExp\", \"Error\" ); private Node tryFoldStandardConstructors(Node n) { Preconditions.checkState(n.isNew()); if (isASTNormalized()) {"
+      },
+      {
+        "txt": "if (n.getFirstChild().isName()) { String className = n.getFirstChild().getString(); if (STANDARD_OBJECT_CONSTRUCTORS.contains(className)) { n.setType(Token.CALL); n.putBooleanProp(Node.FREE_CALL, true); reportCodeChange(); } } } return n;"
+      },
+      {
+        "txt": "} private Node tryFoldLiteralConstructor(Node n) { Preconditions.checkArgument(n.isCall() || n.isNew()); Node constructorNameNode = n.getFirstChild(); Node newLiteralNode = null; if (isASTNormalized() && Token.NAME == constructorNameNode.getType()) { String className = constructorNameNode.getString(); if (\"RegExp\".equals(className)) { return tryFoldRegularExpressionConstructor(n);"
+      },
+      {
+        "txt": "} else { boolean constructorHasArgs = constructorNameNode.getNext() != null; if (\"Object\".equals(className) && !constructorHasArgs) { newLiteralNode = IR.objectlit(); } else if (\"Array\".equals(className)) { Node arg0 = constructorNameNode.getNext(); FoldArrayAction action = isSafeToFoldArrayConstructor(arg0); if (action == FoldArrayAction.SAFE_TO_FOLD_WITH_ARGS || action == FoldArrayAction.SAFE_TO_FOLD_WITHOUT_ARGS) { newLiteralNode = IR.arraylit();"
+      },
+      {
+        "txt": "n.removeChildren(); if (action == FoldArrayAction.SAFE_TO_FOLD_WITH_ARGS) { newLiteralNode.addChildrenToFront(arg0); } } } if (newLiteralNode != null) { n.getParent().replaceChild(n, newLiteralNode); reportCodeChange(); return newLiteralNode;"
+      },
+      {
+        "txt": "} } } return n; } private static enum FoldArrayAction { NOT_SAFE_TO_FOLD, SAFE_TO_FOLD_WITH_ARGS, SAFE_TO_FOLD_WITHOUT_ARGS} private static FoldArrayAction isSafeToFoldArrayConstructor(Node arg) { FoldArrayAction action = FoldArrayAction.NOT_SAFE_TO_FOLD; if (arg == null) {"
+      },
+      {
+        "txt": "action = FoldArrayAction.SAFE_TO_FOLD_WITHOUT_ARGS; } else if (arg.getNext() != null) { action = FoldArrayAction.SAFE_TO_FOLD_WITH_ARGS; } else { switch (arg.getType()) { case Token.STRING: action = FoldArrayAction.SAFE_TO_FOLD_WITH_ARGS; break; case Token.NUMBER: if (arg.getDouble() == 0) {"
+      },
+      {
+        "txt": "action = FoldArrayAction.SAFE_TO_FOLD_WITHOUT_ARGS; } break; case Token.ARRAYLIT: action = FoldArrayAction.SAFE_TO_FOLD_WITH_ARGS; break; default: } } return action;"
+      },
+      {
+        "txt": "} private Node tryFoldRegularExpressionConstructor(Node n) { Node parent = n.getParent(); Node constructor = n.getFirstChild(); Node pattern = constructor.getNext(); // e.g. ^foobar$ Node flags = null != pattern ? pattern.getNext() : null; // e.g. gi if (null == pattern || (null != flags && null != flags.getNext())) { return n; } if (// is pattern folded"
+      },
+      {
+        "txt": "pattern.isString() && !\"\".equals(pattern.getString()) && pattern.getString().length() < 100 && (null == flags || flags.isString()) && (isEcmaScript5OrGreater() || !containsUnicodeEscape(pattern.getString()))) { pattern = makeForwardSlashBracketSafe(pattern); Node regexLiteral; if (null == flags || \"\".equals(flags.getString())) { regexLiteral = IR.regexp(pattern);"
+      },
+      {
+        "txt": "} else { if (!areValidRegexpFlags(flags.getString())) { report(INVALID_REGULAR_EXPRESSION_FLAGS, flags); return n; } if (!areSafeFlagsToFold(flags.getString())) { return n; } n.removeChild(flags); regexLiteral = IR.regexp(pattern, flags);"
+      },
+      {
+        "txt": "} parent.replaceChild(n, regexLiteral); reportCodeChange(); return regexLiteral; } return n; } private Node reduceTrueFalse(Node n) { if (late) { Node not = IR.not(IR.number(n.isTrue() ? 0 : 1));"
+      },
+      {
+        "txt": "not.copyInformationFromForTree(n); n.getParent().replaceChild(n, not); reportCodeChange(); return not; } return n; } private Node tryMinimizeArrayLiteral(Node n) { boolean allStrings = true; for (Node cur = n.getFirstChild(); cur != null; cur = cur.getNext()) {"
+      },
+      {
+        "txt": "if (!cur.isString()) { allStrings = false; } } if (allStrings) { return tryMinimizeStringArrayLiteral(n); } else { return n; } }"
+      },
+      {
+        "txt": "private Node tryMinimizeStringArrayLiteral(Node n) { if (!late) { return n; } int numElements = n.getChildCount(); int saving = numElements * 2 - STRING_SPLIT_OVERHEAD; if (saving <= 0) { return n; } String[] strings = new String[n.getChildCount()];"
+      },
+      {
+        "txt": "int idx = 0; for (Node cur = n.getFirstChild(); cur != null; cur = cur.getNext()) { strings[idx++] = cur.getString(); } String delimiter = pickDelimiter(strings); if (delimiter != null) { String template = Joiner.on(delimiter).join(strings); Node call = IR.call( IR.getprop( IR.string(template),"
+      },
+      {
+        "txt": "IR.string(\"split\")), IR.string(\"\" + delimiter)); call.copyInformationFromForTree(n); n.getParent().replaceChild(n, call); reportCodeChange(); return call; } return n; } private static String pickDelimiter(String[] strings) {"
+      },
+      {
+        "txt": "boolean allLength1 = true; for (String s : strings) { if (s.length() != 1) { allLength1 = false; break; } } if (allLength1) { return \"\"; }"
+      },
+      {
+        "txt": "String[] delimiters = new String[]{\" \", \";\", \",\", \"{\", \"}\", null}; int i = 0; NEXT_DELIMITER: for (; delimiters[i] != null; i++) { for (String cur : strings) { if (cur.contains(delimiters[i])) { continue NEXT_DELIMITER; } } break; }"
+      },
+      {
+        "txt": "return delimiters[i]; } private static final Pattern REGEXP_FLAGS_RE = Pattern.compile(\"^[gmi]*$\"); private static boolean areValidRegexpFlags(String flags) { return REGEXP_FLAGS_RE.matcher(flags).matches(); } private boolean areSafeFlagsToFold(String flags) { return isEcmaScript5OrGreater() || flags.indexOf('g') < 0; } private static Node makeForwardSlashBracketSafe(Node n) {"
+      },
+      {
+        "txt": "String s = n.getString(); StringBuilder sb = null; int pos = 0; boolean isEscaped = false, inCharset = false; for (int i = 0; i < s.length(); ++i) { char ch = s.charAt(i); switch (ch) { case '\\\\': isEscaped = !isEscaped; continue;"
+      },
+      {
+        "txt": "case '/': if (!isEscaped && !inCharset) { if (null == sb) { sb = new StringBuilder(s.length() + 16); } sb.append(s, pos, i).append('\\\\'); pos = i; } break; case '[': if (!isEscaped) { inCharset = true;"
+      },
+      {
+        "txt": "} break; case ']': if (!isEscaped) { inCharset = false; } break; case '\\r': case '\\n': case '\\u2028': case '\\u2029': if (null == sb) { sb = new StringBuilder(s.length() + 16); } if (isEscaped) {"
+      },
+      {
+        "txt": "sb.append(s, pos, i - 1); } else { sb.append(s, pos, i); } switch (ch) { case '\\r': sb.append(\"\\\\r\"); break; case '\\n': sb.append(\"\\\\n\"); break; case '\\u2028': sb.append(\"\\\\u2028\"); break; case '\\u2029': sb.append(\"\\\\u2029\"); break; }"
+      },
+      {
+        "txt": "pos = i + 1; break; } isEscaped = false; } if (null == sb) { return n.cloneTree(); } sb.append(s, pos, s.length()); return IR.string(sb.toString()).srcref(n); } static boolean containsUnicodeEscape(String s) {"
+      },
+      {
+        "txt": "String esc = REGEXP_ESCAPER.regexpEscape(s); for (int i = -1; (i = esc.indexOf(\"\\\\u\", i + 1)) >= 0;) { int nSlashes = 0; while (i - nSlashes > 0 && '\\\\' == esc.charAt(i - nSlashes - 1)) { ++nSlashes; } if (0 == (nSlashes & 1)) { return true; } } return false; }"
+      }
+    ]
+  },
+  {
+    "id": 898,
+    "file_path": "src/com/google/javascript/jscomp/PeepholeSubstituteAlternateSyntax.java",
+    "start-bug-line": 108,
+    "end-bug-line": 108,
+    "bug": "",
+    "fix": "private Node tryRotateAssociativeOperator(Node n) { if (!late) { return n; } Preconditions.checkArgument(NodeUtil.isAssociative(n.getType())); Node rhs = n.getLastChild(); if (n.getType() == rhs.getType()) { Node parent = n.getParent(); Node first = n.getFirstChild().detachFromParent(); Node second = rhs.getFirstChild().detachFromParent(); Node third = rhs.getLastChild().detachFromParent(); Node newLhs = new Node(n.getType(), first, second) .copyInformationFrom(n); Node newRoot = new Node(rhs.getType(), newLhs, third) .copyInformationFrom(rhs); parent.replaceChild(n, newRoot); reportCodeChange(); return newRoot; } return n; }",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.google.javascript.jscomp; import com.google.common.base.Joiner; import com.google.common.base.Preconditions; import com.google.common.collect.ImmutableSet; import com.google.javascript.jscomp.CodingConvention.Bind; import com.google.javascript.rhino.IR; import com.google.javascript.rhino.Node; import com.google.javascript.rhino.Token; import java.util.regex.Pattern;"
+      },
+      {
+        "txt": "class PeepholeSubstituteAlternateSyntax extends AbstractPeepholeOptimization { private static final CodeGenerator REGEXP_ESCAPER = CodeGenerator.forCostEstimation( null /* blow up if we try to produce code */); private final boolean late; private static final int STRING_SPLIT_OVERHEAD = \".split('.')\".length(); static final DiagnosticType INVALID_REGULAR_EXPRESSION_FLAGS = DiagnosticType.warning( \"JSC_INVALID_REGULAR_EXPRESSION_FLAGS\","
+      },
+      {
+        "txt": "\"Invalid flags to RegExp constructor: {0}\"); PeepholeSubstituteAlternateSyntax(boolean late) { this.late = late; } @Override @SuppressWarnings(\"fallthrough\") public Node optimizeSubtree(Node node) { switch(node.getType()) { case Token.TRUE: case Token.FALSE:"
+      },
+      {
+        "txt": "return reduceTrueFalse(node); case Token.NEW: node = tryFoldStandardConstructors(node); if (!node.isCall()) { return node; } case Token.CALL: Node result = tryFoldLiteralConstructor(node); if (result == node) { result = tryFoldSimpleFunctionCall(node);"
+      },
+      {
+        "txt": "if (result == node) { result = tryFoldImmediateCallToBoundFunction(node); } } return result; case Token.RETURN: return tryReduceReturn(node); case Token.COMMA: return trySplitComma(node); case Token.NAME:"
+      },
+      {
+        "txt": "case Token.ARRAYLIT: return tryMinimizeArrayLiteral(node); default: return node; //Nothing changed } } <extra_id_0> private Node tryFoldSimpleFunctionCall(Node n) { Preconditions.checkState(n.isCall()); Node callTarget = n.getFirstChild(); if (callTarget != null && callTarget.isName() && callTarget.getString().equals(\"String\")) { Node value = callTarget.getNext();"
+      },
+      {
+        "txt": "callTarget.getString().equals(\"String\")) { Node value = callTarget.getNext(); if (value != null && value.getNext() == null && NodeUtil.isImmutableValue(value)) { Node addition = IR.add( IR.string(\"\").srcref(callTarget), value.detachFromParent()); n.getParent().replaceChild(n, addition); reportCodeChange(); return addition;"
+      },
+      {
+        "txt": "} } return n; } private Node tryFoldImmediateCallToBoundFunction(Node n) { Preconditions.checkState(n.isCall()); Node callTarget = n.getFirstChild(); Bind bind = getCodingConvention().describeFunctionBind(callTarget, false); if (bind != null) { bind.target.detachFromParent();"
+      },
+      {
+        "txt": "n.replaceChild(callTarget, bind.target); callTarget = bind.target; addParameterAfter(bind.parameters, callTarget); if (bind.thisValue != null && !NodeUtil.isUndefined(bind.thisValue)) { Node newCallTarget = IR.getprop( callTarget.cloneTree(), IR.string(\"call\").srcref(callTarget)); n.replaceChild(callTarget, newCallTarget); n.addChildAfter(bind.thisValue.cloneTree(), newCallTarget); n.putBooleanProp(Node.FREE_CALL, false);"
+      },
+      {
+        "txt": "} else { n.putBooleanProp(Node.FREE_CALL, true); } reportCodeChange(); } return n; } private void addParameterAfter(Node parameterList, Node after) { if (parameterList != null) { addParameterAfter(parameterList.getNext(), after);"
+      },
+      {
+        "txt": "after.getParent().addChildAfter(parameterList.cloneTree(), after); } } private Node trySplitComma(Node n) { if (late) { return n; } Node parent = n.getParent(); Node left = n.getFirstChild(); Node right = n.getLastChild();"
+      },
+      {
+        "txt": "if (parent.isExprResult() && !parent.getParent().isLabel()) { n.detachChildren(); parent.replaceChild(n, left); Node newStatement = IR.exprResult(right); newStatement.copyInformationFrom(n); parent.getParent().addChildAfter(newStatement, parent); reportCodeChange(); return left; } else {"
+      },
+      {
+        "txt": "return n; } } private Node tryReplaceUndefined(Node n) { if (isASTNormalized() && NodeUtil.isUndefined(n) && !NodeUtil.isLValue(n)) { Node replacement = NodeUtil.newUndefinedNode(n); n.getParent().replaceChild(n, replacement); reportCodeChange();"
+      },
+      {
+        "txt": "return replacement; } return n; } private Node tryReduceReturn(Node n) { Node result = n.getFirstChild(); if (result != null) { switch (result.getType()) { case Token.VOID: Node operand = result.getFirstChild();"
+      },
+      {
+        "txt": "if (!mayHaveSideEffects(operand)) { n.removeFirstChild(); reportCodeChange(); } break; case Token.NAME: String name = result.getString(); if (name.equals(\"undefined\")) { n.removeFirstChild(); reportCodeChange();"
+      },
+      {
+        "txt": "} break; } } return n; } private static final ImmutableSet<String> STANDARD_OBJECT_CONSTRUCTORS = ImmutableSet.of( \"Object\", \"Array\","
+      },
+      {
+        "txt": "\"RegExp\", \"Error\" ); private Node tryFoldStandardConstructors(Node n) { Preconditions.checkState(n.isNew()); if (isASTNormalized()) { if (n.getFirstChild().isName()) { String className = n.getFirstChild().getString(); if (STANDARD_OBJECT_CONSTRUCTORS.contains(className)) { n.setType(Token.CALL);"
+      },
+      {
+        "txt": "n.putBooleanProp(Node.FREE_CALL, true); reportCodeChange(); } } } return n; } private Node tryFoldLiteralConstructor(Node n) { Preconditions.checkArgument(n.isCall() || n.isNew());"
+      },
+      {
+        "txt": "Node constructorNameNode = n.getFirstChild(); Node newLiteralNode = null; if (isASTNormalized() && Token.NAME == constructorNameNode.getType()) { String className = constructorNameNode.getString(); if (\"RegExp\".equals(className)) { return tryFoldRegularExpressionConstructor(n); } else { boolean constructorHasArgs = constructorNameNode.getNext() != null; if (\"Object\".equals(className) && !constructorHasArgs) { newLiteralNode = IR.objectlit();"
+      },
+      {
+        "txt": "} else if (\"Array\".equals(className)) { Node arg0 = constructorNameNode.getNext(); FoldArrayAction action = isSafeToFoldArrayConstructor(arg0); if (action == FoldArrayAction.SAFE_TO_FOLD_WITH_ARGS || action == FoldArrayAction.SAFE_TO_FOLD_WITHOUT_ARGS) { newLiteralNode = IR.arraylit(); n.removeChildren(); if (action == FoldArrayAction.SAFE_TO_FOLD_WITH_ARGS) { newLiteralNode.addChildrenToFront(arg0); }"
+      },
+      {
+        "txt": "} } if (newLiteralNode != null) { n.getParent().replaceChild(n, newLiteralNode); reportCodeChange(); return newLiteralNode; } } } return n;"
+      },
+      {
+        "txt": "} private static enum FoldArrayAction { NOT_SAFE_TO_FOLD, SAFE_TO_FOLD_WITH_ARGS, SAFE_TO_FOLD_WITHOUT_ARGS} private static FoldArrayAction isSafeToFoldArrayConstructor(Node arg) { FoldArrayAction action = FoldArrayAction.NOT_SAFE_TO_FOLD; if (arg == null) { action = FoldArrayAction.SAFE_TO_FOLD_WITHOUT_ARGS; } else if (arg.getNext() != null) { action = FoldArrayAction.SAFE_TO_FOLD_WITH_ARGS; } else {"
+      },
+      {
+        "txt": "switch (arg.getType()) { case Token.STRING: action = FoldArrayAction.SAFE_TO_FOLD_WITH_ARGS; break; case Token.NUMBER: if (arg.getDouble() == 0) { action = FoldArrayAction.SAFE_TO_FOLD_WITHOUT_ARGS; } break; case Token.ARRAYLIT:"
+      },
+      {
+        "txt": "action = FoldArrayAction.SAFE_TO_FOLD_WITH_ARGS; break; default: } } return action; } private Node tryFoldRegularExpressionConstructor(Node n) { Node parent = n.getParent(); Node constructor = n.getFirstChild();"
+      },
+      {
+        "txt": "Node pattern = constructor.getNext(); // e.g. ^foobar$ Node flags = null != pattern ? pattern.getNext() : null; // e.g. gi if (null == pattern || (null != flags && null != flags.getNext())) { return n; } if (// is pattern folded pattern.isString() && !\"\".equals(pattern.getString()) && pattern.getString().length() < 100 && (null == flags || flags.isString())"
+      },
+      {
+        "txt": "&& (isEcmaScript5OrGreater() || !containsUnicodeEscape(pattern.getString()))) { pattern = makeForwardSlashBracketSafe(pattern); Node regexLiteral; if (null == flags || \"\".equals(flags.getString())) { regexLiteral = IR.regexp(pattern); } else { if (!areValidRegexpFlags(flags.getString())) { report(INVALID_REGULAR_EXPRESSION_FLAGS, flags); return n;"
+      },
+      {
+        "txt": "} if (!areSafeFlagsToFold(flags.getString())) { return n; } n.removeChild(flags); regexLiteral = IR.regexp(pattern, flags); } parent.replaceChild(n, regexLiteral); reportCodeChange(); return regexLiteral;"
+      },
+      {
+        "txt": "} return n; } private Node reduceTrueFalse(Node n) { if (late) { Node not = IR.not(IR.number(n.isTrue() ? 0 : 1)); not.copyInformationFromForTree(n); n.getParent().replaceChild(n, not); reportCodeChange(); return not;"
+      },
+      {
+        "txt": "} return n; } private Node tryMinimizeArrayLiteral(Node n) { boolean allStrings = true; for (Node cur = n.getFirstChild(); cur != null; cur = cur.getNext()) { if (!cur.isString()) { allStrings = false; } }"
+      },
+      {
+        "txt": "if (allStrings) { return tryMinimizeStringArrayLiteral(n); } else { return n; } } private Node tryMinimizeStringArrayLiteral(Node n) { if (!late) { return n; }"
+      },
+      {
+        "txt": "int numElements = n.getChildCount(); int saving = numElements * 2 - STRING_SPLIT_OVERHEAD; if (saving <= 0) { return n; } String[] strings = new String[n.getChildCount()]; int idx = 0; for (Node cur = n.getFirstChild(); cur != null; cur = cur.getNext()) { strings[idx++] = cur.getString(); }"
+      },
+      {
+        "txt": "String delimiter = pickDelimiter(strings); if (delimiter != null) { String template = Joiner.on(delimiter).join(strings); Node call = IR.call( IR.getprop( IR.string(template), IR.string(\"split\")), IR.string(\"\" + delimiter)); call.copyInformationFromForTree(n); n.getParent().replaceChild(n, call);"
+      },
+      {
+        "txt": "reportCodeChange(); return call; } return n; } private static String pickDelimiter(String[] strings) { boolean allLength1 = true; for (String s : strings) { if (s.length() != 1) { allLength1 = false;"
+      },
+      {
+        "txt": "break; } } if (allLength1) { return \"\"; } String[] delimiters = new String[]{\" \", \";\", \",\", \"{\", \"}\", null}; int i = 0; NEXT_DELIMITER: for (; delimiters[i] != null; i++) { for (String cur : strings) {"
+      },
+      {
+        "txt": "if (cur.contains(delimiters[i])) { continue NEXT_DELIMITER; } } break; } return delimiters[i]; } private static final Pattern REGEXP_FLAGS_RE = Pattern.compile(\"^[gmi]*$\"); private static boolean areValidRegexpFlags(String flags) {"
+      },
+      {
+        "txt": "return REGEXP_FLAGS_RE.matcher(flags).matches(); } private boolean areSafeFlagsToFold(String flags) { return isEcmaScript5OrGreater() || flags.indexOf('g') < 0; } private static Node makeForwardSlashBracketSafe(Node n) { String s = n.getString(); StringBuilder sb = null; int pos = 0; boolean isEscaped = false, inCharset = false;"
+      },
+      {
+        "txt": "for (int i = 0; i < s.length(); ++i) { char ch = s.charAt(i); switch (ch) { case '\\\\': isEscaped = !isEscaped; continue; case '/': if (!isEscaped && !inCharset) { if (null == sb) { sb = new StringBuilder(s.length() + 16); } sb.append(s, pos, i).append('\\\\');"
+      },
+      {
+        "txt": "pos = i; } break; case '[': if (!isEscaped) { inCharset = true; } break; case ']': if (!isEscaped) {"
+      },
+      {
+        "txt": "inCharset = false; } break; case '\\r': case '\\n': case '\\u2028': case '\\u2029': if (null == sb) { sb = new StringBuilder(s.length() + 16); } if (isEscaped) { sb.append(s, pos, i - 1); } else { sb.append(s, pos, i); }"
+      },
+      {
+        "txt": "switch (ch) { case '\\r': sb.append(\"\\\\r\"); break; case '\\n': sb.append(\"\\\\n\"); break; case '\\u2028': sb.append(\"\\\\u2028\"); break; case '\\u2029': sb.append(\"\\\\u2029\"); break; } pos = i + 1; break; } isEscaped = false;"
+      },
+      {
+        "txt": "} if (null == sb) { return n.cloneTree(); } sb.append(s, pos, s.length()); return IR.string(sb.toString()).srcref(n); } static boolean containsUnicodeEscape(String s) { String esc = REGEXP_ESCAPER.regexpEscape(s); for (int i = -1; (i = esc.indexOf(\"\\\\u\", i + 1)) >= 0;) { int nSlashes = 0; while (i - nSlashes > 0 && '\\\\' == esc.charAt(i - nSlashes - 1)) {"
+      },
+      {
+        "txt": "++nSlashes; } if (0 == (nSlashes & 1)) { return true; } } return false; }"
+      }
+    ]
+  }
+]

@@ -1,0 +1,68 @@
+[
+  {
+    "id": 1037,
+    "file_path": "src/main/java/org/apache/commons/compress/archivers/zip/Zip64ExtendedInformationExtraField.java",
+    "start-bug-line": 259,
+    "end-bug-line": 259,
+    "bug": "if (rawCentralDirectoryData.length != expectedLength) {",
+    "fix": "if (rawCentralDirectoryData.length < expectedLength) {",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.compress.archivers.zip; import java.util.zip.ZipException; import static org.apache.commons.compress.archivers.zip.ZipConstants.DWORD; import static org.apache.commons.compress.archivers.zip.ZipConstants.WORD; public class Zip64ExtendedInformationExtraField implements ZipExtraField { static final ZipShort HEADER_ID = new ZipShort(0x0001); private static final String LFH_MUST_HAVE_BOTH_SIZES_MSG ="
+      },
+      {
+        "txt": "\"Zip64 extended information must contain\" + \" both size values in the local file header.\"; private static final byte[] EMPTY = new byte[0]; private ZipEightByteInteger size, compressedSize, relativeHeaderOffset; private ZipLong diskStart; private byte[] rawCentralDirectoryData; public Zip64ExtendedInformationExtraField() { } public Zip64ExtendedInformationExtraField(ZipEightByteInteger size, ZipEightByteInteger compressedSize) { this(size, compressedSize, null, null);"
+      },
+      {
+        "txt": "} public Zip64ExtendedInformationExtraField(ZipEightByteInteger size, ZipEightByteInteger compressedSize, ZipEightByteInteger relativeHeaderOffset, ZipLong diskStart) { this.size = size; this.compressedSize = compressedSize; this.relativeHeaderOffset = relativeHeaderOffset; this.diskStart = diskStart; }"
+      },
+      {
+        "txt": "public ZipShort getHeaderId() { return HEADER_ID; } public ZipShort getLocalFileDataLength() { return new ZipShort(size != null ? 2 * DWORD : 0); } public ZipShort getCentralDirectoryLength() { return new ZipShort((size != null ? DWORD : 0) + (compressedSize != null ? DWORD : 0) + (relativeHeaderOffset != null ? DWORD : 0)"
+      },
+      {
+        "txt": "+ (diskStart != null ? WORD : 0)); } public byte[] getLocalFileDataData() { if (size != null || compressedSize != null) { if (size == null || compressedSize == null) { throw new IllegalArgumentException(LFH_MUST_HAVE_BOTH_SIZES_MSG); } byte[] data = new byte[2 * DWORD]; addSizes(data); return data;"
+      },
+      {
+        "txt": "} return EMPTY; } public byte[] getCentralDirectoryData() { byte[] data = new byte[getCentralDirectoryLength().getValue()]; int off = addSizes(data); if (relativeHeaderOffset != null) { System.arraycopy(relativeHeaderOffset.getBytes(), 0, data, off, DWORD); off += DWORD; }"
+      },
+      {
+        "txt": "if (diskStart != null) { System.arraycopy(diskStart.getBytes(), 0, data, off, WORD); off += WORD; } return data; } public void parseFromLocalFileData(byte[] buffer, int offset, int length) throws ZipException { if (length == 0) { return;"
+      },
+      {
+        "txt": "} if (length < 2 * DWORD) { throw new ZipException(LFH_MUST_HAVE_BOTH_SIZES_MSG); } size = new ZipEightByteInteger(buffer, offset); offset += DWORD; compressedSize = new ZipEightByteInteger(buffer, offset); offset += DWORD; int remaining = length - 2 * DWORD; if (remaining >= DWORD) {"
+      },
+      {
+        "txt": "relativeHeaderOffset = new ZipEightByteInteger(buffer, offset); offset += DWORD; remaining -= DWORD; } if (remaining >= WORD) { diskStart = new ZipLong(buffer, offset); offset += WORD; remaining -= WORD; } }"
+      },
+      {
+        "txt": "public void parseFromCentralDirectoryData(byte[] buffer, int offset, int length) throws ZipException { rawCentralDirectoryData = new byte[length]; System.arraycopy(buffer, offset, rawCentralDirectoryData, 0, length); if (length >= 3 * DWORD + WORD) { parseFromLocalFileData(buffer, offset, length); } else if (length == 3 * DWORD) { size = new ZipEightByteInteger(buffer, offset); offset += DWORD;"
+      },
+      {
+        "txt": "compressedSize = new ZipEightByteInteger(buffer, offset); offset += DWORD; relativeHeaderOffset = new ZipEightByteInteger(buffer, offset); } else if (length % DWORD == WORD) { diskStart = new ZipLong(buffer, offset + length - WORD); } } public void reparseCentralDirectoryData(boolean hasUncompressedSize, boolean hasCompressedSize, boolean hasRelativeHeaderOffset,"
+      },
+      {
+        "txt": "throws ZipException { if (rawCentralDirectoryData != null) { int expectedLength = (hasUncompressedSize ? DWORD : 0) + (hasCompressedSize ? DWORD : 0) + (hasRelativeHeaderOffset ? DWORD : 0) + (hasDiskStart ? WORD : 0); <extra_id_0> throw new ZipException(\"central directory zip64 extended\" + \" information extra field's length\" + \" doesn't match central directory\" + \" data. Expected length \" + expectedLength + \" but is \" + rawCentralDirectoryData.length);"
+      },
+      {
+        "txt": "+ expectedLength + \" but is \" + rawCentralDirectoryData.length); } int offset = 0; if (hasUncompressedSize) { size = new ZipEightByteInteger(rawCentralDirectoryData, offset); offset += DWORD; } if (hasCompressedSize) { compressedSize = new ZipEightByteInteger(rawCentralDirectoryData,"
+      },
+      {
+        "txt": "offset); offset += DWORD; } if (hasRelativeHeaderOffset) { relativeHeaderOffset = new ZipEightByteInteger(rawCentralDirectoryData, offset); offset += DWORD; } if (hasDiskStart) { diskStart = new ZipLong(rawCentralDirectoryData, offset);"
+      },
+      {
+        "txt": "offset += WORD; } } } public ZipEightByteInteger getSize() { return size; } public void setSize(ZipEightByteInteger size) { this.size = size; }"
+      },
+      {
+        "txt": "public ZipEightByteInteger getCompressedSize() { return compressedSize; } public void setCompressedSize(ZipEightByteInteger compressedSize) { this.compressedSize = compressedSize; } public ZipEightByteInteger getRelativeHeaderOffset() { return relativeHeaderOffset; } public void setRelativeHeaderOffset(ZipEightByteInteger rho) {"
+      },
+      {
+        "txt": "relativeHeaderOffset = rho; } public ZipLong getDiskStartNumber() { return diskStart; } public void setDiskStartNumber(ZipLong ds) { diskStart = ds; } private int addSizes(byte[] data) { int off = 0;"
+      },
+      {
+        "txt": "if (size != null) { System.arraycopy(size.getBytes(), 0, data, 0, DWORD); off += DWORD; } if (compressedSize != null) { System.arraycopy(compressedSize.getBytes(), 0, data, off, DWORD); off += DWORD; } return off; }"
+      }
+    ]
+  }
+]

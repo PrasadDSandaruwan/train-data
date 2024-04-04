@@ -1,0 +1,1874 @@
+[
+  {
+    "id": 1578,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/ser/std/JsonValueSerializer.java",
+    "start-bug-line": 9,
+    "end-bug-line": 9,
+    "bug": "",
+    "fix": "import com.fasterxml.jackson.annotation.JsonTypeInfo.As;",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind.ser.std; import java.io.IOException; import java.lang.reflect.InvocationTargetException; import java.lang.reflect.Type; import java.util.LinkedHashSet; import java.util.Set; <extra_id_0> import com.fasterxml.jackson.databind.*; import com.fasterxml.jackson.databind.annotation.JacksonStdImpl; import com.fasterxml.jackson.databind.introspect.AnnotatedMethod; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonFormatVisitable; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonFormatVisitorWrapper; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonStringFormatVisitor;"
+      },
+      {
+        "txt": "import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonFormatVisitorWrapper; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonStringFormatVisitor; import com.fasterxml.jackson.databind.jsonschema.SchemaAware; import com.fasterxml.jackson.databind.jsontype.TypeSerializer; import com.fasterxml.jackson.databind.ser.BeanSerializer; import com.fasterxml.jackson.databind.ser.ContextualSerializer; @SuppressWarnings(\"serial\") @JacksonStdImpl public class JsonValueSerializer extends StdSerializer<Object>"
+      },
+      {
+        "txt": "implements ContextualSerializer, JsonFormatVisitable, SchemaAware { protected final AnnotatedMethod _accessorMethod; protected final JsonSerializer<Object> _valueSerializer; protected final BeanProperty _property; protected final boolean _forceTypeInformation; @SuppressWarnings(\"unchecked\") public JsonValueSerializer(AnnotatedMethod valueMethod, JsonSerializer<?> ser) { super(valueMethod.getType());"
+      },
+      {
+        "txt": "_accessorMethod = valueMethod; _valueSerializer = (JsonSerializer<Object>) ser; _property = null; _forceTypeInformation = true; // gets reconsidered when we are contextualized } @SuppressWarnings(\"unchecked\") public JsonValueSerializer(JsonValueSerializer src, BeanProperty property, JsonSerializer<?> ser, boolean forceTypeInfo) { super(_notNullClass(src.handledType()));"
+      },
+      {
+        "txt": "_accessorMethod = src._accessorMethod; _valueSerializer = (JsonSerializer<Object>) ser; _property = property; _forceTypeInformation = forceTypeInfo; } @SuppressWarnings(\"unchecked\") private final static Class<Object> _notNullClass(Class<?> cls) { return (cls == null) ? Object.class : (Class<Object>) cls; } public JsonValueSerializer withResolved(BeanProperty property,"
+      },
+      {
+        "txt": "JsonSerializer<?> ser, boolean forceTypeInfo) { if (_property == property && _valueSerializer == ser && forceTypeInfo == _forceTypeInformation) { return this; } return new JsonValueSerializer(this, property, ser, forceTypeInfo); } @Override public JsonSerializer<?> createContextual(SerializerProvider provider,"
+      },
+      {
+        "txt": "BeanProperty property) throws JsonMappingException { JsonSerializer<?> ser = _valueSerializer; if (ser == null) { JavaType t = _accessorMethod.getType(); if (provider.isEnabled(MapperFeature.USE_STATIC_TYPING) || t.isFinal()) { ser = provider.findPrimaryPropertySerializer(t, property); boolean forceTypeInformation = isNaturalTypeWithStdHandling(t.getRawClass(), ser); return withResolved(property, ser, forceTypeInformation);"
+      },
+      {
+        "txt": "} } else { ser = provider.handlePrimaryContextualization(ser, property); return withResolved(property, ser, _forceTypeInformation); } return this; } @Override public void serialize(Object bean, JsonGenerator gen, SerializerProvider prov) throws IOException {"
+      },
+      {
+        "txt": "try { Object value = _accessorMethod.getValue(bean); if (value == null) { prov.defaultSerializeNull(gen); return; } JsonSerializer<Object> ser = _valueSerializer; if (ser == null) { Class<?> c = value.getClass(); ser = prov.findTypedValueSerializer(c, true, _property);"
+      },
+      {
+        "txt": "} ser.serialize(value, gen, prov); } catch (IOException ioe) { throw ioe; } catch (Exception e) { Throwable t = e; while (t instanceof InvocationTargetException && t.getCause() != null) { t = t.getCause(); } if (t instanceof Error) {"
+      },
+      {
+        "txt": "throw (Error) t; } throw JsonMappingException.wrapWithPath(t, bean, _accessorMethod.getName() + \"()\"); } } @Override public void serializeWithType(Object bean, JsonGenerator gen, SerializerProvider provider, TypeSerializer typeSer0) throws IOException { Object value = null;"
+      },
+      {
+        "txt": "try { value = _accessorMethod.getValue(bean); if (value == null) { provider.defaultSerializeNull(gen); return; } JsonSerializer<Object> ser = _valueSerializer; if (ser == null) { // no serializer yet? Need to fetch ser = provider.findValueSerializer(value.getClass(), _property); } else {"
+      },
+      {
+        "txt": "if (_forceTypeInformation) { typeSer0.writeTypePrefixForScalar(bean, gen); ser.serialize(value, gen, provider); typeSer0.writeTypeSuffixForScalar(bean, gen); return; } } ser.serializeWithType(value, gen, provider, typeSer0); } catch (IOException ioe) { throw ioe;"
+      },
+      {
+        "txt": "} catch (Exception e) { Throwable t = e; while (t instanceof InvocationTargetException && t.getCause() != null) { t = t.getCause(); } if (t instanceof Error) { throw (Error) t; } throw JsonMappingException.wrapWithPath(t, bean, _accessorMethod.getName() + \"()\"); }"
+      },
+      {
+        "txt": "} @SuppressWarnings(\"deprecation\") @Override public JsonNode getSchema(SerializerProvider provider, Type typeHint) throws JsonMappingException { if (_valueSerializer instanceof SchemaAware) { return ((SchemaAware)_valueSerializer).getSchema(provider, null); } return com.fasterxml.jackson.databind.jsonschema.JsonSchema.getDefaultSchemaNode();"
+      },
+      {
+        "txt": "} @Override public void acceptJsonFormatVisitor(JsonFormatVisitorWrapper visitor, JavaType typeHint) throws JsonMappingException { final JavaType type = _accessorMethod.getType(); Class<?> declaring = _accessorMethod.getDeclaringClass(); if ((declaring != null) && declaring.isEnum()) { if (_acceptJsonFormatVisitorForEnum(visitor, typeHint, declaring)) { return;"
+      },
+      {
+        "txt": "} } JsonSerializer<Object> ser = _valueSerializer; if (ser == null) { ser = visitor.getProvider().findTypedValueSerializer(type, false, _property); if (ser == null) { // can this ever occur? visitor.expectAnyFormat(typeHint); return; } }"
+      },
+      {
+        "txt": "ser.acceptJsonFormatVisitor(visitor, null); } protected boolean _acceptJsonFormatVisitorForEnum(JsonFormatVisitorWrapper visitor, JavaType typeHint, Class<?> enumType) throws JsonMappingException { JsonStringFormatVisitor stringVisitor = visitor.expectStringFormat(typeHint); if (stringVisitor != null) { Set<String> enums = new LinkedHashSet<String>(); for (Object en : enumType.getEnumConstants()) {"
+      },
+      {
+        "txt": "try { enums.add(String.valueOf(_accessorMethod.callOn(en))); } catch (Exception e) { Throwable t = e; while (t instanceof InvocationTargetException && t.getCause() != null) { t = t.getCause(); } if (t instanceof Error) { throw (Error) t; }"
+      },
+      {
+        "txt": "throw JsonMappingException.wrapWithPath(t, en, _accessorMethod.getName() + \"()\"); } } stringVisitor.enumTypes(enums); } return true; } protected boolean isNaturalTypeWithStdHandling(Class<?> rawType, JsonSerializer<?> ser) { if (rawType.isPrimitive()) {"
+      },
+      {
+        "txt": "if (rawType != Integer.TYPE && rawType != Boolean.TYPE && rawType != Double.TYPE) { return false; } } else { if (rawType != String.class && rawType != Integer.class && rawType != Boolean.class && rawType != Double.class) { return false; } } return isDefaultSerializer(ser);"
+      },
+      {
+        "txt": "} @Override public String toString() { return \"(@JsonValue serializer for method \" + _accessorMethod.getDeclaringClass() + \"#\" + _accessorMethod.getName() + \")\"; }"
+      }
+    ]
+  },
+  {
+    "id": 1579,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/ser/std/JsonValueSerializer.java",
+    "start-bug-line": 17,
+    "end-bug-line": 17,
+    "bug": "",
+    "fix": "import com.fasterxml.jackson.databind.jsontype.TypeIdResolver;",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind.ser.std; import java.io.IOException; import java.lang.reflect.InvocationTargetException; import java.lang.reflect.Type; import java.util.LinkedHashSet; import java.util.Set; import com.fasterxml.jackson.core.*;"
+      },
+      {
+        "txt": "import com.fasterxml.jackson.databind.annotation.JacksonStdImpl; import com.fasterxml.jackson.databind.introspect.AnnotatedMethod; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonFormatVisitable; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonFormatVisitorWrapper; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonStringFormatVisitor; import com.fasterxml.jackson.databind.jsonschema.SchemaAware; <extra_id_0> import com.fasterxml.jackson.databind.ser.BeanSerializer; import com.fasterxml.jackson.databind.ser.ContextualSerializer; @SuppressWarnings(\"serial\") @JacksonStdImpl public class JsonValueSerializer extends StdSerializer<Object>"
+      },
+      {
+        "txt": "public class JsonValueSerializer extends StdSerializer<Object> implements ContextualSerializer, JsonFormatVisitable, SchemaAware { protected final AnnotatedMethod _accessorMethod; protected final JsonSerializer<Object> _valueSerializer; protected final BeanProperty _property; protected final boolean _forceTypeInformation; @SuppressWarnings(\"unchecked\") public JsonValueSerializer(AnnotatedMethod valueMethod, JsonSerializer<?> ser)"
+      },
+      {
+        "txt": "{ super(valueMethod.getType()); _accessorMethod = valueMethod; _valueSerializer = (JsonSerializer<Object>) ser; _property = null; _forceTypeInformation = true; // gets reconsidered when we are contextualized } @SuppressWarnings(\"unchecked\") public JsonValueSerializer(JsonValueSerializer src, BeanProperty property, JsonSerializer<?> ser, boolean forceTypeInfo)"
+      },
+      {
+        "txt": "{ super(_notNullClass(src.handledType())); _accessorMethod = src._accessorMethod; _valueSerializer = (JsonSerializer<Object>) ser; _property = property; _forceTypeInformation = forceTypeInfo; } @SuppressWarnings(\"unchecked\") private final static Class<Object> _notNullClass(Class<?> cls) { return (cls == null) ? Object.class : (Class<Object>) cls;"
+      },
+      {
+        "txt": "} public JsonValueSerializer withResolved(BeanProperty property, JsonSerializer<?> ser, boolean forceTypeInfo) { if (_property == property && _valueSerializer == ser && forceTypeInfo == _forceTypeInformation) { return this; } return new JsonValueSerializer(this, property, ser, forceTypeInfo); }"
+      },
+      {
+        "txt": "@Override public JsonSerializer<?> createContextual(SerializerProvider provider, BeanProperty property) throws JsonMappingException { JsonSerializer<?> ser = _valueSerializer; if (ser == null) { JavaType t = _accessorMethod.getType(); if (provider.isEnabled(MapperFeature.USE_STATIC_TYPING) || t.isFinal()) { ser = provider.findPrimaryPropertySerializer(t, property);"
+      },
+      {
+        "txt": "boolean forceTypeInformation = isNaturalTypeWithStdHandling(t.getRawClass(), ser); return withResolved(property, ser, forceTypeInformation); } } else { ser = provider.handlePrimaryContextualization(ser, property); return withResolved(property, ser, _forceTypeInformation); } return this; } @Override"
+      },
+      {
+        "txt": "public void serialize(Object bean, JsonGenerator gen, SerializerProvider prov) throws IOException { try { Object value = _accessorMethod.getValue(bean); if (value == null) { prov.defaultSerializeNull(gen); return; } JsonSerializer<Object> ser = _valueSerializer; if (ser == null) {"
+      },
+      {
+        "txt": "Class<?> c = value.getClass(); ser = prov.findTypedValueSerializer(c, true, _property); } ser.serialize(value, gen, prov); } catch (IOException ioe) { throw ioe; } catch (Exception e) { Throwable t = e; while (t instanceof InvocationTargetException && t.getCause() != null) { t = t.getCause();"
+      },
+      {
+        "txt": "} if (t instanceof Error) { throw (Error) t; } throw JsonMappingException.wrapWithPath(t, bean, _accessorMethod.getName() + \"()\"); } } @Override public void serializeWithType(Object bean, JsonGenerator gen, SerializerProvider provider, TypeSerializer typeSer0) throws IOException"
+      },
+      {
+        "txt": "{ Object value = null; try { value = _accessorMethod.getValue(bean); if (value == null) { provider.defaultSerializeNull(gen); return; } JsonSerializer<Object> ser = _valueSerializer; if (ser == null) { // no serializer yet? Need to fetch"
+      },
+      {
+        "txt": "ser = provider.findValueSerializer(value.getClass(), _property); } else { if (_forceTypeInformation) { typeSer0.writeTypePrefixForScalar(bean, gen); ser.serialize(value, gen, provider); typeSer0.writeTypeSuffixForScalar(bean, gen); return; } } ser.serializeWithType(value, gen, provider, typeSer0);"
+      },
+      {
+        "txt": "} catch (IOException ioe) { throw ioe; } catch (Exception e) { Throwable t = e; while (t instanceof InvocationTargetException && t.getCause() != null) { t = t.getCause(); } if (t instanceof Error) { throw (Error) t; }"
+      },
+      {
+        "txt": "throw JsonMappingException.wrapWithPath(t, bean, _accessorMethod.getName() + \"()\"); } } @SuppressWarnings(\"deprecation\") @Override public JsonNode getSchema(SerializerProvider provider, Type typeHint) throws JsonMappingException { if (_valueSerializer instanceof SchemaAware) { return ((SchemaAware)_valueSerializer).getSchema(provider, null);"
+      },
+      {
+        "txt": "} return com.fasterxml.jackson.databind.jsonschema.JsonSchema.getDefaultSchemaNode(); } @Override public void acceptJsonFormatVisitor(JsonFormatVisitorWrapper visitor, JavaType typeHint) throws JsonMappingException { final JavaType type = _accessorMethod.getType(); Class<?> declaring = _accessorMethod.getDeclaringClass(); if ((declaring != null) && declaring.isEnum()) {"
+      },
+      {
+        "txt": "if (_acceptJsonFormatVisitorForEnum(visitor, typeHint, declaring)) { return; } } JsonSerializer<Object> ser = _valueSerializer; if (ser == null) { ser = visitor.getProvider().findTypedValueSerializer(type, false, _property); if (ser == null) { // can this ever occur? visitor.expectAnyFormat(typeHint); return;"
+      },
+      {
+        "txt": "} } ser.acceptJsonFormatVisitor(visitor, null); } protected boolean _acceptJsonFormatVisitorForEnum(JsonFormatVisitorWrapper visitor, JavaType typeHint, Class<?> enumType) throws JsonMappingException { JsonStringFormatVisitor stringVisitor = visitor.expectStringFormat(typeHint); if (stringVisitor != null) {"
+      },
+      {
+        "txt": "Set<String> enums = new LinkedHashSet<String>(); for (Object en : enumType.getEnumConstants()) { try { enums.add(String.valueOf(_accessorMethod.callOn(en))); } catch (Exception e) { Throwable t = e; while (t instanceof InvocationTargetException && t.getCause() != null) { t = t.getCause(); } if (t instanceof Error) {"
+      },
+      {
+        "txt": "throw (Error) t; } throw JsonMappingException.wrapWithPath(t, en, _accessorMethod.getName() + \"()\"); } } stringVisitor.enumTypes(enums); } return true; } protected boolean isNaturalTypeWithStdHandling(Class<?> rawType, JsonSerializer<?> ser)"
+      },
+      {
+        "txt": "{ if (rawType.isPrimitive()) { if (rawType != Integer.TYPE && rawType != Boolean.TYPE && rawType != Double.TYPE) { return false; } } else { if (rawType != String.class && rawType != Integer.class && rawType != Boolean.class && rawType != Double.class) { return false; }"
+      },
+      {
+        "txt": "} return isDefaultSerializer(ser); } @Override public String toString() { return \"(@JsonValue serializer for method \" + _accessorMethod.getDeclaringClass() + \"#\" + _accessorMethod.getName() + \")\"; }"
+      }
+    ]
+  },
+  {
+    "id": 1580,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/ser/std/JsonValueSerializer.java",
+    "start-bug-line": 226,
+    "end-bug-line": 226,
+    "bug": "ser.serializeWithType(value, gen, provider, typeSer0);",
+    "fix": "TypeSerializerRerouter rr = new TypeSerializerRerouter(typeSer0, bean); ser.serializeWithType(value, gen, provider, rr);",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "import java.io.IOException; import java.lang.reflect.InvocationTargetException; import java.lang.reflect.Type; import java.util.LinkedHashSet; import java.util.Set; import com.fasterxml.jackson.core.*; import com.fasterxml.jackson.databind.*; import com.fasterxml.jackson.databind.annotation.JacksonStdImpl; import com.fasterxml.jackson.databind.introspect.AnnotatedMethod; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonFormatVisitable;"
+      },
+      {
+        "txt": "import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonFormatVisitorWrapper; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonStringFormatVisitor; import com.fasterxml.jackson.databind.jsonschema.SchemaAware; import com.fasterxml.jackson.databind.jsontype.TypeSerializer; import com.fasterxml.jackson.databind.ser.BeanSerializer; import com.fasterxml.jackson.databind.ser.ContextualSerializer; @SuppressWarnings(\"serial\") @JacksonStdImpl public class JsonValueSerializer extends StdSerializer<Object>"
+      },
+      {
+        "txt": "implements ContextualSerializer, JsonFormatVisitable, SchemaAware { protected final AnnotatedMethod _accessorMethod; protected final JsonSerializer<Object> _valueSerializer; protected final BeanProperty _property; protected final boolean _forceTypeInformation; @SuppressWarnings(\"unchecked\") public JsonValueSerializer(AnnotatedMethod valueMethod, JsonSerializer<?> ser) { super(valueMethod.getType());"
+      },
+      {
+        "txt": "_accessorMethod = valueMethod; _valueSerializer = (JsonSerializer<Object>) ser; _property = null; _forceTypeInformation = true; // gets reconsidered when we are contextualized } @SuppressWarnings(\"unchecked\") public JsonValueSerializer(JsonValueSerializer src, BeanProperty property, JsonSerializer<?> ser, boolean forceTypeInfo) { super(_notNullClass(src.handledType()));"
+      },
+      {
+        "txt": "_accessorMethod = src._accessorMethod; _valueSerializer = (JsonSerializer<Object>) ser; _property = property; _forceTypeInformation = forceTypeInfo; } @SuppressWarnings(\"unchecked\") private final static Class<Object> _notNullClass(Class<?> cls) { return (cls == null) ? Object.class : (Class<Object>) cls; } public JsonValueSerializer withResolved(BeanProperty property,"
+      },
+      {
+        "txt": "JsonSerializer<?> ser, boolean forceTypeInfo) { if (_property == property && _valueSerializer == ser && forceTypeInfo == _forceTypeInformation) { return this; } return new JsonValueSerializer(this, property, ser, forceTypeInfo); } @Override public JsonSerializer<?> createContextual(SerializerProvider provider,"
+      },
+      {
+        "txt": "BeanProperty property) throws JsonMappingException { JsonSerializer<?> ser = _valueSerializer; if (ser == null) { JavaType t = _accessorMethod.getType(); if (provider.isEnabled(MapperFeature.USE_STATIC_TYPING) || t.isFinal()) { ser = provider.findPrimaryPropertySerializer(t, property); boolean forceTypeInformation = isNaturalTypeWithStdHandling(t.getRawClass(), ser); return withResolved(property, ser, forceTypeInformation);"
+      },
+      {
+        "txt": "} } else { ser = provider.handlePrimaryContextualization(ser, property); return withResolved(property, ser, _forceTypeInformation); } return this; } @Override public void serialize(Object bean, JsonGenerator gen, SerializerProvider prov) throws IOException {"
+      },
+      {
+        "txt": "try { Object value = _accessorMethod.getValue(bean); if (value == null) { prov.defaultSerializeNull(gen); return; } JsonSerializer<Object> ser = _valueSerializer; if (ser == null) { Class<?> c = value.getClass(); ser = prov.findTypedValueSerializer(c, true, _property);"
+      },
+      {
+        "txt": "} ser.serialize(value, gen, prov); } catch (IOException ioe) { throw ioe; } catch (Exception e) { Throwable t = e; while (t instanceof InvocationTargetException && t.getCause() != null) { t = t.getCause(); } if (t instanceof Error) {"
+      },
+      {
+        "txt": "throw (Error) t; } throw JsonMappingException.wrapWithPath(t, bean, _accessorMethod.getName() + \"()\"); } } @Override public void serializeWithType(Object bean, JsonGenerator gen, SerializerProvider provider, TypeSerializer typeSer0) throws IOException { Object value = null;"
+      },
+      {
+        "txt": "try { value = _accessorMethod.getValue(bean); if (value == null) { provider.defaultSerializeNull(gen); return; } JsonSerializer<Object> ser = _valueSerializer; if (ser == null) { // no serializer yet? Need to fetch ser = provider.findValueSerializer(value.getClass(), _property); } else {"
+      },
+      {
+        "txt": "typeSer0.writeTypePrefixForScalar(bean, gen); ser.serialize(value, gen, provider); typeSer0.writeTypeSuffixForScalar(bean, gen); return; } } <extra_id_0> } catch (IOException ioe) { throw ioe; } catch (Exception e) { Throwable t = e; while (t instanceof InvocationTargetException && t.getCause() != null) { t = t.getCause();"
+      },
+      {
+        "txt": "while (t instanceof InvocationTargetException && t.getCause() != null) { t = t.getCause(); } if (t instanceof Error) { throw (Error) t; } throw JsonMappingException.wrapWithPath(t, bean, _accessorMethod.getName() + \"()\"); } } @SuppressWarnings(\"deprecation\")"
+      },
+      {
+        "txt": "@Override public JsonNode getSchema(SerializerProvider provider, Type typeHint) throws JsonMappingException { if (_valueSerializer instanceof SchemaAware) { return ((SchemaAware)_valueSerializer).getSchema(provider, null); } return com.fasterxml.jackson.databind.jsonschema.JsonSchema.getDefaultSchemaNode(); } @Override"
+      },
+      {
+        "txt": "public void acceptJsonFormatVisitor(JsonFormatVisitorWrapper visitor, JavaType typeHint) throws JsonMappingException { final JavaType type = _accessorMethod.getType(); Class<?> declaring = _accessorMethod.getDeclaringClass(); if ((declaring != null) && declaring.isEnum()) { if (_acceptJsonFormatVisitorForEnum(visitor, typeHint, declaring)) { return; } }"
+      },
+      {
+        "txt": "JsonSerializer<Object> ser = _valueSerializer; if (ser == null) { ser = visitor.getProvider().findTypedValueSerializer(type, false, _property); if (ser == null) { // can this ever occur? visitor.expectAnyFormat(typeHint); return; } } ser.acceptJsonFormatVisitor(visitor, null); }"
+      },
+      {
+        "txt": "protected boolean _acceptJsonFormatVisitorForEnum(JsonFormatVisitorWrapper visitor, JavaType typeHint, Class<?> enumType) throws JsonMappingException { JsonStringFormatVisitor stringVisitor = visitor.expectStringFormat(typeHint); if (stringVisitor != null) { Set<String> enums = new LinkedHashSet<String>(); for (Object en : enumType.getEnumConstants()) { try { enums.add(String.valueOf(_accessorMethod.callOn(en)));"
+      },
+      {
+        "txt": "} catch (Exception e) { Throwable t = e; while (t instanceof InvocationTargetException && t.getCause() != null) { t = t.getCause(); } if (t instanceof Error) { throw (Error) t; } throw JsonMappingException.wrapWithPath(t, en, _accessorMethod.getName() + \"()\"); }"
+      },
+      {
+        "txt": "} stringVisitor.enumTypes(enums); } return true; } protected boolean isNaturalTypeWithStdHandling(Class<?> rawType, JsonSerializer<?> ser) { if (rawType.isPrimitive()) { if (rawType != Integer.TYPE && rawType != Boolean.TYPE && rawType != Double.TYPE) { return false;"
+      },
+      {
+        "txt": "} } else { if (rawType != String.class && rawType != Integer.class && rawType != Boolean.class && rawType != Double.class) { return false; } } return isDefaultSerializer(ser); } @Override"
+      },
+      {
+        "txt": "public String toString() { return \"(@JsonValue serializer for method \" + _accessorMethod.getDeclaringClass() + \"#\" + _accessorMethod.getName() + \")\"; }"
+      }
+    ]
+  },
+  {
+    "id": 1581,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/ser/std/JsonValueSerializer.java",
+    "start-bug-line": 363,
+    "end-bug-line": 363,
+    "bug": "",
+    "fix": "static class TypeSerializerRerouter extends TypeSerializer { protected final TypeSerializer _typeSerializer; protected final Object _forObject;",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind.ser.std; import java.io.IOException; import java.lang.reflect.InvocationTargetException; import java.lang.reflect.Type; import java.util.LinkedHashSet; import java.util.Set; import com.fasterxml.jackson.core.*; import com.fasterxml.jackson.databind.*; import com.fasterxml.jackson.databind.annotation.JacksonStdImpl;"
+      },
+      {
+        "txt": "import com.fasterxml.jackson.databind.introspect.AnnotatedMethod; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonFormatVisitable; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonFormatVisitorWrapper; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonStringFormatVisitor; import com.fasterxml.jackson.databind.jsonschema.SchemaAware; import com.fasterxml.jackson.databind.jsontype.TypeSerializer; import com.fasterxml.jackson.databind.ser.BeanSerializer; import com.fasterxml.jackson.databind.ser.ContextualSerializer; @SuppressWarnings(\"serial\") @JacksonStdImpl"
+      },
+      {
+        "txt": "public class JsonValueSerializer extends StdSerializer<Object> implements ContextualSerializer, JsonFormatVisitable, SchemaAware { protected final AnnotatedMethod _accessorMethod; protected final JsonSerializer<Object> _valueSerializer; protected final BeanProperty _property; protected final boolean _forceTypeInformation; @SuppressWarnings(\"unchecked\") public JsonValueSerializer(AnnotatedMethod valueMethod, JsonSerializer<?> ser)"
+      },
+      {
+        "txt": "{ super(valueMethod.getType()); _accessorMethod = valueMethod; _valueSerializer = (JsonSerializer<Object>) ser; _property = null; _forceTypeInformation = true; // gets reconsidered when we are contextualized } @SuppressWarnings(\"unchecked\") public JsonValueSerializer(JsonValueSerializer src, BeanProperty property, JsonSerializer<?> ser, boolean forceTypeInfo)"
+      },
+      {
+        "txt": "{ super(_notNullClass(src.handledType())); _accessorMethod = src._accessorMethod; _valueSerializer = (JsonSerializer<Object>) ser; _property = property; _forceTypeInformation = forceTypeInfo; } @SuppressWarnings(\"unchecked\") private final static Class<Object> _notNullClass(Class<?> cls) { return (cls == null) ? Object.class : (Class<Object>) cls;"
+      },
+      {
+        "txt": "} public JsonValueSerializer withResolved(BeanProperty property, JsonSerializer<?> ser, boolean forceTypeInfo) { if (_property == property && _valueSerializer == ser && forceTypeInfo == _forceTypeInformation) { return this; } return new JsonValueSerializer(this, property, ser, forceTypeInfo); }"
+      },
+      {
+        "txt": "@Override public JsonSerializer<?> createContextual(SerializerProvider provider, BeanProperty property) throws JsonMappingException { JsonSerializer<?> ser = _valueSerializer; if (ser == null) { JavaType t = _accessorMethod.getType(); if (provider.isEnabled(MapperFeature.USE_STATIC_TYPING) || t.isFinal()) { ser = provider.findPrimaryPropertySerializer(t, property);"
+      },
+      {
+        "txt": "boolean forceTypeInformation = isNaturalTypeWithStdHandling(t.getRawClass(), ser); return withResolved(property, ser, forceTypeInformation); } } else { ser = provider.handlePrimaryContextualization(ser, property); return withResolved(property, ser, _forceTypeInformation); } return this; } @Override"
+      },
+      {
+        "txt": "public void serialize(Object bean, JsonGenerator gen, SerializerProvider prov) throws IOException { try { Object value = _accessorMethod.getValue(bean); if (value == null) { prov.defaultSerializeNull(gen); return; } JsonSerializer<Object> ser = _valueSerializer; if (ser == null) {"
+      },
+      {
+        "txt": "Class<?> c = value.getClass(); ser = prov.findTypedValueSerializer(c, true, _property); } ser.serialize(value, gen, prov); } catch (IOException ioe) { throw ioe; } catch (Exception e) { Throwable t = e; while (t instanceof InvocationTargetException && t.getCause() != null) { t = t.getCause();"
+      },
+      {
+        "txt": "} if (t instanceof Error) { throw (Error) t; } throw JsonMappingException.wrapWithPath(t, bean, _accessorMethod.getName() + \"()\"); } } @Override public void serializeWithType(Object bean, JsonGenerator gen, SerializerProvider provider, TypeSerializer typeSer0) throws IOException"
+      },
+      {
+        "txt": "{ Object value = null; try { value = _accessorMethod.getValue(bean); if (value == null) { provider.defaultSerializeNull(gen); return; } JsonSerializer<Object> ser = _valueSerializer; if (ser == null) { // no serializer yet? Need to fetch"
+      },
+      {
+        "txt": "ser = provider.findValueSerializer(value.getClass(), _property); } else { if (_forceTypeInformation) { typeSer0.writeTypePrefixForScalar(bean, gen); ser.serialize(value, gen, provider); typeSer0.writeTypeSuffixForScalar(bean, gen); return; } } ser.serializeWithType(value, gen, provider, typeSer0);"
+      },
+      {
+        "txt": "} catch (IOException ioe) { throw ioe; } catch (Exception e) { Throwable t = e; while (t instanceof InvocationTargetException && t.getCause() != null) { t = t.getCause(); } if (t instanceof Error) { throw (Error) t; }"
+      },
+      {
+        "txt": "throw JsonMappingException.wrapWithPath(t, bean, _accessorMethod.getName() + \"()\"); } } @SuppressWarnings(\"deprecation\") @Override public JsonNode getSchema(SerializerProvider provider, Type typeHint) throws JsonMappingException { if (_valueSerializer instanceof SchemaAware) { return ((SchemaAware)_valueSerializer).getSchema(provider, null);"
+      },
+      {
+        "txt": "} return com.fasterxml.jackson.databind.jsonschema.JsonSchema.getDefaultSchemaNode(); } @Override public void acceptJsonFormatVisitor(JsonFormatVisitorWrapper visitor, JavaType typeHint) throws JsonMappingException { final JavaType type = _accessorMethod.getType(); Class<?> declaring = _accessorMethod.getDeclaringClass(); if ((declaring != null) && declaring.isEnum()) {"
+      },
+      {
+        "txt": "if (_acceptJsonFormatVisitorForEnum(visitor, typeHint, declaring)) { return; } } JsonSerializer<Object> ser = _valueSerializer; if (ser == null) { ser = visitor.getProvider().findTypedValueSerializer(type, false, _property); if (ser == null) { // can this ever occur? visitor.expectAnyFormat(typeHint); return;"
+      },
+      {
+        "txt": "} } ser.acceptJsonFormatVisitor(visitor, null); } protected boolean _acceptJsonFormatVisitorForEnum(JsonFormatVisitorWrapper visitor, JavaType typeHint, Class<?> enumType) throws JsonMappingException { JsonStringFormatVisitor stringVisitor = visitor.expectStringFormat(typeHint); if (stringVisitor != null) {"
+      },
+      {
+        "txt": "Set<String> enums = new LinkedHashSet<String>(); for (Object en : enumType.getEnumConstants()) { try { enums.add(String.valueOf(_accessorMethod.callOn(en))); } catch (Exception e) { Throwable t = e; while (t instanceof InvocationTargetException && t.getCause() != null) { t = t.getCause(); } if (t instanceof Error) {"
+      },
+      {
+        "txt": "throw (Error) t; } throw JsonMappingException.wrapWithPath(t, en, _accessorMethod.getName() + \"()\"); } } stringVisitor.enumTypes(enums); } return true; } protected boolean isNaturalTypeWithStdHandling(Class<?> rawType, JsonSerializer<?> ser)"
+      },
+      {
+        "txt": "{ if (rawType.isPrimitive()) { if (rawType != Integer.TYPE && rawType != Boolean.TYPE && rawType != Double.TYPE) { return false; } } else { if (rawType != String.class && rawType != Integer.class && rawType != Boolean.class && rawType != Double.class) { return false; }"
+      },
+      {
+        "txt": "return isDefaultSerializer(ser); } @Override public String toString() { return \"(@JsonValue serializer for method \" + _accessorMethod.getDeclaringClass() + \"#\" + _accessorMethod.getName() + \")\"; } <extra_id_0> }"
+      }
+    ]
+  },
+  {
+    "id": 1582,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/ser/std/JsonValueSerializer.java",
+    "start-bug-line": 364,
+    "end-bug-line": 364,
+    "bug": "",
+    "fix": "public TypeSerializerRerouter(TypeSerializer ts, Object ob) { _typeSerializer = ts; _forObject = ob; }",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind.ser.std; import java.io.IOException; import java.lang.reflect.InvocationTargetException; import java.lang.reflect.Type; import java.util.LinkedHashSet; import java.util.Set; import com.fasterxml.jackson.core.*; import com.fasterxml.jackson.databind.*; import com.fasterxml.jackson.databind.annotation.JacksonStdImpl;"
+      },
+      {
+        "txt": "import com.fasterxml.jackson.databind.introspect.AnnotatedMethod; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonFormatVisitable; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonFormatVisitorWrapper; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonStringFormatVisitor; import com.fasterxml.jackson.databind.jsonschema.SchemaAware; import com.fasterxml.jackson.databind.jsontype.TypeSerializer; import com.fasterxml.jackson.databind.ser.BeanSerializer; import com.fasterxml.jackson.databind.ser.ContextualSerializer; @SuppressWarnings(\"serial\") @JacksonStdImpl"
+      },
+      {
+        "txt": "public class JsonValueSerializer extends StdSerializer<Object> implements ContextualSerializer, JsonFormatVisitable, SchemaAware { protected final AnnotatedMethod _accessorMethod; protected final JsonSerializer<Object> _valueSerializer; protected final BeanProperty _property; protected final boolean _forceTypeInformation; @SuppressWarnings(\"unchecked\") public JsonValueSerializer(AnnotatedMethod valueMethod, JsonSerializer<?> ser)"
+      },
+      {
+        "txt": "{ super(valueMethod.getType()); _accessorMethod = valueMethod; _valueSerializer = (JsonSerializer<Object>) ser; _property = null; _forceTypeInformation = true; // gets reconsidered when we are contextualized } @SuppressWarnings(\"unchecked\") public JsonValueSerializer(JsonValueSerializer src, BeanProperty property, JsonSerializer<?> ser, boolean forceTypeInfo)"
+      },
+      {
+        "txt": "{ super(_notNullClass(src.handledType())); _accessorMethod = src._accessorMethod; _valueSerializer = (JsonSerializer<Object>) ser; _property = property; _forceTypeInformation = forceTypeInfo; } @SuppressWarnings(\"unchecked\") private final static Class<Object> _notNullClass(Class<?> cls) { return (cls == null) ? Object.class : (Class<Object>) cls;"
+      },
+      {
+        "txt": "} public JsonValueSerializer withResolved(BeanProperty property, JsonSerializer<?> ser, boolean forceTypeInfo) { if (_property == property && _valueSerializer == ser && forceTypeInfo == _forceTypeInformation) { return this; } return new JsonValueSerializer(this, property, ser, forceTypeInfo); }"
+      },
+      {
+        "txt": "@Override public JsonSerializer<?> createContextual(SerializerProvider provider, BeanProperty property) throws JsonMappingException { JsonSerializer<?> ser = _valueSerializer; if (ser == null) { JavaType t = _accessorMethod.getType(); if (provider.isEnabled(MapperFeature.USE_STATIC_TYPING) || t.isFinal()) { ser = provider.findPrimaryPropertySerializer(t, property);"
+      },
+      {
+        "txt": "boolean forceTypeInformation = isNaturalTypeWithStdHandling(t.getRawClass(), ser); return withResolved(property, ser, forceTypeInformation); } } else { ser = provider.handlePrimaryContextualization(ser, property); return withResolved(property, ser, _forceTypeInformation); } return this; } @Override"
+      },
+      {
+        "txt": "public void serialize(Object bean, JsonGenerator gen, SerializerProvider prov) throws IOException { try { Object value = _accessorMethod.getValue(bean); if (value == null) { prov.defaultSerializeNull(gen); return; } JsonSerializer<Object> ser = _valueSerializer; if (ser == null) {"
+      },
+      {
+        "txt": "Class<?> c = value.getClass(); ser = prov.findTypedValueSerializer(c, true, _property); } ser.serialize(value, gen, prov); } catch (IOException ioe) { throw ioe; } catch (Exception e) { Throwable t = e; while (t instanceof InvocationTargetException && t.getCause() != null) { t = t.getCause();"
+      },
+      {
+        "txt": "} if (t instanceof Error) { throw (Error) t; } throw JsonMappingException.wrapWithPath(t, bean, _accessorMethod.getName() + \"()\"); } } @Override public void serializeWithType(Object bean, JsonGenerator gen, SerializerProvider provider, TypeSerializer typeSer0) throws IOException"
+      },
+      {
+        "txt": "{ Object value = null; try { value = _accessorMethod.getValue(bean); if (value == null) { provider.defaultSerializeNull(gen); return; } JsonSerializer<Object> ser = _valueSerializer; if (ser == null) { // no serializer yet? Need to fetch"
+      },
+      {
+        "txt": "ser = provider.findValueSerializer(value.getClass(), _property); } else { if (_forceTypeInformation) { typeSer0.writeTypePrefixForScalar(bean, gen); ser.serialize(value, gen, provider); typeSer0.writeTypeSuffixForScalar(bean, gen); return; } } ser.serializeWithType(value, gen, provider, typeSer0);"
+      },
+      {
+        "txt": "} catch (IOException ioe) { throw ioe; } catch (Exception e) { Throwable t = e; while (t instanceof InvocationTargetException && t.getCause() != null) { t = t.getCause(); } if (t instanceof Error) { throw (Error) t; }"
+      },
+      {
+        "txt": "throw JsonMappingException.wrapWithPath(t, bean, _accessorMethod.getName() + \"()\"); } } @SuppressWarnings(\"deprecation\") @Override public JsonNode getSchema(SerializerProvider provider, Type typeHint) throws JsonMappingException { if (_valueSerializer instanceof SchemaAware) { return ((SchemaAware)_valueSerializer).getSchema(provider, null);"
+      },
+      {
+        "txt": "} return com.fasterxml.jackson.databind.jsonschema.JsonSchema.getDefaultSchemaNode(); } @Override public void acceptJsonFormatVisitor(JsonFormatVisitorWrapper visitor, JavaType typeHint) throws JsonMappingException { final JavaType type = _accessorMethod.getType(); Class<?> declaring = _accessorMethod.getDeclaringClass(); if ((declaring != null) && declaring.isEnum()) {"
+      },
+      {
+        "txt": "if (_acceptJsonFormatVisitorForEnum(visitor, typeHint, declaring)) { return; } } JsonSerializer<Object> ser = _valueSerializer; if (ser == null) { ser = visitor.getProvider().findTypedValueSerializer(type, false, _property); if (ser == null) { // can this ever occur? visitor.expectAnyFormat(typeHint); return;"
+      },
+      {
+        "txt": "} } ser.acceptJsonFormatVisitor(visitor, null); } protected boolean _acceptJsonFormatVisitorForEnum(JsonFormatVisitorWrapper visitor, JavaType typeHint, Class<?> enumType) throws JsonMappingException { JsonStringFormatVisitor stringVisitor = visitor.expectStringFormat(typeHint); if (stringVisitor != null) {"
+      },
+      {
+        "txt": "Set<String> enums = new LinkedHashSet<String>(); for (Object en : enumType.getEnumConstants()) { try { enums.add(String.valueOf(_accessorMethod.callOn(en))); } catch (Exception e) { Throwable t = e; while (t instanceof InvocationTargetException && t.getCause() != null) { t = t.getCause(); } if (t instanceof Error) {"
+      },
+      {
+        "txt": "throw (Error) t; } throw JsonMappingException.wrapWithPath(t, en, _accessorMethod.getName() + \"()\"); } } stringVisitor.enumTypes(enums); } return true; } protected boolean isNaturalTypeWithStdHandling(Class<?> rawType, JsonSerializer<?> ser)"
+      },
+      {
+        "txt": "{ if (rawType.isPrimitive()) { if (rawType != Integer.TYPE && rawType != Boolean.TYPE && rawType != Double.TYPE) { return false; } } else { if (rawType != String.class && rawType != Integer.class && rawType != Boolean.class && rawType != Double.class) { return false; }"
+      },
+      {
+        "txt": "return isDefaultSerializer(ser); } @Override public String toString() { return \"(@JsonValue serializer for method \" + _accessorMethod.getDeclaringClass() + \"#\" + _accessorMethod.getName() + \")\"; } <extra_id_0> }"
+      }
+    ]
+  },
+  {
+    "id": 1583,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/ser/std/JsonValueSerializer.java",
+    "start-bug-line": 365,
+    "end-bug-line": 365,
+    "bug": "",
+    "fix": "@Override public TypeSerializer forProperty(BeanProperty prop) { // should never get called throw new UnsupportedOperationException(); }",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind.ser.std; import java.io.IOException; import java.lang.reflect.InvocationTargetException; import java.lang.reflect.Type; import java.util.LinkedHashSet; import java.util.Set; import com.fasterxml.jackson.core.*; import com.fasterxml.jackson.databind.*; import com.fasterxml.jackson.databind.annotation.JacksonStdImpl;"
+      },
+      {
+        "txt": "import com.fasterxml.jackson.databind.introspect.AnnotatedMethod; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonFormatVisitable; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonFormatVisitorWrapper; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonStringFormatVisitor; import com.fasterxml.jackson.databind.jsonschema.SchemaAware; import com.fasterxml.jackson.databind.jsontype.TypeSerializer; import com.fasterxml.jackson.databind.ser.BeanSerializer; import com.fasterxml.jackson.databind.ser.ContextualSerializer; @SuppressWarnings(\"serial\") @JacksonStdImpl"
+      },
+      {
+        "txt": "public class JsonValueSerializer extends StdSerializer<Object> implements ContextualSerializer, JsonFormatVisitable, SchemaAware { protected final AnnotatedMethod _accessorMethod; protected final JsonSerializer<Object> _valueSerializer; protected final BeanProperty _property; protected final boolean _forceTypeInformation; @SuppressWarnings(\"unchecked\") public JsonValueSerializer(AnnotatedMethod valueMethod, JsonSerializer<?> ser)"
+      },
+      {
+        "txt": "{ super(valueMethod.getType()); _accessorMethod = valueMethod; _valueSerializer = (JsonSerializer<Object>) ser; _property = null; _forceTypeInformation = true; // gets reconsidered when we are contextualized } @SuppressWarnings(\"unchecked\") public JsonValueSerializer(JsonValueSerializer src, BeanProperty property, JsonSerializer<?> ser, boolean forceTypeInfo)"
+      },
+      {
+        "txt": "{ super(_notNullClass(src.handledType())); _accessorMethod = src._accessorMethod; _valueSerializer = (JsonSerializer<Object>) ser; _property = property; _forceTypeInformation = forceTypeInfo; } @SuppressWarnings(\"unchecked\") private final static Class<Object> _notNullClass(Class<?> cls) { return (cls == null) ? Object.class : (Class<Object>) cls;"
+      },
+      {
+        "txt": "} public JsonValueSerializer withResolved(BeanProperty property, JsonSerializer<?> ser, boolean forceTypeInfo) { if (_property == property && _valueSerializer == ser && forceTypeInfo == _forceTypeInformation) { return this; } return new JsonValueSerializer(this, property, ser, forceTypeInfo); }"
+      },
+      {
+        "txt": "@Override public JsonSerializer<?> createContextual(SerializerProvider provider, BeanProperty property) throws JsonMappingException { JsonSerializer<?> ser = _valueSerializer; if (ser == null) { JavaType t = _accessorMethod.getType(); if (provider.isEnabled(MapperFeature.USE_STATIC_TYPING) || t.isFinal()) { ser = provider.findPrimaryPropertySerializer(t, property);"
+      },
+      {
+        "txt": "boolean forceTypeInformation = isNaturalTypeWithStdHandling(t.getRawClass(), ser); return withResolved(property, ser, forceTypeInformation); } } else { ser = provider.handlePrimaryContextualization(ser, property); return withResolved(property, ser, _forceTypeInformation); } return this; } @Override"
+      },
+      {
+        "txt": "public void serialize(Object bean, JsonGenerator gen, SerializerProvider prov) throws IOException { try { Object value = _accessorMethod.getValue(bean); if (value == null) { prov.defaultSerializeNull(gen); return; } JsonSerializer<Object> ser = _valueSerializer; if (ser == null) {"
+      },
+      {
+        "txt": "Class<?> c = value.getClass(); ser = prov.findTypedValueSerializer(c, true, _property); } ser.serialize(value, gen, prov); } catch (IOException ioe) { throw ioe; } catch (Exception e) { Throwable t = e; while (t instanceof InvocationTargetException && t.getCause() != null) { t = t.getCause();"
+      },
+      {
+        "txt": "} if (t instanceof Error) { throw (Error) t; } throw JsonMappingException.wrapWithPath(t, bean, _accessorMethod.getName() + \"()\"); } } @Override public void serializeWithType(Object bean, JsonGenerator gen, SerializerProvider provider, TypeSerializer typeSer0) throws IOException"
+      },
+      {
+        "txt": "{ Object value = null; try { value = _accessorMethod.getValue(bean); if (value == null) { provider.defaultSerializeNull(gen); return; } JsonSerializer<Object> ser = _valueSerializer; if (ser == null) { // no serializer yet? Need to fetch"
+      },
+      {
+        "txt": "ser = provider.findValueSerializer(value.getClass(), _property); } else { if (_forceTypeInformation) { typeSer0.writeTypePrefixForScalar(bean, gen); ser.serialize(value, gen, provider); typeSer0.writeTypeSuffixForScalar(bean, gen); return; } } ser.serializeWithType(value, gen, provider, typeSer0);"
+      },
+      {
+        "txt": "} catch (IOException ioe) { throw ioe; } catch (Exception e) { Throwable t = e; while (t instanceof InvocationTargetException && t.getCause() != null) { t = t.getCause(); } if (t instanceof Error) { throw (Error) t; }"
+      },
+      {
+        "txt": "throw JsonMappingException.wrapWithPath(t, bean, _accessorMethod.getName() + \"()\"); } } @SuppressWarnings(\"deprecation\") @Override public JsonNode getSchema(SerializerProvider provider, Type typeHint) throws JsonMappingException { if (_valueSerializer instanceof SchemaAware) { return ((SchemaAware)_valueSerializer).getSchema(provider, null);"
+      },
+      {
+        "txt": "} return com.fasterxml.jackson.databind.jsonschema.JsonSchema.getDefaultSchemaNode(); } @Override public void acceptJsonFormatVisitor(JsonFormatVisitorWrapper visitor, JavaType typeHint) throws JsonMappingException { final JavaType type = _accessorMethod.getType(); Class<?> declaring = _accessorMethod.getDeclaringClass(); if ((declaring != null) && declaring.isEnum()) {"
+      },
+      {
+        "txt": "if (_acceptJsonFormatVisitorForEnum(visitor, typeHint, declaring)) { return; } } JsonSerializer<Object> ser = _valueSerializer; if (ser == null) { ser = visitor.getProvider().findTypedValueSerializer(type, false, _property); if (ser == null) { // can this ever occur? visitor.expectAnyFormat(typeHint); return;"
+      },
+      {
+        "txt": "} } ser.acceptJsonFormatVisitor(visitor, null); } protected boolean _acceptJsonFormatVisitorForEnum(JsonFormatVisitorWrapper visitor, JavaType typeHint, Class<?> enumType) throws JsonMappingException { JsonStringFormatVisitor stringVisitor = visitor.expectStringFormat(typeHint); if (stringVisitor != null) {"
+      },
+      {
+        "txt": "Set<String> enums = new LinkedHashSet<String>(); for (Object en : enumType.getEnumConstants()) { try { enums.add(String.valueOf(_accessorMethod.callOn(en))); } catch (Exception e) { Throwable t = e; while (t instanceof InvocationTargetException && t.getCause() != null) { t = t.getCause(); } if (t instanceof Error) {"
+      },
+      {
+        "txt": "throw (Error) t; } throw JsonMappingException.wrapWithPath(t, en, _accessorMethod.getName() + \"()\"); } } stringVisitor.enumTypes(enums); } return true; } protected boolean isNaturalTypeWithStdHandling(Class<?> rawType, JsonSerializer<?> ser)"
+      },
+      {
+        "txt": "{ if (rawType.isPrimitive()) { if (rawType != Integer.TYPE && rawType != Boolean.TYPE && rawType != Double.TYPE) { return false; } } else { if (rawType != String.class && rawType != Integer.class && rawType != Boolean.class && rawType != Double.class) { return false; }"
+      },
+      {
+        "txt": "return isDefaultSerializer(ser); } @Override public String toString() { return \"(@JsonValue serializer for method \" + _accessorMethod.getDeclaringClass() + \"#\" + _accessorMethod.getName() + \")\"; } <extra_id_0> }"
+      }
+    ]
+  },
+  {
+    "id": 1584,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/ser/std/JsonValueSerializer.java",
+    "start-bug-line": 366,
+    "end-bug-line": 366,
+    "bug": "",
+    "fix": "@Override public As getTypeInclusion() { return _typeSerializer.getTypeInclusion(); }",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind.ser.std; import java.io.IOException; import java.lang.reflect.InvocationTargetException; import java.lang.reflect.Type; import java.util.LinkedHashSet; import java.util.Set; import com.fasterxml.jackson.core.*; import com.fasterxml.jackson.databind.*; import com.fasterxml.jackson.databind.annotation.JacksonStdImpl;"
+      },
+      {
+        "txt": "import com.fasterxml.jackson.databind.introspect.AnnotatedMethod; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonFormatVisitable; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonFormatVisitorWrapper; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonStringFormatVisitor; import com.fasterxml.jackson.databind.jsonschema.SchemaAware; import com.fasterxml.jackson.databind.jsontype.TypeSerializer; import com.fasterxml.jackson.databind.ser.BeanSerializer; import com.fasterxml.jackson.databind.ser.ContextualSerializer; @SuppressWarnings(\"serial\") @JacksonStdImpl"
+      },
+      {
+        "txt": "public class JsonValueSerializer extends StdSerializer<Object> implements ContextualSerializer, JsonFormatVisitable, SchemaAware { protected final AnnotatedMethod _accessorMethod; protected final JsonSerializer<Object> _valueSerializer; protected final BeanProperty _property; protected final boolean _forceTypeInformation; @SuppressWarnings(\"unchecked\") public JsonValueSerializer(AnnotatedMethod valueMethod, JsonSerializer<?> ser)"
+      },
+      {
+        "txt": "{ super(valueMethod.getType()); _accessorMethod = valueMethod; _valueSerializer = (JsonSerializer<Object>) ser; _property = null; _forceTypeInformation = true; // gets reconsidered when we are contextualized } @SuppressWarnings(\"unchecked\") public JsonValueSerializer(JsonValueSerializer src, BeanProperty property, JsonSerializer<?> ser, boolean forceTypeInfo)"
+      },
+      {
+        "txt": "{ super(_notNullClass(src.handledType())); _accessorMethod = src._accessorMethod; _valueSerializer = (JsonSerializer<Object>) ser; _property = property; _forceTypeInformation = forceTypeInfo; } @SuppressWarnings(\"unchecked\") private final static Class<Object> _notNullClass(Class<?> cls) { return (cls == null) ? Object.class : (Class<Object>) cls;"
+      },
+      {
+        "txt": "} public JsonValueSerializer withResolved(BeanProperty property, JsonSerializer<?> ser, boolean forceTypeInfo) { if (_property == property && _valueSerializer == ser && forceTypeInfo == _forceTypeInformation) { return this; } return new JsonValueSerializer(this, property, ser, forceTypeInfo); }"
+      },
+      {
+        "txt": "@Override public JsonSerializer<?> createContextual(SerializerProvider provider, BeanProperty property) throws JsonMappingException { JsonSerializer<?> ser = _valueSerializer; if (ser == null) { JavaType t = _accessorMethod.getType(); if (provider.isEnabled(MapperFeature.USE_STATIC_TYPING) || t.isFinal()) { ser = provider.findPrimaryPropertySerializer(t, property);"
+      },
+      {
+        "txt": "boolean forceTypeInformation = isNaturalTypeWithStdHandling(t.getRawClass(), ser); return withResolved(property, ser, forceTypeInformation); } } else { ser = provider.handlePrimaryContextualization(ser, property); return withResolved(property, ser, _forceTypeInformation); } return this; } @Override"
+      },
+      {
+        "txt": "public void serialize(Object bean, JsonGenerator gen, SerializerProvider prov) throws IOException { try { Object value = _accessorMethod.getValue(bean); if (value == null) { prov.defaultSerializeNull(gen); return; } JsonSerializer<Object> ser = _valueSerializer; if (ser == null) {"
+      },
+      {
+        "txt": "Class<?> c = value.getClass(); ser = prov.findTypedValueSerializer(c, true, _property); } ser.serialize(value, gen, prov); } catch (IOException ioe) { throw ioe; } catch (Exception e) { Throwable t = e; while (t instanceof InvocationTargetException && t.getCause() != null) { t = t.getCause();"
+      },
+      {
+        "txt": "} if (t instanceof Error) { throw (Error) t; } throw JsonMappingException.wrapWithPath(t, bean, _accessorMethod.getName() + \"()\"); } } @Override public void serializeWithType(Object bean, JsonGenerator gen, SerializerProvider provider, TypeSerializer typeSer0) throws IOException"
+      },
+      {
+        "txt": "{ Object value = null; try { value = _accessorMethod.getValue(bean); if (value == null) { provider.defaultSerializeNull(gen); return; } JsonSerializer<Object> ser = _valueSerializer; if (ser == null) { // no serializer yet? Need to fetch"
+      },
+      {
+        "txt": "ser = provider.findValueSerializer(value.getClass(), _property); } else { if (_forceTypeInformation) { typeSer0.writeTypePrefixForScalar(bean, gen); ser.serialize(value, gen, provider); typeSer0.writeTypeSuffixForScalar(bean, gen); return; } } ser.serializeWithType(value, gen, provider, typeSer0);"
+      },
+      {
+        "txt": "} catch (IOException ioe) { throw ioe; } catch (Exception e) { Throwable t = e; while (t instanceof InvocationTargetException && t.getCause() != null) { t = t.getCause(); } if (t instanceof Error) { throw (Error) t; }"
+      },
+      {
+        "txt": "throw JsonMappingException.wrapWithPath(t, bean, _accessorMethod.getName() + \"()\"); } } @SuppressWarnings(\"deprecation\") @Override public JsonNode getSchema(SerializerProvider provider, Type typeHint) throws JsonMappingException { if (_valueSerializer instanceof SchemaAware) { return ((SchemaAware)_valueSerializer).getSchema(provider, null);"
+      },
+      {
+        "txt": "} return com.fasterxml.jackson.databind.jsonschema.JsonSchema.getDefaultSchemaNode(); } @Override public void acceptJsonFormatVisitor(JsonFormatVisitorWrapper visitor, JavaType typeHint) throws JsonMappingException { final JavaType type = _accessorMethod.getType(); Class<?> declaring = _accessorMethod.getDeclaringClass(); if ((declaring != null) && declaring.isEnum()) {"
+      },
+      {
+        "txt": "if (_acceptJsonFormatVisitorForEnum(visitor, typeHint, declaring)) { return; } } JsonSerializer<Object> ser = _valueSerializer; if (ser == null) { ser = visitor.getProvider().findTypedValueSerializer(type, false, _property); if (ser == null) { // can this ever occur? visitor.expectAnyFormat(typeHint); return;"
+      },
+      {
+        "txt": "} } ser.acceptJsonFormatVisitor(visitor, null); } protected boolean _acceptJsonFormatVisitorForEnum(JsonFormatVisitorWrapper visitor, JavaType typeHint, Class<?> enumType) throws JsonMappingException { JsonStringFormatVisitor stringVisitor = visitor.expectStringFormat(typeHint); if (stringVisitor != null) {"
+      },
+      {
+        "txt": "Set<String> enums = new LinkedHashSet<String>(); for (Object en : enumType.getEnumConstants()) { try { enums.add(String.valueOf(_accessorMethod.callOn(en))); } catch (Exception e) { Throwable t = e; while (t instanceof InvocationTargetException && t.getCause() != null) { t = t.getCause(); } if (t instanceof Error) {"
+      },
+      {
+        "txt": "throw (Error) t; } throw JsonMappingException.wrapWithPath(t, en, _accessorMethod.getName() + \"()\"); } } stringVisitor.enumTypes(enums); } return true; } protected boolean isNaturalTypeWithStdHandling(Class<?> rawType, JsonSerializer<?> ser)"
+      },
+      {
+        "txt": "{ if (rawType.isPrimitive()) { if (rawType != Integer.TYPE && rawType != Boolean.TYPE && rawType != Double.TYPE) { return false; } } else { if (rawType != String.class && rawType != Integer.class && rawType != Boolean.class && rawType != Double.class) { return false; }"
+      },
+      {
+        "txt": "return isDefaultSerializer(ser); } @Override public String toString() { return \"(@JsonValue serializer for method \" + _accessorMethod.getDeclaringClass() + \"#\" + _accessorMethod.getName() + \")\"; } <extra_id_0> }"
+      }
+    ]
+  },
+  {
+    "id": 1585,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/ser/std/JsonValueSerializer.java",
+    "start-bug-line": 367,
+    "end-bug-line": 367,
+    "bug": "",
+    "fix": "@Override public String getPropertyName() { return _typeSerializer.getPropertyName(); }",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind.ser.std; import java.io.IOException; import java.lang.reflect.InvocationTargetException; import java.lang.reflect.Type; import java.util.LinkedHashSet; import java.util.Set; import com.fasterxml.jackson.core.*; import com.fasterxml.jackson.databind.*; import com.fasterxml.jackson.databind.annotation.JacksonStdImpl;"
+      },
+      {
+        "txt": "import com.fasterxml.jackson.databind.introspect.AnnotatedMethod; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonFormatVisitable; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonFormatVisitorWrapper; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonStringFormatVisitor; import com.fasterxml.jackson.databind.jsonschema.SchemaAware; import com.fasterxml.jackson.databind.jsontype.TypeSerializer; import com.fasterxml.jackson.databind.ser.BeanSerializer; import com.fasterxml.jackson.databind.ser.ContextualSerializer; @SuppressWarnings(\"serial\") @JacksonStdImpl"
+      },
+      {
+        "txt": "public class JsonValueSerializer extends StdSerializer<Object> implements ContextualSerializer, JsonFormatVisitable, SchemaAware { protected final AnnotatedMethod _accessorMethod; protected final JsonSerializer<Object> _valueSerializer; protected final BeanProperty _property; protected final boolean _forceTypeInformation; @SuppressWarnings(\"unchecked\") public JsonValueSerializer(AnnotatedMethod valueMethod, JsonSerializer<?> ser)"
+      },
+      {
+        "txt": "{ super(valueMethod.getType()); _accessorMethod = valueMethod; _valueSerializer = (JsonSerializer<Object>) ser; _property = null; _forceTypeInformation = true; // gets reconsidered when we are contextualized } @SuppressWarnings(\"unchecked\") public JsonValueSerializer(JsonValueSerializer src, BeanProperty property, JsonSerializer<?> ser, boolean forceTypeInfo)"
+      },
+      {
+        "txt": "{ super(_notNullClass(src.handledType())); _accessorMethod = src._accessorMethod; _valueSerializer = (JsonSerializer<Object>) ser; _property = property; _forceTypeInformation = forceTypeInfo; } @SuppressWarnings(\"unchecked\") private final static Class<Object> _notNullClass(Class<?> cls) { return (cls == null) ? Object.class : (Class<Object>) cls;"
+      },
+      {
+        "txt": "} public JsonValueSerializer withResolved(BeanProperty property, JsonSerializer<?> ser, boolean forceTypeInfo) { if (_property == property && _valueSerializer == ser && forceTypeInfo == _forceTypeInformation) { return this; } return new JsonValueSerializer(this, property, ser, forceTypeInfo); }"
+      },
+      {
+        "txt": "@Override public JsonSerializer<?> createContextual(SerializerProvider provider, BeanProperty property) throws JsonMappingException { JsonSerializer<?> ser = _valueSerializer; if (ser == null) { JavaType t = _accessorMethod.getType(); if (provider.isEnabled(MapperFeature.USE_STATIC_TYPING) || t.isFinal()) { ser = provider.findPrimaryPropertySerializer(t, property);"
+      },
+      {
+        "txt": "boolean forceTypeInformation = isNaturalTypeWithStdHandling(t.getRawClass(), ser); return withResolved(property, ser, forceTypeInformation); } } else { ser = provider.handlePrimaryContextualization(ser, property); return withResolved(property, ser, _forceTypeInformation); } return this; } @Override"
+      },
+      {
+        "txt": "public void serialize(Object bean, JsonGenerator gen, SerializerProvider prov) throws IOException { try { Object value = _accessorMethod.getValue(bean); if (value == null) { prov.defaultSerializeNull(gen); return; } JsonSerializer<Object> ser = _valueSerializer; if (ser == null) {"
+      },
+      {
+        "txt": "Class<?> c = value.getClass(); ser = prov.findTypedValueSerializer(c, true, _property); } ser.serialize(value, gen, prov); } catch (IOException ioe) { throw ioe; } catch (Exception e) { Throwable t = e; while (t instanceof InvocationTargetException && t.getCause() != null) { t = t.getCause();"
+      },
+      {
+        "txt": "} if (t instanceof Error) { throw (Error) t; } throw JsonMappingException.wrapWithPath(t, bean, _accessorMethod.getName() + \"()\"); } } @Override public void serializeWithType(Object bean, JsonGenerator gen, SerializerProvider provider, TypeSerializer typeSer0) throws IOException"
+      },
+      {
+        "txt": "{ Object value = null; try { value = _accessorMethod.getValue(bean); if (value == null) { provider.defaultSerializeNull(gen); return; } JsonSerializer<Object> ser = _valueSerializer; if (ser == null) { // no serializer yet? Need to fetch"
+      },
+      {
+        "txt": "ser = provider.findValueSerializer(value.getClass(), _property); } else { if (_forceTypeInformation) { typeSer0.writeTypePrefixForScalar(bean, gen); ser.serialize(value, gen, provider); typeSer0.writeTypeSuffixForScalar(bean, gen); return; } } ser.serializeWithType(value, gen, provider, typeSer0);"
+      },
+      {
+        "txt": "} catch (IOException ioe) { throw ioe; } catch (Exception e) { Throwable t = e; while (t instanceof InvocationTargetException && t.getCause() != null) { t = t.getCause(); } if (t instanceof Error) { throw (Error) t; }"
+      },
+      {
+        "txt": "throw JsonMappingException.wrapWithPath(t, bean, _accessorMethod.getName() + \"()\"); } } @SuppressWarnings(\"deprecation\") @Override public JsonNode getSchema(SerializerProvider provider, Type typeHint) throws JsonMappingException { if (_valueSerializer instanceof SchemaAware) { return ((SchemaAware)_valueSerializer).getSchema(provider, null);"
+      },
+      {
+        "txt": "} return com.fasterxml.jackson.databind.jsonschema.JsonSchema.getDefaultSchemaNode(); } @Override public void acceptJsonFormatVisitor(JsonFormatVisitorWrapper visitor, JavaType typeHint) throws JsonMappingException { final JavaType type = _accessorMethod.getType(); Class<?> declaring = _accessorMethod.getDeclaringClass(); if ((declaring != null) && declaring.isEnum()) {"
+      },
+      {
+        "txt": "if (_acceptJsonFormatVisitorForEnum(visitor, typeHint, declaring)) { return; } } JsonSerializer<Object> ser = _valueSerializer; if (ser == null) { ser = visitor.getProvider().findTypedValueSerializer(type, false, _property); if (ser == null) { // can this ever occur? visitor.expectAnyFormat(typeHint); return;"
+      },
+      {
+        "txt": "} } ser.acceptJsonFormatVisitor(visitor, null); } protected boolean _acceptJsonFormatVisitorForEnum(JsonFormatVisitorWrapper visitor, JavaType typeHint, Class<?> enumType) throws JsonMappingException { JsonStringFormatVisitor stringVisitor = visitor.expectStringFormat(typeHint); if (stringVisitor != null) {"
+      },
+      {
+        "txt": "Set<String> enums = new LinkedHashSet<String>(); for (Object en : enumType.getEnumConstants()) { try { enums.add(String.valueOf(_accessorMethod.callOn(en))); } catch (Exception e) { Throwable t = e; while (t instanceof InvocationTargetException && t.getCause() != null) { t = t.getCause(); } if (t instanceof Error) {"
+      },
+      {
+        "txt": "throw (Error) t; } throw JsonMappingException.wrapWithPath(t, en, _accessorMethod.getName() + \"()\"); } } stringVisitor.enumTypes(enums); } return true; } protected boolean isNaturalTypeWithStdHandling(Class<?> rawType, JsonSerializer<?> ser)"
+      },
+      {
+        "txt": "{ if (rawType.isPrimitive()) { if (rawType != Integer.TYPE && rawType != Boolean.TYPE && rawType != Double.TYPE) { return false; } } else { if (rawType != String.class && rawType != Integer.class && rawType != Boolean.class && rawType != Double.class) { return false; }"
+      },
+      {
+        "txt": "return isDefaultSerializer(ser); } @Override public String toString() { return \"(@JsonValue serializer for method \" + _accessorMethod.getDeclaringClass() + \"#\" + _accessorMethod.getName() + \")\"; } <extra_id_0> }"
+      }
+    ]
+  },
+  {
+    "id": 1586,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/ser/std/JsonValueSerializer.java",
+    "start-bug-line": 368,
+    "end-bug-line": 368,
+    "bug": "",
+    "fix": "@Override public TypeIdResolver getTypeIdResolver() { return _typeSerializer.getTypeIdResolver(); }",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind.ser.std; import java.io.IOException; import java.lang.reflect.InvocationTargetException; import java.lang.reflect.Type; import java.util.LinkedHashSet; import java.util.Set; import com.fasterxml.jackson.core.*; import com.fasterxml.jackson.databind.*; import com.fasterxml.jackson.databind.annotation.JacksonStdImpl;"
+      },
+      {
+        "txt": "import com.fasterxml.jackson.databind.introspect.AnnotatedMethod; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonFormatVisitable; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonFormatVisitorWrapper; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonStringFormatVisitor; import com.fasterxml.jackson.databind.jsonschema.SchemaAware; import com.fasterxml.jackson.databind.jsontype.TypeSerializer; import com.fasterxml.jackson.databind.ser.BeanSerializer; import com.fasterxml.jackson.databind.ser.ContextualSerializer; @SuppressWarnings(\"serial\") @JacksonStdImpl"
+      },
+      {
+        "txt": "public class JsonValueSerializer extends StdSerializer<Object> implements ContextualSerializer, JsonFormatVisitable, SchemaAware { protected final AnnotatedMethod _accessorMethod; protected final JsonSerializer<Object> _valueSerializer; protected final BeanProperty _property; protected final boolean _forceTypeInformation; @SuppressWarnings(\"unchecked\") public JsonValueSerializer(AnnotatedMethod valueMethod, JsonSerializer<?> ser)"
+      },
+      {
+        "txt": "{ super(valueMethod.getType()); _accessorMethod = valueMethod; _valueSerializer = (JsonSerializer<Object>) ser; _property = null; _forceTypeInformation = true; // gets reconsidered when we are contextualized } @SuppressWarnings(\"unchecked\") public JsonValueSerializer(JsonValueSerializer src, BeanProperty property, JsonSerializer<?> ser, boolean forceTypeInfo)"
+      },
+      {
+        "txt": "{ super(_notNullClass(src.handledType())); _accessorMethod = src._accessorMethod; _valueSerializer = (JsonSerializer<Object>) ser; _property = property; _forceTypeInformation = forceTypeInfo; } @SuppressWarnings(\"unchecked\") private final static Class<Object> _notNullClass(Class<?> cls) { return (cls == null) ? Object.class : (Class<Object>) cls;"
+      },
+      {
+        "txt": "} public JsonValueSerializer withResolved(BeanProperty property, JsonSerializer<?> ser, boolean forceTypeInfo) { if (_property == property && _valueSerializer == ser && forceTypeInfo == _forceTypeInformation) { return this; } return new JsonValueSerializer(this, property, ser, forceTypeInfo); }"
+      },
+      {
+        "txt": "@Override public JsonSerializer<?> createContextual(SerializerProvider provider, BeanProperty property) throws JsonMappingException { JsonSerializer<?> ser = _valueSerializer; if (ser == null) { JavaType t = _accessorMethod.getType(); if (provider.isEnabled(MapperFeature.USE_STATIC_TYPING) || t.isFinal()) { ser = provider.findPrimaryPropertySerializer(t, property);"
+      },
+      {
+        "txt": "boolean forceTypeInformation = isNaturalTypeWithStdHandling(t.getRawClass(), ser); return withResolved(property, ser, forceTypeInformation); } } else { ser = provider.handlePrimaryContextualization(ser, property); return withResolved(property, ser, _forceTypeInformation); } return this; } @Override"
+      },
+      {
+        "txt": "public void serialize(Object bean, JsonGenerator gen, SerializerProvider prov) throws IOException { try { Object value = _accessorMethod.getValue(bean); if (value == null) { prov.defaultSerializeNull(gen); return; } JsonSerializer<Object> ser = _valueSerializer; if (ser == null) {"
+      },
+      {
+        "txt": "Class<?> c = value.getClass(); ser = prov.findTypedValueSerializer(c, true, _property); } ser.serialize(value, gen, prov); } catch (IOException ioe) { throw ioe; } catch (Exception e) { Throwable t = e; while (t instanceof InvocationTargetException && t.getCause() != null) { t = t.getCause();"
+      },
+      {
+        "txt": "} if (t instanceof Error) { throw (Error) t; } throw JsonMappingException.wrapWithPath(t, bean, _accessorMethod.getName() + \"()\"); } } @Override public void serializeWithType(Object bean, JsonGenerator gen, SerializerProvider provider, TypeSerializer typeSer0) throws IOException"
+      },
+      {
+        "txt": "{ Object value = null; try { value = _accessorMethod.getValue(bean); if (value == null) { provider.defaultSerializeNull(gen); return; } JsonSerializer<Object> ser = _valueSerializer; if (ser == null) { // no serializer yet? Need to fetch"
+      },
+      {
+        "txt": "ser = provider.findValueSerializer(value.getClass(), _property); } else { if (_forceTypeInformation) { typeSer0.writeTypePrefixForScalar(bean, gen); ser.serialize(value, gen, provider); typeSer0.writeTypeSuffixForScalar(bean, gen); return; } } ser.serializeWithType(value, gen, provider, typeSer0);"
+      },
+      {
+        "txt": "} catch (IOException ioe) { throw ioe; } catch (Exception e) { Throwable t = e; while (t instanceof InvocationTargetException && t.getCause() != null) { t = t.getCause(); } if (t instanceof Error) { throw (Error) t; }"
+      },
+      {
+        "txt": "throw JsonMappingException.wrapWithPath(t, bean, _accessorMethod.getName() + \"()\"); } } @SuppressWarnings(\"deprecation\") @Override public JsonNode getSchema(SerializerProvider provider, Type typeHint) throws JsonMappingException { if (_valueSerializer instanceof SchemaAware) { return ((SchemaAware)_valueSerializer).getSchema(provider, null);"
+      },
+      {
+        "txt": "} return com.fasterxml.jackson.databind.jsonschema.JsonSchema.getDefaultSchemaNode(); } @Override public void acceptJsonFormatVisitor(JsonFormatVisitorWrapper visitor, JavaType typeHint) throws JsonMappingException { final JavaType type = _accessorMethod.getType(); Class<?> declaring = _accessorMethod.getDeclaringClass(); if ((declaring != null) && declaring.isEnum()) {"
+      },
+      {
+        "txt": "if (_acceptJsonFormatVisitorForEnum(visitor, typeHint, declaring)) { return; } } JsonSerializer<Object> ser = _valueSerializer; if (ser == null) { ser = visitor.getProvider().findTypedValueSerializer(type, false, _property); if (ser == null) { // can this ever occur? visitor.expectAnyFormat(typeHint); return;"
+      },
+      {
+        "txt": "} } ser.acceptJsonFormatVisitor(visitor, null); } protected boolean _acceptJsonFormatVisitorForEnum(JsonFormatVisitorWrapper visitor, JavaType typeHint, Class<?> enumType) throws JsonMappingException { JsonStringFormatVisitor stringVisitor = visitor.expectStringFormat(typeHint); if (stringVisitor != null) {"
+      },
+      {
+        "txt": "Set<String> enums = new LinkedHashSet<String>(); for (Object en : enumType.getEnumConstants()) { try { enums.add(String.valueOf(_accessorMethod.callOn(en))); } catch (Exception e) { Throwable t = e; while (t instanceof InvocationTargetException && t.getCause() != null) { t = t.getCause(); } if (t instanceof Error) {"
+      },
+      {
+        "txt": "throw (Error) t; } throw JsonMappingException.wrapWithPath(t, en, _accessorMethod.getName() + \"()\"); } } stringVisitor.enumTypes(enums); } return true; } protected boolean isNaturalTypeWithStdHandling(Class<?> rawType, JsonSerializer<?> ser)"
+      },
+      {
+        "txt": "{ if (rawType.isPrimitive()) { if (rawType != Integer.TYPE && rawType != Boolean.TYPE && rawType != Double.TYPE) { return false; } } else { if (rawType != String.class && rawType != Integer.class && rawType != Boolean.class && rawType != Double.class) { return false; }"
+      },
+      {
+        "txt": "return isDefaultSerializer(ser); } @Override public String toString() { return \"(@JsonValue serializer for method \" + _accessorMethod.getDeclaringClass() + \"#\" + _accessorMethod.getName() + \")\"; } <extra_id_0> }"
+      }
+    ]
+  },
+  {
+    "id": 1587,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/ser/std/JsonValueSerializer.java",
+    "start-bug-line": 369,
+    "end-bug-line": 369,
+    "bug": "",
+    "fix": "@Override public void writeTypePrefixForScalar(Object value, JsonGenerator gen) throws IOException { _typeSerializer.writeTypePrefixForScalar(_forObject, gen); }",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind.ser.std; import java.io.IOException; import java.lang.reflect.InvocationTargetException; import java.lang.reflect.Type; import java.util.LinkedHashSet; import java.util.Set; import com.fasterxml.jackson.core.*; import com.fasterxml.jackson.databind.*; import com.fasterxml.jackson.databind.annotation.JacksonStdImpl;"
+      },
+      {
+        "txt": "import com.fasterxml.jackson.databind.introspect.AnnotatedMethod; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonFormatVisitable; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonFormatVisitorWrapper; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonStringFormatVisitor; import com.fasterxml.jackson.databind.jsonschema.SchemaAware; import com.fasterxml.jackson.databind.jsontype.TypeSerializer; import com.fasterxml.jackson.databind.ser.BeanSerializer; import com.fasterxml.jackson.databind.ser.ContextualSerializer; @SuppressWarnings(\"serial\") @JacksonStdImpl"
+      },
+      {
+        "txt": "public class JsonValueSerializer extends StdSerializer<Object> implements ContextualSerializer, JsonFormatVisitable, SchemaAware { protected final AnnotatedMethod _accessorMethod; protected final JsonSerializer<Object> _valueSerializer; protected final BeanProperty _property; protected final boolean _forceTypeInformation; @SuppressWarnings(\"unchecked\") public JsonValueSerializer(AnnotatedMethod valueMethod, JsonSerializer<?> ser)"
+      },
+      {
+        "txt": "{ super(valueMethod.getType()); _accessorMethod = valueMethod; _valueSerializer = (JsonSerializer<Object>) ser; _property = null; _forceTypeInformation = true; // gets reconsidered when we are contextualized } @SuppressWarnings(\"unchecked\") public JsonValueSerializer(JsonValueSerializer src, BeanProperty property, JsonSerializer<?> ser, boolean forceTypeInfo)"
+      },
+      {
+        "txt": "{ super(_notNullClass(src.handledType())); _accessorMethod = src._accessorMethod; _valueSerializer = (JsonSerializer<Object>) ser; _property = property; _forceTypeInformation = forceTypeInfo; } @SuppressWarnings(\"unchecked\") private final static Class<Object> _notNullClass(Class<?> cls) { return (cls == null) ? Object.class : (Class<Object>) cls;"
+      },
+      {
+        "txt": "} public JsonValueSerializer withResolved(BeanProperty property, JsonSerializer<?> ser, boolean forceTypeInfo) { if (_property == property && _valueSerializer == ser && forceTypeInfo == _forceTypeInformation) { return this; } return new JsonValueSerializer(this, property, ser, forceTypeInfo); }"
+      },
+      {
+        "txt": "@Override public JsonSerializer<?> createContextual(SerializerProvider provider, BeanProperty property) throws JsonMappingException { JsonSerializer<?> ser = _valueSerializer; if (ser == null) { JavaType t = _accessorMethod.getType(); if (provider.isEnabled(MapperFeature.USE_STATIC_TYPING) || t.isFinal()) { ser = provider.findPrimaryPropertySerializer(t, property);"
+      },
+      {
+        "txt": "boolean forceTypeInformation = isNaturalTypeWithStdHandling(t.getRawClass(), ser); return withResolved(property, ser, forceTypeInformation); } } else { ser = provider.handlePrimaryContextualization(ser, property); return withResolved(property, ser, _forceTypeInformation); } return this; } @Override"
+      },
+      {
+        "txt": "public void serialize(Object bean, JsonGenerator gen, SerializerProvider prov) throws IOException { try { Object value = _accessorMethod.getValue(bean); if (value == null) { prov.defaultSerializeNull(gen); return; } JsonSerializer<Object> ser = _valueSerializer; if (ser == null) {"
+      },
+      {
+        "txt": "Class<?> c = value.getClass(); ser = prov.findTypedValueSerializer(c, true, _property); } ser.serialize(value, gen, prov); } catch (IOException ioe) { throw ioe; } catch (Exception e) { Throwable t = e; while (t instanceof InvocationTargetException && t.getCause() != null) { t = t.getCause();"
+      },
+      {
+        "txt": "} if (t instanceof Error) { throw (Error) t; } throw JsonMappingException.wrapWithPath(t, bean, _accessorMethod.getName() + \"()\"); } } @Override public void serializeWithType(Object bean, JsonGenerator gen, SerializerProvider provider, TypeSerializer typeSer0) throws IOException"
+      },
+      {
+        "txt": "{ Object value = null; try { value = _accessorMethod.getValue(bean); if (value == null) { provider.defaultSerializeNull(gen); return; } JsonSerializer<Object> ser = _valueSerializer; if (ser == null) { // no serializer yet? Need to fetch"
+      },
+      {
+        "txt": "ser = provider.findValueSerializer(value.getClass(), _property); } else { if (_forceTypeInformation) { typeSer0.writeTypePrefixForScalar(bean, gen); ser.serialize(value, gen, provider); typeSer0.writeTypeSuffixForScalar(bean, gen); return; } } ser.serializeWithType(value, gen, provider, typeSer0);"
+      },
+      {
+        "txt": "} catch (IOException ioe) { throw ioe; } catch (Exception e) { Throwable t = e; while (t instanceof InvocationTargetException && t.getCause() != null) { t = t.getCause(); } if (t instanceof Error) { throw (Error) t; }"
+      },
+      {
+        "txt": "throw JsonMappingException.wrapWithPath(t, bean, _accessorMethod.getName() + \"()\"); } } @SuppressWarnings(\"deprecation\") @Override public JsonNode getSchema(SerializerProvider provider, Type typeHint) throws JsonMappingException { if (_valueSerializer instanceof SchemaAware) { return ((SchemaAware)_valueSerializer).getSchema(provider, null);"
+      },
+      {
+        "txt": "} return com.fasterxml.jackson.databind.jsonschema.JsonSchema.getDefaultSchemaNode(); } @Override public void acceptJsonFormatVisitor(JsonFormatVisitorWrapper visitor, JavaType typeHint) throws JsonMappingException { final JavaType type = _accessorMethod.getType(); Class<?> declaring = _accessorMethod.getDeclaringClass(); if ((declaring != null) && declaring.isEnum()) {"
+      },
+      {
+        "txt": "if (_acceptJsonFormatVisitorForEnum(visitor, typeHint, declaring)) { return; } } JsonSerializer<Object> ser = _valueSerializer; if (ser == null) { ser = visitor.getProvider().findTypedValueSerializer(type, false, _property); if (ser == null) { // can this ever occur? visitor.expectAnyFormat(typeHint); return;"
+      },
+      {
+        "txt": "} } ser.acceptJsonFormatVisitor(visitor, null); } protected boolean _acceptJsonFormatVisitorForEnum(JsonFormatVisitorWrapper visitor, JavaType typeHint, Class<?> enumType) throws JsonMappingException { JsonStringFormatVisitor stringVisitor = visitor.expectStringFormat(typeHint); if (stringVisitor != null) {"
+      },
+      {
+        "txt": "Set<String> enums = new LinkedHashSet<String>(); for (Object en : enumType.getEnumConstants()) { try { enums.add(String.valueOf(_accessorMethod.callOn(en))); } catch (Exception e) { Throwable t = e; while (t instanceof InvocationTargetException && t.getCause() != null) { t = t.getCause(); } if (t instanceof Error) {"
+      },
+      {
+        "txt": "throw (Error) t; } throw JsonMappingException.wrapWithPath(t, en, _accessorMethod.getName() + \"()\"); } } stringVisitor.enumTypes(enums); } return true; } protected boolean isNaturalTypeWithStdHandling(Class<?> rawType, JsonSerializer<?> ser)"
+      },
+      {
+        "txt": "{ if (rawType.isPrimitive()) { if (rawType != Integer.TYPE && rawType != Boolean.TYPE && rawType != Double.TYPE) { return false; } } else { if (rawType != String.class && rawType != Integer.class && rawType != Boolean.class && rawType != Double.class) { return false; }"
+      },
+      {
+        "txt": "return isDefaultSerializer(ser); } @Override public String toString() { return \"(@JsonValue serializer for method \" + _accessorMethod.getDeclaringClass() + \"#\" + _accessorMethod.getName() + \")\"; } <extra_id_0> }"
+      }
+    ]
+  },
+  {
+    "id": 1588,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/ser/std/JsonValueSerializer.java",
+    "start-bug-line": 370,
+    "end-bug-line": 370,
+    "bug": "",
+    "fix": "@Override public void writeTypePrefixForObject(Object value, JsonGenerator gen) throws IOException { _typeSerializer.writeTypePrefixForObject(_forObject, gen); }",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind.ser.std; import java.io.IOException; import java.lang.reflect.InvocationTargetException; import java.lang.reflect.Type; import java.util.LinkedHashSet; import java.util.Set; import com.fasterxml.jackson.core.*; import com.fasterxml.jackson.databind.*; import com.fasterxml.jackson.databind.annotation.JacksonStdImpl;"
+      },
+      {
+        "txt": "import com.fasterxml.jackson.databind.introspect.AnnotatedMethod; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonFormatVisitable; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonFormatVisitorWrapper; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonStringFormatVisitor; import com.fasterxml.jackson.databind.jsonschema.SchemaAware; import com.fasterxml.jackson.databind.jsontype.TypeSerializer; import com.fasterxml.jackson.databind.ser.BeanSerializer; import com.fasterxml.jackson.databind.ser.ContextualSerializer; @SuppressWarnings(\"serial\") @JacksonStdImpl"
+      },
+      {
+        "txt": "public class JsonValueSerializer extends StdSerializer<Object> implements ContextualSerializer, JsonFormatVisitable, SchemaAware { protected final AnnotatedMethod _accessorMethod; protected final JsonSerializer<Object> _valueSerializer; protected final BeanProperty _property; protected final boolean _forceTypeInformation; @SuppressWarnings(\"unchecked\") public JsonValueSerializer(AnnotatedMethod valueMethod, JsonSerializer<?> ser)"
+      },
+      {
+        "txt": "{ super(valueMethod.getType()); _accessorMethod = valueMethod; _valueSerializer = (JsonSerializer<Object>) ser; _property = null; _forceTypeInformation = true; // gets reconsidered when we are contextualized } @SuppressWarnings(\"unchecked\") public JsonValueSerializer(JsonValueSerializer src, BeanProperty property, JsonSerializer<?> ser, boolean forceTypeInfo)"
+      },
+      {
+        "txt": "{ super(_notNullClass(src.handledType())); _accessorMethod = src._accessorMethod; _valueSerializer = (JsonSerializer<Object>) ser; _property = property; _forceTypeInformation = forceTypeInfo; } @SuppressWarnings(\"unchecked\") private final static Class<Object> _notNullClass(Class<?> cls) { return (cls == null) ? Object.class : (Class<Object>) cls;"
+      },
+      {
+        "txt": "} public JsonValueSerializer withResolved(BeanProperty property, JsonSerializer<?> ser, boolean forceTypeInfo) { if (_property == property && _valueSerializer == ser && forceTypeInfo == _forceTypeInformation) { return this; } return new JsonValueSerializer(this, property, ser, forceTypeInfo); }"
+      },
+      {
+        "txt": "@Override public JsonSerializer<?> createContextual(SerializerProvider provider, BeanProperty property) throws JsonMappingException { JsonSerializer<?> ser = _valueSerializer; if (ser == null) { JavaType t = _accessorMethod.getType(); if (provider.isEnabled(MapperFeature.USE_STATIC_TYPING) || t.isFinal()) { ser = provider.findPrimaryPropertySerializer(t, property);"
+      },
+      {
+        "txt": "boolean forceTypeInformation = isNaturalTypeWithStdHandling(t.getRawClass(), ser); return withResolved(property, ser, forceTypeInformation); } } else { ser = provider.handlePrimaryContextualization(ser, property); return withResolved(property, ser, _forceTypeInformation); } return this; } @Override"
+      },
+      {
+        "txt": "public void serialize(Object bean, JsonGenerator gen, SerializerProvider prov) throws IOException { try { Object value = _accessorMethod.getValue(bean); if (value == null) { prov.defaultSerializeNull(gen); return; } JsonSerializer<Object> ser = _valueSerializer; if (ser == null) {"
+      },
+      {
+        "txt": "Class<?> c = value.getClass(); ser = prov.findTypedValueSerializer(c, true, _property); } ser.serialize(value, gen, prov); } catch (IOException ioe) { throw ioe; } catch (Exception e) { Throwable t = e; while (t instanceof InvocationTargetException && t.getCause() != null) { t = t.getCause();"
+      },
+      {
+        "txt": "} if (t instanceof Error) { throw (Error) t; } throw JsonMappingException.wrapWithPath(t, bean, _accessorMethod.getName() + \"()\"); } } @Override public void serializeWithType(Object bean, JsonGenerator gen, SerializerProvider provider, TypeSerializer typeSer0) throws IOException"
+      },
+      {
+        "txt": "{ Object value = null; try { value = _accessorMethod.getValue(bean); if (value == null) { provider.defaultSerializeNull(gen); return; } JsonSerializer<Object> ser = _valueSerializer; if (ser == null) { // no serializer yet? Need to fetch"
+      },
+      {
+        "txt": "ser = provider.findValueSerializer(value.getClass(), _property); } else { if (_forceTypeInformation) { typeSer0.writeTypePrefixForScalar(bean, gen); ser.serialize(value, gen, provider); typeSer0.writeTypeSuffixForScalar(bean, gen); return; } } ser.serializeWithType(value, gen, provider, typeSer0);"
+      },
+      {
+        "txt": "} catch (IOException ioe) { throw ioe; } catch (Exception e) { Throwable t = e; while (t instanceof InvocationTargetException && t.getCause() != null) { t = t.getCause(); } if (t instanceof Error) { throw (Error) t; }"
+      },
+      {
+        "txt": "throw JsonMappingException.wrapWithPath(t, bean, _accessorMethod.getName() + \"()\"); } } @SuppressWarnings(\"deprecation\") @Override public JsonNode getSchema(SerializerProvider provider, Type typeHint) throws JsonMappingException { if (_valueSerializer instanceof SchemaAware) { return ((SchemaAware)_valueSerializer).getSchema(provider, null);"
+      },
+      {
+        "txt": "} return com.fasterxml.jackson.databind.jsonschema.JsonSchema.getDefaultSchemaNode(); } @Override public void acceptJsonFormatVisitor(JsonFormatVisitorWrapper visitor, JavaType typeHint) throws JsonMappingException { final JavaType type = _accessorMethod.getType(); Class<?> declaring = _accessorMethod.getDeclaringClass(); if ((declaring != null) && declaring.isEnum()) {"
+      },
+      {
+        "txt": "if (_acceptJsonFormatVisitorForEnum(visitor, typeHint, declaring)) { return; } } JsonSerializer<Object> ser = _valueSerializer; if (ser == null) { ser = visitor.getProvider().findTypedValueSerializer(type, false, _property); if (ser == null) { // can this ever occur? visitor.expectAnyFormat(typeHint); return;"
+      },
+      {
+        "txt": "} } ser.acceptJsonFormatVisitor(visitor, null); } protected boolean _acceptJsonFormatVisitorForEnum(JsonFormatVisitorWrapper visitor, JavaType typeHint, Class<?> enumType) throws JsonMappingException { JsonStringFormatVisitor stringVisitor = visitor.expectStringFormat(typeHint); if (stringVisitor != null) {"
+      },
+      {
+        "txt": "Set<String> enums = new LinkedHashSet<String>(); for (Object en : enumType.getEnumConstants()) { try { enums.add(String.valueOf(_accessorMethod.callOn(en))); } catch (Exception e) { Throwable t = e; while (t instanceof InvocationTargetException && t.getCause() != null) { t = t.getCause(); } if (t instanceof Error) {"
+      },
+      {
+        "txt": "throw (Error) t; } throw JsonMappingException.wrapWithPath(t, en, _accessorMethod.getName() + \"()\"); } } stringVisitor.enumTypes(enums); } return true; } protected boolean isNaturalTypeWithStdHandling(Class<?> rawType, JsonSerializer<?> ser)"
+      },
+      {
+        "txt": "{ if (rawType.isPrimitive()) { if (rawType != Integer.TYPE && rawType != Boolean.TYPE && rawType != Double.TYPE) { return false; } } else { if (rawType != String.class && rawType != Integer.class && rawType != Boolean.class && rawType != Double.class) { return false; }"
+      },
+      {
+        "txt": "return isDefaultSerializer(ser); } @Override public String toString() { return \"(@JsonValue serializer for method \" + _accessorMethod.getDeclaringClass() + \"#\" + _accessorMethod.getName() + \")\"; } <extra_id_0> }"
+      }
+    ]
+  },
+  {
+    "id": 1589,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/ser/std/JsonValueSerializer.java",
+    "start-bug-line": 371,
+    "end-bug-line": 371,
+    "bug": "",
+    "fix": "@Override public void writeTypePrefixForArray(Object value, JsonGenerator gen) throws IOException { _typeSerializer.writeTypePrefixForArray(_forObject, gen); }",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind.ser.std; import java.io.IOException; import java.lang.reflect.InvocationTargetException; import java.lang.reflect.Type; import java.util.LinkedHashSet; import java.util.Set; import com.fasterxml.jackson.core.*; import com.fasterxml.jackson.databind.*; import com.fasterxml.jackson.databind.annotation.JacksonStdImpl;"
+      },
+      {
+        "txt": "import com.fasterxml.jackson.databind.introspect.AnnotatedMethod; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonFormatVisitable; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonFormatVisitorWrapper; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonStringFormatVisitor; import com.fasterxml.jackson.databind.jsonschema.SchemaAware; import com.fasterxml.jackson.databind.jsontype.TypeSerializer; import com.fasterxml.jackson.databind.ser.BeanSerializer; import com.fasterxml.jackson.databind.ser.ContextualSerializer; @SuppressWarnings(\"serial\") @JacksonStdImpl"
+      },
+      {
+        "txt": "public class JsonValueSerializer extends StdSerializer<Object> implements ContextualSerializer, JsonFormatVisitable, SchemaAware { protected final AnnotatedMethod _accessorMethod; protected final JsonSerializer<Object> _valueSerializer; protected final BeanProperty _property; protected final boolean _forceTypeInformation; @SuppressWarnings(\"unchecked\") public JsonValueSerializer(AnnotatedMethod valueMethod, JsonSerializer<?> ser)"
+      },
+      {
+        "txt": "{ super(valueMethod.getType()); _accessorMethod = valueMethod; _valueSerializer = (JsonSerializer<Object>) ser; _property = null; _forceTypeInformation = true; // gets reconsidered when we are contextualized } @SuppressWarnings(\"unchecked\") public JsonValueSerializer(JsonValueSerializer src, BeanProperty property, JsonSerializer<?> ser, boolean forceTypeInfo)"
+      },
+      {
+        "txt": "{ super(_notNullClass(src.handledType())); _accessorMethod = src._accessorMethod; _valueSerializer = (JsonSerializer<Object>) ser; _property = property; _forceTypeInformation = forceTypeInfo; } @SuppressWarnings(\"unchecked\") private final static Class<Object> _notNullClass(Class<?> cls) { return (cls == null) ? Object.class : (Class<Object>) cls;"
+      },
+      {
+        "txt": "} public JsonValueSerializer withResolved(BeanProperty property, JsonSerializer<?> ser, boolean forceTypeInfo) { if (_property == property && _valueSerializer == ser && forceTypeInfo == _forceTypeInformation) { return this; } return new JsonValueSerializer(this, property, ser, forceTypeInfo); }"
+      },
+      {
+        "txt": "@Override public JsonSerializer<?> createContextual(SerializerProvider provider, BeanProperty property) throws JsonMappingException { JsonSerializer<?> ser = _valueSerializer; if (ser == null) { JavaType t = _accessorMethod.getType(); if (provider.isEnabled(MapperFeature.USE_STATIC_TYPING) || t.isFinal()) { ser = provider.findPrimaryPropertySerializer(t, property);"
+      },
+      {
+        "txt": "boolean forceTypeInformation = isNaturalTypeWithStdHandling(t.getRawClass(), ser); return withResolved(property, ser, forceTypeInformation); } } else { ser = provider.handlePrimaryContextualization(ser, property); return withResolved(property, ser, _forceTypeInformation); } return this; } @Override"
+      },
+      {
+        "txt": "public void serialize(Object bean, JsonGenerator gen, SerializerProvider prov) throws IOException { try { Object value = _accessorMethod.getValue(bean); if (value == null) { prov.defaultSerializeNull(gen); return; } JsonSerializer<Object> ser = _valueSerializer; if (ser == null) {"
+      },
+      {
+        "txt": "Class<?> c = value.getClass(); ser = prov.findTypedValueSerializer(c, true, _property); } ser.serialize(value, gen, prov); } catch (IOException ioe) { throw ioe; } catch (Exception e) { Throwable t = e; while (t instanceof InvocationTargetException && t.getCause() != null) { t = t.getCause();"
+      },
+      {
+        "txt": "} if (t instanceof Error) { throw (Error) t; } throw JsonMappingException.wrapWithPath(t, bean, _accessorMethod.getName() + \"()\"); } } @Override public void serializeWithType(Object bean, JsonGenerator gen, SerializerProvider provider, TypeSerializer typeSer0) throws IOException"
+      },
+      {
+        "txt": "{ Object value = null; try { value = _accessorMethod.getValue(bean); if (value == null) { provider.defaultSerializeNull(gen); return; } JsonSerializer<Object> ser = _valueSerializer; if (ser == null) { // no serializer yet? Need to fetch"
+      },
+      {
+        "txt": "ser = provider.findValueSerializer(value.getClass(), _property); } else { if (_forceTypeInformation) { typeSer0.writeTypePrefixForScalar(bean, gen); ser.serialize(value, gen, provider); typeSer0.writeTypeSuffixForScalar(bean, gen); return; } } ser.serializeWithType(value, gen, provider, typeSer0);"
+      },
+      {
+        "txt": "} catch (IOException ioe) { throw ioe; } catch (Exception e) { Throwable t = e; while (t instanceof InvocationTargetException && t.getCause() != null) { t = t.getCause(); } if (t instanceof Error) { throw (Error) t; }"
+      },
+      {
+        "txt": "throw JsonMappingException.wrapWithPath(t, bean, _accessorMethod.getName() + \"()\"); } } @SuppressWarnings(\"deprecation\") @Override public JsonNode getSchema(SerializerProvider provider, Type typeHint) throws JsonMappingException { if (_valueSerializer instanceof SchemaAware) { return ((SchemaAware)_valueSerializer).getSchema(provider, null);"
+      },
+      {
+        "txt": "} return com.fasterxml.jackson.databind.jsonschema.JsonSchema.getDefaultSchemaNode(); } @Override public void acceptJsonFormatVisitor(JsonFormatVisitorWrapper visitor, JavaType typeHint) throws JsonMappingException { final JavaType type = _accessorMethod.getType(); Class<?> declaring = _accessorMethod.getDeclaringClass(); if ((declaring != null) && declaring.isEnum()) {"
+      },
+      {
+        "txt": "if (_acceptJsonFormatVisitorForEnum(visitor, typeHint, declaring)) { return; } } JsonSerializer<Object> ser = _valueSerializer; if (ser == null) { ser = visitor.getProvider().findTypedValueSerializer(type, false, _property); if (ser == null) { // can this ever occur? visitor.expectAnyFormat(typeHint); return;"
+      },
+      {
+        "txt": "} } ser.acceptJsonFormatVisitor(visitor, null); } protected boolean _acceptJsonFormatVisitorForEnum(JsonFormatVisitorWrapper visitor, JavaType typeHint, Class<?> enumType) throws JsonMappingException { JsonStringFormatVisitor stringVisitor = visitor.expectStringFormat(typeHint); if (stringVisitor != null) {"
+      },
+      {
+        "txt": "Set<String> enums = new LinkedHashSet<String>(); for (Object en : enumType.getEnumConstants()) { try { enums.add(String.valueOf(_accessorMethod.callOn(en))); } catch (Exception e) { Throwable t = e; while (t instanceof InvocationTargetException && t.getCause() != null) { t = t.getCause(); } if (t instanceof Error) {"
+      },
+      {
+        "txt": "throw (Error) t; } throw JsonMappingException.wrapWithPath(t, en, _accessorMethod.getName() + \"()\"); } } stringVisitor.enumTypes(enums); } return true; } protected boolean isNaturalTypeWithStdHandling(Class<?> rawType, JsonSerializer<?> ser)"
+      },
+      {
+        "txt": "{ if (rawType.isPrimitive()) { if (rawType != Integer.TYPE && rawType != Boolean.TYPE && rawType != Double.TYPE) { return false; } } else { if (rawType != String.class && rawType != Integer.class && rawType != Boolean.class && rawType != Double.class) { return false; }"
+      },
+      {
+        "txt": "return isDefaultSerializer(ser); } @Override public String toString() { return \"(@JsonValue serializer for method \" + _accessorMethod.getDeclaringClass() + \"#\" + _accessorMethod.getName() + \")\"; } <extra_id_0> }"
+      }
+    ]
+  },
+  {
+    "id": 1590,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/ser/std/JsonValueSerializer.java",
+    "start-bug-line": 372,
+    "end-bug-line": 372,
+    "bug": "",
+    "fix": "@Override public void writeTypeSuffixForScalar(Object value, JsonGenerator gen) throws IOException { _typeSerializer.writeTypeSuffixForScalar(_forObject, gen); }",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind.ser.std; import java.io.IOException; import java.lang.reflect.InvocationTargetException; import java.lang.reflect.Type; import java.util.LinkedHashSet; import java.util.Set; import com.fasterxml.jackson.core.*; import com.fasterxml.jackson.databind.*; import com.fasterxml.jackson.databind.annotation.JacksonStdImpl;"
+      },
+      {
+        "txt": "import com.fasterxml.jackson.databind.introspect.AnnotatedMethod; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonFormatVisitable; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonFormatVisitorWrapper; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonStringFormatVisitor; import com.fasterxml.jackson.databind.jsonschema.SchemaAware; import com.fasterxml.jackson.databind.jsontype.TypeSerializer; import com.fasterxml.jackson.databind.ser.BeanSerializer; import com.fasterxml.jackson.databind.ser.ContextualSerializer; @SuppressWarnings(\"serial\") @JacksonStdImpl"
+      },
+      {
+        "txt": "public class JsonValueSerializer extends StdSerializer<Object> implements ContextualSerializer, JsonFormatVisitable, SchemaAware { protected final AnnotatedMethod _accessorMethod; protected final JsonSerializer<Object> _valueSerializer; protected final BeanProperty _property; protected final boolean _forceTypeInformation; @SuppressWarnings(\"unchecked\") public JsonValueSerializer(AnnotatedMethod valueMethod, JsonSerializer<?> ser)"
+      },
+      {
+        "txt": "{ super(valueMethod.getType()); _accessorMethod = valueMethod; _valueSerializer = (JsonSerializer<Object>) ser; _property = null; _forceTypeInformation = true; // gets reconsidered when we are contextualized } @SuppressWarnings(\"unchecked\") public JsonValueSerializer(JsonValueSerializer src, BeanProperty property, JsonSerializer<?> ser, boolean forceTypeInfo)"
+      },
+      {
+        "txt": "{ super(_notNullClass(src.handledType())); _accessorMethod = src._accessorMethod; _valueSerializer = (JsonSerializer<Object>) ser; _property = property; _forceTypeInformation = forceTypeInfo; } @SuppressWarnings(\"unchecked\") private final static Class<Object> _notNullClass(Class<?> cls) { return (cls == null) ? Object.class : (Class<Object>) cls;"
+      },
+      {
+        "txt": "} public JsonValueSerializer withResolved(BeanProperty property, JsonSerializer<?> ser, boolean forceTypeInfo) { if (_property == property && _valueSerializer == ser && forceTypeInfo == _forceTypeInformation) { return this; } return new JsonValueSerializer(this, property, ser, forceTypeInfo); }"
+      },
+      {
+        "txt": "@Override public JsonSerializer<?> createContextual(SerializerProvider provider, BeanProperty property) throws JsonMappingException { JsonSerializer<?> ser = _valueSerializer; if (ser == null) { JavaType t = _accessorMethod.getType(); if (provider.isEnabled(MapperFeature.USE_STATIC_TYPING) || t.isFinal()) { ser = provider.findPrimaryPropertySerializer(t, property);"
+      },
+      {
+        "txt": "boolean forceTypeInformation = isNaturalTypeWithStdHandling(t.getRawClass(), ser); return withResolved(property, ser, forceTypeInformation); } } else { ser = provider.handlePrimaryContextualization(ser, property); return withResolved(property, ser, _forceTypeInformation); } return this; } @Override"
+      },
+      {
+        "txt": "public void serialize(Object bean, JsonGenerator gen, SerializerProvider prov) throws IOException { try { Object value = _accessorMethod.getValue(bean); if (value == null) { prov.defaultSerializeNull(gen); return; } JsonSerializer<Object> ser = _valueSerializer; if (ser == null) {"
+      },
+      {
+        "txt": "Class<?> c = value.getClass(); ser = prov.findTypedValueSerializer(c, true, _property); } ser.serialize(value, gen, prov); } catch (IOException ioe) { throw ioe; } catch (Exception e) { Throwable t = e; while (t instanceof InvocationTargetException && t.getCause() != null) { t = t.getCause();"
+      },
+      {
+        "txt": "} if (t instanceof Error) { throw (Error) t; } throw JsonMappingException.wrapWithPath(t, bean, _accessorMethod.getName() + \"()\"); } } @Override public void serializeWithType(Object bean, JsonGenerator gen, SerializerProvider provider, TypeSerializer typeSer0) throws IOException"
+      },
+      {
+        "txt": "{ Object value = null; try { value = _accessorMethod.getValue(bean); if (value == null) { provider.defaultSerializeNull(gen); return; } JsonSerializer<Object> ser = _valueSerializer; if (ser == null) { // no serializer yet? Need to fetch"
+      },
+      {
+        "txt": "ser = provider.findValueSerializer(value.getClass(), _property); } else { if (_forceTypeInformation) { typeSer0.writeTypePrefixForScalar(bean, gen); ser.serialize(value, gen, provider); typeSer0.writeTypeSuffixForScalar(bean, gen); return; } } ser.serializeWithType(value, gen, provider, typeSer0);"
+      },
+      {
+        "txt": "} catch (IOException ioe) { throw ioe; } catch (Exception e) { Throwable t = e; while (t instanceof InvocationTargetException && t.getCause() != null) { t = t.getCause(); } if (t instanceof Error) { throw (Error) t; }"
+      },
+      {
+        "txt": "throw JsonMappingException.wrapWithPath(t, bean, _accessorMethod.getName() + \"()\"); } } @SuppressWarnings(\"deprecation\") @Override public JsonNode getSchema(SerializerProvider provider, Type typeHint) throws JsonMappingException { if (_valueSerializer instanceof SchemaAware) { return ((SchemaAware)_valueSerializer).getSchema(provider, null);"
+      },
+      {
+        "txt": "} return com.fasterxml.jackson.databind.jsonschema.JsonSchema.getDefaultSchemaNode(); } @Override public void acceptJsonFormatVisitor(JsonFormatVisitorWrapper visitor, JavaType typeHint) throws JsonMappingException { final JavaType type = _accessorMethod.getType(); Class<?> declaring = _accessorMethod.getDeclaringClass(); if ((declaring != null) && declaring.isEnum()) {"
+      },
+      {
+        "txt": "if (_acceptJsonFormatVisitorForEnum(visitor, typeHint, declaring)) { return; } } JsonSerializer<Object> ser = _valueSerializer; if (ser == null) { ser = visitor.getProvider().findTypedValueSerializer(type, false, _property); if (ser == null) { // can this ever occur? visitor.expectAnyFormat(typeHint); return;"
+      },
+      {
+        "txt": "} } ser.acceptJsonFormatVisitor(visitor, null); } protected boolean _acceptJsonFormatVisitorForEnum(JsonFormatVisitorWrapper visitor, JavaType typeHint, Class<?> enumType) throws JsonMappingException { JsonStringFormatVisitor stringVisitor = visitor.expectStringFormat(typeHint); if (stringVisitor != null) {"
+      },
+      {
+        "txt": "Set<String> enums = new LinkedHashSet<String>(); for (Object en : enumType.getEnumConstants()) { try { enums.add(String.valueOf(_accessorMethod.callOn(en))); } catch (Exception e) { Throwable t = e; while (t instanceof InvocationTargetException && t.getCause() != null) { t = t.getCause(); } if (t instanceof Error) {"
+      },
+      {
+        "txt": "throw (Error) t; } throw JsonMappingException.wrapWithPath(t, en, _accessorMethod.getName() + \"()\"); } } stringVisitor.enumTypes(enums); } return true; } protected boolean isNaturalTypeWithStdHandling(Class<?> rawType, JsonSerializer<?> ser)"
+      },
+      {
+        "txt": "{ if (rawType.isPrimitive()) { if (rawType != Integer.TYPE && rawType != Boolean.TYPE && rawType != Double.TYPE) { return false; } } else { if (rawType != String.class && rawType != Integer.class && rawType != Boolean.class && rawType != Double.class) { return false; }"
+      },
+      {
+        "txt": "return isDefaultSerializer(ser); } @Override public String toString() { return \"(@JsonValue serializer for method \" + _accessorMethod.getDeclaringClass() + \"#\" + _accessorMethod.getName() + \")\"; } <extra_id_0> }"
+      }
+    ]
+  },
+  {
+    "id": 1591,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/ser/std/JsonValueSerializer.java",
+    "start-bug-line": 373,
+    "end-bug-line": 373,
+    "bug": "",
+    "fix": "@Override public void writeTypeSuffixForObject(Object value, JsonGenerator gen) throws IOException { _typeSerializer.writeTypeSuffixForObject(_forObject, gen); }",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind.ser.std; import java.io.IOException; import java.lang.reflect.InvocationTargetException; import java.lang.reflect.Type; import java.util.LinkedHashSet; import java.util.Set; import com.fasterxml.jackson.core.*; import com.fasterxml.jackson.databind.*; import com.fasterxml.jackson.databind.annotation.JacksonStdImpl;"
+      },
+      {
+        "txt": "import com.fasterxml.jackson.databind.introspect.AnnotatedMethod; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonFormatVisitable; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonFormatVisitorWrapper; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonStringFormatVisitor; import com.fasterxml.jackson.databind.jsonschema.SchemaAware; import com.fasterxml.jackson.databind.jsontype.TypeSerializer; import com.fasterxml.jackson.databind.ser.BeanSerializer; import com.fasterxml.jackson.databind.ser.ContextualSerializer; @SuppressWarnings(\"serial\") @JacksonStdImpl"
+      },
+      {
+        "txt": "public class JsonValueSerializer extends StdSerializer<Object> implements ContextualSerializer, JsonFormatVisitable, SchemaAware { protected final AnnotatedMethod _accessorMethod; protected final JsonSerializer<Object> _valueSerializer; protected final BeanProperty _property; protected final boolean _forceTypeInformation; @SuppressWarnings(\"unchecked\") public JsonValueSerializer(AnnotatedMethod valueMethod, JsonSerializer<?> ser)"
+      },
+      {
+        "txt": "{ super(valueMethod.getType()); _accessorMethod = valueMethod; _valueSerializer = (JsonSerializer<Object>) ser; _property = null; _forceTypeInformation = true; // gets reconsidered when we are contextualized } @SuppressWarnings(\"unchecked\") public JsonValueSerializer(JsonValueSerializer src, BeanProperty property, JsonSerializer<?> ser, boolean forceTypeInfo)"
+      },
+      {
+        "txt": "{ super(_notNullClass(src.handledType())); _accessorMethod = src._accessorMethod; _valueSerializer = (JsonSerializer<Object>) ser; _property = property; _forceTypeInformation = forceTypeInfo; } @SuppressWarnings(\"unchecked\") private final static Class<Object> _notNullClass(Class<?> cls) { return (cls == null) ? Object.class : (Class<Object>) cls;"
+      },
+      {
+        "txt": "} public JsonValueSerializer withResolved(BeanProperty property, JsonSerializer<?> ser, boolean forceTypeInfo) { if (_property == property && _valueSerializer == ser && forceTypeInfo == _forceTypeInformation) { return this; } return new JsonValueSerializer(this, property, ser, forceTypeInfo); }"
+      },
+      {
+        "txt": "@Override public JsonSerializer<?> createContextual(SerializerProvider provider, BeanProperty property) throws JsonMappingException { JsonSerializer<?> ser = _valueSerializer; if (ser == null) { JavaType t = _accessorMethod.getType(); if (provider.isEnabled(MapperFeature.USE_STATIC_TYPING) || t.isFinal()) { ser = provider.findPrimaryPropertySerializer(t, property);"
+      },
+      {
+        "txt": "boolean forceTypeInformation = isNaturalTypeWithStdHandling(t.getRawClass(), ser); return withResolved(property, ser, forceTypeInformation); } } else { ser = provider.handlePrimaryContextualization(ser, property); return withResolved(property, ser, _forceTypeInformation); } return this; } @Override"
+      },
+      {
+        "txt": "public void serialize(Object bean, JsonGenerator gen, SerializerProvider prov) throws IOException { try { Object value = _accessorMethod.getValue(bean); if (value == null) { prov.defaultSerializeNull(gen); return; } JsonSerializer<Object> ser = _valueSerializer; if (ser == null) {"
+      },
+      {
+        "txt": "Class<?> c = value.getClass(); ser = prov.findTypedValueSerializer(c, true, _property); } ser.serialize(value, gen, prov); } catch (IOException ioe) { throw ioe; } catch (Exception e) { Throwable t = e; while (t instanceof InvocationTargetException && t.getCause() != null) { t = t.getCause();"
+      },
+      {
+        "txt": "} if (t instanceof Error) { throw (Error) t; } throw JsonMappingException.wrapWithPath(t, bean, _accessorMethod.getName() + \"()\"); } } @Override public void serializeWithType(Object bean, JsonGenerator gen, SerializerProvider provider, TypeSerializer typeSer0) throws IOException"
+      },
+      {
+        "txt": "{ Object value = null; try { value = _accessorMethod.getValue(bean); if (value == null) { provider.defaultSerializeNull(gen); return; } JsonSerializer<Object> ser = _valueSerializer; if (ser == null) { // no serializer yet? Need to fetch"
+      },
+      {
+        "txt": "ser = provider.findValueSerializer(value.getClass(), _property); } else { if (_forceTypeInformation) { typeSer0.writeTypePrefixForScalar(bean, gen); ser.serialize(value, gen, provider); typeSer0.writeTypeSuffixForScalar(bean, gen); return; } } ser.serializeWithType(value, gen, provider, typeSer0);"
+      },
+      {
+        "txt": "} catch (IOException ioe) { throw ioe; } catch (Exception e) { Throwable t = e; while (t instanceof InvocationTargetException && t.getCause() != null) { t = t.getCause(); } if (t instanceof Error) { throw (Error) t; }"
+      },
+      {
+        "txt": "throw JsonMappingException.wrapWithPath(t, bean, _accessorMethod.getName() + \"()\"); } } @SuppressWarnings(\"deprecation\") @Override public JsonNode getSchema(SerializerProvider provider, Type typeHint) throws JsonMappingException { if (_valueSerializer instanceof SchemaAware) { return ((SchemaAware)_valueSerializer).getSchema(provider, null);"
+      },
+      {
+        "txt": "} return com.fasterxml.jackson.databind.jsonschema.JsonSchema.getDefaultSchemaNode(); } @Override public void acceptJsonFormatVisitor(JsonFormatVisitorWrapper visitor, JavaType typeHint) throws JsonMappingException { final JavaType type = _accessorMethod.getType(); Class<?> declaring = _accessorMethod.getDeclaringClass(); if ((declaring != null) && declaring.isEnum()) {"
+      },
+      {
+        "txt": "if (_acceptJsonFormatVisitorForEnum(visitor, typeHint, declaring)) { return; } } JsonSerializer<Object> ser = _valueSerializer; if (ser == null) { ser = visitor.getProvider().findTypedValueSerializer(type, false, _property); if (ser == null) { // can this ever occur? visitor.expectAnyFormat(typeHint); return;"
+      },
+      {
+        "txt": "} } ser.acceptJsonFormatVisitor(visitor, null); } protected boolean _acceptJsonFormatVisitorForEnum(JsonFormatVisitorWrapper visitor, JavaType typeHint, Class<?> enumType) throws JsonMappingException { JsonStringFormatVisitor stringVisitor = visitor.expectStringFormat(typeHint); if (stringVisitor != null) {"
+      },
+      {
+        "txt": "Set<String> enums = new LinkedHashSet<String>(); for (Object en : enumType.getEnumConstants()) { try { enums.add(String.valueOf(_accessorMethod.callOn(en))); } catch (Exception e) { Throwable t = e; while (t instanceof InvocationTargetException && t.getCause() != null) { t = t.getCause(); } if (t instanceof Error) {"
+      },
+      {
+        "txt": "throw (Error) t; } throw JsonMappingException.wrapWithPath(t, en, _accessorMethod.getName() + \"()\"); } } stringVisitor.enumTypes(enums); } return true; } protected boolean isNaturalTypeWithStdHandling(Class<?> rawType, JsonSerializer<?> ser)"
+      },
+      {
+        "txt": "{ if (rawType.isPrimitive()) { if (rawType != Integer.TYPE && rawType != Boolean.TYPE && rawType != Double.TYPE) { return false; } } else { if (rawType != String.class && rawType != Integer.class && rawType != Boolean.class && rawType != Double.class) { return false; }"
+      },
+      {
+        "txt": "return isDefaultSerializer(ser); } @Override public String toString() { return \"(@JsonValue serializer for method \" + _accessorMethod.getDeclaringClass() + \"#\" + _accessorMethod.getName() + \")\"; } <extra_id_0> }"
+      }
+    ]
+  },
+  {
+    "id": 1592,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/ser/std/JsonValueSerializer.java",
+    "start-bug-line": 374,
+    "end-bug-line": 374,
+    "bug": "",
+    "fix": "@Override public void writeTypeSuffixForArray(Object value, JsonGenerator gen) throws IOException { _typeSerializer.writeTypeSuffixForArray(_forObject, gen); }",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind.ser.std; import java.io.IOException; import java.lang.reflect.InvocationTargetException; import java.lang.reflect.Type; import java.util.LinkedHashSet; import java.util.Set; import com.fasterxml.jackson.core.*; import com.fasterxml.jackson.databind.*; import com.fasterxml.jackson.databind.annotation.JacksonStdImpl;"
+      },
+      {
+        "txt": "import com.fasterxml.jackson.databind.introspect.AnnotatedMethod; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonFormatVisitable; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonFormatVisitorWrapper; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonStringFormatVisitor; import com.fasterxml.jackson.databind.jsonschema.SchemaAware; import com.fasterxml.jackson.databind.jsontype.TypeSerializer; import com.fasterxml.jackson.databind.ser.BeanSerializer; import com.fasterxml.jackson.databind.ser.ContextualSerializer; @SuppressWarnings(\"serial\") @JacksonStdImpl"
+      },
+      {
+        "txt": "public class JsonValueSerializer extends StdSerializer<Object> implements ContextualSerializer, JsonFormatVisitable, SchemaAware { protected final AnnotatedMethod _accessorMethod; protected final JsonSerializer<Object> _valueSerializer; protected final BeanProperty _property; protected final boolean _forceTypeInformation; @SuppressWarnings(\"unchecked\") public JsonValueSerializer(AnnotatedMethod valueMethod, JsonSerializer<?> ser)"
+      },
+      {
+        "txt": "{ super(valueMethod.getType()); _accessorMethod = valueMethod; _valueSerializer = (JsonSerializer<Object>) ser; _property = null; _forceTypeInformation = true; // gets reconsidered when we are contextualized } @SuppressWarnings(\"unchecked\") public JsonValueSerializer(JsonValueSerializer src, BeanProperty property, JsonSerializer<?> ser, boolean forceTypeInfo)"
+      },
+      {
+        "txt": "{ super(_notNullClass(src.handledType())); _accessorMethod = src._accessorMethod; _valueSerializer = (JsonSerializer<Object>) ser; _property = property; _forceTypeInformation = forceTypeInfo; } @SuppressWarnings(\"unchecked\") private final static Class<Object> _notNullClass(Class<?> cls) { return (cls == null) ? Object.class : (Class<Object>) cls;"
+      },
+      {
+        "txt": "} public JsonValueSerializer withResolved(BeanProperty property, JsonSerializer<?> ser, boolean forceTypeInfo) { if (_property == property && _valueSerializer == ser && forceTypeInfo == _forceTypeInformation) { return this; } return new JsonValueSerializer(this, property, ser, forceTypeInfo); }"
+      },
+      {
+        "txt": "@Override public JsonSerializer<?> createContextual(SerializerProvider provider, BeanProperty property) throws JsonMappingException { JsonSerializer<?> ser = _valueSerializer; if (ser == null) { JavaType t = _accessorMethod.getType(); if (provider.isEnabled(MapperFeature.USE_STATIC_TYPING) || t.isFinal()) { ser = provider.findPrimaryPropertySerializer(t, property);"
+      },
+      {
+        "txt": "boolean forceTypeInformation = isNaturalTypeWithStdHandling(t.getRawClass(), ser); return withResolved(property, ser, forceTypeInformation); } } else { ser = provider.handlePrimaryContextualization(ser, property); return withResolved(property, ser, _forceTypeInformation); } return this; } @Override"
+      },
+      {
+        "txt": "public void serialize(Object bean, JsonGenerator gen, SerializerProvider prov) throws IOException { try { Object value = _accessorMethod.getValue(bean); if (value == null) { prov.defaultSerializeNull(gen); return; } JsonSerializer<Object> ser = _valueSerializer; if (ser == null) {"
+      },
+      {
+        "txt": "Class<?> c = value.getClass(); ser = prov.findTypedValueSerializer(c, true, _property); } ser.serialize(value, gen, prov); } catch (IOException ioe) { throw ioe; } catch (Exception e) { Throwable t = e; while (t instanceof InvocationTargetException && t.getCause() != null) { t = t.getCause();"
+      },
+      {
+        "txt": "} if (t instanceof Error) { throw (Error) t; } throw JsonMappingException.wrapWithPath(t, bean, _accessorMethod.getName() + \"()\"); } } @Override public void serializeWithType(Object bean, JsonGenerator gen, SerializerProvider provider, TypeSerializer typeSer0) throws IOException"
+      },
+      {
+        "txt": "{ Object value = null; try { value = _accessorMethod.getValue(bean); if (value == null) { provider.defaultSerializeNull(gen); return; } JsonSerializer<Object> ser = _valueSerializer; if (ser == null) { // no serializer yet? Need to fetch"
+      },
+      {
+        "txt": "ser = provider.findValueSerializer(value.getClass(), _property); } else { if (_forceTypeInformation) { typeSer0.writeTypePrefixForScalar(bean, gen); ser.serialize(value, gen, provider); typeSer0.writeTypeSuffixForScalar(bean, gen); return; } } ser.serializeWithType(value, gen, provider, typeSer0);"
+      },
+      {
+        "txt": "} catch (IOException ioe) { throw ioe; } catch (Exception e) { Throwable t = e; while (t instanceof InvocationTargetException && t.getCause() != null) { t = t.getCause(); } if (t instanceof Error) { throw (Error) t; }"
+      },
+      {
+        "txt": "throw JsonMappingException.wrapWithPath(t, bean, _accessorMethod.getName() + \"()\"); } } @SuppressWarnings(\"deprecation\") @Override public JsonNode getSchema(SerializerProvider provider, Type typeHint) throws JsonMappingException { if (_valueSerializer instanceof SchemaAware) { return ((SchemaAware)_valueSerializer).getSchema(provider, null);"
+      },
+      {
+        "txt": "} return com.fasterxml.jackson.databind.jsonschema.JsonSchema.getDefaultSchemaNode(); } @Override public void acceptJsonFormatVisitor(JsonFormatVisitorWrapper visitor, JavaType typeHint) throws JsonMappingException { final JavaType type = _accessorMethod.getType(); Class<?> declaring = _accessorMethod.getDeclaringClass(); if ((declaring != null) && declaring.isEnum()) {"
+      },
+      {
+        "txt": "if (_acceptJsonFormatVisitorForEnum(visitor, typeHint, declaring)) { return; } } JsonSerializer<Object> ser = _valueSerializer; if (ser == null) { ser = visitor.getProvider().findTypedValueSerializer(type, false, _property); if (ser == null) { // can this ever occur? visitor.expectAnyFormat(typeHint); return;"
+      },
+      {
+        "txt": "} } ser.acceptJsonFormatVisitor(visitor, null); } protected boolean _acceptJsonFormatVisitorForEnum(JsonFormatVisitorWrapper visitor, JavaType typeHint, Class<?> enumType) throws JsonMappingException { JsonStringFormatVisitor stringVisitor = visitor.expectStringFormat(typeHint); if (stringVisitor != null) {"
+      },
+      {
+        "txt": "Set<String> enums = new LinkedHashSet<String>(); for (Object en : enumType.getEnumConstants()) { try { enums.add(String.valueOf(_accessorMethod.callOn(en))); } catch (Exception e) { Throwable t = e; while (t instanceof InvocationTargetException && t.getCause() != null) { t = t.getCause(); } if (t instanceof Error) {"
+      },
+      {
+        "txt": "throw (Error) t; } throw JsonMappingException.wrapWithPath(t, en, _accessorMethod.getName() + \"()\"); } } stringVisitor.enumTypes(enums); } return true; } protected boolean isNaturalTypeWithStdHandling(Class<?> rawType, JsonSerializer<?> ser)"
+      },
+      {
+        "txt": "{ if (rawType.isPrimitive()) { if (rawType != Integer.TYPE && rawType != Boolean.TYPE && rawType != Double.TYPE) { return false; } } else { if (rawType != String.class && rawType != Integer.class && rawType != Boolean.class && rawType != Double.class) { return false; }"
+      },
+      {
+        "txt": "return isDefaultSerializer(ser); } @Override public String toString() { return \"(@JsonValue serializer for method \" + _accessorMethod.getDeclaringClass() + \"#\" + _accessorMethod.getName() + \")\"; } <extra_id_0> }"
+      }
+    ]
+  },
+  {
+    "id": 1593,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/ser/std/JsonValueSerializer.java",
+    "start-bug-line": 375,
+    "end-bug-line": 375,
+    "bug": "",
+    "fix": "public void writeTypePrefixForScalar(Object value, JsonGenerator gen, Class<?> type) throws IOException { _typeSerializer.writeTypePrefixForScalar(_forObject, gen, type); }",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind.ser.std; import java.io.IOException; import java.lang.reflect.InvocationTargetException; import java.lang.reflect.Type; import java.util.LinkedHashSet; import java.util.Set; import com.fasterxml.jackson.core.*; import com.fasterxml.jackson.databind.*; import com.fasterxml.jackson.databind.annotation.JacksonStdImpl;"
+      },
+      {
+        "txt": "import com.fasterxml.jackson.databind.introspect.AnnotatedMethod; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonFormatVisitable; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonFormatVisitorWrapper; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonStringFormatVisitor; import com.fasterxml.jackson.databind.jsonschema.SchemaAware; import com.fasterxml.jackson.databind.jsontype.TypeSerializer; import com.fasterxml.jackson.databind.ser.BeanSerializer; import com.fasterxml.jackson.databind.ser.ContextualSerializer; @SuppressWarnings(\"serial\") @JacksonStdImpl"
+      },
+      {
+        "txt": "public class JsonValueSerializer extends StdSerializer<Object> implements ContextualSerializer, JsonFormatVisitable, SchemaAware { protected final AnnotatedMethod _accessorMethod; protected final JsonSerializer<Object> _valueSerializer; protected final BeanProperty _property; protected final boolean _forceTypeInformation; @SuppressWarnings(\"unchecked\") public JsonValueSerializer(AnnotatedMethod valueMethod, JsonSerializer<?> ser)"
+      },
+      {
+        "txt": "{ super(valueMethod.getType()); _accessorMethod = valueMethod; _valueSerializer = (JsonSerializer<Object>) ser; _property = null; _forceTypeInformation = true; // gets reconsidered when we are contextualized } @SuppressWarnings(\"unchecked\") public JsonValueSerializer(JsonValueSerializer src, BeanProperty property, JsonSerializer<?> ser, boolean forceTypeInfo)"
+      },
+      {
+        "txt": "{ super(_notNullClass(src.handledType())); _accessorMethod = src._accessorMethod; _valueSerializer = (JsonSerializer<Object>) ser; _property = property; _forceTypeInformation = forceTypeInfo; } @SuppressWarnings(\"unchecked\") private final static Class<Object> _notNullClass(Class<?> cls) { return (cls == null) ? Object.class : (Class<Object>) cls;"
+      },
+      {
+        "txt": "} public JsonValueSerializer withResolved(BeanProperty property, JsonSerializer<?> ser, boolean forceTypeInfo) { if (_property == property && _valueSerializer == ser && forceTypeInfo == _forceTypeInformation) { return this; } return new JsonValueSerializer(this, property, ser, forceTypeInfo); }"
+      },
+      {
+        "txt": "@Override public JsonSerializer<?> createContextual(SerializerProvider provider, BeanProperty property) throws JsonMappingException { JsonSerializer<?> ser = _valueSerializer; if (ser == null) { JavaType t = _accessorMethod.getType(); if (provider.isEnabled(MapperFeature.USE_STATIC_TYPING) || t.isFinal()) { ser = provider.findPrimaryPropertySerializer(t, property);"
+      },
+      {
+        "txt": "boolean forceTypeInformation = isNaturalTypeWithStdHandling(t.getRawClass(), ser); return withResolved(property, ser, forceTypeInformation); } } else { ser = provider.handlePrimaryContextualization(ser, property); return withResolved(property, ser, _forceTypeInformation); } return this; } @Override"
+      },
+      {
+        "txt": "public void serialize(Object bean, JsonGenerator gen, SerializerProvider prov) throws IOException { try { Object value = _accessorMethod.getValue(bean); if (value == null) { prov.defaultSerializeNull(gen); return; } JsonSerializer<Object> ser = _valueSerializer; if (ser == null) {"
+      },
+      {
+        "txt": "Class<?> c = value.getClass(); ser = prov.findTypedValueSerializer(c, true, _property); } ser.serialize(value, gen, prov); } catch (IOException ioe) { throw ioe; } catch (Exception e) { Throwable t = e; while (t instanceof InvocationTargetException && t.getCause() != null) { t = t.getCause();"
+      },
+      {
+        "txt": "} if (t instanceof Error) { throw (Error) t; } throw JsonMappingException.wrapWithPath(t, bean, _accessorMethod.getName() + \"()\"); } } @Override public void serializeWithType(Object bean, JsonGenerator gen, SerializerProvider provider, TypeSerializer typeSer0) throws IOException"
+      },
+      {
+        "txt": "{ Object value = null; try { value = _accessorMethod.getValue(bean); if (value == null) { provider.defaultSerializeNull(gen); return; } JsonSerializer<Object> ser = _valueSerializer; if (ser == null) { // no serializer yet? Need to fetch"
+      },
+      {
+        "txt": "ser = provider.findValueSerializer(value.getClass(), _property); } else { if (_forceTypeInformation) { typeSer0.writeTypePrefixForScalar(bean, gen); ser.serialize(value, gen, provider); typeSer0.writeTypeSuffixForScalar(bean, gen); return; } } ser.serializeWithType(value, gen, provider, typeSer0);"
+      },
+      {
+        "txt": "} catch (IOException ioe) { throw ioe; } catch (Exception e) { Throwable t = e; while (t instanceof InvocationTargetException && t.getCause() != null) { t = t.getCause(); } if (t instanceof Error) { throw (Error) t; }"
+      },
+      {
+        "txt": "throw JsonMappingException.wrapWithPath(t, bean, _accessorMethod.getName() + \"()\"); } } @SuppressWarnings(\"deprecation\") @Override public JsonNode getSchema(SerializerProvider provider, Type typeHint) throws JsonMappingException { if (_valueSerializer instanceof SchemaAware) { return ((SchemaAware)_valueSerializer).getSchema(provider, null);"
+      },
+      {
+        "txt": "} return com.fasterxml.jackson.databind.jsonschema.JsonSchema.getDefaultSchemaNode(); } @Override public void acceptJsonFormatVisitor(JsonFormatVisitorWrapper visitor, JavaType typeHint) throws JsonMappingException { final JavaType type = _accessorMethod.getType(); Class<?> declaring = _accessorMethod.getDeclaringClass(); if ((declaring != null) && declaring.isEnum()) {"
+      },
+      {
+        "txt": "if (_acceptJsonFormatVisitorForEnum(visitor, typeHint, declaring)) { return; } } JsonSerializer<Object> ser = _valueSerializer; if (ser == null) { ser = visitor.getProvider().findTypedValueSerializer(type, false, _property); if (ser == null) { // can this ever occur? visitor.expectAnyFormat(typeHint); return;"
+      },
+      {
+        "txt": "} } ser.acceptJsonFormatVisitor(visitor, null); } protected boolean _acceptJsonFormatVisitorForEnum(JsonFormatVisitorWrapper visitor, JavaType typeHint, Class<?> enumType) throws JsonMappingException { JsonStringFormatVisitor stringVisitor = visitor.expectStringFormat(typeHint); if (stringVisitor != null) {"
+      },
+      {
+        "txt": "Set<String> enums = new LinkedHashSet<String>(); for (Object en : enumType.getEnumConstants()) { try { enums.add(String.valueOf(_accessorMethod.callOn(en))); } catch (Exception e) { Throwable t = e; while (t instanceof InvocationTargetException && t.getCause() != null) { t = t.getCause(); } if (t instanceof Error) {"
+      },
+      {
+        "txt": "throw (Error) t; } throw JsonMappingException.wrapWithPath(t, en, _accessorMethod.getName() + \"()\"); } } stringVisitor.enumTypes(enums); } return true; } protected boolean isNaturalTypeWithStdHandling(Class<?> rawType, JsonSerializer<?> ser)"
+      },
+      {
+        "txt": "{ if (rawType.isPrimitive()) { if (rawType != Integer.TYPE && rawType != Boolean.TYPE && rawType != Double.TYPE) { return false; } } else { if (rawType != String.class && rawType != Integer.class && rawType != Boolean.class && rawType != Double.class) { return false; }"
+      },
+      {
+        "txt": "return isDefaultSerializer(ser); } @Override public String toString() { return \"(@JsonValue serializer for method \" + _accessorMethod.getDeclaringClass() + \"#\" + _accessorMethod.getName() + \")\"; } <extra_id_0> }"
+      }
+    ]
+  },
+  {
+    "id": 1594,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/ser/std/JsonValueSerializer.java",
+    "start-bug-line": 376,
+    "end-bug-line": 376,
+    "bug": "",
+    "fix": "public void writeTypePrefixForObject(Object value, JsonGenerator gen, Class<?> type) throws IOException { _typeSerializer.writeTypePrefixForObject(_forObject, gen, type); }",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind.ser.std; import java.io.IOException; import java.lang.reflect.InvocationTargetException; import java.lang.reflect.Type; import java.util.LinkedHashSet; import java.util.Set; import com.fasterxml.jackson.core.*; import com.fasterxml.jackson.databind.*; import com.fasterxml.jackson.databind.annotation.JacksonStdImpl;"
+      },
+      {
+        "txt": "import com.fasterxml.jackson.databind.introspect.AnnotatedMethod; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonFormatVisitable; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonFormatVisitorWrapper; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonStringFormatVisitor; import com.fasterxml.jackson.databind.jsonschema.SchemaAware; import com.fasterxml.jackson.databind.jsontype.TypeSerializer; import com.fasterxml.jackson.databind.ser.BeanSerializer; import com.fasterxml.jackson.databind.ser.ContextualSerializer; @SuppressWarnings(\"serial\") @JacksonStdImpl"
+      },
+      {
+        "txt": "public class JsonValueSerializer extends StdSerializer<Object> implements ContextualSerializer, JsonFormatVisitable, SchemaAware { protected final AnnotatedMethod _accessorMethod; protected final JsonSerializer<Object> _valueSerializer; protected final BeanProperty _property; protected final boolean _forceTypeInformation; @SuppressWarnings(\"unchecked\") public JsonValueSerializer(AnnotatedMethod valueMethod, JsonSerializer<?> ser)"
+      },
+      {
+        "txt": "{ super(valueMethod.getType()); _accessorMethod = valueMethod; _valueSerializer = (JsonSerializer<Object>) ser; _property = null; _forceTypeInformation = true; // gets reconsidered when we are contextualized } @SuppressWarnings(\"unchecked\") public JsonValueSerializer(JsonValueSerializer src, BeanProperty property, JsonSerializer<?> ser, boolean forceTypeInfo)"
+      },
+      {
+        "txt": "{ super(_notNullClass(src.handledType())); _accessorMethod = src._accessorMethod; _valueSerializer = (JsonSerializer<Object>) ser; _property = property; _forceTypeInformation = forceTypeInfo; } @SuppressWarnings(\"unchecked\") private final static Class<Object> _notNullClass(Class<?> cls) { return (cls == null) ? Object.class : (Class<Object>) cls;"
+      },
+      {
+        "txt": "} public JsonValueSerializer withResolved(BeanProperty property, JsonSerializer<?> ser, boolean forceTypeInfo) { if (_property == property && _valueSerializer == ser && forceTypeInfo == _forceTypeInformation) { return this; } return new JsonValueSerializer(this, property, ser, forceTypeInfo); }"
+      },
+      {
+        "txt": "@Override public JsonSerializer<?> createContextual(SerializerProvider provider, BeanProperty property) throws JsonMappingException { JsonSerializer<?> ser = _valueSerializer; if (ser == null) { JavaType t = _accessorMethod.getType(); if (provider.isEnabled(MapperFeature.USE_STATIC_TYPING) || t.isFinal()) { ser = provider.findPrimaryPropertySerializer(t, property);"
+      },
+      {
+        "txt": "boolean forceTypeInformation = isNaturalTypeWithStdHandling(t.getRawClass(), ser); return withResolved(property, ser, forceTypeInformation); } } else { ser = provider.handlePrimaryContextualization(ser, property); return withResolved(property, ser, _forceTypeInformation); } return this; } @Override"
+      },
+      {
+        "txt": "public void serialize(Object bean, JsonGenerator gen, SerializerProvider prov) throws IOException { try { Object value = _accessorMethod.getValue(bean); if (value == null) { prov.defaultSerializeNull(gen); return; } JsonSerializer<Object> ser = _valueSerializer; if (ser == null) {"
+      },
+      {
+        "txt": "Class<?> c = value.getClass(); ser = prov.findTypedValueSerializer(c, true, _property); } ser.serialize(value, gen, prov); } catch (IOException ioe) { throw ioe; } catch (Exception e) { Throwable t = e; while (t instanceof InvocationTargetException && t.getCause() != null) { t = t.getCause();"
+      },
+      {
+        "txt": "} if (t instanceof Error) { throw (Error) t; } throw JsonMappingException.wrapWithPath(t, bean, _accessorMethod.getName() + \"()\"); } } @Override public void serializeWithType(Object bean, JsonGenerator gen, SerializerProvider provider, TypeSerializer typeSer0) throws IOException"
+      },
+      {
+        "txt": "{ Object value = null; try { value = _accessorMethod.getValue(bean); if (value == null) { provider.defaultSerializeNull(gen); return; } JsonSerializer<Object> ser = _valueSerializer; if (ser == null) { // no serializer yet? Need to fetch"
+      },
+      {
+        "txt": "ser = provider.findValueSerializer(value.getClass(), _property); } else { if (_forceTypeInformation) { typeSer0.writeTypePrefixForScalar(bean, gen); ser.serialize(value, gen, provider); typeSer0.writeTypeSuffixForScalar(bean, gen); return; } } ser.serializeWithType(value, gen, provider, typeSer0);"
+      },
+      {
+        "txt": "} catch (IOException ioe) { throw ioe; } catch (Exception e) { Throwable t = e; while (t instanceof InvocationTargetException && t.getCause() != null) { t = t.getCause(); } if (t instanceof Error) { throw (Error) t; }"
+      },
+      {
+        "txt": "throw JsonMappingException.wrapWithPath(t, bean, _accessorMethod.getName() + \"()\"); } } @SuppressWarnings(\"deprecation\") @Override public JsonNode getSchema(SerializerProvider provider, Type typeHint) throws JsonMappingException { if (_valueSerializer instanceof SchemaAware) { return ((SchemaAware)_valueSerializer).getSchema(provider, null);"
+      },
+      {
+        "txt": "} return com.fasterxml.jackson.databind.jsonschema.JsonSchema.getDefaultSchemaNode(); } @Override public void acceptJsonFormatVisitor(JsonFormatVisitorWrapper visitor, JavaType typeHint) throws JsonMappingException { final JavaType type = _accessorMethod.getType(); Class<?> declaring = _accessorMethod.getDeclaringClass(); if ((declaring != null) && declaring.isEnum()) {"
+      },
+      {
+        "txt": "if (_acceptJsonFormatVisitorForEnum(visitor, typeHint, declaring)) { return; } } JsonSerializer<Object> ser = _valueSerializer; if (ser == null) { ser = visitor.getProvider().findTypedValueSerializer(type, false, _property); if (ser == null) { // can this ever occur? visitor.expectAnyFormat(typeHint); return;"
+      },
+      {
+        "txt": "} } ser.acceptJsonFormatVisitor(visitor, null); } protected boolean _acceptJsonFormatVisitorForEnum(JsonFormatVisitorWrapper visitor, JavaType typeHint, Class<?> enumType) throws JsonMappingException { JsonStringFormatVisitor stringVisitor = visitor.expectStringFormat(typeHint); if (stringVisitor != null) {"
+      },
+      {
+        "txt": "Set<String> enums = new LinkedHashSet<String>(); for (Object en : enumType.getEnumConstants()) { try { enums.add(String.valueOf(_accessorMethod.callOn(en))); } catch (Exception e) { Throwable t = e; while (t instanceof InvocationTargetException && t.getCause() != null) { t = t.getCause(); } if (t instanceof Error) {"
+      },
+      {
+        "txt": "throw (Error) t; } throw JsonMappingException.wrapWithPath(t, en, _accessorMethod.getName() + \"()\"); } } stringVisitor.enumTypes(enums); } return true; } protected boolean isNaturalTypeWithStdHandling(Class<?> rawType, JsonSerializer<?> ser)"
+      },
+      {
+        "txt": "{ if (rawType.isPrimitive()) { if (rawType != Integer.TYPE && rawType != Boolean.TYPE && rawType != Double.TYPE) { return false; } } else { if (rawType != String.class && rawType != Integer.class && rawType != Boolean.class && rawType != Double.class) { return false; }"
+      },
+      {
+        "txt": "return isDefaultSerializer(ser); } @Override public String toString() { return \"(@JsonValue serializer for method \" + _accessorMethod.getDeclaringClass() + \"#\" + _accessorMethod.getName() + \")\"; } <extra_id_0> }"
+      }
+    ]
+  },
+  {
+    "id": 1595,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/ser/std/JsonValueSerializer.java",
+    "start-bug-line": 377,
+    "end-bug-line": 377,
+    "bug": "",
+    "fix": "public void writeTypePrefixForArray(Object value, JsonGenerator gen, Class<?> type) throws IOException { _typeSerializer.writeTypePrefixForArray(_forObject, gen, type); }",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind.ser.std; import java.io.IOException; import java.lang.reflect.InvocationTargetException; import java.lang.reflect.Type; import java.util.LinkedHashSet; import java.util.Set; import com.fasterxml.jackson.core.*; import com.fasterxml.jackson.databind.*; import com.fasterxml.jackson.databind.annotation.JacksonStdImpl;"
+      },
+      {
+        "txt": "import com.fasterxml.jackson.databind.introspect.AnnotatedMethod; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonFormatVisitable; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonFormatVisitorWrapper; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonStringFormatVisitor; import com.fasterxml.jackson.databind.jsonschema.SchemaAware; import com.fasterxml.jackson.databind.jsontype.TypeSerializer; import com.fasterxml.jackson.databind.ser.BeanSerializer; import com.fasterxml.jackson.databind.ser.ContextualSerializer; @SuppressWarnings(\"serial\") @JacksonStdImpl"
+      },
+      {
+        "txt": "public class JsonValueSerializer extends StdSerializer<Object> implements ContextualSerializer, JsonFormatVisitable, SchemaAware { protected final AnnotatedMethod _accessorMethod; protected final JsonSerializer<Object> _valueSerializer; protected final BeanProperty _property; protected final boolean _forceTypeInformation; @SuppressWarnings(\"unchecked\") public JsonValueSerializer(AnnotatedMethod valueMethod, JsonSerializer<?> ser)"
+      },
+      {
+        "txt": "{ super(valueMethod.getType()); _accessorMethod = valueMethod; _valueSerializer = (JsonSerializer<Object>) ser; _property = null; _forceTypeInformation = true; // gets reconsidered when we are contextualized } @SuppressWarnings(\"unchecked\") public JsonValueSerializer(JsonValueSerializer src, BeanProperty property, JsonSerializer<?> ser, boolean forceTypeInfo)"
+      },
+      {
+        "txt": "{ super(_notNullClass(src.handledType())); _accessorMethod = src._accessorMethod; _valueSerializer = (JsonSerializer<Object>) ser; _property = property; _forceTypeInformation = forceTypeInfo; } @SuppressWarnings(\"unchecked\") private final static Class<Object> _notNullClass(Class<?> cls) { return (cls == null) ? Object.class : (Class<Object>) cls;"
+      },
+      {
+        "txt": "} public JsonValueSerializer withResolved(BeanProperty property, JsonSerializer<?> ser, boolean forceTypeInfo) { if (_property == property && _valueSerializer == ser && forceTypeInfo == _forceTypeInformation) { return this; } return new JsonValueSerializer(this, property, ser, forceTypeInfo); }"
+      },
+      {
+        "txt": "@Override public JsonSerializer<?> createContextual(SerializerProvider provider, BeanProperty property) throws JsonMappingException { JsonSerializer<?> ser = _valueSerializer; if (ser == null) { JavaType t = _accessorMethod.getType(); if (provider.isEnabled(MapperFeature.USE_STATIC_TYPING) || t.isFinal()) { ser = provider.findPrimaryPropertySerializer(t, property);"
+      },
+      {
+        "txt": "boolean forceTypeInformation = isNaturalTypeWithStdHandling(t.getRawClass(), ser); return withResolved(property, ser, forceTypeInformation); } } else { ser = provider.handlePrimaryContextualization(ser, property); return withResolved(property, ser, _forceTypeInformation); } return this; } @Override"
+      },
+      {
+        "txt": "public void serialize(Object bean, JsonGenerator gen, SerializerProvider prov) throws IOException { try { Object value = _accessorMethod.getValue(bean); if (value == null) { prov.defaultSerializeNull(gen); return; } JsonSerializer<Object> ser = _valueSerializer; if (ser == null) {"
+      },
+      {
+        "txt": "Class<?> c = value.getClass(); ser = prov.findTypedValueSerializer(c, true, _property); } ser.serialize(value, gen, prov); } catch (IOException ioe) { throw ioe; } catch (Exception e) { Throwable t = e; while (t instanceof InvocationTargetException && t.getCause() != null) { t = t.getCause();"
+      },
+      {
+        "txt": "} if (t instanceof Error) { throw (Error) t; } throw JsonMappingException.wrapWithPath(t, bean, _accessorMethod.getName() + \"()\"); } } @Override public void serializeWithType(Object bean, JsonGenerator gen, SerializerProvider provider, TypeSerializer typeSer0) throws IOException"
+      },
+      {
+        "txt": "{ Object value = null; try { value = _accessorMethod.getValue(bean); if (value == null) { provider.defaultSerializeNull(gen); return; } JsonSerializer<Object> ser = _valueSerializer; if (ser == null) { // no serializer yet? Need to fetch"
+      },
+      {
+        "txt": "ser = provider.findValueSerializer(value.getClass(), _property); } else { if (_forceTypeInformation) { typeSer0.writeTypePrefixForScalar(bean, gen); ser.serialize(value, gen, provider); typeSer0.writeTypeSuffixForScalar(bean, gen); return; } } ser.serializeWithType(value, gen, provider, typeSer0);"
+      },
+      {
+        "txt": "} catch (IOException ioe) { throw ioe; } catch (Exception e) { Throwable t = e; while (t instanceof InvocationTargetException && t.getCause() != null) { t = t.getCause(); } if (t instanceof Error) { throw (Error) t; }"
+      },
+      {
+        "txt": "throw JsonMappingException.wrapWithPath(t, bean, _accessorMethod.getName() + \"()\"); } } @SuppressWarnings(\"deprecation\") @Override public JsonNode getSchema(SerializerProvider provider, Type typeHint) throws JsonMappingException { if (_valueSerializer instanceof SchemaAware) { return ((SchemaAware)_valueSerializer).getSchema(provider, null);"
+      },
+      {
+        "txt": "} return com.fasterxml.jackson.databind.jsonschema.JsonSchema.getDefaultSchemaNode(); } @Override public void acceptJsonFormatVisitor(JsonFormatVisitorWrapper visitor, JavaType typeHint) throws JsonMappingException { final JavaType type = _accessorMethod.getType(); Class<?> declaring = _accessorMethod.getDeclaringClass(); if ((declaring != null) && declaring.isEnum()) {"
+      },
+      {
+        "txt": "if (_acceptJsonFormatVisitorForEnum(visitor, typeHint, declaring)) { return; } } JsonSerializer<Object> ser = _valueSerializer; if (ser == null) { ser = visitor.getProvider().findTypedValueSerializer(type, false, _property); if (ser == null) { // can this ever occur? visitor.expectAnyFormat(typeHint); return;"
+      },
+      {
+        "txt": "} } ser.acceptJsonFormatVisitor(visitor, null); } protected boolean _acceptJsonFormatVisitorForEnum(JsonFormatVisitorWrapper visitor, JavaType typeHint, Class<?> enumType) throws JsonMappingException { JsonStringFormatVisitor stringVisitor = visitor.expectStringFormat(typeHint); if (stringVisitor != null) {"
+      },
+      {
+        "txt": "Set<String> enums = new LinkedHashSet<String>(); for (Object en : enumType.getEnumConstants()) { try { enums.add(String.valueOf(_accessorMethod.callOn(en))); } catch (Exception e) { Throwable t = e; while (t instanceof InvocationTargetException && t.getCause() != null) { t = t.getCause(); } if (t instanceof Error) {"
+      },
+      {
+        "txt": "throw (Error) t; } throw JsonMappingException.wrapWithPath(t, en, _accessorMethod.getName() + \"()\"); } } stringVisitor.enumTypes(enums); } return true; } protected boolean isNaturalTypeWithStdHandling(Class<?> rawType, JsonSerializer<?> ser)"
+      },
+      {
+        "txt": "{ if (rawType.isPrimitive()) { if (rawType != Integer.TYPE && rawType != Boolean.TYPE && rawType != Double.TYPE) { return false; } } else { if (rawType != String.class && rawType != Integer.class && rawType != Boolean.class && rawType != Double.class) { return false; }"
+      },
+      {
+        "txt": "return isDefaultSerializer(ser); } @Override public String toString() { return \"(@JsonValue serializer for method \" + _accessorMethod.getDeclaringClass() + \"#\" + _accessorMethod.getName() + \")\"; } <extra_id_0> }"
+      }
+    ]
+  },
+  {
+    "id": 1596,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/ser/std/JsonValueSerializer.java",
+    "start-bug-line": 378,
+    "end-bug-line": 378,
+    "bug": "",
+    "fix": "@Override public void writeCustomTypePrefixForScalar(Object value, JsonGenerator gen, String typeId) throws IOException { _typeSerializer.writeCustomTypePrefixForScalar(_forObject, gen, typeId); }",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind.ser.std; import java.io.IOException; import java.lang.reflect.InvocationTargetException; import java.lang.reflect.Type; import java.util.LinkedHashSet; import java.util.Set; import com.fasterxml.jackson.core.*; import com.fasterxml.jackson.databind.*; import com.fasterxml.jackson.databind.annotation.JacksonStdImpl;"
+      },
+      {
+        "txt": "import com.fasterxml.jackson.databind.introspect.AnnotatedMethod; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonFormatVisitable; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonFormatVisitorWrapper; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonStringFormatVisitor; import com.fasterxml.jackson.databind.jsonschema.SchemaAware; import com.fasterxml.jackson.databind.jsontype.TypeSerializer; import com.fasterxml.jackson.databind.ser.BeanSerializer; import com.fasterxml.jackson.databind.ser.ContextualSerializer; @SuppressWarnings(\"serial\") @JacksonStdImpl"
+      },
+      {
+        "txt": "public class JsonValueSerializer extends StdSerializer<Object> implements ContextualSerializer, JsonFormatVisitable, SchemaAware { protected final AnnotatedMethod _accessorMethod; protected final JsonSerializer<Object> _valueSerializer; protected final BeanProperty _property; protected final boolean _forceTypeInformation; @SuppressWarnings(\"unchecked\") public JsonValueSerializer(AnnotatedMethod valueMethod, JsonSerializer<?> ser)"
+      },
+      {
+        "txt": "{ super(valueMethod.getType()); _accessorMethod = valueMethod; _valueSerializer = (JsonSerializer<Object>) ser; _property = null; _forceTypeInformation = true; // gets reconsidered when we are contextualized } @SuppressWarnings(\"unchecked\") public JsonValueSerializer(JsonValueSerializer src, BeanProperty property, JsonSerializer<?> ser, boolean forceTypeInfo)"
+      },
+      {
+        "txt": "{ super(_notNullClass(src.handledType())); _accessorMethod = src._accessorMethod; _valueSerializer = (JsonSerializer<Object>) ser; _property = property; _forceTypeInformation = forceTypeInfo; } @SuppressWarnings(\"unchecked\") private final static Class<Object> _notNullClass(Class<?> cls) { return (cls == null) ? Object.class : (Class<Object>) cls;"
+      },
+      {
+        "txt": "} public JsonValueSerializer withResolved(BeanProperty property, JsonSerializer<?> ser, boolean forceTypeInfo) { if (_property == property && _valueSerializer == ser && forceTypeInfo == _forceTypeInformation) { return this; } return new JsonValueSerializer(this, property, ser, forceTypeInfo); }"
+      },
+      {
+        "txt": "@Override public JsonSerializer<?> createContextual(SerializerProvider provider, BeanProperty property) throws JsonMappingException { JsonSerializer<?> ser = _valueSerializer; if (ser == null) { JavaType t = _accessorMethod.getType(); if (provider.isEnabled(MapperFeature.USE_STATIC_TYPING) || t.isFinal()) { ser = provider.findPrimaryPropertySerializer(t, property);"
+      },
+      {
+        "txt": "boolean forceTypeInformation = isNaturalTypeWithStdHandling(t.getRawClass(), ser); return withResolved(property, ser, forceTypeInformation); } } else { ser = provider.handlePrimaryContextualization(ser, property); return withResolved(property, ser, _forceTypeInformation); } return this; } @Override"
+      },
+      {
+        "txt": "public void serialize(Object bean, JsonGenerator gen, SerializerProvider prov) throws IOException { try { Object value = _accessorMethod.getValue(bean); if (value == null) { prov.defaultSerializeNull(gen); return; } JsonSerializer<Object> ser = _valueSerializer; if (ser == null) {"
+      },
+      {
+        "txt": "Class<?> c = value.getClass(); ser = prov.findTypedValueSerializer(c, true, _property); } ser.serialize(value, gen, prov); } catch (IOException ioe) { throw ioe; } catch (Exception e) { Throwable t = e; while (t instanceof InvocationTargetException && t.getCause() != null) { t = t.getCause();"
+      },
+      {
+        "txt": "} if (t instanceof Error) { throw (Error) t; } throw JsonMappingException.wrapWithPath(t, bean, _accessorMethod.getName() + \"()\"); } } @Override public void serializeWithType(Object bean, JsonGenerator gen, SerializerProvider provider, TypeSerializer typeSer0) throws IOException"
+      },
+      {
+        "txt": "{ Object value = null; try { value = _accessorMethod.getValue(bean); if (value == null) { provider.defaultSerializeNull(gen); return; } JsonSerializer<Object> ser = _valueSerializer; if (ser == null) { // no serializer yet? Need to fetch"
+      },
+      {
+        "txt": "ser = provider.findValueSerializer(value.getClass(), _property); } else { if (_forceTypeInformation) { typeSer0.writeTypePrefixForScalar(bean, gen); ser.serialize(value, gen, provider); typeSer0.writeTypeSuffixForScalar(bean, gen); return; } } ser.serializeWithType(value, gen, provider, typeSer0);"
+      },
+      {
+        "txt": "} catch (IOException ioe) { throw ioe; } catch (Exception e) { Throwable t = e; while (t instanceof InvocationTargetException && t.getCause() != null) { t = t.getCause(); } if (t instanceof Error) { throw (Error) t; }"
+      },
+      {
+        "txt": "throw JsonMappingException.wrapWithPath(t, bean, _accessorMethod.getName() + \"()\"); } } @SuppressWarnings(\"deprecation\") @Override public JsonNode getSchema(SerializerProvider provider, Type typeHint) throws JsonMappingException { if (_valueSerializer instanceof SchemaAware) { return ((SchemaAware)_valueSerializer).getSchema(provider, null);"
+      },
+      {
+        "txt": "} return com.fasterxml.jackson.databind.jsonschema.JsonSchema.getDefaultSchemaNode(); } @Override public void acceptJsonFormatVisitor(JsonFormatVisitorWrapper visitor, JavaType typeHint) throws JsonMappingException { final JavaType type = _accessorMethod.getType(); Class<?> declaring = _accessorMethod.getDeclaringClass(); if ((declaring != null) && declaring.isEnum()) {"
+      },
+      {
+        "txt": "if (_acceptJsonFormatVisitorForEnum(visitor, typeHint, declaring)) { return; } } JsonSerializer<Object> ser = _valueSerializer; if (ser == null) { ser = visitor.getProvider().findTypedValueSerializer(type, false, _property); if (ser == null) { // can this ever occur? visitor.expectAnyFormat(typeHint); return;"
+      },
+      {
+        "txt": "} } ser.acceptJsonFormatVisitor(visitor, null); } protected boolean _acceptJsonFormatVisitorForEnum(JsonFormatVisitorWrapper visitor, JavaType typeHint, Class<?> enumType) throws JsonMappingException { JsonStringFormatVisitor stringVisitor = visitor.expectStringFormat(typeHint); if (stringVisitor != null) {"
+      },
+      {
+        "txt": "Set<String> enums = new LinkedHashSet<String>(); for (Object en : enumType.getEnumConstants()) { try { enums.add(String.valueOf(_accessorMethod.callOn(en))); } catch (Exception e) { Throwable t = e; while (t instanceof InvocationTargetException && t.getCause() != null) { t = t.getCause(); } if (t instanceof Error) {"
+      },
+      {
+        "txt": "throw (Error) t; } throw JsonMappingException.wrapWithPath(t, en, _accessorMethod.getName() + \"()\"); } } stringVisitor.enumTypes(enums); } return true; } protected boolean isNaturalTypeWithStdHandling(Class<?> rawType, JsonSerializer<?> ser)"
+      },
+      {
+        "txt": "{ if (rawType.isPrimitive()) { if (rawType != Integer.TYPE && rawType != Boolean.TYPE && rawType != Double.TYPE) { return false; } } else { if (rawType != String.class && rawType != Integer.class && rawType != Boolean.class && rawType != Double.class) { return false; }"
+      },
+      {
+        "txt": "return isDefaultSerializer(ser); } @Override public String toString() { return \"(@JsonValue serializer for method \" + _accessorMethod.getDeclaringClass() + \"#\" + _accessorMethod.getName() + \")\"; } <extra_id_0> }"
+      }
+    ]
+  },
+  {
+    "id": 1597,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/ser/std/JsonValueSerializer.java",
+    "start-bug-line": 379,
+    "end-bug-line": 379,
+    "bug": "",
+    "fix": "@Override public void writeCustomTypePrefixForObject(Object value, JsonGenerator gen, String typeId) throws IOException { _typeSerializer.writeCustomTypePrefixForObject(_forObject, gen, typeId); }",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind.ser.std; import java.io.IOException; import java.lang.reflect.InvocationTargetException; import java.lang.reflect.Type; import java.util.LinkedHashSet; import java.util.Set; import com.fasterxml.jackson.core.*; import com.fasterxml.jackson.databind.*; import com.fasterxml.jackson.databind.annotation.JacksonStdImpl;"
+      },
+      {
+        "txt": "import com.fasterxml.jackson.databind.introspect.AnnotatedMethod; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonFormatVisitable; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonFormatVisitorWrapper; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonStringFormatVisitor; import com.fasterxml.jackson.databind.jsonschema.SchemaAware; import com.fasterxml.jackson.databind.jsontype.TypeSerializer; import com.fasterxml.jackson.databind.ser.BeanSerializer; import com.fasterxml.jackson.databind.ser.ContextualSerializer; @SuppressWarnings(\"serial\") @JacksonStdImpl"
+      },
+      {
+        "txt": "public class JsonValueSerializer extends StdSerializer<Object> implements ContextualSerializer, JsonFormatVisitable, SchemaAware { protected final AnnotatedMethod _accessorMethod; protected final JsonSerializer<Object> _valueSerializer; protected final BeanProperty _property; protected final boolean _forceTypeInformation; @SuppressWarnings(\"unchecked\") public JsonValueSerializer(AnnotatedMethod valueMethod, JsonSerializer<?> ser)"
+      },
+      {
+        "txt": "{ super(valueMethod.getType()); _accessorMethod = valueMethod; _valueSerializer = (JsonSerializer<Object>) ser; _property = null; _forceTypeInformation = true; // gets reconsidered when we are contextualized } @SuppressWarnings(\"unchecked\") public JsonValueSerializer(JsonValueSerializer src, BeanProperty property, JsonSerializer<?> ser, boolean forceTypeInfo)"
+      },
+      {
+        "txt": "{ super(_notNullClass(src.handledType())); _accessorMethod = src._accessorMethod; _valueSerializer = (JsonSerializer<Object>) ser; _property = property; _forceTypeInformation = forceTypeInfo; } @SuppressWarnings(\"unchecked\") private final static Class<Object> _notNullClass(Class<?> cls) { return (cls == null) ? Object.class : (Class<Object>) cls;"
+      },
+      {
+        "txt": "} public JsonValueSerializer withResolved(BeanProperty property, JsonSerializer<?> ser, boolean forceTypeInfo) { if (_property == property && _valueSerializer == ser && forceTypeInfo == _forceTypeInformation) { return this; } return new JsonValueSerializer(this, property, ser, forceTypeInfo); }"
+      },
+      {
+        "txt": "@Override public JsonSerializer<?> createContextual(SerializerProvider provider, BeanProperty property) throws JsonMappingException { JsonSerializer<?> ser = _valueSerializer; if (ser == null) { JavaType t = _accessorMethod.getType(); if (provider.isEnabled(MapperFeature.USE_STATIC_TYPING) || t.isFinal()) { ser = provider.findPrimaryPropertySerializer(t, property);"
+      },
+      {
+        "txt": "boolean forceTypeInformation = isNaturalTypeWithStdHandling(t.getRawClass(), ser); return withResolved(property, ser, forceTypeInformation); } } else { ser = provider.handlePrimaryContextualization(ser, property); return withResolved(property, ser, _forceTypeInformation); } return this; } @Override"
+      },
+      {
+        "txt": "public void serialize(Object bean, JsonGenerator gen, SerializerProvider prov) throws IOException { try { Object value = _accessorMethod.getValue(bean); if (value == null) { prov.defaultSerializeNull(gen); return; } JsonSerializer<Object> ser = _valueSerializer; if (ser == null) {"
+      },
+      {
+        "txt": "Class<?> c = value.getClass(); ser = prov.findTypedValueSerializer(c, true, _property); } ser.serialize(value, gen, prov); } catch (IOException ioe) { throw ioe; } catch (Exception e) { Throwable t = e; while (t instanceof InvocationTargetException && t.getCause() != null) { t = t.getCause();"
+      },
+      {
+        "txt": "} if (t instanceof Error) { throw (Error) t; } throw JsonMappingException.wrapWithPath(t, bean, _accessorMethod.getName() + \"()\"); } } @Override public void serializeWithType(Object bean, JsonGenerator gen, SerializerProvider provider, TypeSerializer typeSer0) throws IOException"
+      },
+      {
+        "txt": "{ Object value = null; try { value = _accessorMethod.getValue(bean); if (value == null) { provider.defaultSerializeNull(gen); return; } JsonSerializer<Object> ser = _valueSerializer; if (ser == null) { // no serializer yet? Need to fetch"
+      },
+      {
+        "txt": "ser = provider.findValueSerializer(value.getClass(), _property); } else { if (_forceTypeInformation) { typeSer0.writeTypePrefixForScalar(bean, gen); ser.serialize(value, gen, provider); typeSer0.writeTypeSuffixForScalar(bean, gen); return; } } ser.serializeWithType(value, gen, provider, typeSer0);"
+      },
+      {
+        "txt": "} catch (IOException ioe) { throw ioe; } catch (Exception e) { Throwable t = e; while (t instanceof InvocationTargetException && t.getCause() != null) { t = t.getCause(); } if (t instanceof Error) { throw (Error) t; }"
+      },
+      {
+        "txt": "throw JsonMappingException.wrapWithPath(t, bean, _accessorMethod.getName() + \"()\"); } } @SuppressWarnings(\"deprecation\") @Override public JsonNode getSchema(SerializerProvider provider, Type typeHint) throws JsonMappingException { if (_valueSerializer instanceof SchemaAware) { return ((SchemaAware)_valueSerializer).getSchema(provider, null);"
+      },
+      {
+        "txt": "} return com.fasterxml.jackson.databind.jsonschema.JsonSchema.getDefaultSchemaNode(); } @Override public void acceptJsonFormatVisitor(JsonFormatVisitorWrapper visitor, JavaType typeHint) throws JsonMappingException { final JavaType type = _accessorMethod.getType(); Class<?> declaring = _accessorMethod.getDeclaringClass(); if ((declaring != null) && declaring.isEnum()) {"
+      },
+      {
+        "txt": "if (_acceptJsonFormatVisitorForEnum(visitor, typeHint, declaring)) { return; } } JsonSerializer<Object> ser = _valueSerializer; if (ser == null) { ser = visitor.getProvider().findTypedValueSerializer(type, false, _property); if (ser == null) { // can this ever occur? visitor.expectAnyFormat(typeHint); return;"
+      },
+      {
+        "txt": "} } ser.acceptJsonFormatVisitor(visitor, null); } protected boolean _acceptJsonFormatVisitorForEnum(JsonFormatVisitorWrapper visitor, JavaType typeHint, Class<?> enumType) throws JsonMappingException { JsonStringFormatVisitor stringVisitor = visitor.expectStringFormat(typeHint); if (stringVisitor != null) {"
+      },
+      {
+        "txt": "Set<String> enums = new LinkedHashSet<String>(); for (Object en : enumType.getEnumConstants()) { try { enums.add(String.valueOf(_accessorMethod.callOn(en))); } catch (Exception e) { Throwable t = e; while (t instanceof InvocationTargetException && t.getCause() != null) { t = t.getCause(); } if (t instanceof Error) {"
+      },
+      {
+        "txt": "throw (Error) t; } throw JsonMappingException.wrapWithPath(t, en, _accessorMethod.getName() + \"()\"); } } stringVisitor.enumTypes(enums); } return true; } protected boolean isNaturalTypeWithStdHandling(Class<?> rawType, JsonSerializer<?> ser)"
+      },
+      {
+        "txt": "{ if (rawType.isPrimitive()) { if (rawType != Integer.TYPE && rawType != Boolean.TYPE && rawType != Double.TYPE) { return false; } } else { if (rawType != String.class && rawType != Integer.class && rawType != Boolean.class && rawType != Double.class) { return false; }"
+      },
+      {
+        "txt": "return isDefaultSerializer(ser); } @Override public String toString() { return \"(@JsonValue serializer for method \" + _accessorMethod.getDeclaringClass() + \"#\" + _accessorMethod.getName() + \")\"; } <extra_id_0> }"
+      }
+    ]
+  },
+  {
+    "id": 1598,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/ser/std/JsonValueSerializer.java",
+    "start-bug-line": 380,
+    "end-bug-line": 380,
+    "bug": "",
+    "fix": "@Override public void writeCustomTypePrefixForArray(Object value, JsonGenerator gen, String typeId) throws IOException { _typeSerializer.writeCustomTypePrefixForArray(_forObject, gen, typeId); }",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind.ser.std; import java.io.IOException; import java.lang.reflect.InvocationTargetException; import java.lang.reflect.Type; import java.util.LinkedHashSet; import java.util.Set; import com.fasterxml.jackson.core.*; import com.fasterxml.jackson.databind.*; import com.fasterxml.jackson.databind.annotation.JacksonStdImpl;"
+      },
+      {
+        "txt": "import com.fasterxml.jackson.databind.introspect.AnnotatedMethod; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonFormatVisitable; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonFormatVisitorWrapper; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonStringFormatVisitor; import com.fasterxml.jackson.databind.jsonschema.SchemaAware; import com.fasterxml.jackson.databind.jsontype.TypeSerializer; import com.fasterxml.jackson.databind.ser.BeanSerializer; import com.fasterxml.jackson.databind.ser.ContextualSerializer; @SuppressWarnings(\"serial\") @JacksonStdImpl"
+      },
+      {
+        "txt": "public class JsonValueSerializer extends StdSerializer<Object> implements ContextualSerializer, JsonFormatVisitable, SchemaAware { protected final AnnotatedMethod _accessorMethod; protected final JsonSerializer<Object> _valueSerializer; protected final BeanProperty _property; protected final boolean _forceTypeInformation; @SuppressWarnings(\"unchecked\") public JsonValueSerializer(AnnotatedMethod valueMethod, JsonSerializer<?> ser)"
+      },
+      {
+        "txt": "{ super(valueMethod.getType()); _accessorMethod = valueMethod; _valueSerializer = (JsonSerializer<Object>) ser; _property = null; _forceTypeInformation = true; // gets reconsidered when we are contextualized } @SuppressWarnings(\"unchecked\") public JsonValueSerializer(JsonValueSerializer src, BeanProperty property, JsonSerializer<?> ser, boolean forceTypeInfo)"
+      },
+      {
+        "txt": "{ super(_notNullClass(src.handledType())); _accessorMethod = src._accessorMethod; _valueSerializer = (JsonSerializer<Object>) ser; _property = property; _forceTypeInformation = forceTypeInfo; } @SuppressWarnings(\"unchecked\") private final static Class<Object> _notNullClass(Class<?> cls) { return (cls == null) ? Object.class : (Class<Object>) cls;"
+      },
+      {
+        "txt": "} public JsonValueSerializer withResolved(BeanProperty property, JsonSerializer<?> ser, boolean forceTypeInfo) { if (_property == property && _valueSerializer == ser && forceTypeInfo == _forceTypeInformation) { return this; } return new JsonValueSerializer(this, property, ser, forceTypeInfo); }"
+      },
+      {
+        "txt": "@Override public JsonSerializer<?> createContextual(SerializerProvider provider, BeanProperty property) throws JsonMappingException { JsonSerializer<?> ser = _valueSerializer; if (ser == null) { JavaType t = _accessorMethod.getType(); if (provider.isEnabled(MapperFeature.USE_STATIC_TYPING) || t.isFinal()) { ser = provider.findPrimaryPropertySerializer(t, property);"
+      },
+      {
+        "txt": "boolean forceTypeInformation = isNaturalTypeWithStdHandling(t.getRawClass(), ser); return withResolved(property, ser, forceTypeInformation); } } else { ser = provider.handlePrimaryContextualization(ser, property); return withResolved(property, ser, _forceTypeInformation); } return this; } @Override"
+      },
+      {
+        "txt": "public void serialize(Object bean, JsonGenerator gen, SerializerProvider prov) throws IOException { try { Object value = _accessorMethod.getValue(bean); if (value == null) { prov.defaultSerializeNull(gen); return; } JsonSerializer<Object> ser = _valueSerializer; if (ser == null) {"
+      },
+      {
+        "txt": "Class<?> c = value.getClass(); ser = prov.findTypedValueSerializer(c, true, _property); } ser.serialize(value, gen, prov); } catch (IOException ioe) { throw ioe; } catch (Exception e) { Throwable t = e; while (t instanceof InvocationTargetException && t.getCause() != null) { t = t.getCause();"
+      },
+      {
+        "txt": "} if (t instanceof Error) { throw (Error) t; } throw JsonMappingException.wrapWithPath(t, bean, _accessorMethod.getName() + \"()\"); } } @Override public void serializeWithType(Object bean, JsonGenerator gen, SerializerProvider provider, TypeSerializer typeSer0) throws IOException"
+      },
+      {
+        "txt": "{ Object value = null; try { value = _accessorMethod.getValue(bean); if (value == null) { provider.defaultSerializeNull(gen); return; } JsonSerializer<Object> ser = _valueSerializer; if (ser == null) { // no serializer yet? Need to fetch"
+      },
+      {
+        "txt": "ser = provider.findValueSerializer(value.getClass(), _property); } else { if (_forceTypeInformation) { typeSer0.writeTypePrefixForScalar(bean, gen); ser.serialize(value, gen, provider); typeSer0.writeTypeSuffixForScalar(bean, gen); return; } } ser.serializeWithType(value, gen, provider, typeSer0);"
+      },
+      {
+        "txt": "} catch (IOException ioe) { throw ioe; } catch (Exception e) { Throwable t = e; while (t instanceof InvocationTargetException && t.getCause() != null) { t = t.getCause(); } if (t instanceof Error) { throw (Error) t; }"
+      },
+      {
+        "txt": "throw JsonMappingException.wrapWithPath(t, bean, _accessorMethod.getName() + \"()\"); } } @SuppressWarnings(\"deprecation\") @Override public JsonNode getSchema(SerializerProvider provider, Type typeHint) throws JsonMappingException { if (_valueSerializer instanceof SchemaAware) { return ((SchemaAware)_valueSerializer).getSchema(provider, null);"
+      },
+      {
+        "txt": "} return com.fasterxml.jackson.databind.jsonschema.JsonSchema.getDefaultSchemaNode(); } @Override public void acceptJsonFormatVisitor(JsonFormatVisitorWrapper visitor, JavaType typeHint) throws JsonMappingException { final JavaType type = _accessorMethod.getType(); Class<?> declaring = _accessorMethod.getDeclaringClass(); if ((declaring != null) && declaring.isEnum()) {"
+      },
+      {
+        "txt": "if (_acceptJsonFormatVisitorForEnum(visitor, typeHint, declaring)) { return; } } JsonSerializer<Object> ser = _valueSerializer; if (ser == null) { ser = visitor.getProvider().findTypedValueSerializer(type, false, _property); if (ser == null) { // can this ever occur? visitor.expectAnyFormat(typeHint); return;"
+      },
+      {
+        "txt": "} } ser.acceptJsonFormatVisitor(visitor, null); } protected boolean _acceptJsonFormatVisitorForEnum(JsonFormatVisitorWrapper visitor, JavaType typeHint, Class<?> enumType) throws JsonMappingException { JsonStringFormatVisitor stringVisitor = visitor.expectStringFormat(typeHint); if (stringVisitor != null) {"
+      },
+      {
+        "txt": "Set<String> enums = new LinkedHashSet<String>(); for (Object en : enumType.getEnumConstants()) { try { enums.add(String.valueOf(_accessorMethod.callOn(en))); } catch (Exception e) { Throwable t = e; while (t instanceof InvocationTargetException && t.getCause() != null) { t = t.getCause(); } if (t instanceof Error) {"
+      },
+      {
+        "txt": "throw (Error) t; } throw JsonMappingException.wrapWithPath(t, en, _accessorMethod.getName() + \"()\"); } } stringVisitor.enumTypes(enums); } return true; } protected boolean isNaturalTypeWithStdHandling(Class<?> rawType, JsonSerializer<?> ser)"
+      },
+      {
+        "txt": "{ if (rawType.isPrimitive()) { if (rawType != Integer.TYPE && rawType != Boolean.TYPE && rawType != Double.TYPE) { return false; } } else { if (rawType != String.class && rawType != Integer.class && rawType != Boolean.class && rawType != Double.class) { return false; }"
+      },
+      {
+        "txt": "return isDefaultSerializer(ser); } @Override public String toString() { return \"(@JsonValue serializer for method \" + _accessorMethod.getDeclaringClass() + \"#\" + _accessorMethod.getName() + \")\"; } <extra_id_0> }"
+      }
+    ]
+  },
+  {
+    "id": 1599,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/ser/std/JsonValueSerializer.java",
+    "start-bug-line": 381,
+    "end-bug-line": 381,
+    "bug": "",
+    "fix": "@Override public void writeCustomTypeSuffixForScalar(Object value, JsonGenerator gen, String typeId) throws IOException { _typeSerializer.writeCustomTypeSuffixForScalar(_forObject, gen, typeId); }",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind.ser.std; import java.io.IOException; import java.lang.reflect.InvocationTargetException; import java.lang.reflect.Type; import java.util.LinkedHashSet; import java.util.Set; import com.fasterxml.jackson.core.*; import com.fasterxml.jackson.databind.*; import com.fasterxml.jackson.databind.annotation.JacksonStdImpl;"
+      },
+      {
+        "txt": "import com.fasterxml.jackson.databind.introspect.AnnotatedMethod; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonFormatVisitable; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonFormatVisitorWrapper; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonStringFormatVisitor; import com.fasterxml.jackson.databind.jsonschema.SchemaAware; import com.fasterxml.jackson.databind.jsontype.TypeSerializer; import com.fasterxml.jackson.databind.ser.BeanSerializer; import com.fasterxml.jackson.databind.ser.ContextualSerializer; @SuppressWarnings(\"serial\") @JacksonStdImpl"
+      },
+      {
+        "txt": "public class JsonValueSerializer extends StdSerializer<Object> implements ContextualSerializer, JsonFormatVisitable, SchemaAware { protected final AnnotatedMethod _accessorMethod; protected final JsonSerializer<Object> _valueSerializer; protected final BeanProperty _property; protected final boolean _forceTypeInformation; @SuppressWarnings(\"unchecked\") public JsonValueSerializer(AnnotatedMethod valueMethod, JsonSerializer<?> ser)"
+      },
+      {
+        "txt": "{ super(valueMethod.getType()); _accessorMethod = valueMethod; _valueSerializer = (JsonSerializer<Object>) ser; _property = null; _forceTypeInformation = true; // gets reconsidered when we are contextualized } @SuppressWarnings(\"unchecked\") public JsonValueSerializer(JsonValueSerializer src, BeanProperty property, JsonSerializer<?> ser, boolean forceTypeInfo)"
+      },
+      {
+        "txt": "{ super(_notNullClass(src.handledType())); _accessorMethod = src._accessorMethod; _valueSerializer = (JsonSerializer<Object>) ser; _property = property; _forceTypeInformation = forceTypeInfo; } @SuppressWarnings(\"unchecked\") private final static Class<Object> _notNullClass(Class<?> cls) { return (cls == null) ? Object.class : (Class<Object>) cls;"
+      },
+      {
+        "txt": "} public JsonValueSerializer withResolved(BeanProperty property, JsonSerializer<?> ser, boolean forceTypeInfo) { if (_property == property && _valueSerializer == ser && forceTypeInfo == _forceTypeInformation) { return this; } return new JsonValueSerializer(this, property, ser, forceTypeInfo); }"
+      },
+      {
+        "txt": "@Override public JsonSerializer<?> createContextual(SerializerProvider provider, BeanProperty property) throws JsonMappingException { JsonSerializer<?> ser = _valueSerializer; if (ser == null) { JavaType t = _accessorMethod.getType(); if (provider.isEnabled(MapperFeature.USE_STATIC_TYPING) || t.isFinal()) { ser = provider.findPrimaryPropertySerializer(t, property);"
+      },
+      {
+        "txt": "boolean forceTypeInformation = isNaturalTypeWithStdHandling(t.getRawClass(), ser); return withResolved(property, ser, forceTypeInformation); } } else { ser = provider.handlePrimaryContextualization(ser, property); return withResolved(property, ser, _forceTypeInformation); } return this; } @Override"
+      },
+      {
+        "txt": "public void serialize(Object bean, JsonGenerator gen, SerializerProvider prov) throws IOException { try { Object value = _accessorMethod.getValue(bean); if (value == null) { prov.defaultSerializeNull(gen); return; } JsonSerializer<Object> ser = _valueSerializer; if (ser == null) {"
+      },
+      {
+        "txt": "Class<?> c = value.getClass(); ser = prov.findTypedValueSerializer(c, true, _property); } ser.serialize(value, gen, prov); } catch (IOException ioe) { throw ioe; } catch (Exception e) { Throwable t = e; while (t instanceof InvocationTargetException && t.getCause() != null) { t = t.getCause();"
+      },
+      {
+        "txt": "} if (t instanceof Error) { throw (Error) t; } throw JsonMappingException.wrapWithPath(t, bean, _accessorMethod.getName() + \"()\"); } } @Override public void serializeWithType(Object bean, JsonGenerator gen, SerializerProvider provider, TypeSerializer typeSer0) throws IOException"
+      },
+      {
+        "txt": "{ Object value = null; try { value = _accessorMethod.getValue(bean); if (value == null) { provider.defaultSerializeNull(gen); return; } JsonSerializer<Object> ser = _valueSerializer; if (ser == null) { // no serializer yet? Need to fetch"
+      },
+      {
+        "txt": "ser = provider.findValueSerializer(value.getClass(), _property); } else { if (_forceTypeInformation) { typeSer0.writeTypePrefixForScalar(bean, gen); ser.serialize(value, gen, provider); typeSer0.writeTypeSuffixForScalar(bean, gen); return; } } ser.serializeWithType(value, gen, provider, typeSer0);"
+      },
+      {
+        "txt": "} catch (IOException ioe) { throw ioe; } catch (Exception e) { Throwable t = e; while (t instanceof InvocationTargetException && t.getCause() != null) { t = t.getCause(); } if (t instanceof Error) { throw (Error) t; }"
+      },
+      {
+        "txt": "throw JsonMappingException.wrapWithPath(t, bean, _accessorMethod.getName() + \"()\"); } } @SuppressWarnings(\"deprecation\") @Override public JsonNode getSchema(SerializerProvider provider, Type typeHint) throws JsonMappingException { if (_valueSerializer instanceof SchemaAware) { return ((SchemaAware)_valueSerializer).getSchema(provider, null);"
+      },
+      {
+        "txt": "} return com.fasterxml.jackson.databind.jsonschema.JsonSchema.getDefaultSchemaNode(); } @Override public void acceptJsonFormatVisitor(JsonFormatVisitorWrapper visitor, JavaType typeHint) throws JsonMappingException { final JavaType type = _accessorMethod.getType(); Class<?> declaring = _accessorMethod.getDeclaringClass(); if ((declaring != null) && declaring.isEnum()) {"
+      },
+      {
+        "txt": "if (_acceptJsonFormatVisitorForEnum(visitor, typeHint, declaring)) { return; } } JsonSerializer<Object> ser = _valueSerializer; if (ser == null) { ser = visitor.getProvider().findTypedValueSerializer(type, false, _property); if (ser == null) { // can this ever occur? visitor.expectAnyFormat(typeHint); return;"
+      },
+      {
+        "txt": "} } ser.acceptJsonFormatVisitor(visitor, null); } protected boolean _acceptJsonFormatVisitorForEnum(JsonFormatVisitorWrapper visitor, JavaType typeHint, Class<?> enumType) throws JsonMappingException { JsonStringFormatVisitor stringVisitor = visitor.expectStringFormat(typeHint); if (stringVisitor != null) {"
+      },
+      {
+        "txt": "Set<String> enums = new LinkedHashSet<String>(); for (Object en : enumType.getEnumConstants()) { try { enums.add(String.valueOf(_accessorMethod.callOn(en))); } catch (Exception e) { Throwable t = e; while (t instanceof InvocationTargetException && t.getCause() != null) { t = t.getCause(); } if (t instanceof Error) {"
+      },
+      {
+        "txt": "throw (Error) t; } throw JsonMappingException.wrapWithPath(t, en, _accessorMethod.getName() + \"()\"); } } stringVisitor.enumTypes(enums); } return true; } protected boolean isNaturalTypeWithStdHandling(Class<?> rawType, JsonSerializer<?> ser)"
+      },
+      {
+        "txt": "{ if (rawType.isPrimitive()) { if (rawType != Integer.TYPE && rawType != Boolean.TYPE && rawType != Double.TYPE) { return false; } } else { if (rawType != String.class && rawType != Integer.class && rawType != Boolean.class && rawType != Double.class) { return false; }"
+      },
+      {
+        "txt": "return isDefaultSerializer(ser); } @Override public String toString() { return \"(@JsonValue serializer for method \" + _accessorMethod.getDeclaringClass() + \"#\" + _accessorMethod.getName() + \")\"; } <extra_id_0> }"
+      }
+    ]
+  },
+  {
+    "id": 1600,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/ser/std/JsonValueSerializer.java",
+    "start-bug-line": 382,
+    "end-bug-line": 382,
+    "bug": "",
+    "fix": "@Override public void writeCustomTypeSuffixForObject(Object value, JsonGenerator gen, String typeId) throws IOException { _typeSerializer.writeCustomTypeSuffixForObject(_forObject, gen, typeId); }",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind.ser.std; import java.io.IOException; import java.lang.reflect.InvocationTargetException; import java.lang.reflect.Type; import java.util.LinkedHashSet; import java.util.Set; import com.fasterxml.jackson.core.*; import com.fasterxml.jackson.databind.*; import com.fasterxml.jackson.databind.annotation.JacksonStdImpl;"
+      },
+      {
+        "txt": "import com.fasterxml.jackson.databind.introspect.AnnotatedMethod; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonFormatVisitable; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonFormatVisitorWrapper; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonStringFormatVisitor; import com.fasterxml.jackson.databind.jsonschema.SchemaAware; import com.fasterxml.jackson.databind.jsontype.TypeSerializer; import com.fasterxml.jackson.databind.ser.BeanSerializer; import com.fasterxml.jackson.databind.ser.ContextualSerializer; @SuppressWarnings(\"serial\") @JacksonStdImpl"
+      },
+      {
+        "txt": "public class JsonValueSerializer extends StdSerializer<Object> implements ContextualSerializer, JsonFormatVisitable, SchemaAware { protected final AnnotatedMethod _accessorMethod; protected final JsonSerializer<Object> _valueSerializer; protected final BeanProperty _property; protected final boolean _forceTypeInformation; @SuppressWarnings(\"unchecked\") public JsonValueSerializer(AnnotatedMethod valueMethod, JsonSerializer<?> ser)"
+      },
+      {
+        "txt": "{ super(valueMethod.getType()); _accessorMethod = valueMethod; _valueSerializer = (JsonSerializer<Object>) ser; _property = null; _forceTypeInformation = true; // gets reconsidered when we are contextualized } @SuppressWarnings(\"unchecked\") public JsonValueSerializer(JsonValueSerializer src, BeanProperty property, JsonSerializer<?> ser, boolean forceTypeInfo)"
+      },
+      {
+        "txt": "{ super(_notNullClass(src.handledType())); _accessorMethod = src._accessorMethod; _valueSerializer = (JsonSerializer<Object>) ser; _property = property; _forceTypeInformation = forceTypeInfo; } @SuppressWarnings(\"unchecked\") private final static Class<Object> _notNullClass(Class<?> cls) { return (cls == null) ? Object.class : (Class<Object>) cls;"
+      },
+      {
+        "txt": "} public JsonValueSerializer withResolved(BeanProperty property, JsonSerializer<?> ser, boolean forceTypeInfo) { if (_property == property && _valueSerializer == ser && forceTypeInfo == _forceTypeInformation) { return this; } return new JsonValueSerializer(this, property, ser, forceTypeInfo); }"
+      },
+      {
+        "txt": "@Override public JsonSerializer<?> createContextual(SerializerProvider provider, BeanProperty property) throws JsonMappingException { JsonSerializer<?> ser = _valueSerializer; if (ser == null) { JavaType t = _accessorMethod.getType(); if (provider.isEnabled(MapperFeature.USE_STATIC_TYPING) || t.isFinal()) { ser = provider.findPrimaryPropertySerializer(t, property);"
+      },
+      {
+        "txt": "boolean forceTypeInformation = isNaturalTypeWithStdHandling(t.getRawClass(), ser); return withResolved(property, ser, forceTypeInformation); } } else { ser = provider.handlePrimaryContextualization(ser, property); return withResolved(property, ser, _forceTypeInformation); } return this; } @Override"
+      },
+      {
+        "txt": "public void serialize(Object bean, JsonGenerator gen, SerializerProvider prov) throws IOException { try { Object value = _accessorMethod.getValue(bean); if (value == null) { prov.defaultSerializeNull(gen); return; } JsonSerializer<Object> ser = _valueSerializer; if (ser == null) {"
+      },
+      {
+        "txt": "Class<?> c = value.getClass(); ser = prov.findTypedValueSerializer(c, true, _property); } ser.serialize(value, gen, prov); } catch (IOException ioe) { throw ioe; } catch (Exception e) { Throwable t = e; while (t instanceof InvocationTargetException && t.getCause() != null) { t = t.getCause();"
+      },
+      {
+        "txt": "} if (t instanceof Error) { throw (Error) t; } throw JsonMappingException.wrapWithPath(t, bean, _accessorMethod.getName() + \"()\"); } } @Override public void serializeWithType(Object bean, JsonGenerator gen, SerializerProvider provider, TypeSerializer typeSer0) throws IOException"
+      },
+      {
+        "txt": "{ Object value = null; try { value = _accessorMethod.getValue(bean); if (value == null) { provider.defaultSerializeNull(gen); return; } JsonSerializer<Object> ser = _valueSerializer; if (ser == null) { // no serializer yet? Need to fetch"
+      },
+      {
+        "txt": "ser = provider.findValueSerializer(value.getClass(), _property); } else { if (_forceTypeInformation) { typeSer0.writeTypePrefixForScalar(bean, gen); ser.serialize(value, gen, provider); typeSer0.writeTypeSuffixForScalar(bean, gen); return; } } ser.serializeWithType(value, gen, provider, typeSer0);"
+      },
+      {
+        "txt": "} catch (IOException ioe) { throw ioe; } catch (Exception e) { Throwable t = e; while (t instanceof InvocationTargetException && t.getCause() != null) { t = t.getCause(); } if (t instanceof Error) { throw (Error) t; }"
+      },
+      {
+        "txt": "throw JsonMappingException.wrapWithPath(t, bean, _accessorMethod.getName() + \"()\"); } } @SuppressWarnings(\"deprecation\") @Override public JsonNode getSchema(SerializerProvider provider, Type typeHint) throws JsonMappingException { if (_valueSerializer instanceof SchemaAware) { return ((SchemaAware)_valueSerializer).getSchema(provider, null);"
+      },
+      {
+        "txt": "} return com.fasterxml.jackson.databind.jsonschema.JsonSchema.getDefaultSchemaNode(); } @Override public void acceptJsonFormatVisitor(JsonFormatVisitorWrapper visitor, JavaType typeHint) throws JsonMappingException { final JavaType type = _accessorMethod.getType(); Class<?> declaring = _accessorMethod.getDeclaringClass(); if ((declaring != null) && declaring.isEnum()) {"
+      },
+      {
+        "txt": "if (_acceptJsonFormatVisitorForEnum(visitor, typeHint, declaring)) { return; } } JsonSerializer<Object> ser = _valueSerializer; if (ser == null) { ser = visitor.getProvider().findTypedValueSerializer(type, false, _property); if (ser == null) { // can this ever occur? visitor.expectAnyFormat(typeHint); return;"
+      },
+      {
+        "txt": "} } ser.acceptJsonFormatVisitor(visitor, null); } protected boolean _acceptJsonFormatVisitorForEnum(JsonFormatVisitorWrapper visitor, JavaType typeHint, Class<?> enumType) throws JsonMappingException { JsonStringFormatVisitor stringVisitor = visitor.expectStringFormat(typeHint); if (stringVisitor != null) {"
+      },
+      {
+        "txt": "Set<String> enums = new LinkedHashSet<String>(); for (Object en : enumType.getEnumConstants()) { try { enums.add(String.valueOf(_accessorMethod.callOn(en))); } catch (Exception e) { Throwable t = e; while (t instanceof InvocationTargetException && t.getCause() != null) { t = t.getCause(); } if (t instanceof Error) {"
+      },
+      {
+        "txt": "throw (Error) t; } throw JsonMappingException.wrapWithPath(t, en, _accessorMethod.getName() + \"()\"); } } stringVisitor.enumTypes(enums); } return true; } protected boolean isNaturalTypeWithStdHandling(Class<?> rawType, JsonSerializer<?> ser)"
+      },
+      {
+        "txt": "{ if (rawType.isPrimitive()) { if (rawType != Integer.TYPE && rawType != Boolean.TYPE && rawType != Double.TYPE) { return false; } } else { if (rawType != String.class && rawType != Integer.class && rawType != Boolean.class && rawType != Double.class) { return false; }"
+      },
+      {
+        "txt": "return isDefaultSerializer(ser); } @Override public String toString() { return \"(@JsonValue serializer for method \" + _accessorMethod.getDeclaringClass() + \"#\" + _accessorMethod.getName() + \")\"; } <extra_id_0> }"
+      }
+    ]
+  },
+  {
+    "id": 1601,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/ser/std/JsonValueSerializer.java",
+    "start-bug-line": 383,
+    "end-bug-line": 383,
+    "bug": "",
+    "fix": "@Override public void writeCustomTypeSuffixForArray(Object value, JsonGenerator gen, String typeId) throws IOException { _typeSerializer.writeCustomTypeSuffixForArray(_forObject, gen, typeId); } }",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind.ser.std; import java.io.IOException; import java.lang.reflect.InvocationTargetException; import java.lang.reflect.Type; import java.util.LinkedHashSet; import java.util.Set; import com.fasterxml.jackson.core.*; import com.fasterxml.jackson.databind.*; import com.fasterxml.jackson.databind.annotation.JacksonStdImpl;"
+      },
+      {
+        "txt": "import com.fasterxml.jackson.databind.introspect.AnnotatedMethod; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonFormatVisitable; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonFormatVisitorWrapper; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonStringFormatVisitor; import com.fasterxml.jackson.databind.jsonschema.SchemaAware; import com.fasterxml.jackson.databind.jsontype.TypeSerializer; import com.fasterxml.jackson.databind.ser.BeanSerializer; import com.fasterxml.jackson.databind.ser.ContextualSerializer; @SuppressWarnings(\"serial\") @JacksonStdImpl"
+      },
+      {
+        "txt": "public class JsonValueSerializer extends StdSerializer<Object> implements ContextualSerializer, JsonFormatVisitable, SchemaAware { protected final AnnotatedMethod _accessorMethod; protected final JsonSerializer<Object> _valueSerializer; protected final BeanProperty _property; protected final boolean _forceTypeInformation; @SuppressWarnings(\"unchecked\") public JsonValueSerializer(AnnotatedMethod valueMethod, JsonSerializer<?> ser)"
+      },
+      {
+        "txt": "{ super(valueMethod.getType()); _accessorMethod = valueMethod; _valueSerializer = (JsonSerializer<Object>) ser; _property = null; _forceTypeInformation = true; // gets reconsidered when we are contextualized } @SuppressWarnings(\"unchecked\") public JsonValueSerializer(JsonValueSerializer src, BeanProperty property, JsonSerializer<?> ser, boolean forceTypeInfo)"
+      },
+      {
+        "txt": "{ super(_notNullClass(src.handledType())); _accessorMethod = src._accessorMethod; _valueSerializer = (JsonSerializer<Object>) ser; _property = property; _forceTypeInformation = forceTypeInfo; } @SuppressWarnings(\"unchecked\") private final static Class<Object> _notNullClass(Class<?> cls) { return (cls == null) ? Object.class : (Class<Object>) cls;"
+      },
+      {
+        "txt": "} public JsonValueSerializer withResolved(BeanProperty property, JsonSerializer<?> ser, boolean forceTypeInfo) { if (_property == property && _valueSerializer == ser && forceTypeInfo == _forceTypeInformation) { return this; } return new JsonValueSerializer(this, property, ser, forceTypeInfo); }"
+      },
+      {
+        "txt": "@Override public JsonSerializer<?> createContextual(SerializerProvider provider, BeanProperty property) throws JsonMappingException { JsonSerializer<?> ser = _valueSerializer; if (ser == null) { JavaType t = _accessorMethod.getType(); if (provider.isEnabled(MapperFeature.USE_STATIC_TYPING) || t.isFinal()) { ser = provider.findPrimaryPropertySerializer(t, property);"
+      },
+      {
+        "txt": "boolean forceTypeInformation = isNaturalTypeWithStdHandling(t.getRawClass(), ser); return withResolved(property, ser, forceTypeInformation); } } else { ser = provider.handlePrimaryContextualization(ser, property); return withResolved(property, ser, _forceTypeInformation); } return this; } @Override"
+      },
+      {
+        "txt": "public void serialize(Object bean, JsonGenerator gen, SerializerProvider prov) throws IOException { try { Object value = _accessorMethod.getValue(bean); if (value == null) { prov.defaultSerializeNull(gen); return; } JsonSerializer<Object> ser = _valueSerializer; if (ser == null) {"
+      },
+      {
+        "txt": "Class<?> c = value.getClass(); ser = prov.findTypedValueSerializer(c, true, _property); } ser.serialize(value, gen, prov); } catch (IOException ioe) { throw ioe; } catch (Exception e) { Throwable t = e; while (t instanceof InvocationTargetException && t.getCause() != null) { t = t.getCause();"
+      },
+      {
+        "txt": "} if (t instanceof Error) { throw (Error) t; } throw JsonMappingException.wrapWithPath(t, bean, _accessorMethod.getName() + \"()\"); } } @Override public void serializeWithType(Object bean, JsonGenerator gen, SerializerProvider provider, TypeSerializer typeSer0) throws IOException"
+      },
+      {
+        "txt": "{ Object value = null; try { value = _accessorMethod.getValue(bean); if (value == null) { provider.defaultSerializeNull(gen); return; } JsonSerializer<Object> ser = _valueSerializer; if (ser == null) { // no serializer yet? Need to fetch"
+      },
+      {
+        "txt": "ser = provider.findValueSerializer(value.getClass(), _property); } else { if (_forceTypeInformation) { typeSer0.writeTypePrefixForScalar(bean, gen); ser.serialize(value, gen, provider); typeSer0.writeTypeSuffixForScalar(bean, gen); return; } } ser.serializeWithType(value, gen, provider, typeSer0);"
+      },
+      {
+        "txt": "} catch (IOException ioe) { throw ioe; } catch (Exception e) { Throwable t = e; while (t instanceof InvocationTargetException && t.getCause() != null) { t = t.getCause(); } if (t instanceof Error) { throw (Error) t; }"
+      },
+      {
+        "txt": "throw JsonMappingException.wrapWithPath(t, bean, _accessorMethod.getName() + \"()\"); } } @SuppressWarnings(\"deprecation\") @Override public JsonNode getSchema(SerializerProvider provider, Type typeHint) throws JsonMappingException { if (_valueSerializer instanceof SchemaAware) { return ((SchemaAware)_valueSerializer).getSchema(provider, null);"
+      },
+      {
+        "txt": "} return com.fasterxml.jackson.databind.jsonschema.JsonSchema.getDefaultSchemaNode(); } @Override public void acceptJsonFormatVisitor(JsonFormatVisitorWrapper visitor, JavaType typeHint) throws JsonMappingException { final JavaType type = _accessorMethod.getType(); Class<?> declaring = _accessorMethod.getDeclaringClass(); if ((declaring != null) && declaring.isEnum()) {"
+      },
+      {
+        "txt": "if (_acceptJsonFormatVisitorForEnum(visitor, typeHint, declaring)) { return; } } JsonSerializer<Object> ser = _valueSerializer; if (ser == null) { ser = visitor.getProvider().findTypedValueSerializer(type, false, _property); if (ser == null) { // can this ever occur? visitor.expectAnyFormat(typeHint); return;"
+      },
+      {
+        "txt": "} } ser.acceptJsonFormatVisitor(visitor, null); } protected boolean _acceptJsonFormatVisitorForEnum(JsonFormatVisitorWrapper visitor, JavaType typeHint, Class<?> enumType) throws JsonMappingException { JsonStringFormatVisitor stringVisitor = visitor.expectStringFormat(typeHint); if (stringVisitor != null) {"
+      },
+      {
+        "txt": "Set<String> enums = new LinkedHashSet<String>(); for (Object en : enumType.getEnumConstants()) { try { enums.add(String.valueOf(_accessorMethod.callOn(en))); } catch (Exception e) { Throwable t = e; while (t instanceof InvocationTargetException && t.getCause() != null) { t = t.getCause(); } if (t instanceof Error) {"
+      },
+      {
+        "txt": "throw (Error) t; } throw JsonMappingException.wrapWithPath(t, en, _accessorMethod.getName() + \"()\"); } } stringVisitor.enumTypes(enums); } return true; } protected boolean isNaturalTypeWithStdHandling(Class<?> rawType, JsonSerializer<?> ser)"
+      },
+      {
+        "txt": "{ if (rawType.isPrimitive()) { if (rawType != Integer.TYPE && rawType != Boolean.TYPE && rawType != Double.TYPE) { return false; } } else { if (rawType != String.class && rawType != Integer.class && rawType != Boolean.class && rawType != Double.class) { return false; }"
+      },
+      {
+        "txt": "return isDefaultSerializer(ser); } @Override public String toString() { return \"(@JsonValue serializer for method \" + _accessorMethod.getDeclaringClass() + \"#\" + _accessorMethod.getName() + \")\"; } <extra_id_0>"
+      }
+    ]
+  }
+]

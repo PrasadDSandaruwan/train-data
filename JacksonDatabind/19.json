@@ -1,0 +1,197 @@
+[
+  {
+    "id": 1400,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/type/TypeFactory.java",
+    "start-bug-line": 1021,
+    "end-bug-line": 1021,
+    "bug": "",
+    "fix": "if (rawClass == Properties.class) { return MapType.construct(rawClass, CORE_TYPE_STRING, CORE_TYPE_STRING); }",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind.type; import java.util.*; import java.util.concurrent.atomic.AtomicReference; import java.lang.reflect.*; import com.fasterxml.jackson.core.type.TypeReference; import com.fasterxml.jackson.databind.JavaType; import com.fasterxml.jackson.databind.util.ArrayBuilders; import com.fasterxml.jackson.databind.util.LRUMap;"
+      },
+      {
+        "txt": "@SuppressWarnings({\"rawtypes\", \"unchecked\"}) public final class TypeFactory implements java.io.Serializable { private static final long serialVersionUID = 1L; private final static JavaType[] NO_TYPES = new JavaType[0]; protected final static TypeFactory instance = new TypeFactory(); protected final static SimpleType CORE_TYPE_STRING = new SimpleType(String.class); protected final static SimpleType CORE_TYPE_BOOL = new SimpleType(Boolean.TYPE); protected final static SimpleType CORE_TYPE_INT = new SimpleType(Integer.TYPE);"
+      },
+      {
+        "txt": "protected final static SimpleType CORE_TYPE_LONG = new SimpleType(Long.TYPE); protected final LRUMap<ClassKey, JavaType> _typeCache = new LRUMap<ClassKey, JavaType>(16, 100); protected transient HierarchicType _cachedHashMapType; protected transient HierarchicType _cachedArrayListType; protected final TypeModifier[] _modifiers; protected final TypeParser _parser; private TypeFactory() { _parser = new TypeParser(this); _modifiers = null; }"
+      },
+      {
+        "txt": "protected TypeFactory(TypeParser p, TypeModifier[] mods) { _parser = p; _modifiers = mods; } public TypeFactory withModifier(TypeModifier mod) { if (mod == null) { // mostly for unit tests return new TypeFactory(_parser, _modifiers); } if (_modifiers == null) {"
+      },
+      {
+        "txt": "return new TypeFactory(_parser, new TypeModifier[] { mod }); } return new TypeFactory(_parser, ArrayBuilders.insertInListNoDup(_modifiers, mod)); } public static TypeFactory defaultInstance() { return instance; } public void clearCache() { _typeCache.clear(); } public static JavaType unknownType() { return defaultInstance()._unknownType();"
+      },
+      {
+        "txt": "} public static Class<?> rawClass(Type t) { if (t instanceof Class<?>) { return (Class<?>) t; } return defaultInstance().constructType(t).getRawClass(); } public JavaType constructSpecializedType(JavaType baseType, Class<?> subclass) { if (baseType.getRawClass() == subclass) {"
+      },
+      {
+        "txt": "return baseType; } if (baseType instanceof SimpleType) { if (subclass.isArray() || Map.class.isAssignableFrom(subclass) || Collection.class.isAssignableFrom(subclass)) { if (!baseType.getRawClass().isAssignableFrom(subclass)) { throw new IllegalArgumentException(\"Class \"+subclass.getClass().getName()+\" not subtype of \"+baseType); } JavaType subtype = _fromClass(subclass, new TypeBindings(this, baseType.getRawClass()));"
+      },
+      {
+        "txt": "Object h = baseType.getValueHandler(); if (h != null) { subtype = subtype.withValueHandler(h); } h = baseType.getTypeHandler(); if (h != null) { subtype = subtype.withTypeHandler(h); } return subtype; }"
+      },
+      {
+        "txt": "} return baseType.narrowBy(subclass); } public JavaType constructFromCanonical(String canonical) throws IllegalArgumentException { return _parser.parse(canonical); } public JavaType[] findTypeParameters(JavaType type, Class<?> expType) { if (expType == type.getParameterSource()) {"
+      },
+      {
+        "txt": "int count = type.containedTypeCount(); if (count == 0) return null; JavaType[] result = new JavaType[count]; for (int i = 0; i < count; ++i) { result[i] = type.containedType(i); } return result; } Class<?> raw = type.getRawClass(); return findTypeParameters(raw, expType, new TypeBindings(this, type));"
+      },
+      {
+        "txt": "} public JavaType[] findTypeParameters(Class<?> clz, Class<?> expType) { return findTypeParameters(clz, expType, new TypeBindings(this, clz)); } public JavaType[] findTypeParameters(Class<?> clz, Class<?> expType, TypeBindings bindings) { HierarchicType subType = _findSuperTypeChain(clz, expType); if (subType == null) { throw new IllegalArgumentException(\"Class \"+clz.getName()+\" is not a subtype of \"+expType.getName()); }"
+      },
+      {
+        "txt": "HierarchicType superType = subType; while (superType.getSuperType() != null) { superType = superType.getSuperType(); Class<?> raw = superType.getRawClass(); TypeBindings newBindings = new TypeBindings(this, raw); if (superType.isGeneric()) { // got bindings, need to resolve ParameterizedType pt = superType.asGeneric(); Type[] actualTypes = pt.getActualTypeArguments(); TypeVariable<?>[] vars = raw.getTypeParameters(); int len = actualTypes.length;"
+      },
+      {
+        "txt": "for (int i = 0; i < len; ++i) { String name = vars[i].getName(); JavaType type = _constructType(actualTypes[i], bindings); newBindings.addBinding(name, type); } } bindings = newBindings; } if (!superType.isGeneric()) { return null;"
+      },
+      {
+        "txt": "} return bindings.typesAsArray(); } public JavaType moreSpecificType(JavaType type1, JavaType type2) { if (type1 == null) { return type2; } if (type2 == null) { return type1;"
+      },
+      {
+        "txt": "} Class<?> raw1 = type1.getRawClass(); Class<?> raw2 = type2.getRawClass(); if (raw1 == raw2) { return type1; } if (raw1.isAssignableFrom(raw2)) { return type2; } return type1;"
+      },
+      {
+        "txt": "} public JavaType constructType(Type type) { return _constructType(type, null); } public JavaType constructType(Type type, TypeBindings bindings) { return _constructType(type, bindings); } public JavaType constructType(TypeReference<?> typeRef) { return _constructType(typeRef.getType(), null); }"
+      },
+      {
+        "txt": "public JavaType constructType(Type type, Class<?> context) { TypeBindings b = (context == null) ? null : new TypeBindings(this, context); return _constructType(type, b); } public JavaType constructType(Type type, JavaType context) { TypeBindings b = (context == null) ? null : new TypeBindings(this, context); return _constructType(type, b); } protected JavaType _constructType(Type type, TypeBindings context) {"
+      },
+      {
+        "txt": "JavaType resultType; if (type instanceof Class<?>) { resultType = _fromClass((Class<?>) type, context); } else if (type instanceof ParameterizedType) { resultType = _fromParamType((ParameterizedType) type, context); } else if (type instanceof JavaType) { // [Issue#116] return (JavaType) type; }"
+      },
+      {
+        "txt": "else if (type instanceof GenericArrayType) { resultType = _fromArrayType((GenericArrayType) type, context); } else if (type instanceof TypeVariable<?>) { resultType = _fromVariable((TypeVariable<?>) type, context); } else if (type instanceof WildcardType) { resultType = _fromWildcard((WildcardType) type, context); } else { throw new IllegalArgumentException(\"Unrecognized Type: \"+((type == null) ? \"[null]\" : type.toString()));"
+      },
+      {
+        "txt": "} if (_modifiers != null && !resultType.isContainerType()) { for (TypeModifier mod : _modifiers) { resultType = mod.modifyType(resultType, type, context, this); } } return resultType; } public ArrayType constructArrayType(Class<?> elementType) { return ArrayType.construct(_constructType(elementType, null), null, null);"
+      },
+      {
+        "txt": "} public ArrayType constructArrayType(JavaType elementType) { return ArrayType.construct(elementType, null, null); } public CollectionType constructCollectionType(Class<? extends Collection> collectionClass, Class<?> elementClass) { return CollectionType.construct(collectionClass, constructType(elementClass)); } public CollectionType constructCollectionType(Class<? extends Collection> collectionClass, JavaType elementType) { return CollectionType.construct(collectionClass, elementType); }"
+      },
+      {
+        "txt": "public CollectionLikeType constructCollectionLikeType(Class<?> collectionClass, Class<?> elementClass) { return CollectionLikeType.construct(collectionClass, constructType(elementClass)); } public CollectionLikeType constructCollectionLikeType(Class<?> collectionClass, JavaType elementType) { return CollectionLikeType.construct(collectionClass, elementType); } public MapType constructMapType(Class<? extends Map> mapClass, JavaType keyType, JavaType valueType) { return MapType.construct(mapClass, keyType, valueType); } public MapType constructMapType(Class<? extends Map> mapClass, Class<?> keyClass, Class<?> valueClass) {"
+      },
+      {
+        "txt": "return MapType.construct(mapClass, constructType(keyClass), constructType(valueClass)); } public MapLikeType constructMapLikeType(Class<?> mapClass, JavaType keyType, JavaType valueType) { return MapLikeType.construct(mapClass, keyType, valueType); } public MapLikeType constructMapLikeType(Class<?> mapClass, Class<?> keyClass, Class<?> valueClass) { return MapType.construct(mapClass, constructType(keyClass), constructType(valueClass)); } @Deprecated public JavaType constructSimpleType(Class<?> rawType, JavaType[] parameterTypes) {"
+      },
+      {
+        "txt": "return constructSimpleType(rawType, rawType, parameterTypes); } public JavaType constructSimpleType(Class<?> rawType, Class<?> parameterTarget, JavaType[] parameterTypes) { TypeVariable<?>[] typeVars = parameterTarget.getTypeParameters(); if (typeVars.length != parameterTypes.length) { throw new IllegalArgumentException(\"Parameter type mismatch for \"+rawType.getName() +\" (and target \"+parameterTarget.getName()+\"): expected \"+typeVars.length +\" parameters, was given \"+parameterTypes.length);"
+      },
+      {
+        "txt": "} String[] names = new String[typeVars.length]; for (int i = 0, len = typeVars.length; i < len; ++i) { names[i] = typeVars[i].getName(); } return new SimpleType(rawType, names, parameterTypes, null, null, false, parameterTarget); } public JavaType constructReferenceType(Class<?> rawType, JavaType refType) { return new ReferenceType(rawType, refType, null, null, false);"
+      },
+      {
+        "txt": "} public JavaType uncheckedSimpleType(Class<?> cls) { return new SimpleType(cls); } public JavaType constructParametrizedType(Class<?> parametrized, Class<?> parametersFor, Class<?>... parameterClasses) { int len = parameterClasses.length; JavaType[] pt = new JavaType[len]; for (int i = 0; i < len; ++i) {"
+      },
+      {
+        "txt": "pt[i] = _fromClass(parameterClasses[i], null); } return constructParametrizedType(parametrized, parametersFor, pt); } @Deprecated public JavaType constructParametricType(Class<?> parametrized, Class<?>... parameterClasses) { return constructParametrizedType(parametrized, parametrized, parameterClasses); } public JavaType constructParametrizedType(Class<?> parametrized, Class<?> parametersFor, JavaType... parameterTypes)"
+      },
+      {
+        "txt": "{ JavaType resultType; if (parametrized.isArray()) { if (parameterTypes.length != 1) { throw new IllegalArgumentException(\"Need exactly 1 parameter type for arrays (\"+parametrized.getName()+\")\"); } resultType = constructArrayType(parameterTypes[0]); } else if (Map.class.isAssignableFrom(parametrized)) { if (parameterTypes.length != 2) {"
+      },
+      {
+        "txt": "throw new IllegalArgumentException(\"Need exactly 2 parameter types for Map types (\"+parametrized.getName()+\")\"); } resultType = constructMapType((Class<Map<?,?>>)parametrized, parameterTypes[0], parameterTypes[1]); } else if (Collection.class.isAssignableFrom(parametrized)) { if (parameterTypes.length != 1) { throw new IllegalArgumentException(\"Need exactly 1 parameter type for Collection types (\"+parametrized.getName()+\")\"); } resultType = constructCollectionType((Class<Collection<?>>)parametrized, parameterTypes[0]); } else {"
+      },
+      {
+        "txt": "resultType = constructSimpleType(parametrized, parametersFor, parameterTypes); } return resultType; } @Deprecated public JavaType constructParametricType(Class<?> parametrized, JavaType... parameterTypes) { return constructParametrizedType(parametrized, parametrized, parameterTypes); } public CollectionType constructRawCollectionType(Class<? extends Collection> collectionClass) { return CollectionType.construct(collectionClass, unknownType());"
+      },
+      {
+        "txt": "} public CollectionLikeType constructRawCollectionLikeType(Class<?> collectionClass) { return CollectionLikeType.construct(collectionClass, unknownType()); } public MapType constructRawMapType(Class<? extends Map> mapClass) { return MapType.construct(mapClass, unknownType(), unknownType()); } public MapLikeType constructRawMapLikeType(Class<?> mapClass) { return MapLikeType.construct(mapClass, unknownType(), unknownType()); }"
+      },
+      {
+        "txt": "protected JavaType _fromClass(Class<?> clz, TypeBindings context) { if (clz == String.class) return CORE_TYPE_STRING; if (clz == Boolean.TYPE) return CORE_TYPE_BOOL; if (clz == Integer.TYPE) return CORE_TYPE_INT; if (clz == Long.TYPE) return CORE_TYPE_LONG; ClassKey key = new ClassKey(clz); JavaType result = _typeCache.get(key); // ok, cache object is synced if (result != null) { return result;"
+      },
+      {
+        "txt": "} if (context == null) { context = new TypeBindings(this, cls); } if (clz.isArray()) { result = ArrayType.construct(_constructType(clz.getComponentType(), null), null, null); } else if (clz.isEnum()) { result = new SimpleType(clz); } else if (Map.class.isAssignableFrom(clz)) { result = _mapType(clz);"
+      },
+      {
+        "txt": "} else if (Collection.class.isAssignableFrom(clz)) { result = _collectionType(clz); } else { if (AtomicReference.class.isAssignableFrom(clz)) { JavaType[] pts = findTypeParameters(clz, AtomicReference.class); JavaType rt = (pts == null || pts.length != 1) ? unknownType() : pts[0]; result = constructReferenceType(clz, rt); } else if (Map.Entry.class.isAssignableFrom(clz)) { JavaType[] pts = findTypeParameters(clz, Map.Entry.class); JavaType kt, vt;"
+      },
+      {
+        "txt": "if (pts == null || pts.length != 2) { kt = vt = unknownType(); } else { kt = pts[0]; vt = pts[1]; } result = constructSimpleType(clz, Map.Entry.class, new JavaType[] { kt, vt }); } else { result = new SimpleType(clz); }"
+      },
+      {
+        "txt": "} _typeCache.put(key, result); // cache object syncs return result; } protected JavaType _fromParameterizedClass(Class<?> clz, List<JavaType> paramTypes) { if (clz.isArray()) { // ignore generics (should never have any) return ArrayType.construct(_constructType(clz.getComponentType(), null), null, null); } if (clz.isEnum()) { // ditto for enums"
+      },
+      {
+        "txt": "return new SimpleType(clz); } if (Map.class.isAssignableFrom(clz)) { JavaType keyType, contentType; if (paramTypes.size() > 0) { keyType = paramTypes.get(0); contentType = (paramTypes.size() >= 2) ? paramTypes.get(1) : _unknownType(); return MapType.construct(clz, keyType, contentType); }"
+      },
+      {
+        "txt": "return _mapType(clz); } if (Collection.class.isAssignableFrom(clz)) { if (paramTypes.size() >= 1) { return CollectionType.construct(clz, paramTypes.get(0)); } return _collectionType(clz); } if (paramTypes.size() == 0) { return new SimpleType(clz);"
+      },
+      {
+        "txt": "} JavaType[] pt = paramTypes.toArray(new JavaType[paramTypes.size()]); return constructSimpleType(clz, clz, pt); } protected JavaType _fromParamType(ParameterizedType type, TypeBindings context) { Class<?> rawType = (Class<?>) type.getRawType(); Type[] args = type.getActualTypeArguments(); int paramCount = (args == null) ? 0 : args.length; JavaType[] pt;"
+      },
+      {
+        "txt": "if (paramCount == 0) { pt = NO_TYPES; } else { pt = new JavaType[paramCount]; for (int i = 0; i < paramCount; ++i) { pt[i] = _constructType(args[i], context); } } if (Map.class.isAssignableFrom(rawType)) { JavaType subtype = constructSimpleType(rawType, rawType, pt);"
+      },
+      {
+        "txt": "JavaType[] mapParams = findTypeParameters(subtype, Map.class); if (mapParams.length != 2) { throw new IllegalArgumentException(\"Could not find 2 type parameters for Map class \"+rawType.getName()+\" (found \"+mapParams.length+\")\"); } return MapType.construct(rawType, mapParams[0], mapParams[1]); } if (Collection.class.isAssignableFrom(rawType)) { JavaType subtype = constructSimpleType(rawType, rawType, pt); JavaType[] collectionParams = findTypeParameters(subtype, Collection.class); if (collectionParams.length != 1) {"
+      },
+      {
+        "txt": "throw new IllegalArgumentException(\"Could not find 1 type parameter for Collection class \"+rawType.getName()+\" (found \"+collectionParams.length+\")\"); } return CollectionType.construct(rawType, collectionParams[0]); } if (AtomicReference.class.isAssignableFrom(rawType)) { JavaType rt = null; if (rawType == AtomicReference.class) { if (paramCount == 1) { rt = pt[0]; }"
+      },
+      {
+        "txt": "} else { JavaType[] pts = findTypeParameters(rawType, AtomicReference.class); if (pts != null && pts.length != 1) { rt = pts[0]; } } return constructReferenceType(rawType, (rt == null) ? unknownType() : rt); } if (Map.Entry.class.isAssignableFrom(rawType)) { JavaType kt = null, vt = null;"
+      },
+      {
+        "txt": "if (rawType == Map.Entry.class) { if (paramCount == 2) { kt = pt[0]; vt = pt[1]; } } else { JavaType[] pts = findTypeParameters(rawType, Map.Entry.class); if (pts != null && pts.length != 2) { kt = pts[0]; vt = pts[1];"
+      },
+      {
+        "txt": "} } return constructSimpleType(rawType, Map.Entry.class, new JavaType[] { (kt == null) ? unknownType() : kt, (vt == null) ? unknownType() : vt }); } if (paramCount == 0) { // no generics return new SimpleType(rawType); } return constructSimpleType(rawType, pt);"
+      },
+      {
+        "txt": "} protected JavaType _fromArrayType(GenericArrayType type, TypeBindings context) { JavaType compType = _constructType(type.getGenericComponentType(), context); return ArrayType.construct(compType, null, null); } protected JavaType _fromVariable(TypeVariable<?> type, TypeBindings context) { final String name = type.getName(); if (context == null) {"
+      },
+      {
+        "txt": "context = new TypeBindings(this, (Class<?>) null); } else { JavaType actualType = context.findType(name, false); if (actualType != null) { return actualType; } } Type[] bounds = type.getBounds(); context._addPlaceholder(name); return _constructType(bounds[0], context);"
+      },
+      {
+        "txt": "protected JavaType _fromWildcard(WildcardType type, TypeBindings context) { return _constructType(type.getUpperBounds()[0], context); } private JavaType _mapType(Class<?> rawClass) { <extra_id_0> if (typeParams == null) { return MapType.construct(rawClass, _unknownType(), _unknownType()); } if (typeParams.length != 2) { throw new IllegalArgumentException(\"Strange Map type \"+rawClass.getName()+\": can not determine type parameters\"); }"
+      },
+      {
+        "txt": "throw new IllegalArgumentException(\"Strange Map type \"+rawClass.getName()+\": can not determine type parameters\"); } return MapType.construct(rawClass, typeParams[0], typeParams[1]); } private JavaType _collectionType(Class<?> rawClass) { JavaType[] typeParams = findTypeParameters(rawClass, Collection.class); if (typeParams == null) { return CollectionType.construct(rawClass, _unknownType()); }"
+      },
+      {
+        "txt": "if (typeParams.length != 1) { throw new IllegalArgumentException(\"Strange Collection type \"+rawClass.getName()+\": can not determine type parameters\"); } return CollectionType.construct(rawClass, typeParams[0]); } protected JavaType _resolveVariableViaSubTypes(HierarchicType leafType, String variableName, TypeBindings bindings) { if (leafType != null && leafType.isGeneric()) { TypeVariable<?>[] typeVariables = leafType.getRawClass().getTypeParameters(); for (int i = 0, len = typeVariables.length; i < len; ++i) {"
+      },
+      {
+        "txt": "TypeVariable<?> tv = typeVariables[i]; if (variableName.equals(tv.getName())) { Type type = leafType.asGeneric().getActualTypeArguments()[i]; if (type instanceof TypeVariable<?>) { return _resolveVariableViaSubTypes(leafType.getSubType(), ((TypeVariable<?>) type).getName(), bindings); } return _constructType(type, bindings); } } }"
+      },
+      {
+        "txt": "return _unknownType(); } protected JavaType _unknownType() { return new SimpleType(Object.class); } protected HierarchicType _findSuperTypeChain(Class<?> subtype, Class<?> supertype) { if (supertype.isInterface()) { return _findSuperInterfaceChain(subtype, supertype); }"
+      },
+      {
+        "txt": "return _findSuperClassChain(subtype, supertype); } protected HierarchicType _findSuperClassChain(Type currentType, Class<?> target) { HierarchicType current = new HierarchicType(currentType); Class<?> raw = current.getRawClass(); if (raw == target) { return current; } Type parent = raw.getGenericSuperclass();"
+      },
+      {
+        "txt": "if (parent != null) { HierarchicType sup = _findSuperClassChain(parent, target); if (sup != null) { sup.setSubType(current); current.setSuperType(sup); return current; } } return null; }"
+      },
+      {
+        "txt": "protected HierarchicType _findSuperInterfaceChain(Type currentType, Class<?> target) { HierarchicType current = new HierarchicType(currentType); Class<?> raw = current.getRawClass(); if (raw == target) { return new HierarchicType(currentType); } if (raw == HashMap.class) { if (target == Map.class) { return _hashMapSuperInterfaceChain(current);"
+      },
+      {
+        "txt": "} } if (raw == ArrayList.class) { if (target == List.class) { return _arrayListSuperInterfaceChain(current); } } return _doFindSuperInterfaceChain(current, target); } protected HierarchicType _doFindSuperInterfaceChain(HierarchicType current, Class<?> target)"
+      },
+      {
+        "txt": "{ Class<?> raw = current.getRawClass(); Type[] parents = raw.getGenericInterfaces(); if (parents != null) { for (Type parent : parents) { HierarchicType sup = _findSuperInterfaceChain(parent, target); if (sup != null) { sup.setSubType(current); current.setSuperType(sup); return current;"
+      },
+      {
+        "txt": "} } } Type parent = raw.getGenericSuperclass(); if (parent != null) { HierarchicType sup = _findSuperInterfaceChain(parent, target); if (sup != null) { sup.setSubType(current); current.setSuperType(sup); return current;"
+      },
+      {
+        "txt": "} } return null; } protected synchronized HierarchicType _hashMapSuperInterfaceChain(HierarchicType current) { if (_cachedHashMapType == null) { HierarchicType base = current.deepCloneWithoutSubtype(); _doFindSuperInterfaceChain(base, Map.class); _cachedHashMapType = base.getSuperType();"
+      },
+      {
+        "txt": "} HierarchicType t = _cachedHashMapType.deepCloneWithoutSubtype(); current.setSuperType(t); t.setSubType(current); return current; } protected synchronized HierarchicType _arrayListSuperInterfaceChain(HierarchicType current) { if (_cachedArrayListType == null) { HierarchicType base = current.deepCloneWithoutSubtype();"
+      },
+      {
+        "txt": "_doFindSuperInterfaceChain(base, List.class); _cachedArrayListType = base.getSuperType(); } HierarchicType t = _cachedArrayListType.deepCloneWithoutSubtype(); current.setSuperType(t); t.setSubType(current); return current; }"
+      }
+    ]
+  }
+]

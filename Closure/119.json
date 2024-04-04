@@ -1,0 +1,287 @@
+[
+  {
+    "id": 474,
+    "file_path": "src/com/google/javascript/jscomp/GlobalNamespace.java",
+    "start-bug-line": 366,
+    "end-bug-line": 366,
+    "bug": "",
+    "fix": "case Token.CATCH:",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.google.javascript.jscomp; import static com.google.javascript.rhino.jstype.JSTypeNative.GLOBAL_THIS;"
+      },
+      {
+        "txt": "import com.google.common.base.Preconditions; import com.google.common.base.Predicate; import com.google.common.collect.ImmutableList; import com.google.common.collect.ImmutableSet; import com.google.common.collect.Lists; import com.google.common.collect.Sets; import com.google.javascript.jscomp.CodingConvention.SubclassRelationship; import com.google.javascript.rhino.JSDocInfo; import com.google.javascript.rhino.Node; import com.google.javascript.rhino.Token;"
+      },
+      {
+        "txt": "import com.google.javascript.rhino.TokenStream; import com.google.javascript.rhino.jstype.JSType; import com.google.javascript.rhino.jstype.StaticReference; import com.google.javascript.rhino.jstype.StaticScope; import com.google.javascript.rhino.jstype.StaticSlot; import com.google.javascript.rhino.jstype.StaticSourceFile; import com.google.javascript.rhino.jstype.StaticSymbolTable; import java.io.PrintStream; import java.util.ArrayList; import java.util.Collections;"
+      },
+      {
+        "txt": "import java.util.HashMap; import java.util.List; import java.util.Map; import java.util.Set; class GlobalNamespace implements StaticScope<JSType>, StaticSymbolTable<GlobalNamespace.Name, GlobalNamespace.Ref> { private AbstractCompiler compiler; private final Node root; private final Node externsRoot;"
+      },
+      {
+        "txt": "private boolean inExterns; private Scope externsScope; private boolean generated = false; private int currentPreOrderIndex = 0; private List<Name> globalNames = new ArrayList<Name>(); private Map<String, Name> nameMap = new HashMap<String, Name>(); GlobalNamespace(AbstractCompiler compiler, Node root) { this(compiler, null, root); } GlobalNamespace(AbstractCompiler compiler, Node externsRoot, Node root) {"
+      },
+      {
+        "txt": "this.compiler = compiler; this.externsRoot = externsRoot; this.root = root; } boolean hasExternsRoot() { return externsRoot != null; } @Override public Node getRootNode() { return root.getParent();"
+      },
+      {
+        "txt": "} @Override public StaticScope<JSType> getParentScope() { return null; } @Override public Name getSlot(String name) { return getOwnSlot(name); } @Override"
+      },
+      {
+        "txt": "public Name getOwnSlot(String name) { ensureGenerated(); return nameMap.get(name); } @Override public JSType getTypeOfThis() { return compiler.getTypeRegistry().getNativeObjectType(GLOBAL_THIS); } @Override public Iterable<Ref> getReferences(Name slot) {"
+      },
+      {
+        "txt": "ensureGenerated(); return Collections.unmodifiableList(slot.getRefs()); } @Override public StaticScope<JSType> getScope(Name slot) { return this; } @Override public Iterable<Name> getAllSymbols() { ensureGenerated();"
+      },
+      {
+        "txt": "return Collections.unmodifiableCollection(getNameIndex().values()); } private void ensureGenerated() { if (!generated) { process(); } } List<Name> getNameForest() { ensureGenerated(); return globalNames;"
+      },
+      {
+        "txt": "} Map<String, Name> getNameIndex() { ensureGenerated(); return nameMap; } static class AstChange { final JSModule module; final Scope scope; final Node node; AstChange(JSModule module, Scope scope, Node node) {"
+      },
+      {
+        "txt": "this.module = module; this.scope = scope; this.node = node; } } void scanNewNodes(List<AstChange> newNodes) { BuildGlobalNamespace builder = new BuildGlobalNamespace(); for (AstChange info : newNodes) { if (!info.node.isQualifiedName() && !NodeUtil.isObjectLitKey(info.node)) { continue;"
+      },
+      {
+        "txt": "} scanFromNode(builder, info.module, info.scope, info.node); } } private void scanFromNode( BuildGlobalNamespace builder, JSModule module, Scope scope, Node n) { if (n.isName() || n.isGetProp()) { scanFromNode(builder, module, scope, n.getParent()); } builder.collect(module, scope, n);"
+      },
+      {
+        "txt": "} private void process() { if (externsRoot != null) { inExterns = true; NodeTraversal.traverse(compiler, externsRoot, new BuildGlobalNamespace()); } inExterns = false; NodeTraversal.traverse(compiler, root, new BuildGlobalNamespace()); generated = true; }"
+      },
+      {
+        "txt": "private boolean isGlobalNameReference(String name, Scope s) { String topVarName = getTopVarName(name); return isGlobalVarReference(topVarName, s); } private String getTopVarName(String name) { int firstDotIndex = name.indexOf('.'); return firstDotIndex == -1 ? name : name.substring(0, firstDotIndex); } private boolean isGlobalVarReference(String name, Scope s) { Scope.Var v = s.getVar(name);"
+      },
+      {
+        "txt": "if (v == null && externsScope != null) { v = externsScope.getVar(name); } return v != null && !v.isLocal(); } private boolean isGlobalScope(Scope s) { return s.getParent() == null; } private class BuildGlobalNamespace implements NodeTraversal.Callback { BuildGlobalNamespace() {"
+      },
+      {
+        "txt": "} @Override public void visit(NodeTraversal t, Node n, Node parent) {} @Override public boolean shouldTraverse(NodeTraversal t, Node n, Node parent) { if (externsRoot != null && n == externsRoot) { externsScope = t.getScope(); } collect(t.getModule(), t.getScope(), n); return true;"
+      },
+      {
+        "txt": "} public void collect(JSModule module, Scope scope, Node n) { Node parent = n.getParent(); String name; boolean isSet = false; Name.Type type = Name.Type.OTHER; boolean isPropAssign = false; switch (n.getType()) { case Token.GETTER_DEF: case Token.SETTER_DEF:"
+      },
+      {
+        "txt": "case Token.STRING_KEY: name = null; if (parent != null && parent.isObjectLit()) { name = getNameForObjLitKey(n); } if (name == null) { return; } isSet = true; switch (n.getType()) {"
+      },
+      {
+        "txt": "case Token.STRING_KEY: type = getValueType(n.getFirstChild()); break; case Token.GETTER_DEF: type = Name.Type.GET; break; case Token.SETTER_DEF: type = Name.Type.SET; break; default:"
+      },
+      {
+        "txt": "throw new IllegalStateException(\"unexpected:\" + n); } break; case Token.NAME: if (parent != null) { switch (parent.getType()) { case Token.VAR: isSet = true; Node rvalue = n.getFirstChild(); type = rvalue == null ? Name.Type.OTHER : getValueType(rvalue);"
+      },
+      {
+        "txt": "break; case Token.ASSIGN: if (parent.getFirstChild() == n) { isSet = true; type = getValueType(n.getNext()); } break; case Token.GETPROP: return; case Token.FUNCTION:"
+      },
+      {
+        "txt": "if (gramps == null || NodeUtil.isFunctionExpression(parent)) { return; } isSet = true; type = Name.Type.FUNCTION; break; <extra_id_0> case Token.DEC: isSet = true; type = Name.Type.OTHER; break; default: if (NodeUtil.isAssignmentOp(parent) &&"
+      },
+      {
+        "txt": "default: if (NodeUtil.isAssignmentOp(parent) && parent.getFirstChild() == n) { isSet = true; type = Name.Type.OTHER; } } } name = n.getString(); break;"
+      },
+      {
+        "txt": "case Token.GETPROP: if (parent != null) { switch (parent.getType()) { case Token.ASSIGN: if (parent.getFirstChild() == n) { isSet = true; type = getValueType(n.getNext()); isPropAssign = true; } break;"
+      },
+      {
+        "txt": "case Token.INC: case Token.DEC: isSet = true; type = Name.Type.OTHER; break; case Token.GETPROP: return; default: if (NodeUtil.isAssignmentOp(parent) && parent.getFirstChild() == n) {"
+      },
+      {
+        "txt": "isSet = true; type = Name.Type.OTHER; } } } name = n.getQualifiedName(); if (name == null) { return; } break;"
+      },
+      {
+        "txt": "default: return; } if (!isGlobalNameReference(name, scope)) { return; } if (isSet) { if (isGlobalScope(scope)) { handleSetFromGlobal(module, scope, n, parent, name, isPropAssign, type); } else {"
+      },
+      {
+        "txt": "handleSetFromLocal(module, scope, n, parent, name); } } else { handleGet(module, scope, n, parent, name); } } String getNameForObjLitKey(Node n) { Node parent = n.getParent(); Preconditions.checkState(parent.isObjectLit()); Node gramps = parent.getParent();"
+      },
+      {
+        "txt": "if (gramps == null) { return null; } Node greatGramps = gramps.getParent(); String name; switch (gramps.getType()) { case Token.NAME: if (greatGramps == null || !greatGramps.isVar()) { return null; }"
+      },
+      {
+        "txt": "name = gramps.getString(); break; case Token.ASSIGN: Node lvalue = gramps.getFirstChild(); name = lvalue.getQualifiedName(); break; case Token.STRING_KEY: if (greatGramps != null && greatGramps.isObjectLit()) { name = getNameForObjLitKey(gramps);"
+      },
+      {
+        "txt": "} else { return null; } break; default: return null; } if (name != null) { String key = n.getString(); if (TokenStream.isJSIdentifier(key)) {"
+      },
+      {
+        "txt": "return name + '.' + key; } } return null; } Name.Type getValueType(Node n) { switch (n.getType()) { case Token.OBJECTLIT: return Name.Type.OBJECTLIT; case Token.FUNCTION:"
+      },
+      {
+        "txt": "return Name.Type.FUNCTION; case Token.OR: return getValueType(n.getLastChild()); case Token.HOOK: Node second = n.getFirstChild().getNext(); Name.Type t = getValueType(second); if (t != Name.Type.OTHER) { return t; } Node third = second.getNext();"
+      },
+      {
+        "txt": "return getValueType(third); } return Name.Type.OTHER; } void handleSetFromGlobal(JSModule module, Scope scope, Node n, Node parent, String name, boolean isPropAssign, Name.Type type) { if (maybeHandlePrototypePrefix(module, scope, n, parent, name)) { return; }"
+      },
+      {
+        "txt": "Name nameObj = getOrCreateName(name); nameObj.type = type; Ref set = new Ref(module, scope, n, nameObj, Ref.Type.SET_FROM_GLOBAL, currentPreOrderIndex++); nameObj.addRef(set); if (isNestedAssign(parent)) { Ref get = new Ref(module, scope, n, nameObj, Ref.Type.ALIASING_GET, currentPreOrderIndex++); nameObj.addRef(get); Ref.markTwins(set, get);"
+      },
+      {
+        "txt": "} else if (isTypeDeclaration(n, parent)) { nameObj.setDeclaredType(); } } private boolean isTypeDeclaration(Node n, Node parent) { Node valueNode = NodeUtil.getRValueOfLValue(n); JSDocInfo info = NodeUtil.getBestJSDocInfo(n); return info != null && valueNode != null && (info.isConstructor() && valueNode.isFunction() || info.isInterface() && valueNode.isFunction() ||"
+      },
+      {
+        "txt": "info.hasEnumParameterType() && valueNode.isObjectLit()); } void handleSetFromLocal(JSModule module, Scope scope, Node n, Node parent, String name) { if (maybeHandlePrototypePrefix(module, scope, n, parent, name)) { return; } Name nameObj = getOrCreateName(name); Ref set = new Ref(module, scope, n, nameObj, Ref.Type.SET_FROM_LOCAL, currentPreOrderIndex++);"
+      },
+      {
+        "txt": "nameObj.addRef(set); if (isNestedAssign(parent)) { Ref get = new Ref(module, scope, n, nameObj, Ref.Type.ALIASING_GET, currentPreOrderIndex++); nameObj.addRef(get); Ref.markTwins(set, get); } } void handleGet(JSModule module, Scope scope, Node n, Node parent, String name) {"
+      },
+      {
+        "txt": "if (maybeHandlePrototypePrefix(module, scope, n, parent, name)) { return; } Ref.Type type = Ref.Type.DIRECT_GET; if (parent != null) { switch (parent.getType()) { case Token.IF: case Token.INSTANCEOF: case Token.TYPEOF: case Token.VOID:"
+      },
+      {
+        "txt": "case Token.NOT: case Token.BITNOT: case Token.POS: case Token.NEG: break; case Token.CALL: if (n == parent.getFirstChild()) { type = Ref.Type.CALL_GET; } else if (isClassDefiningCall(parent)) { type = Ref.Type.DIRECT_GET;"
+      },
+      {
+        "txt": "} else { type = Ref.Type.ALIASING_GET; } break; case Token.NEW: type = n == parent.getFirstChild() ? Ref.Type.DIRECT_GET : Ref.Type.ALIASING_GET; break; case Token.OR:"
+      },
+      {
+        "txt": "case Token.AND: type = determineGetTypeForHookOrBooleanExpr(module, scope, parent, name); break; case Token.HOOK: if (n != parent.getFirstChild()) { type = determineGetTypeForHookOrBooleanExpr(module, scope, parent, name); } break; case Token.DELPROP: type = Ref.Type.DELETE_PROP;"
+      },
+      {
+        "txt": "break; default: type = Ref.Type.ALIASING_GET; break; } } handleGet(module, scope, n, parent, name, type); } private boolean isClassDefiningCall(Node callNode) { SubclassRelationship classes ="
+      },
+      {
+        "txt": "compiler.getCodingConvention().getClassesDefinedByCall(callNode); return classes != null; } Ref.Type determineGetTypeForHookOrBooleanExpr( JSModule module, Scope scope, Node parent, String name) { Node prev = parent; for (Node anc : parent.getAncestors()) { switch (anc.getType()) { case Token.INSTANCEOF: case Token.EXPR_RESULT:"
+      },
+      {
+        "txt": "case Token.VAR: case Token.IF: case Token.WHILE: case Token.FOR: case Token.TYPEOF: case Token.VOID: case Token.NOT: case Token.BITNOT: case Token.POS: case Token.NEG:"
+      },
+      {
+        "txt": "return Ref.Type.DIRECT_GET; case Token.HOOK: if (anc.getFirstChild() == prev) { return Ref.Type.DIRECT_GET; } break; case Token.ASSIGN: if (!name.equals(anc.getFirstChild().getQualifiedName())) { return Ref.Type.ALIASING_GET; }"
+      },
+      {
+        "txt": "break; case Token.NAME: // a variable declaration if (!name.equals(anc.getString())) { return Ref.Type.ALIASING_GET; } break; case Token.CALL: if (anc.getFirstChild() != prev) { return Ref.Type.ALIASING_GET; }"
+      },
+      {
+        "txt": "break; case Token.DELPROP: return Ref.Type.DELETE_PROP; } prev = anc; } return Ref.Type.ALIASING_GET; } void handleGet(JSModule module, Scope scope, Node n, Node parent, String name, Ref.Type type) {"
+      },
+      {
+        "txt": "Name nameObj = getOrCreateName(name); nameObj.addRef( new Ref(module, scope, n, nameObj, type, currentPreOrderIndex++)); } boolean maybeHandlePrototypePrefix(JSModule module, Scope scope, Node n, Node parent, String name) { int numLevelsToRemove; String prefix; if (name.endsWith(\".prototype\")) { numLevelsToRemove = 1;"
+      },
+      {
+        "txt": "prefix = name.substring(0, name.length() - 10); } else { int i = name.indexOf(\".prototype.\"); if (i == -1) { return false; } prefix = name.substring(0, i); numLevelsToRemove = 2; i = name.indexOf('.', i + 11); while (i >= 0) {"
+      },
+      {
+        "txt": "numLevelsToRemove++; i = name.indexOf('.', i + 1); } } if (parent != null && NodeUtil.isObjectLitKey(n)) { return true; } for (int i = 0; i < numLevelsToRemove; i++) { parent = n; n = n.getFirstChild();"
+      },
+      {
+        "txt": "} handleGet(module, scope, n, parent, prefix, Ref.Type.PROTOTYPE_GET); return true; } boolean isNestedAssign(Node parent) { return parent.isAssign() && !parent.getParent().isExprResult(); } Name getOrCreateName(String name) { Name node = nameMap.get(name);"
+      },
+      {
+        "txt": "if (node == null) { int i = name.lastIndexOf('.'); if (i >= 0) { String parentName = name.substring(0, i); Name parent = getOrCreateName(parentName); node = parent.addProperty(name.substring(i + 1), inExterns); } else { node = new Name(name, null, inExterns); globalNames.add(node); }"
+      },
+      {
+        "txt": "nameMap.put(name, node); } return node; } } static class Name implements StaticSlot<JSType> { enum Type { OBJECTLIT, FUNCTION, GET,"
+      },
+      {
+        "txt": "SET, OTHER, } private final String baseName; final Name parent; List<Name> props; private Ref declaration; private List<Ref> refs; Type type; private boolean declaredType = false;"
+      },
+      {
+        "txt": "private boolean hasDeclaredTypeDescendant = false; int globalSets = 0; int localSets = 0; int aliasingGets = 0; int totalGets = 0; int callGets = 0; int deleteProps = 0; final boolean inExterns; JSDocInfo docInfo = null; Name(String name, Name parent, boolean inExterns) {"
+      },
+      {
+        "txt": "this.baseName = name; this.parent = parent; this.type = Type.OTHER; this.inExterns = inExterns; } Name addProperty(String name, boolean inExterns) { if (props == null) { props = new ArrayList<Name>(); } Name node = new Name(name, this, inExterns);"
+      },
+      {
+        "txt": "props.add(node); return node; } String getBaseName() { return baseName; } @Override public String getName() { return getFullName(); }"
+      },
+      {
+        "txt": "String getFullName() { return parent == null ? baseName : parent.getFullName() + '.' + baseName; } @Override public Ref getDeclaration() { return declaration; } @Override public boolean isTypeInferred() { return false;"
+      },
+      {
+        "txt": "} @Override public JSType getType() { return null; } void addRef(Ref ref) { addRefInternal(ref); switch (ref.type) { case SET_FROM_GLOBAL: if (declaration == null) {"
+      },
+      {
+        "txt": "declaration = ref; docInfo = getDocInfoForDeclaration(ref); } globalSets++; break; case SET_FROM_LOCAL: localSets++; break; case PROTOTYPE_GET: case DIRECT_GET:"
+      },
+      {
+        "txt": "totalGets++; break; case ALIASING_GET: aliasingGets++; totalGets++; break; case CALL_GET: callGets++; totalGets++; break;"
+      },
+      {
+        "txt": "case DELETE_PROP: deleteProps++; break; default: throw new IllegalStateException(); } } void removeRef(Ref ref) { if (refs != null && refs.remove(ref)) { if (ref == declaration) {"
+      },
+      {
+        "txt": "declaration = null; if (refs != null) { for (Ref maybeNewDecl : refs) { if (maybeNewDecl.type == Ref.Type.SET_FROM_GLOBAL) { declaration = maybeNewDecl; break; } } } }"
+      },
+      {
+        "txt": "switch (ref.type) { case SET_FROM_GLOBAL: globalSets--; break; case SET_FROM_LOCAL: localSets--; break; case PROTOTYPE_GET: case DIRECT_GET: totalGets--;"
+      },
+      {
+        "txt": "break; case ALIASING_GET: aliasingGets--; totalGets--; break; case CALL_GET: callGets--; totalGets--; break; case DELETE_PROP:"
+      },
+      {
+        "txt": "deleteProps--; break; default: throw new IllegalStateException(); } } } List<Ref> getRefs() { return refs == null ? ImmutableList.<Ref>of() : refs; }"
+      },
+      {
+        "txt": "void addRefInternal(Ref ref) { if (refs == null) { refs = Lists.newArrayList(); } refs.add(ref); } boolean canEliminate() { if (!canCollapseUnannotatedChildNames() || totalGets > 0) { return false; }"
+      },
+      {
+        "txt": "if (props != null) { for (Name n : props) { if (!n.canCollapse()) { return false; } } } return true; } boolean isSimpleStubDeclaration() {"
+      },
+      {
+        "txt": "if (getRefs().size() == 1) { Ref ref = refs.get(0); if (ref.node.getParent() != null && ref.node.getParent().isExprResult()) { return true; } } return false; } boolean canCollapse() {"
+      },
+      {
+        "txt": "return !inExterns && !isGetOrSetDefinition() && (declaredType || (parent == null || parent.canCollapseUnannotatedChildNames()) && (globalSets > 0 || localSets > 0) && deleteProps == 0); } boolean isGetOrSetDefinition() { return this.type == Type.GET || this.type == Type.SET; } boolean canCollapseUnannotatedChildNames() { if (type == Type.OTHER || isGetOrSetDefinition()"
+      },
+      {
+        "txt": "|| globalSets != 1 || localSets != 0 || deleteProps != 0) { return false; } Preconditions.checkNotNull(declaration); if (declaration.getTwin() != null) { return false; } if (declaredType) { return true; }"
+      },
+      {
+        "txt": "if (parent != null && parent.shouldKeepKeys()) { return false; } if (aliasingGets > 0) { return false; } return (parent == null || parent.canCollapseUnannotatedChildNames()); } boolean shouldKeepKeys() { return type == Type.OBJECTLIT && aliasingGets > 0;"
+      },
+      {
+        "txt": "} boolean needsToBeStubbed() { return globalSets == 0 && localSets > 0; } void setDeclaredType() { declaredType = true; for (Name ancestor = parent; ancestor != null; ancestor = ancestor.parent) { ancestor.hasDeclaredTypeDescendant = true; }"
+      },
+      {
+        "txt": "} boolean isDeclaredType() { return declaredType; } boolean isNamespace() { return hasDeclaredTypeDescendant && type == Type.OBJECTLIT; } boolean isSimpleName() { return parent == null; }"
+      },
+      {
+        "txt": "@Override public String toString() { return getFullName() + \" (\" + type + \"): globalSets=\" + globalSets + \", localSets=\" + localSets + \", totalGets=\" + totalGets + \", aliasingGets=\" + aliasingGets + \", callGets=\" + callGets; } @Override public JSDocInfo getJSDocInfo() { return docInfo; } private static JSDocInfo getDocInfoForDeclaration(Ref ref) {"
+      },
+      {
+        "txt": "if (ref.node != null) { Node refParent = ref.node.getParent(); switch (refParent.getType()) { case Token.FUNCTION: case Token.ASSIGN: return refParent.getJSDocInfo(); case Token.VAR: return ref.node == refParent.getFirstChild() ? refParent.getJSDocInfo() : ref.node.getJSDocInfo(); }"
+      },
+      {
+        "txt": "} return null; } } static class Ref implements StaticReference<JSType> { enum Type { SET_FROM_GLOBAL, SET_FROM_LOCAL, PROTOTYPE_GET, ALIASING_GET, // Prevents a name's properties from being collapsed"
+      },
+      {
+        "txt": "DIRECT_GET, // Prevents a name from being completely eliminated CALL_GET, // Prevents a name from being collapsed if never set DELETE_PROP, // Prevents a name from being collapsed at all. } Node node; final JSModule module; final StaticSourceFile source; final Name name; final Type type; final Scope scope;"
+      },
+      {
+        "txt": "final int preOrderIndex; private Ref twin = null; Ref(JSModule module, Scope scope, Node node, Name name, Type type, int index) { this.node = node; this.name = name; this.module = module; this.source = node.getStaticSourceFile(); this.type = type; this.scope = scope; this.preOrderIndex = index;"
+      },
+      {
+        "txt": "} private Ref(Ref original, Type type, int index) { this.node = original.node; this.name = original.name; this.module = original.module; this.source = original.source; this.type = type; this.scope = original.scope; this.preOrderIndex = index; }"
+      },
+      {
+        "txt": "private Ref(Type type, int index) { this.type = type; this.module = null; this.source = null; this.scope = null; this.name = null; this.preOrderIndex = index; } @Override public Node getNode() {"
+      },
+      {
+        "txt": "return node; } @Override public StaticSourceFile getSourceFile() { return source; } @Override public StaticSlot<JSType> getSymbol() { return name; }"
+      },
+      {
+        "txt": "JSModule getModule() { return module; } String getSourceName() { return source == null ? \"\" : source.getName(); } Ref getTwin() { return twin; } boolean isSet() {"
+      },
+      {
+        "txt": "return type == Type.SET_FROM_GLOBAL || type == Type.SET_FROM_LOCAL; } static void markTwins(Ref a, Ref b) { Preconditions.checkArgument( (a.type == Type.ALIASING_GET || b.type == Type.ALIASING_GET) && (a.type == Type.SET_FROM_GLOBAL || a.type == Type.SET_FROM_LOCAL || b.type == Type.SET_FROM_GLOBAL || b.type == Type.SET_FROM_LOCAL)); a.twin = b; b.twin = a; }"
+      },
+      {
+        "txt": "Ref cloneAndReclassify(Type type) { return new Ref(this, type, this.preOrderIndex); } static Ref createRefForTesting(Type type) { return new Ref(type, -1); } } static class Tracker implements CompilerPass { private final AbstractCompiler compiler; private final PrintStream stream;"
+      },
+      {
+        "txt": "private final Predicate<String> isInterestingSymbol; private Set<String> previousSymbolsInTree = ImmutableSet.of(); @param stream The stream to print logs to. Tracker(AbstractCompiler compiler, PrintStream stream, Predicate<String> isInterestingSymbol) { this.compiler = compiler; this.stream = stream; this.isInterestingSymbol = isInterestingSymbol; } @Override public void process(Node externs, Node root) {"
+      },
+      {
+        "txt": "GlobalNamespace namespace = new GlobalNamespace(compiler, externs, root); Set<String> currentSymbols = Sets.newTreeSet(); for (String name : namespace.getNameIndex().keySet()) { if (isInterestingSymbol.apply(name)) { currentSymbols.add(name); } } String passName = compiler.getLastPassName(); if (passName == null) { passName = \"[Unknown pass]\";"
+      },
+      {
+        "txt": "} for (String sym : currentSymbols) { if (!previousSymbolsInTree.contains(sym)) { stream.println(String.format(\"%s: Added by %s\", sym, passName)); } } for (String sym : previousSymbolsInTree) { if (!currentSymbols.contains(sym)) { stream.println(String.format(\"%s: Removed by %s\", sym, passName)); }"
+      },
+      {
+        "txt": "} previousSymbolsInTree = currentSymbols; } }"
+      }
+    ]
+  }
+]

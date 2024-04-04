@@ -1,0 +1,329 @@
+[
+  {
+    "id": 999,
+    "file_path": "src/main/java/org/apache/commons/compress/archivers/cpio/CpioArchiveOutputStream.java",
+    "start-bug-line": 336,
+    "end-bug-line": 336,
+    "bug": "this.finish();",
+    "fix": "[Delete]",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.compress.archivers.cpio; import java.io.File; import java.io.FilterOutputStream; import java.io.IOException; import java.io.OutputStream;"
+      },
+      {
+        "txt": "import java.util.HashMap; import org.apache.commons.compress.archivers.ArchiveEntry; import org.apache.commons.compress.archivers.ArchiveOutputStream; import org.apache.commons.compress.utils.ArchiveUtils; public class CpioArchiveOutputStream extends ArchiveOutputStream implements CpioConstants { private CpioArchiveEntry entry; private boolean closed = false; private boolean finished; private final short entryFormat;"
+      },
+      {
+        "txt": "private final HashMap names = new HashMap(); private long crc = 0; private long written; private final OutputStream out; public CpioArchiveOutputStream(final OutputStream out, final short format) { this.out = new FilterOutputStream(out); switch (format) { case FORMAT_NEW: case FORMAT_NEW_CRC: case FORMAT_OLD_ASCII:"
+      },
+      {
+        "txt": "case FORMAT_OLD_BINARY: break; default: throw new IllegalArgumentException(\"Unknown format: \"+format); } this.entryFormat = format; } public CpioArchiveOutputStream(final OutputStream out) { this(out, FORMAT_NEW); }"
+      },
+      {
+        "txt": "private void ensureOpen() throws IOException { if (this.closed) { throw new IOException(\"Stream closed\"); } } public void putArchiveEntry(ArchiveEntry entry) throws IOException { CpioArchiveEntry e = (CpioArchiveEntry) entry; ensureOpen(); if (this.entry != null) { closeArchiveEntry(); // close previous entry"
+      },
+      {
+        "txt": "} if (e.getTime() == -1) { e.setTime(System.currentTimeMillis()); } final short format = e.getFormat(); if (format != this.entryFormat){ throw new IOException(\"Header format: \"+format+\" does not match existing format: \"+this.entryFormat); } if (this.names.put(e.getName(), e) != null) { throw new IOException(\"duplicate entry: \" + e.getName());"
+      },
+      {
+        "txt": "} writeHeader(e); this.entry = e; this.written = 0; } private void writeHeader(final CpioArchiveEntry e) throws IOException { switch (e.getFormat()) { case FORMAT_NEW: out.write(ArchiveUtils.toAsciiBytes(MAGIC_NEW)); writeNewEntry(e);"
+      },
+      {
+        "txt": "break; case FORMAT_NEW_CRC: out.write(ArchiveUtils.toAsciiBytes(MAGIC_NEW_CRC)); writeNewEntry(e); break; case FORMAT_OLD_ASCII: out.write(ArchiveUtils.toAsciiBytes(MAGIC_OLD_ASCII)); writeOldAsciiEntry(e); break; case FORMAT_OLD_BINARY:"
+      },
+      {
+        "txt": "boolean swapHalfWord = true; writeBinaryLong(MAGIC_OLD_BINARY, 2, swapHalfWord); writeOldBinaryEntry(e, swapHalfWord); break; } } private void writeNewEntry(final CpioArchiveEntry entry) throws IOException { writeAsciiLong(entry.getInode(), 8, 16); writeAsciiLong(entry.getMode(), 8, 16); writeAsciiLong(entry.getUID(), 8, 16);"
+      },
+      {
+        "txt": "writeAsciiLong(entry.getGID(), 8, 16); writeAsciiLong(entry.getNumberOfLinks(), 8, 16); writeAsciiLong(entry.getTime(), 8, 16); writeAsciiLong(entry.getSize(), 8, 16); writeAsciiLong(entry.getDeviceMaj(), 8, 16); writeAsciiLong(entry.getDeviceMin(), 8, 16); writeAsciiLong(entry.getRemoteDeviceMaj(), 8, 16); writeAsciiLong(entry.getRemoteDeviceMin(), 8, 16); writeAsciiLong(entry.getName().length() + 1, 8, 16); writeAsciiLong(entry.getChksum(), 8, 16);"
+      },
+      {
+        "txt": "writeCString(entry.getName()); pad(entry.getHeaderPadCount()); } private void writeOldAsciiEntry(final CpioArchiveEntry entry) throws IOException { writeAsciiLong(entry.getDevice(), 6, 8); writeAsciiLong(entry.getInode(), 6, 8); writeAsciiLong(entry.getMode(), 6, 8); writeAsciiLong(entry.getUID(), 6, 8); writeAsciiLong(entry.getGID(), 6, 8);"
+      },
+      {
+        "txt": "writeAsciiLong(entry.getNumberOfLinks(), 6, 8); writeAsciiLong(entry.getRemoteDevice(), 6, 8); writeAsciiLong(entry.getTime(), 11, 8); writeAsciiLong(entry.getName().length() + 1, 6, 8); writeAsciiLong(entry.getSize(), 11, 8); writeCString(entry.getName()); } private void writeOldBinaryEntry(final CpioArchiveEntry entry, final boolean swapHalfWord) throws IOException { writeBinaryLong(entry.getDevice(), 2, swapHalfWord);"
+      },
+      {
+        "txt": "writeBinaryLong(entry.getInode(), 2, swapHalfWord); writeBinaryLong(entry.getMode(), 2, swapHalfWord); writeBinaryLong(entry.getUID(), 2, swapHalfWord); writeBinaryLong(entry.getGID(), 2, swapHalfWord); writeBinaryLong(entry.getNumberOfLinks(), 2, swapHalfWord); writeBinaryLong(entry.getRemoteDevice(), 2, swapHalfWord); writeBinaryLong(entry.getTime(), 4, swapHalfWord); writeBinaryLong(entry.getName().length() + 1, 2, swapHalfWord); writeBinaryLong(entry.getSize(), 4, swapHalfWord); writeCString(entry.getName());"
+      },
+      {
+        "txt": "pad(entry.getHeaderPadCount()); } public void closeArchiveEntry() throws IOException { ensureOpen(); if (this.entry.getSize() != this.written) { throw new IOException(\"invalid entry size (expected \" + this.entry.getSize() + \" but got \" + this.written + \" bytes)\"); } pad(this.entry.getDataPadCount());"
+      },
+      {
+        "txt": "if (this.entry.getFormat() == FORMAT_NEW_CRC) { if (this.crc != this.entry.getChksum()) { throw new IOException(\"CRC Error\"); } } this.entry = null; this.crc = 0; this.written = 0; } public void write(final byte[] b, final int off, final int len)"
+      },
+      {
+        "txt": "throws IOException { ensureOpen(); if (off < 0 || len < 0 || off > b.length - len) { throw new IndexOutOfBoundsException(); } else if (len == 0) { return; } if (this.entry == null) { throw new IOException(\"no current CPIO entry\"); }"
+      },
+      {
+        "txt": "if (this.written + len > this.entry.getSize()) { throw new IOException(\"attempt to write past end of STORED entry\"); } out.write(b, off, len); this.written += len; if (this.entry.getFormat() == FORMAT_NEW_CRC) { for (int pos = 0; pos < len; pos++) { this.crc += b[pos] & 0xFF; } }"
+      },
+      {
+        "txt": "} public void finish() throws IOException { ensureOpen(); if (this.finished) { return; } if (this.entry != null) { throw new IOException(\"This archives contains unclosed entries.\"); } this.entry = new CpioArchiveEntry(this.entryFormat);"
+      },
+      {
+        "txt": "this.entry.setNumberOfLinks(1); writeHeader(this.entry); closeArchiveEntry(); } public void close() throws IOException { if (!this.closed) { <extra_id_0> out.close(); this.closed = true; } } private void pad(int count) throws IOException{ if (count > 0){"
+      },
+      {
+        "txt": "private void pad(int count) throws IOException{ if (count > 0){ byte buff[] = new byte[count]; out.write(buff); } } private void writeBinaryLong(final long number, final int length, final boolean swapHalfWord) throws IOException { byte tmp[] = CpioUtil.long2byteArray(number, length, swapHalfWord); out.write(tmp);"
+      },
+      {
+        "txt": "} private void writeAsciiLong(final long number, final int length, final int radix) throws IOException { StringBuffer tmp = new StringBuffer(); String tmpStr; if (radix == 16) { tmp.append(Long.toHexString(number)); } else if (radix == 8) { tmp.append(Long.toOctalString(number)); } else {"
+      },
+      {
+        "txt": "tmp.append(Long.toString(number)); } if (tmp.length() <= length) { long insertLength = length - tmp.length(); for (int pos = 0; pos < insertLength; pos++) { tmp.insert(0, \"0\"); } tmpStr = tmp.toString(); } else { tmpStr = tmp.substring(tmp.length() - length);"
+      },
+      {
+        "txt": "} out.write(tmpStr.getBytes()); // TODO is it correct to use the default charset here? } private void writeCString(final String str) throws IOException { out.write(str.getBytes()); // TODO is it correct to use the default charset here? out.write('\\0'); } public ArchiveEntry createArchiveEntry(File inputFile, String entryName) throws IOException { return new CpioArchiveEntry(inputFile, entryName);"
+      }
+    ]
+  },
+  {
+    "id": 1000,
+    "file_path": "src/main/java/org/apache/commons/compress/archivers/tar/TarArchiveOutputStream.java",
+    "start-bug-line": 126,
+    "end-bug-line": 126,
+    "bug": "finish();",
+    "fix": "[Delete]",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.compress.archivers.tar; import java.io.File; import java.io.IOException; import java.io.OutputStream; import org.apache.commons.compress.archivers.ArchiveEntry; import org.apache.commons.compress.archivers.ArchiveOutputStream; public class TarArchiveOutputStream extends ArchiveOutputStream { public static final int LONGFILE_ERROR = 0; public static final int LONGFILE_TRUNCATE = 1;"
+      },
+      {
+        "txt": "public static final int LONGFILE_GNU = 2; private long currSize; private String currName; private long currBytes; private final byte[] recordBuf; private int assemLen; private final byte[] assemBuf; protected final TarBuffer buffer; private int longFileMode = LONGFILE_ERROR; private boolean closed = false;"
+      },
+      {
+        "txt": "private boolean haveUnclosedEntry = false; private final OutputStream out; public TarArchiveOutputStream(OutputStream os) { this(os, TarBuffer.DEFAULT_BLKSIZE, TarBuffer.DEFAULT_RCDSIZE); } public TarArchiveOutputStream(OutputStream os, int blockSize) { this(os, blockSize, TarBuffer.DEFAULT_RCDSIZE); } public TarArchiveOutputStream(OutputStream os, int blockSize, int recordSize) { out = os;"
+      },
+      {
+        "txt": "this.buffer = new TarBuffer(os, blockSize, recordSize); this.assemLen = 0; this.assemBuf = new byte[recordSize]; this.recordBuf = new byte[recordSize]; } public void setLongFileMode(int longFileMode) { this.longFileMode = longFileMode; } public void finish() throws IOException { if(haveUnclosedEntry) {"
+      },
+      {
+        "txt": "} writeEOFRecord(); writeEOFRecord(); } public void close() throws IOException { if (!closed) { <extra_id_0> buffer.close(); out.close(); closed = true; } } public int getRecordSize() {"
+      },
+      {
+        "txt": "} public int getRecordSize() { return buffer.getRecordSize(); } public void putArchiveEntry(ArchiveEntry archiveEntry) throws IOException { TarArchiveEntry entry = (TarArchiveEntry) archiveEntry; if (entry.getName().length() >= TarConstants.NAMELEN) { if (longFileMode == LONGFILE_GNU) { TarArchiveEntry longLinkEntry = new TarArchiveEntry(TarConstants.GNU_LONGLINK, TarConstants.LF_GNUTYPE_LONGNAME);"
+      },
+      {
+        "txt": "final byte[] nameBytes = entry.getName().getBytes(); // TODO is it correct to use the default charset here? longLinkEntry.setSize(nameBytes.length + 1); // +1 for NUL putArchiveEntry(longLinkEntry); write(nameBytes); write(0); // NUL terminator closeArchiveEntry(); } else if (longFileMode != LONGFILE_TRUNCATE) { throw new RuntimeException(\"file name '\" + entry.getName() + \"' is too long ( > \" + TarConstants.NAMELEN + \" bytes)\");"
+      },
+      {
+        "txt": "} } entry.writeEntryHeader(recordBuf); buffer.writeRecord(recordBuf); currBytes = 0; if (entry.isDirectory()) { currSize = 0; } else { currSize = entry.getSize(); }"
+      },
+      {
+        "txt": "currName = entry.getName(); haveUnclosedEntry = true; } public void closeArchiveEntry() throws IOException { if (assemLen > 0) { for (int i = assemLen; i < assemBuf.length; ++i) { assemBuf[i] = 0; } buffer.writeRecord(assemBuf); currBytes += assemLen;"
+      },
+      {
+        "txt": "assemLen = 0; } if (currBytes < currSize) { throw new IOException(\"entry '\" + currName + \"' closed at '\" + currBytes + \"' before the '\" + currSize + \"' bytes specified in the header were written\"); } haveUnclosedEntry = false; }"
+      },
+      {
+        "txt": "public void write(byte[] wBuf, int wOffset, int numToWrite) throws IOException { if ((currBytes + numToWrite) > currSize) { throw new IOException(\"request to write '\" + numToWrite + \"' bytes exceeds size in header of '\" + currSize + \"' bytes for entry '\" + currName + \"'\"); } if (assemLen > 0) { if ((assemLen + numToWrite) >= recordBuf.length) { int aLen = recordBuf.length - assemLen;"
+      },
+      {
+        "txt": "System.arraycopy(assemBuf, 0, recordBuf, 0, assemLen); System.arraycopy(wBuf, wOffset, recordBuf, assemLen, aLen); buffer.writeRecord(recordBuf); currBytes += recordBuf.length; wOffset += aLen; numToWrite -= aLen; assemLen = 0; } else {"
+      },
+      {
+        "txt": "System.arraycopy(wBuf, wOffset, assemBuf, assemLen, numToWrite); wOffset += numToWrite; assemLen += numToWrite; numToWrite = 0; } } while (numToWrite > 0) { if (numToWrite < recordBuf.length) { System.arraycopy(wBuf, wOffset, assemBuf, assemLen,"
+      },
+      {
+        "txt": "numToWrite); assemLen += numToWrite; break; } buffer.writeRecord(wBuf, wOffset); int num = recordBuf.length; currBytes += num; numToWrite -= num; wOffset += num; }"
+      },
+      {
+        "txt": "} private void writeEOFRecord() throws IOException { for (int i = 0; i < recordBuf.length; ++i) { recordBuf[i] = 0; } buffer.writeRecord(recordBuf); } public void flush() throws IOException { out.flush(); }"
+      },
+      {
+        "txt": "public ArchiveEntry createArchiveEntry(File inputFile, String entryName) throws IOException { return new TarArchiveEntry(inputFile, entryName); }"
+      }
+    ]
+  },
+  {
+    "id": 1001,
+    "file_path": "src/main/java/org/apache/commons/compress/archivers/zip/ZipArchiveOutputStream.java",
+    "start-bug-line": 530,
+    "end-bug-line": 530,
+    "bug": "finish();",
+    "fix": "[Delete]",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.compress.archivers.zip; import java.io.File; import java.io.FileOutputStream;"
+      },
+      {
+        "txt": "import java.io.IOException; import java.io.OutputStream; import java.io.RandomAccessFile; import java.nio.ByteBuffer; import java.util.HashMap; import java.util.Iterator; import java.util.LinkedList; import java.util.List; import java.util.Map; import java.util.zip.CRC32;"
+      },
+      {
+        "txt": "import java.util.zip.Deflater; import java.util.zip.ZipException; import org.apache.commons.compress.archivers.ArchiveEntry; import org.apache.commons.compress.archivers.ArchiveOutputStream; public class ZipArchiveOutputStream extends ArchiveOutputStream { static final int BYTE_MASK = 0xFF; private static final int SHORT = 2; private static final int WORD = 4; static final int BUFFER_SIZE = 512; private static final int DEFLATER_BLOCK_SIZE = 8192;"
+      },
+      {
+        "txt": "public static final int DEFLATED = java.util.zip.ZipEntry.DEFLATED; public static final int DEFAULT_COMPRESSION = Deflater.DEFAULT_COMPRESSION; public static final int STORED = java.util.zip.ZipEntry.STORED; static final String DEFAULT_ENCODING = ZipEncodingHelper.UTF8; public static final int EFS_FLAG = 1 << 11; private ZipArchiveEntry entry; private String comment = \"\"; private int level = DEFAULT_COMPRESSION; private boolean hasCompressionLevelChanged = false; private int method = java.util.zip.ZipEntry.DEFLATED;"
+      },
+      {
+        "txt": "private final List entries = new LinkedList(); private final CRC32 crc = new CRC32(); private long written = 0; private long dataStart = 0; private long localDataStart = 0; private long cdOffset = 0; private long cdLength = 0; private static final byte[] ZERO = {0, 0}; private static final byte[] LZERO = {0, 0, 0, 0}; private final Map offsets = new HashMap();"
+      },
+      {
+        "txt": "private String encoding = DEFAULT_ENCODING; private ZipEncoding zipEncoding = ZipEncodingHelper.getZipEncoding(DEFAULT_ENCODING); protected final Deflater def = new Deflater(level, true); private final byte[] buf = new byte[BUFFER_SIZE]; private final RandomAccessFile raf; private final OutputStream out; private boolean useEFS = true; private boolean fallbackToUTF8 = false; private UnicodeExtraFieldPolicy createUnicodeExtraFields ="
+      },
+      {
+        "txt": "UnicodeExtraFieldPolicy.NEVER; public ZipArchiveOutputStream(OutputStream out) { this.out = out; this.raf = null; } public ZipArchiveOutputStream(File file) throws IOException { OutputStream o = null; RandomAccessFile _raf = null; try { _raf = new RandomAccessFile(file, \"rw\");"
+      },
+      {
+        "txt": "_raf.setLength(0); } catch (IOException e) { if (_raf != null) { try { _raf.close(); } catch (IOException inner) { } _raf = null; } o = new FileOutputStream(file);"
+      },
+      {
+        "txt": "} out = o; raf = _raf; } public boolean isSeekable() { return raf != null; } public void setEncoding(final String encoding) { this.encoding = encoding; this.zipEncoding = ZipEncodingHelper.getZipEncoding(encoding);"
+      },
+      {
+        "txt": "useEFS &= ZipEncodingHelper.isUTF8(encoding); } public String getEncoding() { return encoding; } public void setUseLanguageEncodingFlag(boolean b) { useEFS = b && ZipEncodingHelper.isUTF8(encoding); } public void setCreateUnicodeExtraFields(UnicodeExtraFieldPolicy b) { createUnicodeExtraFields = b;"
+      },
+      {
+        "txt": "} public void setFallbackToUTF8(boolean b) { fallbackToUTF8 = b; } public void finish() throws IOException { if(entry != null) { throw new IOException(\"This archives contains unclosed entries.\"); } cdOffset = written; for (Iterator i = entries.iterator(); i.hasNext(); ) {"
+      },
+      {
+        "txt": "writeCentralFileHeader((ZipArchiveEntry) i.next()); } cdLength = written - cdOffset; writeCentralDirectoryEnd(); offsets.clear(); entries.clear(); } public void closeArchiveEntry() throws IOException { if (entry == null) { return;"
+      },
+      {
+        "txt": "} long realCrc = crc.getValue(); crc.reset(); if (entry.getMethod() == DEFLATED) { def.finish(); while (!def.finished()) { deflate(); } entry.setSize(ZipUtil.adjustToLong(def.getTotalIn())); entry.setCompressedSize(ZipUtil.adjustToLong(def.getTotalOut()));"
+      },
+      {
+        "txt": "entry.setCrc(realCrc); def.reset(); written += entry.getCompressedSize(); } else if (raf == null) { if (entry.getCrc() != realCrc) { throw new ZipException(\"bad CRC checksum for entry \" + entry.getName() + \": \" + Long.toHexString(entry.getCrc()) + \" instead of \" + Long.toHexString(realCrc));"
+      },
+      {
+        "txt": "} if (entry.getSize() != written - dataStart) { throw new ZipException(\"bad size for entry \" + entry.getName() + \": \" + entry.getSize() + \" instead of \" + (written - dataStart)); } } else { /* method is STORED and we used RandomAccessFile */ long size = written - dataStart;"
+      },
+      {
+        "txt": "entry.setSize(size); entry.setCompressedSize(size); entry.setCrc(realCrc); } if (raf != null) { long save = raf.getFilePointer(); raf.seek(localDataStart); writeOut(ZipLong.getBytes(entry.getCrc())); writeOut(ZipLong.getBytes(entry.getCompressedSize())); writeOut(ZipLong.getBytes(entry.getSize()));"
+      },
+      {
+        "txt": "raf.seek(save); } writeDataDescriptor(entry); entry = null; } public void putArchiveEntry(ArchiveEntry archiveEntry) throws IOException { closeArchiveEntry(); entry = ((ZipArchiveEntry) archiveEntry); entries.add(entry); if (entry.getMethod() == -1) { // not specified"
+      },
+      {
+        "txt": "entry.setMethod(method); } if (entry.getTime() == -1) { // not specified entry.setTime(System.currentTimeMillis()); } if (entry.getMethod() == STORED && raf == null) { if (entry.getSize() == -1) { throw new ZipException(\"uncompressed size is required for\" + \" STORED method when not writing to a\" + \" file\");"
+      },
+      {
+        "txt": "} if (entry.getCrc() == -1) { throw new ZipException(\"crc checksum is required for STORED\" + \" method when not writing to a file\"); } entry.setCompressedSize(entry.getSize()); } if (entry.getMethod() == DEFLATED && hasCompressionLevelChanged) { def.setLevel(level); hasCompressionLevelChanged = false;"
+      },
+      {
+        "txt": "} writeLocalFileHeader(entry); } public void setComment(String comment) { this.comment = comment; } public void setLevel(int level) { if (level < Deflater.DEFAULT_COMPRESSION || level > Deflater.BEST_COMPRESSION) { throw new IllegalArgumentException(\"Invalid compression level: \""
+      },
+      {
+        "txt": "+ level); } hasCompressionLevelChanged = (this.level != level); this.level = level; } public void setMethod(int method) { this.method = method; } public void write(byte[] b, int offset, int length) throws IOException { if (entry.getMethod() == DEFLATED) {"
+      },
+      {
+        "txt": "if (length > 0) { if (!def.finished()) { if (length <= DEFLATER_BLOCK_SIZE) { def.setInput(b, offset, length); deflateUntilInputIsNeeded(); } else { final int fullblocks = length / DEFLATER_BLOCK_SIZE; for (int i = 0; i < fullblocks; i++) { def.setInput(b, offset + i * DEFLATER_BLOCK_SIZE, DEFLATER_BLOCK_SIZE);"
+      },
+      {
+        "txt": "deflateUntilInputIsNeeded(); } final int done = fullblocks * DEFLATER_BLOCK_SIZE; if (done < length) { def.setInput(b, offset + done, length - done); deflateUntilInputIsNeeded(); } } } }"
+      },
+      {
+        "txt": "writeOut(b, offset, length); written += length; } crc.update(b, offset, length); } public void close() throws IOException { <extra_id_0> if (raf != null) { raf.close(); } if (out != null) { out.close(); }"
+      },
+      {
+        "txt": "out.close(); } } public void flush() throws IOException { if (out != null) { out.flush(); } } static final byte[] LFH_SIG = ZipLong.LFH_SIG.getBytes(); static final byte[] DD_SIG = ZipLong.getBytes(0X08074B50L);"
+      },
+      {
+        "txt": "static final byte[] CFH_SIG = ZipLong.CFH_SIG.getBytes(); static final byte[] EOCD_SIG = ZipLong.getBytes(0X06054B50L); protected final void deflate() throws IOException { int len = def.deflate(buf, 0, buf.length); if (len > 0) { writeOut(buf, 0, len); } } protected void writeLocalFileHeader(ZipArchiveEntry ze) throws IOException { boolean encodable = zipEncoding.canEncode(ze.getName());"
+      },
+      {
+        "txt": "final ZipEncoding entryEncoding; if (!encodable && fallbackToUTF8) { entryEncoding = ZipEncodingHelper.UTF8_ZIP_ENCODING; } else { entryEncoding = zipEncoding; } ByteBuffer name = entryEncoding.encode(ze.getName()); if (createUnicodeExtraFields != UnicodeExtraFieldPolicy.NEVER) { if (createUnicodeExtraFields == UnicodeExtraFieldPolicy.ALWAYS || !encodable) {"
+      },
+      {
+        "txt": "ze.addExtraField(new UnicodePathExtraField(ze.getName(), name.array(), name.arrayOffset(), name.limit())); } String comm = ze.getComment(); if (comm != null && !\"\".equals(comm)) { boolean commentEncodable = this.zipEncoding.canEncode(comm); if (createUnicodeExtraFields == UnicodeExtraFieldPolicy.ALWAYS || !commentEncodable) {"
+      },
+      {
+        "txt": "ByteBuffer commentB = entryEncoding.encode(comm); ze.addExtraField(new UnicodeCommentExtraField(comm, commentB.array(), commentB.arrayOffset(), commentB.limit()) ); } } } offsets.put(ze, ZipLong.getBytes(written));"
+      },
+      {
+        "txt": "writeOut(LFH_SIG); written += WORD; final int zipMethod = ze.getMethod(); writeVersionNeededToExtractAndGeneralPurposeBits(zipMethod, !encodable && fallbackToUTF8); written += WORD; writeOut(ZipShort.getBytes(zipMethod)); written += SHORT; writeOut(ZipUtil.toDosTime(ze.getTime()));"
+      },
+      {
+        "txt": "written += WORD; localDataStart = written; if (zipMethod == DEFLATED || raf != null) { writeOut(LZERO); writeOut(LZERO); writeOut(LZERO); } else { writeOut(ZipLong.getBytes(ze.getCrc())); writeOut(ZipLong.getBytes(ze.getSize())); writeOut(ZipLong.getBytes(ze.getSize()));"
+      },
+      {
+        "txt": "} written += 12; writeOut(ZipShort.getBytes(name.limit())); written += SHORT; byte[] extra = ze.getLocalFileDataExtra(); writeOut(ZipShort.getBytes(extra.length)); written += SHORT; writeOut(name.array(), name.arrayOffset(), name.limit()); written += name.limit(); writeOut(extra);"
+      },
+      {
+        "txt": "written += extra.length; dataStart = written; } protected void writeDataDescriptor(ZipArchiveEntry ze) throws IOException { if (ze.getMethod() != DEFLATED || raf != null) { return; } writeOut(DD_SIG); writeOut(ZipLong.getBytes(entry.getCrc())); writeOut(ZipLong.getBytes(entry.getCompressedSize()));"
+      },
+      {
+        "txt": "writeOut(ZipLong.getBytes(entry.getSize())); written += 16; } protected void writeCentralFileHeader(ZipArchiveEntry ze) throws IOException { writeOut(CFH_SIG); written += WORD; writeOut(ZipShort.getBytes((ze.getPlatform() << 8) | 20)); written += SHORT; final int zipMethod = ze.getMethod(); final boolean encodable = zipEncoding.canEncode(ze.getName());"
+      },
+      {
+        "txt": "writeVersionNeededToExtractAndGeneralPurposeBits(zipMethod, !encodable && fallbackToUTF8); written += WORD; writeOut(ZipShort.getBytes(zipMethod)); written += SHORT; writeOut(ZipUtil.toDosTime(ze.getTime())); written += WORD; writeOut(ZipLong.getBytes(ze.getCrc())); writeOut(ZipLong.getBytes(ze.getCompressedSize()));"
+      },
+      {
+        "txt": "writeOut(ZipLong.getBytes(ze.getSize())); written += 12; final ZipEncoding entryEncoding; if (!encodable && fallbackToUTF8) { entryEncoding = ZipEncodingHelper.UTF8_ZIP_ENCODING; } else { entryEncoding = zipEncoding; } ByteBuffer name = entryEncoding.encode(ze.getName()); writeOut(ZipShort.getBytes(name.limit()));"
+      },
+      {
+        "txt": "written += SHORT; byte[] extra = ze.getCentralDirectoryExtra(); writeOut(ZipShort.getBytes(extra.length)); written += SHORT; String comm = ze.getComment(); if (comm == null) { comm = \"\"; } ByteBuffer commentB = entryEncoding.encode(comm); writeOut(ZipShort.getBytes(commentB.limit()));"
+      },
+      {
+        "txt": "written += SHORT; writeOut(ZERO); written += SHORT; writeOut(ZipShort.getBytes(ze.getInternalAttributes())); written += SHORT; writeOut(ZipLong.getBytes(ze.getExternalAttributes())); written += WORD; writeOut((byte[]) offsets.get(ze)); written += WORD; writeOut(name.array(), name.arrayOffset(), name.limit());"
+      },
+      {
+        "txt": "written += name.limit(); writeOut(extra); written += extra.length; writeOut(commentB.array(), commentB.arrayOffset(), commentB.limit()); written += commentB.limit(); } protected void writeCentralDirectoryEnd() throws IOException { writeOut(EOCD_SIG); writeOut(ZERO); writeOut(ZERO);"
+      },
+      {
+        "txt": "byte[] num = ZipShort.getBytes(entries.size()); writeOut(num); writeOut(num); writeOut(ZipLong.getBytes(cdLength)); writeOut(ZipLong.getBytes(cdOffset)); ByteBuffer data = this.zipEncoding.encode(comment); writeOut(ZipShort.getBytes(data.limit())); writeOut(data.array(), data.arrayOffset(), data.limit()); } protected final void writeOut(byte[] data) throws IOException {"
+      },
+      {
+        "txt": "writeOut(data, 0, data.length); } protected final void writeOut(byte[] data, int offset, int length) throws IOException { if (raf != null) { raf.write(data, offset, length); } else { out.write(data, offset, length); } }"
+      },
+      {
+        "txt": "private void deflateUntilInputIsNeeded() throws IOException { while (!def.needsInput()) { deflate(); } } private void writeVersionNeededToExtractAndGeneralPurposeBits(final int zipMethod, final boolean utfFallback) throws IOException {"
+      },
+      {
+        "txt": "int versionNeededToExtract = 10; int generalPurposeFlag = (useEFS || utfFallback) ? EFS_FLAG : 0; if (zipMethod == DEFLATED && raf == null) { versionNeededToExtract = 20; generalPurposeFlag |= 8; } writeOut(ZipShort.getBytes(versionNeededToExtract)); writeOut(ZipShort.getBytes(generalPurposeFlag)); } public static final class UnicodeExtraFieldPolicy {"
+      },
+      {
+        "txt": "public static final UnicodeExtraFieldPolicy ALWAYS = new UnicodeExtraFieldPolicy(\"always\"); public static final UnicodeExtraFieldPolicy NEVER = new UnicodeExtraFieldPolicy(\"never\"); public static final UnicodeExtraFieldPolicy NOT_ENCODEABLE = new UnicodeExtraFieldPolicy(\"not encodeable\"); private final String name; private UnicodeExtraFieldPolicy(String n) { name = n; }"
+      },
+      {
+        "txt": "public String toString() { return name; } } public ArchiveEntry createArchiveEntry(File inputFile, String entryName) throws IOException { return new ZipArchiveEntry(inputFile, entryName); }"
+      }
+    ]
+  },
+  {
+    "id": 1002,
+    "file_path": "src/main/java/org/apache/commons/compress/changes/ChangeSetPerformer.java",
+    "start-bug-line": 128,
+    "end-bug-line": 128,
+    "bug": "",
+    "fix": "out.finish();",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.compress.changes; import java.io.IOException; import java.io.InputStream; import java.util.Iterator; import java.util.LinkedHashSet; import java.util.Set; import org.apache.commons.compress.archivers.ArchiveEntry; import org.apache.commons.compress.archivers.ArchiveInputStream; import org.apache.commons.compress.archivers.ArchiveOutputStream;"
+      },
+      {
+        "txt": "import org.apache.commons.compress.utils.IOUtils; public class ChangeSetPerformer { private final Set changes; public ChangeSetPerformer(final ChangeSet changeSet) { changes = changeSet.getChanges(); } public ChangeSetResults perform(ArchiveInputStream in, ArchiveOutputStream out) throws IOException { ChangeSetResults results = new ChangeSetResults(); Set workingSet = new LinkedHashSet(changes);"
+      },
+      {
+        "txt": "for (Iterator it = workingSet.iterator(); it.hasNext();) { Change change = (Change) it.next(); if (change.type() == Change.TYPE_ADD && change.isReplaceMode()) { copyStream(change.getInput(), out, change.getEntry()); it.remove(); results.addedFromChangeSet(change.getEntry().getName()); } } ArchiveEntry entry = null; while ((entry = in.getNextEntry()) != null) {"
+      },
+      {
+        "txt": "boolean copy = true; for (Iterator it = workingSet.iterator(); it.hasNext();) { Change change = (Change) it.next(); final int type = change.type(); final String name = entry.getName(); if (type == Change.TYPE_DELETE && name != null) { if (name.equals(change.targetFile())) { copy = false; it.remove(); results.deleted(name);"
+      },
+      {
+        "txt": "break; } } else if(type == Change.TYPE_DELETE_DIR && name != null) { if (name.startsWith(change.targetFile() + \"/\")) { copy = false; results.deleted(name); break; } } }"
+      },
+      {
+        "txt": "if (copy) { if (!isDeletedLater(workingSet, entry) && !results.hasBeenAdded(entry.getName())) { copyStream(in, out, entry); results.addedFromStream(entry.getName()); } } } for (Iterator it = workingSet.iterator(); it.hasNext();) { Change change = (Change) it.next(); if (change.type() == Change.TYPE_ADD &&"
+      },
+      {
+        "txt": "!results.hasBeenAdded(change.getEntry().getName())) { copyStream(change.getInput(), out, change.getEntry()); it.remove(); results.addedFromChangeSet(change.getEntry().getName()); } } <extra_id_0> } private boolean isDeletedLater(Set workingSet, ArchiveEntry entry) { String source = entry.getName(); if (!workingSet.isEmpty()) { for (Iterator it = workingSet.iterator(); it.hasNext();) { Change change = (Change) it.next();"
+      },
+      {
+        "txt": "for (Iterator it = workingSet.iterator(); it.hasNext();) { Change change = (Change) it.next(); final int type = change.type(); String target = change.targetFile(); if (type == Change.TYPE_DELETE && source.equals(target)) { return true; } if (type == Change.TYPE_DELETE_DIR && source.startsWith(target + \"/\")){ return true; }"
+      },
+      {
+        "txt": "} } return false; } private void copyStream(InputStream in, ArchiveOutputStream out, ArchiveEntry entry) throws IOException { out.putArchiveEntry(entry); IOUtils.copy(in, out); out.closeArchiveEntry(); }"
+      }
+    ]
+  }
+]

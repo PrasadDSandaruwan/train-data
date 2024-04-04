@@ -1,0 +1,416 @@
+[
+  {
+    "id": 1319,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/introspect/AnnotatedClass.java",
+    "start-bug-line": 658,
+    "end-bug-line": 658,
+    "bug": "",
+    "fix": "am = mixIns.find(m); if (am != null) { _addMixUnders(m, am); } else {",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind.introspect; import java.lang.annotation.Annotation; import java.lang.reflect.*; import java.util.*; import com.fasterxml.jackson.databind.AnnotationIntrospector; import com.fasterxml.jackson.databind.introspect.ClassIntrospector.MixInResolver;"
+      },
+      {
+        "txt": "import com.fasterxml.jackson.databind.util.Annotations; import com.fasterxml.jackson.databind.util.ClassUtil; public final class AnnotatedClass extends Annotated { private final static AnnotationMap[] NO_ANNOTATION_MAPS = new AnnotationMap[0]; final protected Class<?> _class; final protected List<Class<?>> _superTypes; final protected AnnotationIntrospector _annotationIntrospector; final protected MixInResolver _mixInResolver;"
+      },
+      {
+        "txt": "final protected Class<?> _primaryMixIn; protected AnnotationMap _classAnnotations; protected boolean _creatorsResolved = false; protected AnnotatedConstructor _defaultConstructor; protected List<AnnotatedConstructor> _constructors; protected List<AnnotatedMethod> _creatorMethods; protected AnnotatedMethodMap _memberMethods; protected List<AnnotatedField> _fields; private AnnotatedClass(Class<?> cls, List<Class<?>> superTypes, AnnotationIntrospector aintr, MixInResolver mir,"
+      },
+      {
+        "txt": "AnnotationMap classAnnotations) { _class = cls; _superTypes = superTypes; _annotationIntrospector = aintr; _mixInResolver = mir; _primaryMixIn = (_mixInResolver == null) ? null : _mixInResolver.findMixInClassFor(_class); _classAnnotations = classAnnotations; }"
+      },
+      {
+        "txt": "@Override public AnnotatedClass withAnnotations(AnnotationMap ann) { return new AnnotatedClass(_class, _superTypes, _annotationIntrospector, _mixInResolver, ann); } public static AnnotatedClass construct(Class<?> cls, AnnotationIntrospector aintr, MixInResolver mir) { return new AnnotatedClass(cls, ClassUtil.findSuperTypes(cls, null), aintr, mir, null);"
+      },
+      {
+        "txt": "} public static AnnotatedClass constructWithoutSuperTypes(Class<?> cls, AnnotationIntrospector aintr, MixInResolver mir) { return new AnnotatedClass(cls, Collections.<Class<?>>emptyList(), aintr, mir, null); } @Override public Class<?> getAnnotated() { return _class; } @Override"
+      },
+      {
+        "txt": "public int getModifiers() { return _class.getModifiers(); } @Override public String getName() { return _class.getName(); } @Override public <A extends Annotation> A getAnnotation(Class<A> acls) { if (_classAnnotations == null) { resolveClassAnnotations(); } return _classAnnotations.get(acls);"
+      },
+      {
+        "txt": "} @Override public Type getGenericType() { return _class; } @Override public Class<?> getRawType() { return _class; } @Override"
+      },
+      {
+        "txt": "public Iterable<Annotation> annotations() { if (_classAnnotations == null) { resolveClassAnnotations(); } return _classAnnotations.annotations(); } @Override protected AnnotationMap getAllAnnotations() { if (_classAnnotations == null) { resolveClassAnnotations();"
+      },
+      {
+        "txt": "} return _classAnnotations; } public Annotations getAnnotations() { if (_classAnnotations == null) { resolveClassAnnotations(); } return _classAnnotations; } public boolean hasAnnotations() {"
+      },
+      {
+        "txt": "if (_classAnnotations == null) { resolveClassAnnotations(); } return _classAnnotations.size() > 0; } public AnnotatedConstructor getDefaultConstructor() { if (!_creatorsResolved) { resolveCreators(); }"
+      },
+      {
+        "txt": "return _defaultConstructor; } public List<AnnotatedConstructor> getConstructors() { if (!_creatorsResolved) { resolveCreators(); } return _constructors; } public List<AnnotatedMethod> getStaticMethods()"
+      },
+      {
+        "txt": "{ if (!_creatorsResolved) { resolveCreators(); } return _creatorMethods; } public Iterable<AnnotatedMethod> memberMethods() { if (_memberMethods == null) { resolveMemberMethods();"
+      },
+      {
+        "txt": "} return _memberMethods; } public int getMemberMethodCount() { if (_memberMethods == null) { resolveMemberMethods(); } return _memberMethods.size(); }"
+      },
+      {
+        "txt": "public AnnotatedMethod findMethod(String name, Class<?>[] paramTypes) { if (_memberMethods == null) { resolveMemberMethods(); } return _memberMethods.find(name, paramTypes); } public int getFieldCount() { if (_fields == null) { resolveFields();"
+      },
+      {
+        "txt": "} return _fields.size(); } public Iterable<AnnotatedField> fields() { if (_fields == null) { resolveFields(); } return _fields; }"
+      },
+      {
+        "txt": "private void resolveClassAnnotations() { _classAnnotations = new AnnotationMap(); if (_annotationIntrospector != null) { if (_primaryMixIn != null) { _addClassMixIns(_classAnnotations, _class, _primaryMixIn); } _addAnnotationsIfNotPresent(_classAnnotations, _class.getDeclaredAnnotations()); for (Class<?> cls : _superTypes) { _addClassMixIns(_classAnnotations, cls);"
+      },
+      {
+        "txt": "_addAnnotationsIfNotPresent(_classAnnotations, cls.getDeclaredAnnotations()); } _addClassMixIns(_classAnnotations, Object.class); } } private void resolveCreators() { List<AnnotatedConstructor> constructors = null; Constructor<?>[] declaredCtors = _class.getDeclaredConstructors(); for (Constructor<?> ctor : declaredCtors) {"
+      },
+      {
+        "txt": "if (ctor.getParameterTypes().length == 0) { _defaultConstructor = _constructConstructor(ctor, true); } else { if (constructors == null) { constructors = new ArrayList<AnnotatedConstructor>(Math.max(10, declaredCtors.length)); } constructors.add(_constructConstructor(ctor, false)); } } if (constructors == null) {"
+      },
+      {
+        "txt": "_constructors = Collections.emptyList(); } else { _constructors = constructors; } if (_primaryMixIn != null) { if (_defaultConstructor != null || !_constructors.isEmpty()) { _addConstructorMixIns(_primaryMixIn); } } if (_annotationIntrospector != null) {"
+      },
+      {
+        "txt": "if (_defaultConstructor != null) { if (_annotationIntrospector.hasIgnoreMarker(_defaultConstructor)) { _defaultConstructor = null; } } if (_constructors != null) { for (int i = _constructors.size(); --i >= 0; ) { if (_annotationIntrospector.hasIgnoreMarker(_constructors.get(i))) { _constructors.remove(i); }"
+      },
+      {
+        "txt": "} } } List<AnnotatedMethod> creatorMethods = null; for (Method m : _class.getDeclaredMethods()) { if (!Modifier.isStatic(m.getModifiers())) { continue; } if (creatorMethods == null) { creatorMethods = new ArrayList<AnnotatedMethod>(8);"
+      },
+      {
+        "txt": "} creatorMethods.add(_constructCreatorMethod(m)); } if (creatorMethods == null) { _creatorMethods = Collections.emptyList(); } else { _creatorMethods = creatorMethods; if (_primaryMixIn != null) { _addFactoryMixIns(_primaryMixIn); }"
+      },
+      {
+        "txt": "if (_annotationIntrospector != null) { for (int i = _creatorMethods.size(); --i >= 0; ) { if (_annotationIntrospector.hasIgnoreMarker(_creatorMethods.get(i))) { _creatorMethods.remove(i); } } } } _creatorsResolved = true; }"
+      },
+      {
+        "txt": "private void resolveMemberMethods() { _memberMethods = new AnnotatedMethodMap(); AnnotatedMethodMap mixins = new AnnotatedMethodMap(); _addMemberMethods(_class, _memberMethods, _primaryMixIn, mixins); for (Class<?> cls : _superTypes) { Class<?> mixin = (_mixInResolver == null) ? null : _mixInResolver.findMixInClassFor(cls); _addMemberMethods(cls, _memberMethods, mixin, mixins); } if (_mixInResolver != null) {"
+      },
+      {
+        "txt": "Class<?> mixin = _mixInResolver.findMixInClassFor(Object.class); if (mixin != null) { _addMethodMixIns(_class, _memberMethods, mixin, mixins); } } if (_annotationIntrospector != null) { if (!mixins.isEmpty()) { Iterator<AnnotatedMethod> it = mixins.iterator(); while (it.hasNext()) { AnnotatedMethod mixIn = it.next();"
+      },
+      {
+        "txt": "try { Method m = Object.class.getDeclaredMethod(mixIn.getName(), mixIn.getRawParameterTypes()); if (m != null) { AnnotatedMethod am = _constructMethod(m); _addMixOvers(mixIn.getAnnotated(), am, false); _memberMethods.add(am); } } catch (Exception e) { } } }"
+      },
+      {
+        "txt": "} } private void resolveFields() { Map<String,AnnotatedField> foundFields = _findFields(_class, null); if (foundFields == null || foundFields.size() == 0) { _fields = Collections.emptyList(); } else { _fields = new ArrayList<AnnotatedField>(foundFields.size()); _fields.addAll(foundFields.values());"
+      },
+      {
+        "txt": "} } protected void _addClassMixIns(AnnotationMap annotations, Class<?> toMask) { if (_mixInResolver != null) { _addClassMixIns(annotations, toMask, _mixInResolver.findMixInClassFor(toMask)); } } protected void _addClassMixIns(AnnotationMap annotations, Class<?> toMask, Class<?> mixin)"
+      },
+      {
+        "txt": "{ if (mixin == null) { return; } _addAnnotationsIfNotPresent(annotations, mixin.getDeclaredAnnotations()); for (Class<?> parent : ClassUtil.findSuperTypes(mixin, toMask)) { _addAnnotationsIfNotPresent(annotations, parent.getDeclaredAnnotations()); } } protected void _addConstructorMixIns(Class<?> mixin)"
+      },
+      {
+        "txt": "{ MemberKey[] ctorKeys = null; int ctorCount = (_constructors == null) ? 0 : _constructors.size(); for (Constructor<?> ctor : mixin.getDeclaredConstructors()) { if (ctor.getParameterTypes().length == 0) { if (_defaultConstructor != null) { _addMixOvers(ctor, _defaultConstructor, false); } } else { if (ctorKeys == null) {"
+      },
+      {
+        "txt": "ctorKeys = new MemberKey[ctorCount]; for (int i = 0; i < ctorCount; ++i) { ctorKeys[i] = new MemberKey(_constructors.get(i).getAnnotated()); } } MemberKey key = new MemberKey(ctor); for (int i = 0; i < ctorCount; ++i) { if (!key.equals(ctorKeys[i])) { continue; }"
+      },
+      {
+        "txt": "_addMixOvers(ctor, _constructors.get(i), true); break; } } } } protected void _addFactoryMixIns(Class<?> mixin) { MemberKey[] methodKeys = null; int methodCount = _creatorMethods.size();"
+      },
+      {
+        "txt": "for (Method m : mixin.getDeclaredMethods()) { if (!Modifier.isStatic(m.getModifiers())) { continue; } if (m.getParameterTypes().length == 0) { continue; } if (methodKeys == null) { methodKeys = new MemberKey[methodCount]; for (int i = 0; i < methodCount; ++i) {"
+      },
+      {
+        "txt": "methodKeys[i] = new MemberKey(_creatorMethods.get(i).getAnnotated()); } } MemberKey key = new MemberKey(m); for (int i = 0; i < methodCount; ++i) { if (!key.equals(methodKeys[i])) { continue; } _addMixOvers(m, _creatorMethods.get(i), true); break;"
+      },
+      {
+        "txt": "} } } protected void _addMemberMethods(Class<?> cls, AnnotatedMethodMap methods, Class<?> mixInCls, AnnotatedMethodMap mixIns) { if (mixInCls != null) { _addMethodMixIns(cls, methods, mixInCls, mixIns); } if (cls == null) { // just so caller need not check when passing super-class"
+      },
+      {
+        "txt": "return; } for (Method m : cls.getDeclaredMethods()) { if (!_isIncludableMemberMethod(m)) { continue; } AnnotatedMethod old = methods.find(m); if (old == null) { AnnotatedMethod newM = _constructMethod(m); methods.add(newM);"
+      },
+      {
+        "txt": "old = mixIns.remove(m); if (old != null) { _addMixOvers(old.getAnnotated(), newM, false); } } else { _addMixUnders(m, old); if (old.getDeclaringClass().isInterface() && !m.getDeclaringClass().isInterface()) { methods.add(old.withMethod(m)); } }"
+      },
+      {
+        "txt": "} } protected void _addMethodMixIns(Class<?> targetClass, AnnotatedMethodMap methods, Class<?> mixInCls, AnnotatedMethodMap mixIns) { List<Class<?>> parents = new ArrayList<Class<?>>(); parents.add(mixInCls); ClassUtil.findSuperTypes(mixInCls, targetClass, parents); for (Class<?> mixin : parents) { for (Method m : mixin.getDeclaredMethods()) {"
+      },
+      {
+        "txt": "continue; } AnnotatedMethod am = methods.find(m); if (am != null) { _addMixUnders(m, am); } else { <extra_id_0> } } } } protected Map<String,AnnotatedField> _findFields(Class<?> c, Map<String,AnnotatedField> fields) {"
+      },
+      {
+        "txt": "protected Map<String,AnnotatedField> _findFields(Class<?> c, Map<String,AnnotatedField> fields) { Class<?> parent = c.getSuperclass(); if (parent != null) { fields = _findFields(parent, fields); for (Field f : c.getDeclaredFields()) { if (!_isIncludableField(f)) { continue; } if (fields == null) {"
+      },
+      {
+        "txt": "fields = new LinkedHashMap<String,AnnotatedField>(); } fields.put(f.getName(), _constructField(f)); } if (_mixInResolver != null) { Class<?> mixin = _mixInResolver.findMixInClassFor(c); if (mixin != null) { _addFieldMixIns(parent, mixin, fields); } }"
+      },
+      {
+        "txt": "} return fields; } protected void _addFieldMixIns(Class<?> targetClass, Class<?> mixInCls, Map<String,AnnotatedField> fields) { List<Class<?>> parents = new ArrayList<Class<?>>(); parents.add(mixInCls); ClassUtil.findSuperTypes(mixInCls, targetClass, parents); for (Class<?> mixin : parents) {"
+      },
+      {
+        "txt": "for (Field mixinField : mixin.getDeclaredFields()) { if (!_isIncludableField(mixinField)) { continue; } String name = mixinField.getName(); AnnotatedField maskedField = fields.get(name); if (maskedField != null) { _addOrOverrideAnnotations(maskedField, mixinField.getDeclaredAnnotations()); } }"
+      },
+      {
+        "txt": "} } protected AnnotatedMethod _constructMethod(Method m) { if (_annotationIntrospector == null) { // when annotation processing is disabled return new AnnotatedMethod(m, _emptyAnnotationMap(), null); } return new AnnotatedMethod(m, _collectRelevantAnnotations(m.getDeclaredAnnotations()), null); } protected AnnotatedConstructor _constructConstructor(Constructor<?> ctor, boolean defaultCtor)"
+      },
+      {
+        "txt": "{ if (_annotationIntrospector == null) { // when annotation processing is disabled return new AnnotatedConstructor(ctor, _emptyAnnotationMap(), _emptyAnnotationMaps(ctor.getParameterTypes().length)); } if (defaultCtor) { return new AnnotatedConstructor(ctor, _collectRelevantAnnotations(ctor.getDeclaredAnnotations()), null); } Annotation[][] paramAnns = ctor.getParameterAnnotations(); int paramCount = ctor.getParameterTypes().length; AnnotationMap[] resolvedAnnotations = null;"
+      },
+      {
+        "txt": "if (paramCount != paramAnns.length) { Class<?> dc = ctor.getDeclaringClass(); if (dc.isEnum() && (paramCount == paramAnns.length + 2)) { Annotation[][] old = paramAnns; paramAnns = new Annotation[old.length+2][]; System.arraycopy(old, 0, paramAnns, 2, old.length); resolvedAnnotations = _collectRelevantAnnotations(paramAnns); } else if (dc.isMemberClass()) { if (paramCount == (paramAnns.length + 1)) { Annotation[][] old = paramAnns;"
+      },
+      {
+        "txt": "paramAnns = new Annotation[old.length+1][]; System.arraycopy(old, 0, paramAnns, 1, old.length); resolvedAnnotations = _collectRelevantAnnotations(paramAnns); } } if (resolvedAnnotations == null) { throw new IllegalStateException(\"Internal error: constructor for \"+ctor.getDeclaringClass().getName() +\" has mismatch: \"+paramCount+\" parameters; \"+paramAnns.length+\" sets of annotations\"); } } else {"
+      },
+      {
+        "txt": "resolvedAnnotations = _collectRelevantAnnotations(paramAnns); } return new AnnotatedConstructor(ctor, _collectRelevantAnnotations(ctor.getDeclaredAnnotations()), resolvedAnnotations); } protected AnnotatedMethod _constructCreatorMethod(Method m) { if (_annotationIntrospector == null) { // when annotation processing is disabled return new AnnotatedMethod(m, _emptyAnnotationMap(), _emptyAnnotationMaps(m.getParameterTypes().length)); }"
+      },
+      {
+        "txt": "return new AnnotatedMethod(m, _collectRelevantAnnotations(m.getDeclaredAnnotations()), _collectRelevantAnnotations(m.getParameterAnnotations())); } protected AnnotatedField _constructField(Field f) { if (_annotationIntrospector == null) { // when annotation processing is disabled return new AnnotatedField(f, _emptyAnnotationMap()); } return new AnnotatedField(f, _collectRelevantAnnotations(f.getDeclaredAnnotations())); }"
+      },
+      {
+        "txt": "private AnnotationMap _emptyAnnotationMap() { return new AnnotationMap(); } private AnnotationMap[] _emptyAnnotationMaps(int count) { if (count == 0) { return NO_ANNOTATION_MAPS; } AnnotationMap[] maps = new AnnotationMap[count]; for (int i = 0; i < count; ++i) { maps[i] = _emptyAnnotationMap();"
+      },
+      {
+        "txt": "} return maps; } protected boolean _isIncludableMemberMethod(Method m) { if (Modifier.isStatic(m.getModifiers())) { return false; } if (m.isSynthetic() || m.isBridge()) { return false;"
+      },
+      {
+        "txt": "} int pcount = m.getParameterTypes().length; return (pcount <= 2); } private boolean _isIncludableField(Field f) { if (f.isSynthetic()) { return false; } int mods = f.getModifiers();"
+      },
+      {
+        "txt": "if (Modifier.isStatic(mods) || Modifier.isTransient(mods)) { return false; } return true; } protected AnnotationMap[] _collectRelevantAnnotations(Annotation[][] anns) { int len = anns.length; AnnotationMap[] result = new AnnotationMap[len]; for (int i = 0; i < len; ++i) {"
+      },
+      {
+        "txt": "result[i] = _collectRelevantAnnotations(anns[i]); } return result; } protected AnnotationMap _collectRelevantAnnotations(Annotation[] anns) { AnnotationMap annMap = new AnnotationMap(); _addAnnotationsIfNotPresent(annMap, anns); return annMap; }"
+      },
+      {
+        "txt": "private void _addAnnotationsIfNotPresent(AnnotationMap result, Annotation[] anns) { if (anns != null) { List<Annotation[]> bundles = null; for (Annotation ann : anns) { // first: direct annotations if (_isAnnotationBundle(ann)) { if (bundles == null) { bundles = new LinkedList<Annotation[]>(); } bundles.add(ann.annotationType().getDeclaredAnnotations());"
+      },
+      {
+        "txt": "} else { // note: we will NOT filter out non-Jackson anns any more result.addIfNotPresent(ann); } } if (bundles != null) { // and secondarily handle bundles, if any found: precedence important for (Annotation[] annotations : bundles) { _addAnnotationsIfNotPresent(result, annotations); } } }"
+      },
+      {
+        "txt": "} private void _addAnnotationsIfNotPresent(AnnotatedMember target, Annotation[] anns) { if (anns != null) { List<Annotation[]> bundles = null; for (Annotation ann : anns) { // first: direct annotations if (_isAnnotationBundle(ann)) { if (bundles == null) { bundles = new LinkedList<Annotation[]>(); }"
+      },
+      {
+        "txt": "bundles.add(ann.annotationType().getDeclaredAnnotations()); } else { // note: we will NOT filter out non-Jackson anns any more target.addIfNotPresent(ann); } } if (bundles != null) { // and secondarily handle bundles, if any found: precedence important for (Annotation[] annotations : bundles) { _addAnnotationsIfNotPresent(target, annotations); } }"
+      },
+      {
+        "txt": "} } private void _addOrOverrideAnnotations(AnnotatedMember target, Annotation[] anns) { if (anns != null) { List<Annotation[]> bundles = null; for (Annotation ann : anns) { // first: direct annotations if (_isAnnotationBundle(ann)) { if (bundles == null) { bundles = new LinkedList<Annotation[]>();"
+      },
+      {
+        "txt": "} bundles.add(ann.annotationType().getDeclaredAnnotations()); } else { // note: no filtering by jackson-annotations target.addOrOverride(ann); } } if (bundles != null) { // and then bundles, if any: important for precedence for (Annotation[] annotations : bundles) { _addOrOverrideAnnotations(target, annotations); }"
+      },
+      {
+        "txt": "} } } protected void _addMixOvers(Constructor<?> mixin, AnnotatedConstructor target, boolean addParamAnnotations) { _addOrOverrideAnnotations(target, mixin.getDeclaredAnnotations()); if (addParamAnnotations) { Annotation[][] pa = mixin.getParameterAnnotations(); for (int i = 0, len = pa.length; i < len; ++i) {"
+      },
+      {
+        "txt": "for (Annotation a : pa[i]) { target.addOrOverrideParam(i, a); } } } } protected void _addMixOvers(Method mixin, AnnotatedMethod target, boolean addParamAnnotations) { _addOrOverrideAnnotations(target, mixin.getDeclaredAnnotations());"
+      },
+      {
+        "txt": "if (addParamAnnotations) { Annotation[][] pa = mixin.getParameterAnnotations(); for (int i = 0, len = pa.length; i < len; ++i) { for (Annotation a : pa[i]) { target.addOrOverrideParam(i, a); } } } } protected void _addMixUnders(Method src, AnnotatedMethod target) {"
+      },
+      {
+        "txt": "_addAnnotationsIfNotPresent(target, src.getDeclaredAnnotations()); } private final boolean _isAnnotationBundle(Annotation ann) { return (_annotationIntrospector != null) && _annotationIntrospector.isAnnotationBundle(ann); } @Override public String toString() { return \"[AnnotedClass \"+_class.getName()+\"]\";"
+      }
+    ]
+  },
+  {
+    "id": 1320,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/introspect/AnnotatedClass.java",
+    "start-bug-line": 659,
+    "end-bug-line": 659,
+    "bug": "",
+    "fix": "}",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind.introspect; import java.lang.annotation.Annotation; import java.lang.reflect.*; import java.util.*; import com.fasterxml.jackson.databind.AnnotationIntrospector; import com.fasterxml.jackson.databind.introspect.ClassIntrospector.MixInResolver; import com.fasterxml.jackson.databind.util.Annotations;"
+      },
+      {
+        "txt": "import com.fasterxml.jackson.databind.util.ClassUtil; public final class AnnotatedClass extends Annotated { private final static AnnotationMap[] NO_ANNOTATION_MAPS = new AnnotationMap[0]; final protected Class<?> _class; final protected List<Class<?>> _superTypes; final protected AnnotationIntrospector _annotationIntrospector; final protected MixInResolver _mixInResolver; final protected Class<?> _primaryMixIn;"
+      },
+      {
+        "txt": "protected AnnotationMap _classAnnotations; protected boolean _creatorsResolved = false; protected AnnotatedConstructor _defaultConstructor; protected List<AnnotatedConstructor> _constructors; protected List<AnnotatedMethod> _creatorMethods; protected AnnotatedMethodMap _memberMethods; protected List<AnnotatedField> _fields; private AnnotatedClass(Class<?> cls, List<Class<?>> superTypes, AnnotationIntrospector aintr, MixInResolver mir, AnnotationMap classAnnotations)"
+      },
+      {
+        "txt": "{ _class = cls; _superTypes = superTypes; _annotationIntrospector = aintr; _mixInResolver = mir; _primaryMixIn = (_mixInResolver == null) ? null : _mixInResolver.findMixInClassFor(_class); _classAnnotations = classAnnotations; } @Override"
+      },
+      {
+        "txt": "public AnnotatedClass withAnnotations(AnnotationMap ann) { return new AnnotatedClass(_class, _superTypes, _annotationIntrospector, _mixInResolver, ann); } public static AnnotatedClass construct(Class<?> cls, AnnotationIntrospector aintr, MixInResolver mir) { return new AnnotatedClass(cls, ClassUtil.findSuperTypes(cls, null), aintr, mir, null); }"
+      },
+      {
+        "txt": "public static AnnotatedClass constructWithoutSuperTypes(Class<?> cls, AnnotationIntrospector aintr, MixInResolver mir) { return new AnnotatedClass(cls, Collections.<Class<?>>emptyList(), aintr, mir, null); } @Override public Class<?> getAnnotated() { return _class; } @Override public int getModifiers() { return _class.getModifiers(); }"
+      },
+      {
+        "txt": "@Override public String getName() { return _class.getName(); } @Override public <A extends Annotation> A getAnnotation(Class<A> acls) { if (_classAnnotations == null) { resolveClassAnnotations(); } return _classAnnotations.get(acls); }"
+      },
+      {
+        "txt": "@Override public Type getGenericType() { return _class; } @Override public Class<?> getRawType() { return _class; } @Override public Iterable<Annotation> annotations() {"
+      },
+      {
+        "txt": "if (_classAnnotations == null) { resolveClassAnnotations(); } return _classAnnotations.annotations(); } @Override protected AnnotationMap getAllAnnotations() { if (_classAnnotations == null) { resolveClassAnnotations(); }"
+      },
+      {
+        "txt": "return _classAnnotations; } public Annotations getAnnotations() { if (_classAnnotations == null) { resolveClassAnnotations(); } return _classAnnotations; } public boolean hasAnnotations() { if (_classAnnotations == null) {"
+      },
+      {
+        "txt": "resolveClassAnnotations(); } return _classAnnotations.size() > 0; } public AnnotatedConstructor getDefaultConstructor() { if (!_creatorsResolved) { resolveCreators(); } return _defaultConstructor;"
+      },
+      {
+        "txt": "} public List<AnnotatedConstructor> getConstructors() { if (!_creatorsResolved) { resolveCreators(); } return _constructors; } public List<AnnotatedMethod> getStaticMethods() {"
+      },
+      {
+        "txt": "if (!_creatorsResolved) { resolveCreators(); } return _creatorMethods; } public Iterable<AnnotatedMethod> memberMethods() { if (_memberMethods == null) { resolveMemberMethods(); }"
+      },
+      {
+        "txt": "return _memberMethods; } public int getMemberMethodCount() { if (_memberMethods == null) { resolveMemberMethods(); } return _memberMethods.size(); } public AnnotatedMethod findMethod(String name, Class<?>[] paramTypes)"
+      },
+      {
+        "txt": "{ if (_memberMethods == null) { resolveMemberMethods(); } return _memberMethods.find(name, paramTypes); } public int getFieldCount() { if (_fields == null) { resolveFields(); }"
+      },
+      {
+        "txt": "return _fields.size(); } public Iterable<AnnotatedField> fields() { if (_fields == null) { resolveFields(); } return _fields; } private void resolveClassAnnotations()"
+      },
+      {
+        "txt": "{ _classAnnotations = new AnnotationMap(); if (_annotationIntrospector != null) { if (_primaryMixIn != null) { _addClassMixIns(_classAnnotations, _class, _primaryMixIn); } _addAnnotationsIfNotPresent(_classAnnotations, _class.getDeclaredAnnotations()); for (Class<?> cls : _superTypes) { _addClassMixIns(_classAnnotations, cls); _addAnnotationsIfNotPresent(_classAnnotations, cls.getDeclaredAnnotations());"
+      },
+      {
+        "txt": "} _addClassMixIns(_classAnnotations, Object.class); } } private void resolveCreators() { List<AnnotatedConstructor> constructors = null; Constructor<?>[] declaredCtors = _class.getDeclaredConstructors(); for (Constructor<?> ctor : declaredCtors) { if (ctor.getParameterTypes().length == 0) {"
+      },
+      {
+        "txt": "_defaultConstructor = _constructConstructor(ctor, true); } else { if (constructors == null) { constructors = new ArrayList<AnnotatedConstructor>(Math.max(10, declaredCtors.length)); } constructors.add(_constructConstructor(ctor, false)); } } if (constructors == null) { _constructors = Collections.emptyList();"
+      },
+      {
+        "txt": "} else { _constructors = constructors; } if (_primaryMixIn != null) { if (_defaultConstructor != null || !_constructors.isEmpty()) { _addConstructorMixIns(_primaryMixIn); } } if (_annotationIntrospector != null) { if (_defaultConstructor != null) {"
+      },
+      {
+        "txt": "if (_annotationIntrospector.hasIgnoreMarker(_defaultConstructor)) { _defaultConstructor = null; } } if (_constructors != null) { for (int i = _constructors.size(); --i >= 0; ) { if (_annotationIntrospector.hasIgnoreMarker(_constructors.get(i))) { _constructors.remove(i); } }"
+      },
+      {
+        "txt": "} } List<AnnotatedMethod> creatorMethods = null; for (Method m : _class.getDeclaredMethods()) { if (!Modifier.isStatic(m.getModifiers())) { continue; } if (creatorMethods == null) { creatorMethods = new ArrayList<AnnotatedMethod>(8); }"
+      },
+      {
+        "txt": "creatorMethods.add(_constructCreatorMethod(m)); } if (creatorMethods == null) { _creatorMethods = Collections.emptyList(); } else { _creatorMethods = creatorMethods; if (_primaryMixIn != null) { _addFactoryMixIns(_primaryMixIn); } if (_annotationIntrospector != null) {"
+      },
+      {
+        "txt": "for (int i = _creatorMethods.size(); --i >= 0; ) { if (_annotationIntrospector.hasIgnoreMarker(_creatorMethods.get(i))) { _creatorMethods.remove(i); } } } } _creatorsResolved = true; } private void resolveMemberMethods()"
+      },
+      {
+        "txt": "{ _memberMethods = new AnnotatedMethodMap(); AnnotatedMethodMap mixins = new AnnotatedMethodMap(); _addMemberMethods(_class, _memberMethods, _primaryMixIn, mixins); for (Class<?> cls : _superTypes) { Class<?> mixin = (_mixInResolver == null) ? null : _mixInResolver.findMixInClassFor(cls); _addMemberMethods(cls, _memberMethods, mixin, mixins); } if (_mixInResolver != null) { Class<?> mixin = _mixInResolver.findMixInClassFor(Object.class);"
+      },
+      {
+        "txt": "if (mixin != null) { _addMethodMixIns(_class, _memberMethods, mixin, mixins); } } if (_annotationIntrospector != null) { if (!mixins.isEmpty()) { Iterator<AnnotatedMethod> it = mixins.iterator(); while (it.hasNext()) { AnnotatedMethod mixIn = it.next(); try {"
+      },
+      {
+        "txt": "Method m = Object.class.getDeclaredMethod(mixIn.getName(), mixIn.getRawParameterTypes()); if (m != null) { AnnotatedMethod am = _constructMethod(m); _addMixOvers(mixIn.getAnnotated(), am, false); _memberMethods.add(am); } } catch (Exception e) { } } } }"
+      },
+      {
+        "txt": "} private void resolveFields() { Map<String,AnnotatedField> foundFields = _findFields(_class, null); if (foundFields == null || foundFields.size() == 0) { _fields = Collections.emptyList(); } else { _fields = new ArrayList<AnnotatedField>(foundFields.size()); _fields.addAll(foundFields.values()); }"
+      },
+      {
+        "txt": "} protected void _addClassMixIns(AnnotationMap annotations, Class<?> toMask) { if (_mixInResolver != null) { _addClassMixIns(annotations, toMask, _mixInResolver.findMixInClassFor(toMask)); } } protected void _addClassMixIns(AnnotationMap annotations, Class<?> toMask, Class<?> mixin) {"
+      },
+      {
+        "txt": "if (mixin == null) { return; } _addAnnotationsIfNotPresent(annotations, mixin.getDeclaredAnnotations()); for (Class<?> parent : ClassUtil.findSuperTypes(mixin, toMask)) { _addAnnotationsIfNotPresent(annotations, parent.getDeclaredAnnotations()); } } protected void _addConstructorMixIns(Class<?> mixin) {"
+      },
+      {
+        "txt": "MemberKey[] ctorKeys = null; int ctorCount = (_constructors == null) ? 0 : _constructors.size(); for (Constructor<?> ctor : mixin.getDeclaredConstructors()) { if (ctor.getParameterTypes().length == 0) { if (_defaultConstructor != null) { _addMixOvers(ctor, _defaultConstructor, false); } } else { if (ctorKeys == null) { ctorKeys = new MemberKey[ctorCount];"
+      },
+      {
+        "txt": "for (int i = 0; i < ctorCount; ++i) { ctorKeys[i] = new MemberKey(_constructors.get(i).getAnnotated()); } } MemberKey key = new MemberKey(ctor); for (int i = 0; i < ctorCount; ++i) { if (!key.equals(ctorKeys[i])) { continue; } _addMixOvers(ctor, _constructors.get(i), true);"
+      },
+      {
+        "txt": "break; } } } } protected void _addFactoryMixIns(Class<?> mixin) { MemberKey[] methodKeys = null; int methodCount = _creatorMethods.size(); for (Method m : mixin.getDeclaredMethods()) {"
+      },
+      {
+        "txt": "if (!Modifier.isStatic(m.getModifiers())) { continue; } if (m.getParameterTypes().length == 0) { continue; } if (methodKeys == null) { methodKeys = new MemberKey[methodCount]; for (int i = 0; i < methodCount; ++i) { methodKeys[i] = new MemberKey(_creatorMethods.get(i).getAnnotated());"
+      },
+      {
+        "txt": "} } MemberKey key = new MemberKey(m); for (int i = 0; i < methodCount; ++i) { if (!key.equals(methodKeys[i])) { continue; } _addMixOvers(m, _creatorMethods.get(i), true); break; }"
+      },
+      {
+        "txt": "} } protected void _addMemberMethods(Class<?> cls, AnnotatedMethodMap methods, Class<?> mixInCls, AnnotatedMethodMap mixIns) { if (mixInCls != null) { _addMethodMixIns(cls, methods, mixInCls, mixIns); } if (cls == null) { // just so caller need not check when passing super-class return;"
+      },
+      {
+        "txt": "} for (Method m : cls.getDeclaredMethods()) { if (!_isIncludableMemberMethod(m)) { continue; } AnnotatedMethod old = methods.find(m); if (old == null) { AnnotatedMethod newM = _constructMethod(m); methods.add(newM); old = mixIns.remove(m);"
+      },
+      {
+        "txt": "if (old != null) { _addMixOvers(old.getAnnotated(), newM, false); } } else { _addMixUnders(m, old); if (old.getDeclaringClass().isInterface() && !m.getDeclaringClass().isInterface()) { methods.add(old.withMethod(m)); } } }"
+      },
+      {
+        "txt": "} protected void _addMethodMixIns(Class<?> targetClass, AnnotatedMethodMap methods, Class<?> mixInCls, AnnotatedMethodMap mixIns) { List<Class<?>> parents = new ArrayList<Class<?>>(); parents.add(mixInCls); ClassUtil.findSuperTypes(mixInCls, targetClass, parents); for (Class<?> mixin : parents) { for (Method m : mixin.getDeclaredMethods()) { if (!_isIncludableMemberMethod(m)) {"
+      },
+      {
+        "txt": "} AnnotatedMethod am = methods.find(m); if (am != null) { _addMixUnders(m, am); } else { mixIns.add(_constructMethod(m)); <extra_id_0> } } } protected Map<String,AnnotatedField> _findFields(Class<?> c, Map<String,AnnotatedField> fields) { Class<?> parent = c.getSuperclass();"
+      },
+      {
+        "txt": "{ Class<?> parent = c.getSuperclass(); if (parent != null) { fields = _findFields(parent, fields); for (Field f : c.getDeclaredFields()) { if (!_isIncludableField(f)) { continue; } if (fields == null) { fields = new LinkedHashMap<String,AnnotatedField>();"
+      },
+      {
+        "txt": "} fields.put(f.getName(), _constructField(f)); } if (_mixInResolver != null) { Class<?> mixin = _mixInResolver.findMixInClassFor(c); if (mixin != null) { _addFieldMixIns(parent, mixin, fields); } } }"
+      },
+      {
+        "txt": "return fields; } protected void _addFieldMixIns(Class<?> targetClass, Class<?> mixInCls, Map<String,AnnotatedField> fields) { List<Class<?>> parents = new ArrayList<Class<?>>(); parents.add(mixInCls); ClassUtil.findSuperTypes(mixInCls, targetClass, parents); for (Class<?> mixin : parents) { for (Field mixinField : mixin.getDeclaredFields()) {"
+      },
+      {
+        "txt": "if (!_isIncludableField(mixinField)) { continue; } String name = mixinField.getName(); AnnotatedField maskedField = fields.get(name); if (maskedField != null) { _addOrOverrideAnnotations(maskedField, mixinField.getDeclaredAnnotations()); } } }"
+      },
+      {
+        "txt": "} protected AnnotatedMethod _constructMethod(Method m) { if (_annotationIntrospector == null) { // when annotation processing is disabled return new AnnotatedMethod(m, _emptyAnnotationMap(), null); } return new AnnotatedMethod(m, _collectRelevantAnnotations(m.getDeclaredAnnotations()), null); } protected AnnotatedConstructor _constructConstructor(Constructor<?> ctor, boolean defaultCtor) {"
+      },
+      {
+        "txt": "if (_annotationIntrospector == null) { // when annotation processing is disabled return new AnnotatedConstructor(ctor, _emptyAnnotationMap(), _emptyAnnotationMaps(ctor.getParameterTypes().length)); } if (defaultCtor) { return new AnnotatedConstructor(ctor, _collectRelevantAnnotations(ctor.getDeclaredAnnotations()), null); } Annotation[][] paramAnns = ctor.getParameterAnnotations(); int paramCount = ctor.getParameterTypes().length; AnnotationMap[] resolvedAnnotations = null; if (paramCount != paramAnns.length) {"
+      },
+      {
+        "txt": "Class<?> dc = ctor.getDeclaringClass(); if (dc.isEnum() && (paramCount == paramAnns.length + 2)) { Annotation[][] old = paramAnns; paramAnns = new Annotation[old.length+2][]; System.arraycopy(old, 0, paramAnns, 2, old.length); resolvedAnnotations = _collectRelevantAnnotations(paramAnns); } else if (dc.isMemberClass()) { if (paramCount == (paramAnns.length + 1)) { Annotation[][] old = paramAnns; paramAnns = new Annotation[old.length+1][];"
+      },
+      {
+        "txt": "System.arraycopy(old, 0, paramAnns, 1, old.length); resolvedAnnotations = _collectRelevantAnnotations(paramAnns); } } if (resolvedAnnotations == null) { throw new IllegalStateException(\"Internal error: constructor for \"+ctor.getDeclaringClass().getName() +\" has mismatch: \"+paramCount+\" parameters; \"+paramAnns.length+\" sets of annotations\"); } } else { resolvedAnnotations = _collectRelevantAnnotations(paramAnns);"
+      },
+      {
+        "txt": "} return new AnnotatedConstructor(ctor, _collectRelevantAnnotations(ctor.getDeclaredAnnotations()), resolvedAnnotations); } protected AnnotatedMethod _constructCreatorMethod(Method m) { if (_annotationIntrospector == null) { // when annotation processing is disabled return new AnnotatedMethod(m, _emptyAnnotationMap(), _emptyAnnotationMaps(m.getParameterTypes().length)); } return new AnnotatedMethod(m, _collectRelevantAnnotations(m.getDeclaredAnnotations()),"
+      },
+      {
+        "txt": "_collectRelevantAnnotations(m.getParameterAnnotations())); } protected AnnotatedField _constructField(Field f) { if (_annotationIntrospector == null) { // when annotation processing is disabled return new AnnotatedField(f, _emptyAnnotationMap()); } return new AnnotatedField(f, _collectRelevantAnnotations(f.getDeclaredAnnotations())); } private AnnotationMap _emptyAnnotationMap() {"
+      },
+      {
+        "txt": "return new AnnotationMap(); } private AnnotationMap[] _emptyAnnotationMaps(int count) { if (count == 0) { return NO_ANNOTATION_MAPS; } AnnotationMap[] maps = new AnnotationMap[count]; for (int i = 0; i < count; ++i) { maps[i] = _emptyAnnotationMap(); }"
+      },
+      {
+        "txt": "return maps; } protected boolean _isIncludableMemberMethod(Method m) { if (Modifier.isStatic(m.getModifiers())) { return false; } if (m.isSynthetic() || m.isBridge()) { return false; }"
+      },
+      {
+        "txt": "int pcount = m.getParameterTypes().length; return (pcount <= 2); } private boolean _isIncludableField(Field f) { if (f.isSynthetic()) { return false; } int mods = f.getModifiers(); if (Modifier.isStatic(mods) || Modifier.isTransient(mods)) {"
+      },
+      {
+        "txt": "return false; } return true; } protected AnnotationMap[] _collectRelevantAnnotations(Annotation[][] anns) { int len = anns.length; AnnotationMap[] result = new AnnotationMap[len]; for (int i = 0; i < len; ++i) { result[i] = _collectRelevantAnnotations(anns[i]);"
+      },
+      {
+        "txt": "} return result; } protected AnnotationMap _collectRelevantAnnotations(Annotation[] anns) { AnnotationMap annMap = new AnnotationMap(); _addAnnotationsIfNotPresent(annMap, anns); return annMap; } private void _addAnnotationsIfNotPresent(AnnotationMap result, Annotation[] anns)"
+      },
+      {
+        "txt": "{ if (anns != null) { List<Annotation[]> bundles = null; for (Annotation ann : anns) { // first: direct annotations if (_isAnnotationBundle(ann)) { if (bundles == null) { bundles = new LinkedList<Annotation[]>(); } bundles.add(ann.annotationType().getDeclaredAnnotations()); } else { // note: we will NOT filter out non-Jackson anns any more"
+      },
+      {
+        "txt": "result.addIfNotPresent(ann); } } if (bundles != null) { // and secondarily handle bundles, if any found: precedence important for (Annotation[] annotations : bundles) { _addAnnotationsIfNotPresent(result, annotations); } } } }"
+      },
+      {
+        "txt": "private void _addAnnotationsIfNotPresent(AnnotatedMember target, Annotation[] anns) { if (anns != null) { List<Annotation[]> bundles = null; for (Annotation ann : anns) { // first: direct annotations if (_isAnnotationBundle(ann)) { if (bundles == null) { bundles = new LinkedList<Annotation[]>(); } bundles.add(ann.annotationType().getDeclaredAnnotations());"
+      },
+      {
+        "txt": "} else { // note: we will NOT filter out non-Jackson anns any more target.addIfNotPresent(ann); } } if (bundles != null) { // and secondarily handle bundles, if any found: precedence important for (Annotation[] annotations : bundles) { _addAnnotationsIfNotPresent(target, annotations); } } }"
+      },
+      {
+        "txt": "} private void _addOrOverrideAnnotations(AnnotatedMember target, Annotation[] anns) { if (anns != null) { List<Annotation[]> bundles = null; for (Annotation ann : anns) { // first: direct annotations if (_isAnnotationBundle(ann)) { if (bundles == null) { bundles = new LinkedList<Annotation[]>(); }"
+      },
+      {
+        "txt": "bundles.add(ann.annotationType().getDeclaredAnnotations()); } else { // note: no filtering by jackson-annotations target.addOrOverride(ann); } } if (bundles != null) { // and then bundles, if any: important for precedence for (Annotation[] annotations : bundles) { _addOrOverrideAnnotations(target, annotations); } }"
+      },
+      {
+        "txt": "} } protected void _addMixOvers(Constructor<?> mixin, AnnotatedConstructor target, boolean addParamAnnotations) { _addOrOverrideAnnotations(target, mixin.getDeclaredAnnotations()); if (addParamAnnotations) { Annotation[][] pa = mixin.getParameterAnnotations(); for (int i = 0, len = pa.length; i < len; ++i) { for (Annotation a : pa[i]) {"
+      },
+      {
+        "txt": "target.addOrOverrideParam(i, a); } } } } protected void _addMixOvers(Method mixin, AnnotatedMethod target, boolean addParamAnnotations) { _addOrOverrideAnnotations(target, mixin.getDeclaredAnnotations()); if (addParamAnnotations) {"
+      },
+      {
+        "txt": "Annotation[][] pa = mixin.getParameterAnnotations(); for (int i = 0, len = pa.length; i < len; ++i) { for (Annotation a : pa[i]) { target.addOrOverrideParam(i, a); } } } } protected void _addMixUnders(Method src, AnnotatedMethod target) { _addAnnotationsIfNotPresent(target, src.getDeclaredAnnotations());"
+      },
+      {
+        "txt": "} private final boolean _isAnnotationBundle(Annotation ann) { return (_annotationIntrospector != null) && _annotationIntrospector.isAnnotationBundle(ann); } @Override public String toString() { return \"[AnnotedClass \"+_class.getName()+\"]\"; }"
+      }
+    ]
+  }
+]

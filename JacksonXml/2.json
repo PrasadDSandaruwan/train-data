@@ -1,0 +1,923 @@
+[
+  {
+    "id": 1825,
+    "file_path": "src/main/java/com/fasterxml/jackson/dataformat/xml/deser/XmlTokenStream.java",
+    "start-bug-line": 62,
+    "end-bug-line": 62,
+    "bug": "",
+    "fix": "protected boolean _mixedText;",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.dataformat.xml.deser; import java.io.IOException; import javax.xml.stream.*; import org.codehaus.stax2.XMLStreamLocation2; import org.codehaus.stax2.XMLStreamReader2; import org.codehaus.stax2.ri.Stax2ReaderAdapter;"
+      },
+      {
+        "txt": "import com.fasterxml.jackson.core.JsonLocation; import com.fasterxml.jackson.dataformat.xml.util.StaxUtil; public class XmlTokenStream { public final static int XML_START_ELEMENT = 1; public final static int XML_END_ELEMENT = 2; public final static int XML_ATTRIBUTE_NAME = 3; public final static int XML_ATTRIBUTE_VALUE = 4; public final static int XML_TEXT = 5; public final static int XML_END = 6;"
+      },
+      {
+        "txt": "private final static int REPLAY_END = 2; private final static int REPLAY_START_DELAYED = 3; final protected XMLStreamReader2 _xmlReader; final protected Object _sourceReference; protected int _currentState; protected int _attributeCount; <extra_id_0> protected int _nextAttributeIndex = 0; protected String _localName; protected String _namespaceURI; protected String _textValue; protected int _repeatElement; protected ElementWrapper _currentWrapper;"
+      },
+      {
+        "txt": "protected int _repeatElement; protected ElementWrapper _currentWrapper; protected String _nextLocalName; protected String _nextNamespaceURI; public XmlTokenStream(XMLStreamReader xmlReader, Object sourceRef) { _sourceReference = sourceRef; if (xmlReader.getEventType() != XMLStreamConstants.START_ELEMENT) { throw new IllegalArgumentException(\"Invalid XMLStreamReader passed: should be pointing to START_ELEMENT (\" +XMLStreamConstants.START_ELEMENT+\"), instead got \"+xmlReader.getEventType());"
+      },
+      {
+        "txt": "} _xmlReader = Stax2ReaderAdapter.wrapIfNecessary(xmlReader); _currentState = XML_START_ELEMENT; _localName = _xmlReader.getLocalName(); _namespaceURI = _xmlReader.getNamespaceURI(); _attributeCount = _xmlReader.getAttributeCount(); } public XMLStreamReader2 getXmlReader() { return _xmlReader; }"
+      },
+      {
+        "txt": "public int next() throws IOException { int n = next0(); switch (n) { case XML_START_ELEMENT: System.out.println(\" XML-token: XML_START_ELEMENT '\"+_localName+\"'\"); break; case XML_END_ELEMENT: System.out.println(\" XML-token: XML_END_ELEMENT '\"+_localName+\"'\"); break;"
+      },
+      {
+        "txt": "case XML_ATTRIBUTE_NAME: System.out.println(\" XML-token: XML_ATTRIBUTE_NAME '\"+_localName+\"'\"); break; case XML_ATTRIBUTE_VALUE: System.out.println(\" XML-token: XML_ATTRIBUTE_VALUE '\"+_textValue+\"'\"); break; case XML_TEXT: System.out.println(\" XML-token: XML_TEXT '\"+_textValue+\"'\"); break; case XML_END:"
+      },
+      {
+        "txt": "System.out.println(\" XML-token: XML_END\"); break; default: throw new IllegalStateException(); } return n; } public int next() throws IOException { if (_repeatElement != 0) {"
+      },
+      {
+        "txt": "return (_currentState = _handleRepeatElement()); } try { return _next(); } catch (XMLStreamException e) { StaxUtil.throwXmlAsIOException(e); return -1; } } public void skipEndElement() throws IOException"
+      },
+      {
+        "txt": "{ int type = next(); if (type != XML_END_ELEMENT) { throw new IOException(\"Expected END_ELEMENT, got event of type \"+type); } } public int getCurrentToken() { return _currentState; } public String getText() { return _textValue; } public String getLocalName() { return _localName; } public String getNamespaceURI() { return _namespaceURI; }"
+      },
+      {
+        "txt": "public boolean hasAttributes() { return (_currentState == XML_START_ELEMENT) && (_attributeCount > 0); } public void closeCompletely() throws IOException { try { _xmlReader.closeCompletely(); } catch (XMLStreamException e) { StaxUtil.throwXmlAsIOException(e); }"
+      },
+      {
+        "txt": "} public void close() throws IOException { try { _xmlReader.close(); } catch (XMLStreamException e) { StaxUtil.throwXmlAsIOException(e); } } public JsonLocation getCurrentLocation() {"
+      },
+      {
+        "txt": "return _extractLocation(_xmlReader.getLocationInfo().getCurrentLocation()); } public JsonLocation getTokenLocation() { return _extractLocation(_xmlReader.getLocationInfo().getStartLocation()); } protected void repeatStartElement() { if (_currentState != XML_START_ELEMENT) { throw new IllegalStateException(\"Current state not XML_START_ELEMENT (\" +XML_START_ELEMENT+\") but \"+_currentState);"
+      },
+      {
+        "txt": "} if (_currentWrapper == null) { _currentWrapper = ElementWrapper.matchingWrapper(_currentWrapper, _localName, _namespaceURI); } else { _currentWrapper = ElementWrapper.matchingWrapper(_currentWrapper.getParent(), _localName, _namespaceURI); } _repeatElement = REPLAY_START_DUP; } protected void skipAttributes() {"
+      },
+      {
+        "txt": "if (_currentState == XML_ATTRIBUTE_NAME) { _attributeCount = 0; _currentState = XML_START_ELEMENT; } else if (_currentState == XML_START_ELEMENT) { } else if (_currentState == XML_TEXT) { ; // nothing to do... is it even legal? } else { throw new IllegalStateException(\"Current state not XML_START_ELEMENT or XML_ATTRIBUTE_NAME (\" +XML_START_ELEMENT+\") but \"+_currentState); }"
+      },
+      {
+        "txt": "} protected String convertToString() throws IOException { if (_currentState != XML_ATTRIBUTE_NAME || _nextAttributeIndex != 0) { return null; } try { String text = _collectUntilTag(); if (_xmlReader.getEventType() == XMLStreamReader.END_ELEMENT) { if (text == null) {"
+      },
+      {
+        "txt": "text = \"\"; } if (_currentWrapper != null) { _currentWrapper = _currentWrapper.getParent(); } _localName = _xmlReader.getLocalName(); _namespaceURI = _xmlReader.getNamespaceURI(); _attributeCount = 0; _currentState = XML_TEXT; _textValue = text;"
+      },
+      {
+        "txt": "return text; } } catch (XMLStreamException e) { StaxUtil.throwXmlAsIOException(e); } return null; } private final int _next() throws XMLStreamException { switch (_currentState) {"
+      },
+      {
+        "txt": "case XML_ATTRIBUTE_VALUE: ++_nextAttributeIndex; case XML_START_ELEMENT: // attributes to return? if (_nextAttributeIndex < _attributeCount) { _localName = _xmlReader.getAttributeLocalName(_nextAttributeIndex); _namespaceURI = _xmlReader.getAttributeNamespace(_nextAttributeIndex); _textValue = _xmlReader.getAttributeValue(_nextAttributeIndex); return (_currentState = XML_ATTRIBUTE_NAME); } String text = _collectUntilTag();"
+      },
+      {
+        "txt": "if (_xmlReader.getEventType() == XMLStreamReader.START_ELEMENT) { return _initStartElement(); } if (text != null) { _textValue = text; return (_currentState = XML_TEXT); } return _handleEndElement(); case XML_ATTRIBUTE_NAME: return (_currentState = XML_ATTRIBUTE_VALUE);"
+      },
+      {
+        "txt": "case XML_TEXT: return _handleEndElement(); case XML_END: return XML_END; } switch (_skipUntilTag()) { case XMLStreamConstants.END_DOCUMENT: return (_currentState = XML_END); case XMLStreamConstants.END_ELEMENT: return _handleEndElement();"
+      },
+      {
+        "txt": "} return _initStartElement(); } private final String _collectUntilTag() throws XMLStreamException { String text = null; while (true) { switch (_xmlReader.next()) { case XMLStreamConstants.START_ELEMENT: case XMLStreamConstants.END_ELEMENT:"
+      },
+      {
+        "txt": "case XMLStreamConstants.END_DOCUMENT: return text; case XMLStreamConstants.CHARACTERS: case XMLStreamConstants.CDATA: if (text == null) { text = _xmlReader.getText(); } else { // can be optimized in future, if need be: text += _xmlReader.getText(); } break;"
+      },
+      {
+        "txt": "default: } } } private final int _skipUntilTag() throws XMLStreamException { while (_xmlReader.hasNext()) { int type; switch (type = _xmlReader.next()) { case XMLStreamConstants.START_ELEMENT:"
+      },
+      {
+        "txt": "case XMLStreamConstants.END_ELEMENT: case XMLStreamConstants.END_DOCUMENT: return type; default: } } throw new IllegalStateException(\"Expected to find a tag, instead reached end of input\"); } private final int _initStartElement() throws XMLStreamException {"
+      },
+      {
+        "txt": "final String ns = _xmlReader.getNamespaceURI(); final String localName = _xmlReader.getLocalName(); _attributeCount = _xmlReader.getAttributeCount(); _nextAttributeIndex = 0; if (_currentWrapper != null) { if (_currentWrapper.matchesWrapper(localName, ns)) { _currentWrapper = _currentWrapper.intermediateWrapper(); } else { _localName = _currentWrapper.getWrapperLocalName(); _namespaceURI = _currentWrapper.getWrapperNamespace();"
+      },
+      {
+        "txt": "_currentWrapper = _currentWrapper.getParent(); _nextLocalName = localName; _nextNamespaceURI = ns; _repeatElement = REPLAY_START_DELAYED; return (_currentState = XML_END_ELEMENT); } } _localName = localName; _namespaceURI = ns; return (_currentState = XML_START_ELEMENT);"
+      },
+      {
+        "txt": "} protected int _handleRepeatElement() throws IOException { int type = _repeatElement; _repeatElement = 0; if (type == REPLAY_START_DUP) { _currentWrapper = _currentWrapper.intermediateWrapper(); return XML_START_ELEMENT; } if (type == REPLAY_END) {"
+      },
+      {
+        "txt": "_localName = _xmlReader.getLocalName(); _namespaceURI = _xmlReader.getNamespaceURI(); if (_currentWrapper != null) { _currentWrapper = _currentWrapper.getParent(); } return XML_END_ELEMENT; } if (type == REPLAY_START_DELAYED) { if (_currentWrapper != null) { _currentWrapper = _currentWrapper.intermediateWrapper();"
+      },
+      {
+        "txt": "} _localName = _nextLocalName; _namespaceURI = _nextNamespaceURI; _nextLocalName = null; _nextNamespaceURI = null; return XML_START_ELEMENT; } throw new IllegalStateException(\"Unrecognized type to repeat: \"+type); } private final int _handleEndElement()"
+      },
+      {
+        "txt": "{ if (_currentWrapper != null) { ElementWrapper w = _currentWrapper; if (w.isMatching()) { _repeatElement = REPLAY_END; _localName = w.getWrapperLocalName(); _namespaceURI = w.getWrapperNamespace(); _currentWrapper = _currentWrapper.getParent(); } else { _currentWrapper = _currentWrapper.getParent();"
+      },
+      {
+        "txt": "} } return (_currentState = XML_END_ELEMENT); } private JsonLocation _extractLocation(XMLStreamLocation2 location) { if (location == null) { // just for impls that might pass null... return new JsonLocation(_sourceReference, -1, -1, -1); } return new JsonLocation(_sourceReference,"
+      },
+      {
+        "txt": "location.getCharacterOffset(), location.getLineNumber(), location.getColumnNumber()); } @Override public String toString() { StringBuilder sb = new StringBuilder(); sb.append(\"(Token stream:\"); sb.append(\" state=\").append(_currentState);"
+      },
+      {
+        "txt": "sb.append(\" attr#=\").append(_attributeCount); sb.append(\" nextAttr#=\").append(_nextAttributeIndex); sb.append(\" name=\").append(_localName); sb.append(\" text=\").append(_textValue); sb.append(\" repeat?=\").append(_repeatElement); sb.append(\" wrapper=[\").append(_currentWrapper); sb.append(\"] repeatElement=\").append(_repeatElement); sb.append(\" nextName=\").append(_nextLocalName); sb.append(\")\"); return sb.toString();"
+      }
+    ]
+  },
+  {
+    "id": 1826,
+    "file_path": "src/main/java/com/fasterxml/jackson/dataformat/xml/deser/XmlTokenStream.java",
+    "start-bug-line": 324,
+    "end-bug-line": 324,
+    "bug": "",
+    "fix": "final boolean startElementNext = _xmlReader.getEventType() == XMLStreamReader.START_ELEMENT;",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.dataformat.xml.deser; import java.io.IOException; import javax.xml.stream.*; import org.codehaus.stax2.XMLStreamLocation2; import org.codehaus.stax2.XMLStreamReader2; import org.codehaus.stax2.ri.Stax2ReaderAdapter; import com.fasterxml.jackson.core.JsonLocation; import com.fasterxml.jackson.dataformat.xml.util.StaxUtil; public class XmlTokenStream {"
+      },
+      {
+        "txt": "public final static int XML_START_ELEMENT = 1; public final static int XML_END_ELEMENT = 2; public final static int XML_ATTRIBUTE_NAME = 3; public final static int XML_ATTRIBUTE_VALUE = 4; public final static int XML_TEXT = 5; public final static int XML_END = 6; private final static int REPLAY_START_DUP = 1; private final static int REPLAY_END = 2; private final static int REPLAY_START_DELAYED = 3; final protected XMLStreamReader2 _xmlReader;"
+      },
+      {
+        "txt": "final protected Object _sourceReference; protected int _currentState; protected int _attributeCount; protected int _nextAttributeIndex = 0; protected String _localName; protected String _namespaceURI; protected String _textValue; protected int _repeatElement; protected ElementWrapper _currentWrapper; protected String _nextLocalName;"
+      },
+      {
+        "txt": "protected String _nextNamespaceURI; public XmlTokenStream(XMLStreamReader xmlReader, Object sourceRef) { _sourceReference = sourceRef; if (xmlReader.getEventType() != XMLStreamConstants.START_ELEMENT) { throw new IllegalArgumentException(\"Invalid XMLStreamReader passed: should be pointing to START_ELEMENT (\" +XMLStreamConstants.START_ELEMENT+\"), instead got \"+xmlReader.getEventType()); } _xmlReader = Stax2ReaderAdapter.wrapIfNecessary(xmlReader); _currentState = XML_START_ELEMENT;"
+      },
+      {
+        "txt": "_localName = _xmlReader.getLocalName(); _namespaceURI = _xmlReader.getNamespaceURI(); _attributeCount = _xmlReader.getAttributeCount(); } public XMLStreamReader2 getXmlReader() { return _xmlReader; } public int next() throws IOException { int n = next0();"
+      },
+      {
+        "txt": "switch (n) { case XML_START_ELEMENT: System.out.println(\" XML-token: XML_START_ELEMENT '\"+_localName+\"'\"); break; case XML_END_ELEMENT: System.out.println(\" XML-token: XML_END_ELEMENT '\"+_localName+\"'\"); break; case XML_ATTRIBUTE_NAME: System.out.println(\" XML-token: XML_ATTRIBUTE_NAME '\"+_localName+\"'\"); break;"
+      },
+      {
+        "txt": "case XML_ATTRIBUTE_VALUE: System.out.println(\" XML-token: XML_ATTRIBUTE_VALUE '\"+_textValue+\"'\"); break; case XML_TEXT: System.out.println(\" XML-token: XML_TEXT '\"+_textValue+\"'\"); break; case XML_END: System.out.println(\" XML-token: XML_END\"); break; default:"
+      },
+      {
+        "txt": "throw new IllegalStateException(); } return n; } public int next() throws IOException { if (_repeatElement != 0) { return (_currentState = _handleRepeatElement()); } try {"
+      },
+      {
+        "txt": "return _next(); } catch (XMLStreamException e) { StaxUtil.throwXmlAsIOException(e); return -1; } } public void skipEndElement() throws IOException { int type = next(); if (type != XML_END_ELEMENT) {"
+      },
+      {
+        "txt": "throw new IOException(\"Expected END_ELEMENT, got event of type \"+type); } } public int getCurrentToken() { return _currentState; } public String getText() { return _textValue; } public String getLocalName() { return _localName; } public String getNamespaceURI() { return _namespaceURI; } public boolean hasAttributes() { return (_currentState == XML_START_ELEMENT) && (_attributeCount > 0); }"
+      },
+      {
+        "txt": "public void closeCompletely() throws IOException { try { _xmlReader.closeCompletely(); } catch (XMLStreamException e) { StaxUtil.throwXmlAsIOException(e); } } public void close() throws IOException {"
+      },
+      {
+        "txt": "try { _xmlReader.close(); } catch (XMLStreamException e) { StaxUtil.throwXmlAsIOException(e); } } public JsonLocation getCurrentLocation() { return _extractLocation(_xmlReader.getLocationInfo().getCurrentLocation()); } public JsonLocation getTokenLocation() {"
+      },
+      {
+        "txt": "return _extractLocation(_xmlReader.getLocationInfo().getStartLocation()); } protected void repeatStartElement() { if (_currentState != XML_START_ELEMENT) { throw new IllegalStateException(\"Current state not XML_START_ELEMENT (\" +XML_START_ELEMENT+\") but \"+_currentState); } if (_currentWrapper == null) { _currentWrapper = ElementWrapper.matchingWrapper(_currentWrapper, _localName, _namespaceURI);"
+      },
+      {
+        "txt": "} else { _currentWrapper = ElementWrapper.matchingWrapper(_currentWrapper.getParent(), _localName, _namespaceURI); } _repeatElement = REPLAY_START_DUP; } protected void skipAttributes() { if (_currentState == XML_ATTRIBUTE_NAME) { _attributeCount = 0; _currentState = XML_START_ELEMENT;"
+      },
+      {
+        "txt": "} else if (_currentState == XML_START_ELEMENT) { } else if (_currentState == XML_TEXT) { ; // nothing to do... is it even legal? } else { throw new IllegalStateException(\"Current state not XML_START_ELEMENT or XML_ATTRIBUTE_NAME (\" +XML_START_ELEMENT+\") but \"+_currentState); } } protected String convertToString() throws IOException {"
+      },
+      {
+        "txt": "if (_currentState != XML_ATTRIBUTE_NAME || _nextAttributeIndex != 0) { return null; } try { String text = _collectUntilTag(); if (_xmlReader.getEventType() == XMLStreamReader.END_ELEMENT) { if (text == null) { text = \"\"; } if (_currentWrapper != null) {"
+      },
+      {
+        "txt": "_currentWrapper = _currentWrapper.getParent(); } _localName = _xmlReader.getLocalName(); _namespaceURI = _xmlReader.getNamespaceURI(); _attributeCount = 0; _currentState = XML_TEXT; _textValue = text; return text; } } catch (XMLStreamException e) {"
+      },
+      {
+        "txt": "StaxUtil.throwXmlAsIOException(e); } return null; } private final int _next() throws XMLStreamException { switch (_currentState) { case XML_ATTRIBUTE_VALUE: ++_nextAttributeIndex; case XML_START_ELEMENT: // attributes to return?"
+      },
+      {
+        "txt": "_localName = _xmlReader.getAttributeLocalName(_nextAttributeIndex); _namespaceURI = _xmlReader.getAttributeNamespace(_nextAttributeIndex); _textValue = _xmlReader.getAttributeValue(_nextAttributeIndex); return (_currentState = XML_ATTRIBUTE_NAME); } String text = _collectUntilTag(); <extra_id_0> if (_xmlReader.getEventType() == XMLStreamReader.START_ELEMENT) { return _initStartElement(); } if (text != null) { _textValue = text; return (_currentState = XML_TEXT);"
+      },
+      {
+        "txt": "_textValue = text; return (_currentState = XML_TEXT); } return _handleEndElement(); case XML_ATTRIBUTE_NAME: return (_currentState = XML_ATTRIBUTE_VALUE); case XML_TEXT: return _handleEndElement(); case XML_END: return XML_END;"
+      },
+      {
+        "txt": "} switch (_skipUntilTag()) { case XMLStreamConstants.END_DOCUMENT: return (_currentState = XML_END); case XMLStreamConstants.END_ELEMENT: return _handleEndElement(); } return _initStartElement(); } private final String _collectUntilTag() throws XMLStreamException"
+      },
+      {
+        "txt": "{ String text = null; while (true) { switch (_xmlReader.next()) { case XMLStreamConstants.START_ELEMENT: case XMLStreamConstants.END_ELEMENT: case XMLStreamConstants.END_DOCUMENT: return text; case XMLStreamConstants.CHARACTERS: case XMLStreamConstants.CDATA:"
+      },
+      {
+        "txt": "if (text == null) { text = _xmlReader.getText(); } else { // can be optimized in future, if need be: text += _xmlReader.getText(); } break; default: } } }"
+      },
+      {
+        "txt": "private final int _skipUntilTag() throws XMLStreamException { while (_xmlReader.hasNext()) { int type; switch (type = _xmlReader.next()) { case XMLStreamConstants.START_ELEMENT: case XMLStreamConstants.END_ELEMENT: case XMLStreamConstants.END_DOCUMENT: return type; default:"
+      },
+      {
+        "txt": "} } throw new IllegalStateException(\"Expected to find a tag, instead reached end of input\"); } private final int _initStartElement() throws XMLStreamException { final String ns = _xmlReader.getNamespaceURI(); final String localName = _xmlReader.getLocalName(); _attributeCount = _xmlReader.getAttributeCount(); _nextAttributeIndex = 0;"
+      },
+      {
+        "txt": "if (_currentWrapper != null) { if (_currentWrapper.matchesWrapper(localName, ns)) { _currentWrapper = _currentWrapper.intermediateWrapper(); } else { _localName = _currentWrapper.getWrapperLocalName(); _namespaceURI = _currentWrapper.getWrapperNamespace(); _currentWrapper = _currentWrapper.getParent(); _nextLocalName = localName; _nextNamespaceURI = ns; _repeatElement = REPLAY_START_DELAYED;"
+      },
+      {
+        "txt": "return (_currentState = XML_END_ELEMENT); } } _localName = localName; _namespaceURI = ns; return (_currentState = XML_START_ELEMENT); } protected int _handleRepeatElement() throws IOException { int type = _repeatElement;"
+      },
+      {
+        "txt": "_repeatElement = 0; if (type == REPLAY_START_DUP) { _currentWrapper = _currentWrapper.intermediateWrapper(); return XML_START_ELEMENT; } if (type == REPLAY_END) { _localName = _xmlReader.getLocalName(); _namespaceURI = _xmlReader.getNamespaceURI(); if (_currentWrapper != null) { _currentWrapper = _currentWrapper.getParent();"
+      },
+      {
+        "txt": "} return XML_END_ELEMENT; } if (type == REPLAY_START_DELAYED) { if (_currentWrapper != null) { _currentWrapper = _currentWrapper.intermediateWrapper(); } _localName = _nextLocalName; _namespaceURI = _nextNamespaceURI; _nextLocalName = null;"
+      },
+      {
+        "txt": "_nextNamespaceURI = null; return XML_START_ELEMENT; } throw new IllegalStateException(\"Unrecognized type to repeat: \"+type); } private final int _handleEndElement() { if (_currentWrapper != null) { ElementWrapper w = _currentWrapper; if (w.isMatching()) {"
+      },
+      {
+        "txt": "_repeatElement = REPLAY_END; _localName = w.getWrapperLocalName(); _namespaceURI = w.getWrapperNamespace(); _currentWrapper = _currentWrapper.getParent(); } else { _currentWrapper = _currentWrapper.getParent(); } } return (_currentState = XML_END_ELEMENT); }"
+      },
+      {
+        "txt": "private JsonLocation _extractLocation(XMLStreamLocation2 location) { if (location == null) { // just for impls that might pass null... return new JsonLocation(_sourceReference, -1, -1, -1); } return new JsonLocation(_sourceReference, location.getCharacterOffset(), location.getLineNumber(), location.getColumnNumber()); }"
+      },
+      {
+        "txt": "@Override public String toString() { StringBuilder sb = new StringBuilder(); sb.append(\"(Token stream:\"); sb.append(\" state=\").append(_currentState); sb.append(\" attr#=\").append(_attributeCount); sb.append(\" nextAttr#=\").append(_nextAttributeIndex); sb.append(\" name=\").append(_localName); sb.append(\" text=\").append(_textValue);"
+      },
+      {
+        "txt": "sb.append(\" repeat?=\").append(_repeatElement); sb.append(\" wrapper=[\").append(_currentWrapper); sb.append(\"] repeatElement=\").append(_repeatElement); sb.append(\" nextName=\").append(_nextLocalName); sb.append(\")\"); return sb.toString(); }"
+      }
+    ]
+  },
+  {
+    "id": 1827,
+    "file_path": "src/main/java/com/fasterxml/jackson/dataformat/xml/deser/XmlTokenStream.java",
+    "start-bug-line": 325,
+    "end-bug-line": 325,
+    "bug": "if (_xmlReader.getEventType() == XMLStreamReader.START_ELEMENT) {",
+    "fix": "if (startElementNext) { if (text == null || _allWs(text)) { _mixedText = false;",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.dataformat.xml.deser; import java.io.IOException; import javax.xml.stream.*; import org.codehaus.stax2.XMLStreamLocation2; import org.codehaus.stax2.XMLStreamReader2; import org.codehaus.stax2.ri.Stax2ReaderAdapter; import com.fasterxml.jackson.core.JsonLocation; import com.fasterxml.jackson.dataformat.xml.util.StaxUtil; public class XmlTokenStream {"
+      },
+      {
+        "txt": "public final static int XML_START_ELEMENT = 1; public final static int XML_END_ELEMENT = 2; public final static int XML_ATTRIBUTE_NAME = 3; public final static int XML_ATTRIBUTE_VALUE = 4; public final static int XML_TEXT = 5; public final static int XML_END = 6; private final static int REPLAY_START_DUP = 1; private final static int REPLAY_END = 2; private final static int REPLAY_START_DELAYED = 3; final protected XMLStreamReader2 _xmlReader;"
+      },
+      {
+        "txt": "final protected Object _sourceReference; protected int _currentState; protected int _attributeCount; protected int _nextAttributeIndex = 0; protected String _localName; protected String _namespaceURI; protected String _textValue; protected int _repeatElement; protected ElementWrapper _currentWrapper; protected String _nextLocalName;"
+      },
+      {
+        "txt": "protected String _nextNamespaceURI; public XmlTokenStream(XMLStreamReader xmlReader, Object sourceRef) { _sourceReference = sourceRef; if (xmlReader.getEventType() != XMLStreamConstants.START_ELEMENT) { throw new IllegalArgumentException(\"Invalid XMLStreamReader passed: should be pointing to START_ELEMENT (\" +XMLStreamConstants.START_ELEMENT+\"), instead got \"+xmlReader.getEventType()); } _xmlReader = Stax2ReaderAdapter.wrapIfNecessary(xmlReader); _currentState = XML_START_ELEMENT;"
+      },
+      {
+        "txt": "_localName = _xmlReader.getLocalName(); _namespaceURI = _xmlReader.getNamespaceURI(); _attributeCount = _xmlReader.getAttributeCount(); } public XMLStreamReader2 getXmlReader() { return _xmlReader; } public int next() throws IOException { int n = next0();"
+      },
+      {
+        "txt": "switch (n) { case XML_START_ELEMENT: System.out.println(\" XML-token: XML_START_ELEMENT '\"+_localName+\"'\"); break; case XML_END_ELEMENT: System.out.println(\" XML-token: XML_END_ELEMENT '\"+_localName+\"'\"); break; case XML_ATTRIBUTE_NAME: System.out.println(\" XML-token: XML_ATTRIBUTE_NAME '\"+_localName+\"'\"); break;"
+      },
+      {
+        "txt": "case XML_ATTRIBUTE_VALUE: System.out.println(\" XML-token: XML_ATTRIBUTE_VALUE '\"+_textValue+\"'\"); break; case XML_TEXT: System.out.println(\" XML-token: XML_TEXT '\"+_textValue+\"'\"); break; case XML_END: System.out.println(\" XML-token: XML_END\"); break; default:"
+      },
+      {
+        "txt": "throw new IllegalStateException(); } return n; } public int next() throws IOException { if (_repeatElement != 0) { return (_currentState = _handleRepeatElement()); } try {"
+      },
+      {
+        "txt": "return _next(); } catch (XMLStreamException e) { StaxUtil.throwXmlAsIOException(e); return -1; } } public void skipEndElement() throws IOException { int type = next(); if (type != XML_END_ELEMENT) {"
+      },
+      {
+        "txt": "throw new IOException(\"Expected END_ELEMENT, got event of type \"+type); } } public int getCurrentToken() { return _currentState; } public String getText() { return _textValue; } public String getLocalName() { return _localName; } public String getNamespaceURI() { return _namespaceURI; } public boolean hasAttributes() { return (_currentState == XML_START_ELEMENT) && (_attributeCount > 0); }"
+      },
+      {
+        "txt": "public void closeCompletely() throws IOException { try { _xmlReader.closeCompletely(); } catch (XMLStreamException e) { StaxUtil.throwXmlAsIOException(e); } } public void close() throws IOException {"
+      },
+      {
+        "txt": "try { _xmlReader.close(); } catch (XMLStreamException e) { StaxUtil.throwXmlAsIOException(e); } } public JsonLocation getCurrentLocation() { return _extractLocation(_xmlReader.getLocationInfo().getCurrentLocation()); } public JsonLocation getTokenLocation() {"
+      },
+      {
+        "txt": "return _extractLocation(_xmlReader.getLocationInfo().getStartLocation()); } protected void repeatStartElement() { if (_currentState != XML_START_ELEMENT) { throw new IllegalStateException(\"Current state not XML_START_ELEMENT (\" +XML_START_ELEMENT+\") but \"+_currentState); } if (_currentWrapper == null) { _currentWrapper = ElementWrapper.matchingWrapper(_currentWrapper, _localName, _namespaceURI);"
+      },
+      {
+        "txt": "} else { _currentWrapper = ElementWrapper.matchingWrapper(_currentWrapper.getParent(), _localName, _namespaceURI); } _repeatElement = REPLAY_START_DUP; } protected void skipAttributes() { if (_currentState == XML_ATTRIBUTE_NAME) { _attributeCount = 0; _currentState = XML_START_ELEMENT;"
+      },
+      {
+        "txt": "} else if (_currentState == XML_START_ELEMENT) { } else if (_currentState == XML_TEXT) { ; // nothing to do... is it even legal? } else { throw new IllegalStateException(\"Current state not XML_START_ELEMENT or XML_ATTRIBUTE_NAME (\" +XML_START_ELEMENT+\") but \"+_currentState); } } protected String convertToString() throws IOException {"
+      },
+      {
+        "txt": "if (_currentState != XML_ATTRIBUTE_NAME || _nextAttributeIndex != 0) { return null; } try { String text = _collectUntilTag(); if (_xmlReader.getEventType() == XMLStreamReader.END_ELEMENT) { if (text == null) { text = \"\"; } if (_currentWrapper != null) {"
+      },
+      {
+        "txt": "_currentWrapper = _currentWrapper.getParent(); } _localName = _xmlReader.getLocalName(); _namespaceURI = _xmlReader.getNamespaceURI(); _attributeCount = 0; _currentState = XML_TEXT; _textValue = text; return text; } } catch (XMLStreamException e) {"
+      },
+      {
+        "txt": "StaxUtil.throwXmlAsIOException(e); } return null; } private final int _next() throws XMLStreamException { switch (_currentState) { case XML_ATTRIBUTE_VALUE: ++_nextAttributeIndex; case XML_START_ELEMENT: // attributes to return?"
+      },
+      {
+        "txt": "_localName = _xmlReader.getAttributeLocalName(_nextAttributeIndex); _namespaceURI = _xmlReader.getAttributeNamespace(_nextAttributeIndex); _textValue = _xmlReader.getAttributeValue(_nextAttributeIndex); return (_currentState = XML_ATTRIBUTE_NAME); } String text = _collectUntilTag(); <extra_id_0> return _initStartElement(); } if (text != null) { _textValue = text; return (_currentState = XML_TEXT); }"
+      },
+      {
+        "txt": "return (_currentState = XML_TEXT); } return _handleEndElement(); case XML_ATTRIBUTE_NAME: return (_currentState = XML_ATTRIBUTE_VALUE); case XML_TEXT: return _handleEndElement(); case XML_END: return XML_END; }"
+      },
+      {
+        "txt": "switch (_skipUntilTag()) { case XMLStreamConstants.END_DOCUMENT: return (_currentState = XML_END); case XMLStreamConstants.END_ELEMENT: return _handleEndElement(); } return _initStartElement(); } private final String _collectUntilTag() throws XMLStreamException {"
+      },
+      {
+        "txt": "String text = null; while (true) { switch (_xmlReader.next()) { case XMLStreamConstants.START_ELEMENT: case XMLStreamConstants.END_ELEMENT: case XMLStreamConstants.END_DOCUMENT: return text; case XMLStreamConstants.CHARACTERS: case XMLStreamConstants.CDATA: if (text == null) {"
+      },
+      {
+        "txt": "text = _xmlReader.getText(); } else { // can be optimized in future, if need be: text += _xmlReader.getText(); } break; default: } } } private final int _skipUntilTag() throws XMLStreamException"
+      },
+      {
+        "txt": "{ while (_xmlReader.hasNext()) { int type; switch (type = _xmlReader.next()) { case XMLStreamConstants.START_ELEMENT: case XMLStreamConstants.END_ELEMENT: case XMLStreamConstants.END_DOCUMENT: return type; default: }"
+      },
+      {
+        "txt": "} throw new IllegalStateException(\"Expected to find a tag, instead reached end of input\"); } private final int _initStartElement() throws XMLStreamException { final String ns = _xmlReader.getNamespaceURI(); final String localName = _xmlReader.getLocalName(); _attributeCount = _xmlReader.getAttributeCount(); _nextAttributeIndex = 0; if (_currentWrapper != null) {"
+      },
+      {
+        "txt": "if (_currentWrapper.matchesWrapper(localName, ns)) { _currentWrapper = _currentWrapper.intermediateWrapper(); } else { _localName = _currentWrapper.getWrapperLocalName(); _namespaceURI = _currentWrapper.getWrapperNamespace(); _currentWrapper = _currentWrapper.getParent(); _nextLocalName = localName; _nextNamespaceURI = ns; _repeatElement = REPLAY_START_DELAYED; return (_currentState = XML_END_ELEMENT);"
+      },
+      {
+        "txt": "} } _localName = localName; _namespaceURI = ns; return (_currentState = XML_START_ELEMENT); } protected int _handleRepeatElement() throws IOException { int type = _repeatElement; _repeatElement = 0;"
+      },
+      {
+        "txt": "if (type == REPLAY_START_DUP) { _currentWrapper = _currentWrapper.intermediateWrapper(); return XML_START_ELEMENT; } if (type == REPLAY_END) { _localName = _xmlReader.getLocalName(); _namespaceURI = _xmlReader.getNamespaceURI(); if (_currentWrapper != null) { _currentWrapper = _currentWrapper.getParent(); }"
+      },
+      {
+        "txt": "return XML_END_ELEMENT; } if (type == REPLAY_START_DELAYED) { if (_currentWrapper != null) { _currentWrapper = _currentWrapper.intermediateWrapper(); } _localName = _nextLocalName; _namespaceURI = _nextNamespaceURI; _nextLocalName = null; _nextNamespaceURI = null;"
+      },
+      {
+        "txt": "return XML_START_ELEMENT; } throw new IllegalStateException(\"Unrecognized type to repeat: \"+type); } private final int _handleEndElement() { if (_currentWrapper != null) { ElementWrapper w = _currentWrapper; if (w.isMatching()) { _repeatElement = REPLAY_END;"
+      },
+      {
+        "txt": "_localName = w.getWrapperLocalName(); _namespaceURI = w.getWrapperNamespace(); _currentWrapper = _currentWrapper.getParent(); } else { _currentWrapper = _currentWrapper.getParent(); } } return (_currentState = XML_END_ELEMENT); } private JsonLocation _extractLocation(XMLStreamLocation2 location)"
+      },
+      {
+        "txt": "{ if (location == null) { // just for impls that might pass null... return new JsonLocation(_sourceReference, -1, -1, -1); } return new JsonLocation(_sourceReference, location.getCharacterOffset(), location.getLineNumber(), location.getColumnNumber()); } @Override"
+      },
+      {
+        "txt": "public String toString() { StringBuilder sb = new StringBuilder(); sb.append(\"(Token stream:\"); sb.append(\" state=\").append(_currentState); sb.append(\" attr#=\").append(_attributeCount); sb.append(\" nextAttr#=\").append(_nextAttributeIndex); sb.append(\" name=\").append(_localName); sb.append(\" text=\").append(_textValue); sb.append(\" repeat?=\").append(_repeatElement);"
+      },
+      {
+        "txt": "sb.append(\" wrapper=[\").append(_currentWrapper); sb.append(\"] repeatElement=\").append(_repeatElement); sb.append(\" nextName=\").append(_nextLocalName); sb.append(\")\"); return sb.toString(); }"
+      }
+    ]
+  },
+  {
+    "id": 1828,
+    "file_path": "src/main/java/com/fasterxml/jackson/dataformat/xml/deser/XmlTokenStream.java",
+    "start-bug-line": 327,
+    "end-bug-line": 327,
+    "bug": "",
+    "fix": "} _mixedText = true; _textValue = text; return (_currentState = XML_TEXT);",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.dataformat.xml.deser; import java.io.IOException;"
+      },
+      {
+        "txt": "import javax.xml.stream.*; import org.codehaus.stax2.XMLStreamLocation2; import org.codehaus.stax2.XMLStreamReader2; import org.codehaus.stax2.ri.Stax2ReaderAdapter; import com.fasterxml.jackson.core.JsonLocation; import com.fasterxml.jackson.dataformat.xml.util.StaxUtil; public class XmlTokenStream { public final static int XML_START_ELEMENT = 1; public final static int XML_END_ELEMENT = 2;"
+      },
+      {
+        "txt": "public final static int XML_ATTRIBUTE_NAME = 3; public final static int XML_ATTRIBUTE_VALUE = 4; public final static int XML_TEXT = 5; public final static int XML_END = 6; private final static int REPLAY_START_DUP = 1; private final static int REPLAY_END = 2; private final static int REPLAY_START_DELAYED = 3; final protected XMLStreamReader2 _xmlReader; final protected Object _sourceReference; protected int _currentState;"
+      },
+      {
+        "txt": "protected int _attributeCount; protected int _nextAttributeIndex = 0; protected String _localName; protected String _namespaceURI; protected String _textValue; protected int _repeatElement; protected ElementWrapper _currentWrapper; protected String _nextLocalName; protected String _nextNamespaceURI; public XmlTokenStream(XMLStreamReader xmlReader, Object sourceRef)"
+      },
+      {
+        "txt": "{ _sourceReference = sourceRef; if (xmlReader.getEventType() != XMLStreamConstants.START_ELEMENT) { throw new IllegalArgumentException(\"Invalid XMLStreamReader passed: should be pointing to START_ELEMENT (\" +XMLStreamConstants.START_ELEMENT+\"), instead got \"+xmlReader.getEventType()); } _xmlReader = Stax2ReaderAdapter.wrapIfNecessary(xmlReader); _currentState = XML_START_ELEMENT; _localName = _xmlReader.getLocalName(); _namespaceURI = _xmlReader.getNamespaceURI();"
+      },
+      {
+        "txt": "_attributeCount = _xmlReader.getAttributeCount(); } public XMLStreamReader2 getXmlReader() { return _xmlReader; } public int next() throws IOException { int n = next0(); switch (n) { case XML_START_ELEMENT:"
+      },
+      {
+        "txt": "System.out.println(\" XML-token: XML_START_ELEMENT '\"+_localName+\"'\"); break; case XML_END_ELEMENT: System.out.println(\" XML-token: XML_END_ELEMENT '\"+_localName+\"'\"); break; case XML_ATTRIBUTE_NAME: System.out.println(\" XML-token: XML_ATTRIBUTE_NAME '\"+_localName+\"'\"); break; case XML_ATTRIBUTE_VALUE: System.out.println(\" XML-token: XML_ATTRIBUTE_VALUE '\"+_textValue+\"'\");"
+      },
+      {
+        "txt": "break; case XML_TEXT: System.out.println(\" XML-token: XML_TEXT '\"+_textValue+\"'\"); break; case XML_END: System.out.println(\" XML-token: XML_END\"); break; default: throw new IllegalStateException(); }"
+      },
+      {
+        "txt": "return n; } public int next() throws IOException { if (_repeatElement != 0) { return (_currentState = _handleRepeatElement()); } try { return _next(); } catch (XMLStreamException e) {"
+      },
+      {
+        "txt": "StaxUtil.throwXmlAsIOException(e); return -1; } } public void skipEndElement() throws IOException { int type = next(); if (type != XML_END_ELEMENT) { throw new IOException(\"Expected END_ELEMENT, got event of type \"+type); }"
+      },
+      {
+        "txt": "} public int getCurrentToken() { return _currentState; } public String getText() { return _textValue; } public String getLocalName() { return _localName; } public String getNamespaceURI() { return _namespaceURI; } public boolean hasAttributes() { return (_currentState == XML_START_ELEMENT) && (_attributeCount > 0); } public void closeCompletely() throws IOException {"
+      },
+      {
+        "txt": "try { _xmlReader.closeCompletely(); } catch (XMLStreamException e) { StaxUtil.throwXmlAsIOException(e); } } public void close() throws IOException { try { _xmlReader.close();"
+      },
+      {
+        "txt": "} catch (XMLStreamException e) { StaxUtil.throwXmlAsIOException(e); } } public JsonLocation getCurrentLocation() { return _extractLocation(_xmlReader.getLocationInfo().getCurrentLocation()); } public JsonLocation getTokenLocation() { return _extractLocation(_xmlReader.getLocationInfo().getStartLocation()); }"
+      },
+      {
+        "txt": "protected void repeatStartElement() { if (_currentState != XML_START_ELEMENT) { throw new IllegalStateException(\"Current state not XML_START_ELEMENT (\" +XML_START_ELEMENT+\") but \"+_currentState); } if (_currentWrapper == null) { _currentWrapper = ElementWrapper.matchingWrapper(_currentWrapper, _localName, _namespaceURI); } else { _currentWrapper = ElementWrapper.matchingWrapper(_currentWrapper.getParent(), _localName, _namespaceURI);"
+      },
+      {
+        "txt": "} _repeatElement = REPLAY_START_DUP; } protected void skipAttributes() { if (_currentState == XML_ATTRIBUTE_NAME) { _attributeCount = 0; _currentState = XML_START_ELEMENT; } else if (_currentState == XML_START_ELEMENT) { } else if (_currentState == XML_TEXT) {"
+      },
+      {
+        "txt": "; // nothing to do... is it even legal? } else { throw new IllegalStateException(\"Current state not XML_START_ELEMENT or XML_ATTRIBUTE_NAME (\" +XML_START_ELEMENT+\") but \"+_currentState); } } protected String convertToString() throws IOException { if (_currentState != XML_ATTRIBUTE_NAME || _nextAttributeIndex != 0) { return null;"
+      },
+      {
+        "txt": "} try { String text = _collectUntilTag(); if (_xmlReader.getEventType() == XMLStreamReader.END_ELEMENT) { if (text == null) { text = \"\"; } if (_currentWrapper != null) { _currentWrapper = _currentWrapper.getParent(); }"
+      },
+      {
+        "txt": "_localName = _xmlReader.getLocalName(); _namespaceURI = _xmlReader.getNamespaceURI(); _attributeCount = 0; _currentState = XML_TEXT; _textValue = text; return text; } } catch (XMLStreamException e) { StaxUtil.throwXmlAsIOException(e); }"
+      },
+      {
+        "txt": "return null; } private final int _next() throws XMLStreamException { switch (_currentState) { case XML_ATTRIBUTE_VALUE: ++_nextAttributeIndex; case XML_START_ELEMENT: // attributes to return? if (_nextAttributeIndex < _attributeCount) { _localName = _xmlReader.getAttributeLocalName(_nextAttributeIndex);"
+      },
+      {
+        "txt": "_textValue = _xmlReader.getAttributeValue(_nextAttributeIndex); return (_currentState = XML_ATTRIBUTE_NAME); } String text = _collectUntilTag(); if (_xmlReader.getEventType() == XMLStreamReader.START_ELEMENT) { return _initStartElement(); <extra_id_0> if (text != null) { _textValue = text; return (_currentState = XML_TEXT); } return _handleEndElement(); case XML_ATTRIBUTE_NAME:"
+      },
+      {
+        "txt": "return _handleEndElement(); case XML_ATTRIBUTE_NAME: return (_currentState = XML_ATTRIBUTE_VALUE); case XML_TEXT: return _handleEndElement(); case XML_END: return XML_END; } switch (_skipUntilTag()) { case XMLStreamConstants.END_DOCUMENT:"
+      },
+      {
+        "txt": "return (_currentState = XML_END); case XMLStreamConstants.END_ELEMENT: return _handleEndElement(); } return _initStartElement(); } private final String _collectUntilTag() throws XMLStreamException { String text = null; while (true) {"
+      },
+      {
+        "txt": "switch (_xmlReader.next()) { case XMLStreamConstants.START_ELEMENT: case XMLStreamConstants.END_ELEMENT: case XMLStreamConstants.END_DOCUMENT: return text; case XMLStreamConstants.CHARACTERS: case XMLStreamConstants.CDATA: if (text == null) { text = _xmlReader.getText(); } else { // can be optimized in future, if need be:"
+      },
+      {
+        "txt": "text += _xmlReader.getText(); } break; default: } } } private final int _skipUntilTag() throws XMLStreamException { while (_xmlReader.hasNext()) {"
+      },
+      {
+        "txt": "int type; switch (type = _xmlReader.next()) { case XMLStreamConstants.START_ELEMENT: case XMLStreamConstants.END_ELEMENT: case XMLStreamConstants.END_DOCUMENT: return type; default: } } throw new IllegalStateException(\"Expected to find a tag, instead reached end of input\");"
+      },
+      {
+        "txt": "} private final int _initStartElement() throws XMLStreamException { final String ns = _xmlReader.getNamespaceURI(); final String localName = _xmlReader.getLocalName(); _attributeCount = _xmlReader.getAttributeCount(); _nextAttributeIndex = 0; if (_currentWrapper != null) { if (_currentWrapper.matchesWrapper(localName, ns)) { _currentWrapper = _currentWrapper.intermediateWrapper();"
+      },
+      {
+        "txt": "} else { _localName = _currentWrapper.getWrapperLocalName(); _namespaceURI = _currentWrapper.getWrapperNamespace(); _currentWrapper = _currentWrapper.getParent(); _nextLocalName = localName; _nextNamespaceURI = ns; _repeatElement = REPLAY_START_DELAYED; return (_currentState = XML_END_ELEMENT); } }"
+      },
+      {
+        "txt": "_localName = localName; _namespaceURI = ns; return (_currentState = XML_START_ELEMENT); } protected int _handleRepeatElement() throws IOException { int type = _repeatElement; _repeatElement = 0; if (type == REPLAY_START_DUP) { _currentWrapper = _currentWrapper.intermediateWrapper();"
+      },
+      {
+        "txt": "return XML_START_ELEMENT; } if (type == REPLAY_END) { _localName = _xmlReader.getLocalName(); _namespaceURI = _xmlReader.getNamespaceURI(); if (_currentWrapper != null) { _currentWrapper = _currentWrapper.getParent(); } return XML_END_ELEMENT; }"
+      },
+      {
+        "txt": "if (type == REPLAY_START_DELAYED) { if (_currentWrapper != null) { _currentWrapper = _currentWrapper.intermediateWrapper(); } _localName = _nextLocalName; _namespaceURI = _nextNamespaceURI; _nextLocalName = null; _nextNamespaceURI = null; return XML_START_ELEMENT; }"
+      },
+      {
+        "txt": "throw new IllegalStateException(\"Unrecognized type to repeat: \"+type); } private final int _handleEndElement() { if (_currentWrapper != null) { ElementWrapper w = _currentWrapper; if (w.isMatching()) { _repeatElement = REPLAY_END; _localName = w.getWrapperLocalName(); _namespaceURI = w.getWrapperNamespace();"
+      },
+      {
+        "txt": "_currentWrapper = _currentWrapper.getParent(); } else { _currentWrapper = _currentWrapper.getParent(); } } return (_currentState = XML_END_ELEMENT); } private JsonLocation _extractLocation(XMLStreamLocation2 location) { if (location == null) { // just for impls that might pass null..."
+      },
+      {
+        "txt": "return new JsonLocation(_sourceReference, -1, -1, -1); } return new JsonLocation(_sourceReference, location.getCharacterOffset(), location.getLineNumber(), location.getColumnNumber()); } @Override public String toString() {"
+      },
+      {
+        "txt": "StringBuilder sb = new StringBuilder(); sb.append(\"(Token stream:\"); sb.append(\" state=\").append(_currentState); sb.append(\" attr#=\").append(_attributeCount); sb.append(\" nextAttr#=\").append(_nextAttributeIndex); sb.append(\" name=\").append(_localName); sb.append(\" text=\").append(_textValue); sb.append(\" repeat?=\").append(_repeatElement); sb.append(\" wrapper=[\").append(_currentWrapper); sb.append(\"] repeatElement=\").append(_repeatElement);"
+      },
+      {
+        "txt": "sb.append(\" nextName=\").append(_nextLocalName); sb.append(\")\"); return sb.toString(); }"
+      }
+    ]
+  },
+  {
+    "id": 1829,
+    "file_path": "src/main/java/com/fasterxml/jackson/dataformat/xml/deser/XmlTokenStream.java",
+    "start-bug-line": 330,
+    "end-bug-line": 330,
+    "bug": "",
+    "fix": "_mixedText = false;",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.dataformat.xml.deser; import java.io.IOException; import javax.xml.stream.*; import org.codehaus.stax2.XMLStreamLocation2;"
+      },
+      {
+        "txt": "import org.codehaus.stax2.XMLStreamReader2; import org.codehaus.stax2.ri.Stax2ReaderAdapter; import com.fasterxml.jackson.core.JsonLocation; import com.fasterxml.jackson.dataformat.xml.util.StaxUtil; public class XmlTokenStream { public final static int XML_START_ELEMENT = 1; public final static int XML_END_ELEMENT = 2; public final static int XML_ATTRIBUTE_NAME = 3; public final static int XML_ATTRIBUTE_VALUE = 4;"
+      },
+      {
+        "txt": "public final static int XML_TEXT = 5; public final static int XML_END = 6; private final static int REPLAY_START_DUP = 1; private final static int REPLAY_END = 2; private final static int REPLAY_START_DELAYED = 3; final protected XMLStreamReader2 _xmlReader; final protected Object _sourceReference; protected int _currentState; protected int _attributeCount; protected int _nextAttributeIndex = 0;"
+      },
+      {
+        "txt": "protected String _localName; protected String _namespaceURI; protected String _textValue; protected int _repeatElement; protected ElementWrapper _currentWrapper; protected String _nextLocalName; protected String _nextNamespaceURI; public XmlTokenStream(XMLStreamReader xmlReader, Object sourceRef) { _sourceReference = sourceRef;"
+      },
+      {
+        "txt": "if (xmlReader.getEventType() != XMLStreamConstants.START_ELEMENT) { throw new IllegalArgumentException(\"Invalid XMLStreamReader passed: should be pointing to START_ELEMENT (\" +XMLStreamConstants.START_ELEMENT+\"), instead got \"+xmlReader.getEventType()); } _xmlReader = Stax2ReaderAdapter.wrapIfNecessary(xmlReader); _currentState = XML_START_ELEMENT; _localName = _xmlReader.getLocalName(); _namespaceURI = _xmlReader.getNamespaceURI(); _attributeCount = _xmlReader.getAttributeCount(); }"
+      },
+      {
+        "txt": "public XMLStreamReader2 getXmlReader() { return _xmlReader; } public int next() throws IOException { int n = next0(); switch (n) { case XML_START_ELEMENT: System.out.println(\" XML-token: XML_START_ELEMENT '\"+_localName+\"'\"); break;"
+      },
+      {
+        "txt": "case XML_END_ELEMENT: System.out.println(\" XML-token: XML_END_ELEMENT '\"+_localName+\"'\"); break; case XML_ATTRIBUTE_NAME: System.out.println(\" XML-token: XML_ATTRIBUTE_NAME '\"+_localName+\"'\"); break; case XML_ATTRIBUTE_VALUE: System.out.println(\" XML-token: XML_ATTRIBUTE_VALUE '\"+_textValue+\"'\"); break; case XML_TEXT:"
+      },
+      {
+        "txt": "System.out.println(\" XML-token: XML_TEXT '\"+_textValue+\"'\"); break; case XML_END: System.out.println(\" XML-token: XML_END\"); break; default: throw new IllegalStateException(); } return n; }"
+      },
+      {
+        "txt": "public int next() throws IOException { if (_repeatElement != 0) { return (_currentState = _handleRepeatElement()); } try { return _next(); } catch (XMLStreamException e) { StaxUtil.throwXmlAsIOException(e); return -1;"
+      },
+      {
+        "txt": "} } public void skipEndElement() throws IOException { int type = next(); if (type != XML_END_ELEMENT) { throw new IOException(\"Expected END_ELEMENT, got event of type \"+type); } } public int getCurrentToken() { return _currentState; }"
+      },
+      {
+        "txt": "public String getText() { return _textValue; } public String getLocalName() { return _localName; } public String getNamespaceURI() { return _namespaceURI; } public boolean hasAttributes() { return (_currentState == XML_START_ELEMENT) && (_attributeCount > 0); } public void closeCompletely() throws IOException { try { _xmlReader.closeCompletely();"
+      },
+      {
+        "txt": "} catch (XMLStreamException e) { StaxUtil.throwXmlAsIOException(e); } } public void close() throws IOException { try { _xmlReader.close(); } catch (XMLStreamException e) { StaxUtil.throwXmlAsIOException(e);"
+      },
+      {
+        "txt": "} } public JsonLocation getCurrentLocation() { return _extractLocation(_xmlReader.getLocationInfo().getCurrentLocation()); } public JsonLocation getTokenLocation() { return _extractLocation(_xmlReader.getLocationInfo().getStartLocation()); } protected void repeatStartElement() {"
+      },
+      {
+        "txt": "if (_currentState != XML_START_ELEMENT) { throw new IllegalStateException(\"Current state not XML_START_ELEMENT (\" +XML_START_ELEMENT+\") but \"+_currentState); } if (_currentWrapper == null) { _currentWrapper = ElementWrapper.matchingWrapper(_currentWrapper, _localName, _namespaceURI); } else { _currentWrapper = ElementWrapper.matchingWrapper(_currentWrapper.getParent(), _localName, _namespaceURI); } _repeatElement = REPLAY_START_DUP;"
+      },
+      {
+        "txt": "} protected void skipAttributes() { if (_currentState == XML_ATTRIBUTE_NAME) { _attributeCount = 0; _currentState = XML_START_ELEMENT; } else if (_currentState == XML_START_ELEMENT) { } else if (_currentState == XML_TEXT) { ; // nothing to do... is it even legal? } else {"
+      },
+      {
+        "txt": "throw new IllegalStateException(\"Current state not XML_START_ELEMENT or XML_ATTRIBUTE_NAME (\" +XML_START_ELEMENT+\") but \"+_currentState); } } protected String convertToString() throws IOException { if (_currentState != XML_ATTRIBUTE_NAME || _nextAttributeIndex != 0) { return null; } try {"
+      },
+      {
+        "txt": "String text = _collectUntilTag(); if (_xmlReader.getEventType() == XMLStreamReader.END_ELEMENT) { if (text == null) { text = \"\"; } if (_currentWrapper != null) { _currentWrapper = _currentWrapper.getParent(); } _localName = _xmlReader.getLocalName(); _namespaceURI = _xmlReader.getNamespaceURI();"
+      },
+      {
+        "txt": "_attributeCount = 0; _currentState = XML_TEXT; _textValue = text; return text; } } catch (XMLStreamException e) { StaxUtil.throwXmlAsIOException(e); } return null; }"
+      },
+      {
+        "txt": "private final int _next() throws XMLStreamException { switch (_currentState) { case XML_ATTRIBUTE_VALUE: ++_nextAttributeIndex; case XML_START_ELEMENT: // attributes to return? if (_nextAttributeIndex < _attributeCount) { _localName = _xmlReader.getAttributeLocalName(_nextAttributeIndex); _namespaceURI = _xmlReader.getAttributeNamespace(_nextAttributeIndex); _textValue = _xmlReader.getAttributeValue(_nextAttributeIndex);"
+      },
+      {
+        "txt": "} String text = _collectUntilTag(); if (_xmlReader.getEventType() == XMLStreamReader.START_ELEMENT) { return _initStartElement(); } if (text != null) { <extra_id_0> return (_currentState = XML_TEXT); } return _handleEndElement(); case XML_ATTRIBUTE_NAME: return (_currentState = XML_ATTRIBUTE_VALUE); case XML_TEXT:"
+      },
+      {
+        "txt": "return (_currentState = XML_ATTRIBUTE_VALUE); case XML_TEXT: return _handleEndElement(); case XML_END: return XML_END; } switch (_skipUntilTag()) { case XMLStreamConstants.END_DOCUMENT: return (_currentState = XML_END); case XMLStreamConstants.END_ELEMENT:"
+      },
+      {
+        "txt": "return _handleEndElement(); } return _initStartElement(); } private final String _collectUntilTag() throws XMLStreamException { String text = null; while (true) { switch (_xmlReader.next()) { case XMLStreamConstants.START_ELEMENT:"
+      },
+      {
+        "txt": "case XMLStreamConstants.END_ELEMENT: case XMLStreamConstants.END_DOCUMENT: return text; case XMLStreamConstants.CHARACTERS: case XMLStreamConstants.CDATA: if (text == null) { text = _xmlReader.getText(); } else { // can be optimized in future, if need be: text += _xmlReader.getText(); }"
+      },
+      {
+        "txt": "break; default: } } } private final int _skipUntilTag() throws XMLStreamException { while (_xmlReader.hasNext()) { int type; switch (type = _xmlReader.next()) {"
+      },
+      {
+        "txt": "case XMLStreamConstants.START_ELEMENT: case XMLStreamConstants.END_ELEMENT: case XMLStreamConstants.END_DOCUMENT: return type; default: } } throw new IllegalStateException(\"Expected to find a tag, instead reached end of input\"); } private final int _initStartElement() throws XMLStreamException"
+      },
+      {
+        "txt": "{ final String ns = _xmlReader.getNamespaceURI(); final String localName = _xmlReader.getLocalName(); _attributeCount = _xmlReader.getAttributeCount(); _nextAttributeIndex = 0; if (_currentWrapper != null) { if (_currentWrapper.matchesWrapper(localName, ns)) { _currentWrapper = _currentWrapper.intermediateWrapper(); } else { _localName = _currentWrapper.getWrapperLocalName();"
+      },
+      {
+        "txt": "_namespaceURI = _currentWrapper.getWrapperNamespace(); _currentWrapper = _currentWrapper.getParent(); _nextLocalName = localName; _nextNamespaceURI = ns; _repeatElement = REPLAY_START_DELAYED; return (_currentState = XML_END_ELEMENT); } } _localName = localName; _namespaceURI = ns;"
+      },
+      {
+        "txt": "return (_currentState = XML_START_ELEMENT); } protected int _handleRepeatElement() throws IOException { int type = _repeatElement; _repeatElement = 0; if (type == REPLAY_START_DUP) { _currentWrapper = _currentWrapper.intermediateWrapper(); return XML_START_ELEMENT; }"
+      },
+      {
+        "txt": "if (type == REPLAY_END) { _localName = _xmlReader.getLocalName(); _namespaceURI = _xmlReader.getNamespaceURI(); if (_currentWrapper != null) { _currentWrapper = _currentWrapper.getParent(); } return XML_END_ELEMENT; } if (type == REPLAY_START_DELAYED) { if (_currentWrapper != null) {"
+      },
+      {
+        "txt": "_currentWrapper = _currentWrapper.intermediateWrapper(); } _localName = _nextLocalName; _namespaceURI = _nextNamespaceURI; _nextLocalName = null; _nextNamespaceURI = null; return XML_START_ELEMENT; } throw new IllegalStateException(\"Unrecognized type to repeat: \"+type); }"
+      },
+      {
+        "txt": "private final int _handleEndElement() { if (_currentWrapper != null) { ElementWrapper w = _currentWrapper; if (w.isMatching()) { _repeatElement = REPLAY_END; _localName = w.getWrapperLocalName(); _namespaceURI = w.getWrapperNamespace(); _currentWrapper = _currentWrapper.getParent(); } else {"
+      },
+      {
+        "txt": "_currentWrapper = _currentWrapper.getParent(); } } return (_currentState = XML_END_ELEMENT); } private JsonLocation _extractLocation(XMLStreamLocation2 location) { if (location == null) { // just for impls that might pass null... return new JsonLocation(_sourceReference, -1, -1, -1); }"
+      },
+      {
+        "txt": "return new JsonLocation(_sourceReference, location.getCharacterOffset(), location.getLineNumber(), location.getColumnNumber()); } @Override public String toString() { StringBuilder sb = new StringBuilder(); sb.append(\"(Token stream:\");"
+      },
+      {
+        "txt": "sb.append(\" state=\").append(_currentState); sb.append(\" attr#=\").append(_attributeCount); sb.append(\" nextAttr#=\").append(_nextAttributeIndex); sb.append(\" name=\").append(_localName); sb.append(\" text=\").append(_textValue); sb.append(\" repeat?=\").append(_repeatElement); sb.append(\" wrapper=[\").append(_currentWrapper); sb.append(\"] repeatElement=\").append(_repeatElement); sb.append(\" nextName=\").append(_nextLocalName); sb.append(\")\");"
+      },
+      {
+        "txt": "return sb.toString(); }"
+      }
+    ]
+  },
+  {
+    "id": 1830,
+    "file_path": "src/main/java/com/fasterxml/jackson/dataformat/xml/deser/XmlTokenStream.java",
+    "start-bug-line": 333,
+    "end-bug-line": 333,
+    "bug": "",
+    "fix": "_mixedText = false;",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.dataformat.xml.deser; import java.io.IOException; import javax.xml.stream.*; import org.codehaus.stax2.XMLStreamLocation2; import org.codehaus.stax2.XMLStreamReader2; import org.codehaus.stax2.ri.Stax2ReaderAdapter; import com.fasterxml.jackson.core.JsonLocation;"
+      },
+      {
+        "txt": "import com.fasterxml.jackson.dataformat.xml.util.StaxUtil; public class XmlTokenStream { public final static int XML_START_ELEMENT = 1; public final static int XML_END_ELEMENT = 2; public final static int XML_ATTRIBUTE_NAME = 3; public final static int XML_ATTRIBUTE_VALUE = 4; public final static int XML_TEXT = 5; public final static int XML_END = 6; private final static int REPLAY_START_DUP = 1;"
+      },
+      {
+        "txt": "private final static int REPLAY_END = 2; private final static int REPLAY_START_DELAYED = 3; final protected XMLStreamReader2 _xmlReader; final protected Object _sourceReference; protected int _currentState; protected int _attributeCount; protected int _nextAttributeIndex = 0; protected String _localName; protected String _namespaceURI; protected String _textValue;"
+      },
+      {
+        "txt": "protected int _repeatElement; protected ElementWrapper _currentWrapper; protected String _nextLocalName; protected String _nextNamespaceURI; public XmlTokenStream(XMLStreamReader xmlReader, Object sourceRef) { _sourceReference = sourceRef; if (xmlReader.getEventType() != XMLStreamConstants.START_ELEMENT) { throw new IllegalArgumentException(\"Invalid XMLStreamReader passed: should be pointing to START_ELEMENT (\" +XMLStreamConstants.START_ELEMENT+\"), instead got \"+xmlReader.getEventType());"
+      },
+      {
+        "txt": "} _xmlReader = Stax2ReaderAdapter.wrapIfNecessary(xmlReader); _currentState = XML_START_ELEMENT; _localName = _xmlReader.getLocalName(); _namespaceURI = _xmlReader.getNamespaceURI(); _attributeCount = _xmlReader.getAttributeCount(); } public XMLStreamReader2 getXmlReader() { return _xmlReader; }"
+      },
+      {
+        "txt": "public int next() throws IOException { int n = next0(); switch (n) { case XML_START_ELEMENT: System.out.println(\" XML-token: XML_START_ELEMENT '\"+_localName+\"'\"); break; case XML_END_ELEMENT: System.out.println(\" XML-token: XML_END_ELEMENT '\"+_localName+\"'\"); break;"
+      },
+      {
+        "txt": "case XML_ATTRIBUTE_NAME: System.out.println(\" XML-token: XML_ATTRIBUTE_NAME '\"+_localName+\"'\"); break; case XML_ATTRIBUTE_VALUE: System.out.println(\" XML-token: XML_ATTRIBUTE_VALUE '\"+_textValue+\"'\"); break; case XML_TEXT: System.out.println(\" XML-token: XML_TEXT '\"+_textValue+\"'\"); break; case XML_END:"
+      },
+      {
+        "txt": "System.out.println(\" XML-token: XML_END\"); break; default: throw new IllegalStateException(); } return n; } public int next() throws IOException { if (_repeatElement != 0) {"
+      },
+      {
+        "txt": "return (_currentState = _handleRepeatElement()); } try { return _next(); } catch (XMLStreamException e) { StaxUtil.throwXmlAsIOException(e); return -1; } } public void skipEndElement() throws IOException"
+      },
+      {
+        "txt": "{ int type = next(); if (type != XML_END_ELEMENT) { throw new IOException(\"Expected END_ELEMENT, got event of type \"+type); } } public int getCurrentToken() { return _currentState; } public String getText() { return _textValue; } public String getLocalName() { return _localName; } public String getNamespaceURI() { return _namespaceURI; }"
+      },
+      {
+        "txt": "public boolean hasAttributes() { return (_currentState == XML_START_ELEMENT) && (_attributeCount > 0); } public void closeCompletely() throws IOException { try { _xmlReader.closeCompletely(); } catch (XMLStreamException e) { StaxUtil.throwXmlAsIOException(e); }"
+      },
+      {
+        "txt": "} public void close() throws IOException { try { _xmlReader.close(); } catch (XMLStreamException e) { StaxUtil.throwXmlAsIOException(e); } } public JsonLocation getCurrentLocation() {"
+      },
+      {
+        "txt": "return _extractLocation(_xmlReader.getLocationInfo().getCurrentLocation()); } public JsonLocation getTokenLocation() { return _extractLocation(_xmlReader.getLocationInfo().getStartLocation()); } protected void repeatStartElement() { if (_currentState != XML_START_ELEMENT) { throw new IllegalStateException(\"Current state not XML_START_ELEMENT (\" +XML_START_ELEMENT+\") but \"+_currentState);"
+      },
+      {
+        "txt": "} if (_currentWrapper == null) { _currentWrapper = ElementWrapper.matchingWrapper(_currentWrapper, _localName, _namespaceURI); } else { _currentWrapper = ElementWrapper.matchingWrapper(_currentWrapper.getParent(), _localName, _namespaceURI); } _repeatElement = REPLAY_START_DUP; } protected void skipAttributes() {"
+      },
+      {
+        "txt": "if (_currentState == XML_ATTRIBUTE_NAME) { _attributeCount = 0; _currentState = XML_START_ELEMENT; } else if (_currentState == XML_START_ELEMENT) { } else if (_currentState == XML_TEXT) { ; // nothing to do... is it even legal? } else { throw new IllegalStateException(\"Current state not XML_START_ELEMENT or XML_ATTRIBUTE_NAME (\" +XML_START_ELEMENT+\") but \"+_currentState); }"
+      },
+      {
+        "txt": "} protected String convertToString() throws IOException { if (_currentState != XML_ATTRIBUTE_NAME || _nextAttributeIndex != 0) { return null; } try { String text = _collectUntilTag(); if (_xmlReader.getEventType() == XMLStreamReader.END_ELEMENT) { if (text == null) {"
+      },
+      {
+        "txt": "text = \"\"; } if (_currentWrapper != null) { _currentWrapper = _currentWrapper.getParent(); } _localName = _xmlReader.getLocalName(); _namespaceURI = _xmlReader.getNamespaceURI(); _attributeCount = 0; _currentState = XML_TEXT; _textValue = text;"
+      },
+      {
+        "txt": "return text; } } catch (XMLStreamException e) { StaxUtil.throwXmlAsIOException(e); } return null; } private final int _next() throws XMLStreamException { switch (_currentState) {"
+      },
+      {
+        "txt": "case XML_ATTRIBUTE_VALUE: ++_nextAttributeIndex; case XML_START_ELEMENT: // attributes to return? if (_nextAttributeIndex < _attributeCount) { _localName = _xmlReader.getAttributeLocalName(_nextAttributeIndex); _namespaceURI = _xmlReader.getAttributeNamespace(_nextAttributeIndex); _textValue = _xmlReader.getAttributeValue(_nextAttributeIndex); return (_currentState = XML_ATTRIBUTE_NAME); } String text = _collectUntilTag();"
+      },
+      {
+        "txt": "return _initStartElement(); } if (text != null) { _textValue = text; return (_currentState = XML_TEXT); } <extra_id_0> case XML_ATTRIBUTE_NAME: return (_currentState = XML_ATTRIBUTE_VALUE); case XML_TEXT: return _handleEndElement(); case XML_END: return XML_END;"
+      },
+      {
+        "txt": "case XML_END: return XML_END; } switch (_skipUntilTag()) { case XMLStreamConstants.END_DOCUMENT: return (_currentState = XML_END); case XMLStreamConstants.END_ELEMENT: return _handleEndElement(); } return _initStartElement();"
+      },
+      {
+        "txt": "} private final String _collectUntilTag() throws XMLStreamException { String text = null; while (true) { switch (_xmlReader.next()) { case XMLStreamConstants.START_ELEMENT: case XMLStreamConstants.END_ELEMENT: case XMLStreamConstants.END_DOCUMENT: return text;"
+      },
+      {
+        "txt": "case XMLStreamConstants.CHARACTERS: case XMLStreamConstants.CDATA: if (text == null) { text = _xmlReader.getText(); } else { // can be optimized in future, if need be: text += _xmlReader.getText(); } break; default: }"
+      },
+      {
+        "txt": "} } private final int _skipUntilTag() throws XMLStreamException { while (_xmlReader.hasNext()) { int type; switch (type = _xmlReader.next()) { case XMLStreamConstants.START_ELEMENT: case XMLStreamConstants.END_ELEMENT: case XMLStreamConstants.END_DOCUMENT:"
+      },
+      {
+        "txt": "return type; default: } } throw new IllegalStateException(\"Expected to find a tag, instead reached end of input\"); } private final int _initStartElement() throws XMLStreamException { final String ns = _xmlReader.getNamespaceURI(); final String localName = _xmlReader.getLocalName();"
+      },
+      {
+        "txt": "_attributeCount = _xmlReader.getAttributeCount(); _nextAttributeIndex = 0; if (_currentWrapper != null) { if (_currentWrapper.matchesWrapper(localName, ns)) { _currentWrapper = _currentWrapper.intermediateWrapper(); } else { _localName = _currentWrapper.getWrapperLocalName(); _namespaceURI = _currentWrapper.getWrapperNamespace(); _currentWrapper = _currentWrapper.getParent(); _nextLocalName = localName;"
+      },
+      {
+        "txt": "_nextNamespaceURI = ns; _repeatElement = REPLAY_START_DELAYED; return (_currentState = XML_END_ELEMENT); } } _localName = localName; _namespaceURI = ns; return (_currentState = XML_START_ELEMENT); } protected int _handleRepeatElement() throws IOException"
+      },
+      {
+        "txt": "{ int type = _repeatElement; _repeatElement = 0; if (type == REPLAY_START_DUP) { _currentWrapper = _currentWrapper.intermediateWrapper(); return XML_START_ELEMENT; } if (type == REPLAY_END) { _localName = _xmlReader.getLocalName(); _namespaceURI = _xmlReader.getNamespaceURI();"
+      },
+      {
+        "txt": "if (_currentWrapper != null) { _currentWrapper = _currentWrapper.getParent(); } return XML_END_ELEMENT; } if (type == REPLAY_START_DELAYED) { if (_currentWrapper != null) { _currentWrapper = _currentWrapper.intermediateWrapper(); } _localName = _nextLocalName;"
+      },
+      {
+        "txt": "_namespaceURI = _nextNamespaceURI; _nextLocalName = null; _nextNamespaceURI = null; return XML_START_ELEMENT; } throw new IllegalStateException(\"Unrecognized type to repeat: \"+type); } private final int _handleEndElement() { if (_currentWrapper != null) {"
+      },
+      {
+        "txt": "ElementWrapper w = _currentWrapper; if (w.isMatching()) { _repeatElement = REPLAY_END; _localName = w.getWrapperLocalName(); _namespaceURI = w.getWrapperNamespace(); _currentWrapper = _currentWrapper.getParent(); } else { _currentWrapper = _currentWrapper.getParent(); } }"
+      },
+      {
+        "txt": "return (_currentState = XML_END_ELEMENT); } private JsonLocation _extractLocation(XMLStreamLocation2 location) { if (location == null) { // just for impls that might pass null... return new JsonLocation(_sourceReference, -1, -1, -1); } return new JsonLocation(_sourceReference, location.getCharacterOffset(), location.getLineNumber(),"
+      },
+      {
+        "txt": "location.getColumnNumber()); } @Override public String toString() { StringBuilder sb = new StringBuilder(); sb.append(\"(Token stream:\"); sb.append(\" state=\").append(_currentState); sb.append(\" attr#=\").append(_attributeCount); sb.append(\" nextAttr#=\").append(_nextAttributeIndex);"
+      },
+      {
+        "txt": "sb.append(\" name=\").append(_localName); sb.append(\" text=\").append(_textValue); sb.append(\" repeat?=\").append(_repeatElement); sb.append(\" wrapper=[\").append(_currentWrapper); sb.append(\"] repeatElement=\").append(_repeatElement); sb.append(\" nextName=\").append(_nextLocalName); sb.append(\")\"); return sb.toString(); }"
+      }
+    ]
+  },
+  {
+    "id": 1831,
+    "file_path": "src/main/java/com/fasterxml/jackson/dataformat/xml/deser/XmlTokenStream.java",
+    "start-bug-line": 340,
+    "end-bug-line": 340,
+    "bug": "",
+    "fix": "if (_mixedText){ _mixedText = false; return _initStartElement(); }",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "import java.io.IOException; import javax.xml.stream.*; import org.codehaus.stax2.XMLStreamLocation2; import org.codehaus.stax2.XMLStreamReader2; import org.codehaus.stax2.ri.Stax2ReaderAdapter; import com.fasterxml.jackson.core.JsonLocation; import com.fasterxml.jackson.dataformat.xml.util.StaxUtil; public class XmlTokenStream { public final static int XML_START_ELEMENT = 1;"
+      },
+      {
+        "txt": "public final static int XML_END_ELEMENT = 2; public final static int XML_ATTRIBUTE_NAME = 3; public final static int XML_ATTRIBUTE_VALUE = 4; public final static int XML_TEXT = 5; public final static int XML_END = 6; private final static int REPLAY_START_DUP = 1; private final static int REPLAY_END = 2; private final static int REPLAY_START_DELAYED = 3; final protected XMLStreamReader2 _xmlReader; final protected Object _sourceReference;"
+      },
+      {
+        "txt": "protected int _currentState; protected int _attributeCount; protected int _nextAttributeIndex = 0; protected String _localName; protected String _namespaceURI; protected String _textValue; protected int _repeatElement; protected ElementWrapper _currentWrapper; protected String _nextLocalName; protected String _nextNamespaceURI;"
+      },
+      {
+        "txt": "public XmlTokenStream(XMLStreamReader xmlReader, Object sourceRef) { _sourceReference = sourceRef; if (xmlReader.getEventType() != XMLStreamConstants.START_ELEMENT) { throw new IllegalArgumentException(\"Invalid XMLStreamReader passed: should be pointing to START_ELEMENT (\" +XMLStreamConstants.START_ELEMENT+\"), instead got \"+xmlReader.getEventType()); } _xmlReader = Stax2ReaderAdapter.wrapIfNecessary(xmlReader); _currentState = XML_START_ELEMENT; _localName = _xmlReader.getLocalName();"
+      },
+      {
+        "txt": "_namespaceURI = _xmlReader.getNamespaceURI(); _attributeCount = _xmlReader.getAttributeCount(); } public XMLStreamReader2 getXmlReader() { return _xmlReader; } public int next() throws IOException { int n = next0(); switch (n) {"
+      },
+      {
+        "txt": "case XML_START_ELEMENT: System.out.println(\" XML-token: XML_START_ELEMENT '\"+_localName+\"'\"); break; case XML_END_ELEMENT: System.out.println(\" XML-token: XML_END_ELEMENT '\"+_localName+\"'\"); break; case XML_ATTRIBUTE_NAME: System.out.println(\" XML-token: XML_ATTRIBUTE_NAME '\"+_localName+\"'\"); break; case XML_ATTRIBUTE_VALUE:"
+      },
+      {
+        "txt": "System.out.println(\" XML-token: XML_ATTRIBUTE_VALUE '\"+_textValue+\"'\"); break; case XML_TEXT: System.out.println(\" XML-token: XML_TEXT '\"+_textValue+\"'\"); break; case XML_END: System.out.println(\" XML-token: XML_END\"); break; default: throw new IllegalStateException();"
+      },
+      {
+        "txt": "} return n; } public int next() throws IOException { if (_repeatElement != 0) { return (_currentState = _handleRepeatElement()); } try { return _next();"
+      },
+      {
+        "txt": "} catch (XMLStreamException e) { StaxUtil.throwXmlAsIOException(e); return -1; } } public void skipEndElement() throws IOException { int type = next(); if (type != XML_END_ELEMENT) { throw new IOException(\"Expected END_ELEMENT, got event of type \"+type);"
+      },
+      {
+        "txt": "} } public int getCurrentToken() { return _currentState; } public String getText() { return _textValue; } public String getLocalName() { return _localName; } public String getNamespaceURI() { return _namespaceURI; } public boolean hasAttributes() { return (_currentState == XML_START_ELEMENT) && (_attributeCount > 0); } public void closeCompletely() throws IOException"
+      },
+      {
+        "txt": "{ try { _xmlReader.closeCompletely(); } catch (XMLStreamException e) { StaxUtil.throwXmlAsIOException(e); } } public void close() throws IOException { try {"
+      },
+      {
+        "txt": "_xmlReader.close(); } catch (XMLStreamException e) { StaxUtil.throwXmlAsIOException(e); } } public JsonLocation getCurrentLocation() { return _extractLocation(_xmlReader.getLocationInfo().getCurrentLocation()); } public JsonLocation getTokenLocation() { return _extractLocation(_xmlReader.getLocationInfo().getStartLocation());"
+      },
+      {
+        "txt": "} protected void repeatStartElement() { if (_currentState != XML_START_ELEMENT) { throw new IllegalStateException(\"Current state not XML_START_ELEMENT (\" +XML_START_ELEMENT+\") but \"+_currentState); } if (_currentWrapper == null) { _currentWrapper = ElementWrapper.matchingWrapper(_currentWrapper, _localName, _namespaceURI); } else {"
+      },
+      {
+        "txt": "_currentWrapper = ElementWrapper.matchingWrapper(_currentWrapper.getParent(), _localName, _namespaceURI); } _repeatElement = REPLAY_START_DUP; } protected void skipAttributes() { if (_currentState == XML_ATTRIBUTE_NAME) { _attributeCount = 0; _currentState = XML_START_ELEMENT; } else if (_currentState == XML_START_ELEMENT) {"
+      },
+      {
+        "txt": "} else if (_currentState == XML_TEXT) { ; // nothing to do... is it even legal? } else { throw new IllegalStateException(\"Current state not XML_START_ELEMENT or XML_ATTRIBUTE_NAME (\" +XML_START_ELEMENT+\") but \"+_currentState); } } protected String convertToString() throws IOException { if (_currentState != XML_ATTRIBUTE_NAME || _nextAttributeIndex != 0) {"
+      },
+      {
+        "txt": "return null; } try { String text = _collectUntilTag(); if (_xmlReader.getEventType() == XMLStreamReader.END_ELEMENT) { if (text == null) { text = \"\"; } if (_currentWrapper != null) { _currentWrapper = _currentWrapper.getParent();"
+      },
+      {
+        "txt": "} _localName = _xmlReader.getLocalName(); _namespaceURI = _xmlReader.getNamespaceURI(); _attributeCount = 0; _currentState = XML_TEXT; _textValue = text; return text; } } catch (XMLStreamException e) { StaxUtil.throwXmlAsIOException(e);"
+      },
+      {
+        "txt": "} return null; } private final int _next() throws XMLStreamException { switch (_currentState) { case XML_ATTRIBUTE_VALUE: ++_nextAttributeIndex; case XML_START_ELEMENT: // attributes to return? if (_nextAttributeIndex < _attributeCount) {"
+      },
+      {
+        "txt": "_localName = _xmlReader.getAttributeLocalName(_nextAttributeIndex); _namespaceURI = _xmlReader.getAttributeNamespace(_nextAttributeIndex); _textValue = _xmlReader.getAttributeValue(_nextAttributeIndex); return (_currentState = XML_ATTRIBUTE_NAME); } String text = _collectUntilTag(); if (_xmlReader.getEventType() == XMLStreamReader.START_ELEMENT) { return _initStartElement(); } if (text != null) {"
+      },
+      {
+        "txt": "return (_currentState = XML_TEXT); } return _handleEndElement(); case XML_ATTRIBUTE_NAME: return (_currentState = XML_ATTRIBUTE_VALUE); case XML_TEXT: <extra_id_0> return _handleEndElement(); case XML_END: return XML_END; } switch (_skipUntilTag()) { case XMLStreamConstants.END_DOCUMENT:"
+      },
+      {
+        "txt": "switch (_skipUntilTag()) { case XMLStreamConstants.END_DOCUMENT: return (_currentState = XML_END); case XMLStreamConstants.END_ELEMENT: return _handleEndElement(); } return _initStartElement(); } private final String _collectUntilTag() throws XMLStreamException {"
+      },
+      {
+        "txt": "String text = null; while (true) { switch (_xmlReader.next()) { case XMLStreamConstants.START_ELEMENT: case XMLStreamConstants.END_ELEMENT: case XMLStreamConstants.END_DOCUMENT: return text; case XMLStreamConstants.CHARACTERS: case XMLStreamConstants.CDATA: if (text == null) {"
+      },
+      {
+        "txt": "text = _xmlReader.getText(); } else { // can be optimized in future, if need be: text += _xmlReader.getText(); } break; default: } } } private final int _skipUntilTag() throws XMLStreamException"
+      },
+      {
+        "txt": "{ while (_xmlReader.hasNext()) { int type; switch (type = _xmlReader.next()) { case XMLStreamConstants.START_ELEMENT: case XMLStreamConstants.END_ELEMENT: case XMLStreamConstants.END_DOCUMENT: return type; default: }"
+      },
+      {
+        "txt": "} throw new IllegalStateException(\"Expected to find a tag, instead reached end of input\"); } private final int _initStartElement() throws XMLStreamException { final String ns = _xmlReader.getNamespaceURI(); final String localName = _xmlReader.getLocalName(); _attributeCount = _xmlReader.getAttributeCount(); _nextAttributeIndex = 0; if (_currentWrapper != null) {"
+      },
+      {
+        "txt": "if (_currentWrapper.matchesWrapper(localName, ns)) { _currentWrapper = _currentWrapper.intermediateWrapper(); } else { _localName = _currentWrapper.getWrapperLocalName(); _namespaceURI = _currentWrapper.getWrapperNamespace(); _currentWrapper = _currentWrapper.getParent(); _nextLocalName = localName; _nextNamespaceURI = ns; _repeatElement = REPLAY_START_DELAYED; return (_currentState = XML_END_ELEMENT);"
+      },
+      {
+        "txt": "} } _localName = localName; _namespaceURI = ns; return (_currentState = XML_START_ELEMENT); } protected int _handleRepeatElement() throws IOException { int type = _repeatElement; _repeatElement = 0;"
+      },
+      {
+        "txt": "if (type == REPLAY_START_DUP) { _currentWrapper = _currentWrapper.intermediateWrapper(); return XML_START_ELEMENT; } if (type == REPLAY_END) { _localName = _xmlReader.getLocalName(); _namespaceURI = _xmlReader.getNamespaceURI(); if (_currentWrapper != null) { _currentWrapper = _currentWrapper.getParent(); }"
+      },
+      {
+        "txt": "return XML_END_ELEMENT; } if (type == REPLAY_START_DELAYED) { if (_currentWrapper != null) { _currentWrapper = _currentWrapper.intermediateWrapper(); } _localName = _nextLocalName; _namespaceURI = _nextNamespaceURI; _nextLocalName = null; _nextNamespaceURI = null;"
+      },
+      {
+        "txt": "return XML_START_ELEMENT; } throw new IllegalStateException(\"Unrecognized type to repeat: \"+type); } private final int _handleEndElement() { if (_currentWrapper != null) { ElementWrapper w = _currentWrapper; if (w.isMatching()) { _repeatElement = REPLAY_END;"
+      },
+      {
+        "txt": "_localName = w.getWrapperLocalName(); _namespaceURI = w.getWrapperNamespace(); _currentWrapper = _currentWrapper.getParent(); } else { _currentWrapper = _currentWrapper.getParent(); } } return (_currentState = XML_END_ELEMENT); } private JsonLocation _extractLocation(XMLStreamLocation2 location)"
+      },
+      {
+        "txt": "{ if (location == null) { // just for impls that might pass null... return new JsonLocation(_sourceReference, -1, -1, -1); } return new JsonLocation(_sourceReference, location.getCharacterOffset(), location.getLineNumber(), location.getColumnNumber()); } @Override"
+      },
+      {
+        "txt": "public String toString() { StringBuilder sb = new StringBuilder(); sb.append(\"(Token stream:\"); sb.append(\" state=\").append(_currentState); sb.append(\" attr#=\").append(_attributeCount); sb.append(\" nextAttr#=\").append(_nextAttributeIndex); sb.append(\" name=\").append(_localName); sb.append(\" text=\").append(_textValue); sb.append(\" repeat?=\").append(_repeatElement);"
+      },
+      {
+        "txt": "sb.append(\" wrapper=[\").append(_currentWrapper); sb.append(\"] repeatElement=\").append(_repeatElement); sb.append(\" nextName=\").append(_nextLocalName); sb.append(\")\"); return sb.toString(); }"
+      }
+    ]
+  },
+  {
+    "id": 1832,
+    "file_path": "src/main/java/com/fasterxml/jackson/dataformat/xml/deser/XmlTokenStream.java",
+    "start-bug-line": 506,
+    "end-bug-line": 506,
+    "bug": "",
+    "fix": "protected boolean _allWs(String str) { final int len = (str == null) ? 0 : str.length(); if (len > 0) { for (int i = 0; i < len; ++i) { if (str.charAt(i) > ' ') { return false; } } } return true; }",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.dataformat.xml.deser; import java.io.IOException; import javax.xml.stream.*; import org.codehaus.stax2.XMLStreamLocation2;"
+      },
+      {
+        "txt": "import org.codehaus.stax2.XMLStreamReader2; import org.codehaus.stax2.ri.Stax2ReaderAdapter; import com.fasterxml.jackson.core.JsonLocation; import com.fasterxml.jackson.dataformat.xml.util.StaxUtil; public class XmlTokenStream { public final static int XML_START_ELEMENT = 1; public final static int XML_END_ELEMENT = 2; public final static int XML_ATTRIBUTE_NAME = 3; public final static int XML_ATTRIBUTE_VALUE = 4;"
+      },
+      {
+        "txt": "public final static int XML_TEXT = 5; public final static int XML_END = 6; private final static int REPLAY_START_DUP = 1; private final static int REPLAY_END = 2; private final static int REPLAY_START_DELAYED = 3; final protected XMLStreamReader2 _xmlReader; final protected Object _sourceReference; protected int _currentState; protected int _attributeCount; protected int _nextAttributeIndex = 0;"
+      },
+      {
+        "txt": "protected String _localName; protected String _namespaceURI; protected String _textValue; protected int _repeatElement; protected ElementWrapper _currentWrapper; protected String _nextLocalName; protected String _nextNamespaceURI; public XmlTokenStream(XMLStreamReader xmlReader, Object sourceRef) { _sourceReference = sourceRef;"
+      },
+      {
+        "txt": "if (xmlReader.getEventType() != XMLStreamConstants.START_ELEMENT) { throw new IllegalArgumentException(\"Invalid XMLStreamReader passed: should be pointing to START_ELEMENT (\" +XMLStreamConstants.START_ELEMENT+\"), instead got \"+xmlReader.getEventType()); } _xmlReader = Stax2ReaderAdapter.wrapIfNecessary(xmlReader); _currentState = XML_START_ELEMENT; _localName = _xmlReader.getLocalName(); _namespaceURI = _xmlReader.getNamespaceURI(); _attributeCount = _xmlReader.getAttributeCount(); }"
+      },
+      {
+        "txt": "public XMLStreamReader2 getXmlReader() { return _xmlReader; } public int next() throws IOException { int n = next0(); switch (n) { case XML_START_ELEMENT: System.out.println(\" XML-token: XML_START_ELEMENT '\"+_localName+\"'\"); break;"
+      },
+      {
+        "txt": "case XML_END_ELEMENT: System.out.println(\" XML-token: XML_END_ELEMENT '\"+_localName+\"'\"); break; case XML_ATTRIBUTE_NAME: System.out.println(\" XML-token: XML_ATTRIBUTE_NAME '\"+_localName+\"'\"); break; case XML_ATTRIBUTE_VALUE: System.out.println(\" XML-token: XML_ATTRIBUTE_VALUE '\"+_textValue+\"'\"); break; case XML_TEXT:"
+      },
+      {
+        "txt": "System.out.println(\" XML-token: XML_TEXT '\"+_textValue+\"'\"); break; case XML_END: System.out.println(\" XML-token: XML_END\"); break; default: throw new IllegalStateException(); } return n; }"
+      },
+      {
+        "txt": "public int next() throws IOException { if (_repeatElement != 0) { return (_currentState = _handleRepeatElement()); } try { return _next(); } catch (XMLStreamException e) { StaxUtil.throwXmlAsIOException(e); return -1;"
+      },
+      {
+        "txt": "} } public void skipEndElement() throws IOException { int type = next(); if (type != XML_END_ELEMENT) { throw new IOException(\"Expected END_ELEMENT, got event of type \"+type); } } public int getCurrentToken() { return _currentState; }"
+      },
+      {
+        "txt": "public String getText() { return _textValue; } public String getLocalName() { return _localName; } public String getNamespaceURI() { return _namespaceURI; } public boolean hasAttributes() { return (_currentState == XML_START_ELEMENT) && (_attributeCount > 0); } public void closeCompletely() throws IOException { try { _xmlReader.closeCompletely();"
+      },
+      {
+        "txt": "} catch (XMLStreamException e) { StaxUtil.throwXmlAsIOException(e); } } public void close() throws IOException { try { _xmlReader.close(); } catch (XMLStreamException e) { StaxUtil.throwXmlAsIOException(e);"
+      },
+      {
+        "txt": "} } public JsonLocation getCurrentLocation() { return _extractLocation(_xmlReader.getLocationInfo().getCurrentLocation()); } public JsonLocation getTokenLocation() { return _extractLocation(_xmlReader.getLocationInfo().getStartLocation()); } protected void repeatStartElement() {"
+      },
+      {
+        "txt": "if (_currentState != XML_START_ELEMENT) { throw new IllegalStateException(\"Current state not XML_START_ELEMENT (\" +XML_START_ELEMENT+\") but \"+_currentState); } if (_currentWrapper == null) { _currentWrapper = ElementWrapper.matchingWrapper(_currentWrapper, _localName, _namespaceURI); } else { _currentWrapper = ElementWrapper.matchingWrapper(_currentWrapper.getParent(), _localName, _namespaceURI); } _repeatElement = REPLAY_START_DUP;"
+      },
+      {
+        "txt": "} protected void skipAttributes() { if (_currentState == XML_ATTRIBUTE_NAME) { _attributeCount = 0; _currentState = XML_START_ELEMENT; } else if (_currentState == XML_START_ELEMENT) { } else if (_currentState == XML_TEXT) { ; // nothing to do... is it even legal? } else {"
+      },
+      {
+        "txt": "throw new IllegalStateException(\"Current state not XML_START_ELEMENT or XML_ATTRIBUTE_NAME (\" +XML_START_ELEMENT+\") but \"+_currentState); } } protected String convertToString() throws IOException { if (_currentState != XML_ATTRIBUTE_NAME || _nextAttributeIndex != 0) { return null; } try {"
+      },
+      {
+        "txt": "String text = _collectUntilTag(); if (_xmlReader.getEventType() == XMLStreamReader.END_ELEMENT) { if (text == null) { text = \"\"; } if (_currentWrapper != null) { _currentWrapper = _currentWrapper.getParent(); } _localName = _xmlReader.getLocalName(); _namespaceURI = _xmlReader.getNamespaceURI();"
+      },
+      {
+        "txt": "_attributeCount = 0; _currentState = XML_TEXT; _textValue = text; return text; } } catch (XMLStreamException e) { StaxUtil.throwXmlAsIOException(e); } return null; }"
+      },
+      {
+        "txt": "private final int _next() throws XMLStreamException { switch (_currentState) { case XML_ATTRIBUTE_VALUE: ++_nextAttributeIndex; case XML_START_ELEMENT: // attributes to return? if (_nextAttributeIndex < _attributeCount) { _localName = _xmlReader.getAttributeLocalName(_nextAttributeIndex); _namespaceURI = _xmlReader.getAttributeNamespace(_nextAttributeIndex); _textValue = _xmlReader.getAttributeValue(_nextAttributeIndex);"
+      },
+      {
+        "txt": "return (_currentState = XML_ATTRIBUTE_NAME); } String text = _collectUntilTag(); if (_xmlReader.getEventType() == XMLStreamReader.START_ELEMENT) { return _initStartElement(); } if (text != null) { _textValue = text; return (_currentState = XML_TEXT); }"
+      },
+      {
+        "txt": "return _handleEndElement(); case XML_ATTRIBUTE_NAME: return (_currentState = XML_ATTRIBUTE_VALUE); case XML_TEXT: return _handleEndElement(); case XML_END: return XML_END; } switch (_skipUntilTag()) { case XMLStreamConstants.END_DOCUMENT:"
+      },
+      {
+        "txt": "return (_currentState = XML_END); case XMLStreamConstants.END_ELEMENT: return _handleEndElement(); } return _initStartElement(); } private final String _collectUntilTag() throws XMLStreamException { String text = null; while (true) {"
+      },
+      {
+        "txt": "switch (_xmlReader.next()) { case XMLStreamConstants.START_ELEMENT: case XMLStreamConstants.END_ELEMENT: case XMLStreamConstants.END_DOCUMENT: return text; case XMLStreamConstants.CHARACTERS: case XMLStreamConstants.CDATA: if (text == null) { text = _xmlReader.getText(); } else { // can be optimized in future, if need be:"
+      },
+      {
+        "txt": "text += _xmlReader.getText(); } break; default: } } } private final int _skipUntilTag() throws XMLStreamException { while (_xmlReader.hasNext()) {"
+      },
+      {
+        "txt": "int type; switch (type = _xmlReader.next()) { case XMLStreamConstants.START_ELEMENT: case XMLStreamConstants.END_ELEMENT: case XMLStreamConstants.END_DOCUMENT: return type; default: } } throw new IllegalStateException(\"Expected to find a tag, instead reached end of input\");"
+      },
+      {
+        "txt": "} private final int _initStartElement() throws XMLStreamException { final String ns = _xmlReader.getNamespaceURI(); final String localName = _xmlReader.getLocalName(); _attributeCount = _xmlReader.getAttributeCount(); _nextAttributeIndex = 0; if (_currentWrapper != null) { if (_currentWrapper.matchesWrapper(localName, ns)) { _currentWrapper = _currentWrapper.intermediateWrapper();"
+      },
+      {
+        "txt": "} else { _localName = _currentWrapper.getWrapperLocalName(); _namespaceURI = _currentWrapper.getWrapperNamespace(); _currentWrapper = _currentWrapper.getParent(); _nextLocalName = localName; _nextNamespaceURI = ns; _repeatElement = REPLAY_START_DELAYED; return (_currentState = XML_END_ELEMENT); } }"
+      },
+      {
+        "txt": "_localName = localName; _namespaceURI = ns; return (_currentState = XML_START_ELEMENT); } protected int _handleRepeatElement() throws IOException { int type = _repeatElement; _repeatElement = 0; if (type == REPLAY_START_DUP) { _currentWrapper = _currentWrapper.intermediateWrapper();"
+      },
+      {
+        "txt": "return XML_START_ELEMENT; } if (type == REPLAY_END) { _localName = _xmlReader.getLocalName(); _namespaceURI = _xmlReader.getNamespaceURI(); if (_currentWrapper != null) { _currentWrapper = _currentWrapper.getParent(); } return XML_END_ELEMENT; }"
+      },
+      {
+        "txt": "if (type == REPLAY_START_DELAYED) { if (_currentWrapper != null) { _currentWrapper = _currentWrapper.intermediateWrapper(); } _localName = _nextLocalName; _namespaceURI = _nextNamespaceURI; _nextLocalName = null; _nextNamespaceURI = null; return XML_START_ELEMENT; }"
+      },
+      {
+        "txt": "throw new IllegalStateException(\"Unrecognized type to repeat: \"+type); } private final int _handleEndElement() { if (_currentWrapper != null) { ElementWrapper w = _currentWrapper; if (w.isMatching()) { _repeatElement = REPLAY_END; _localName = w.getWrapperLocalName(); _namespaceURI = w.getWrapperNamespace();"
+      },
+      {
+        "txt": "_currentWrapper = _currentWrapper.getParent(); } else { _currentWrapper = _currentWrapper.getParent(); } } return (_currentState = XML_END_ELEMENT); } private JsonLocation _extractLocation(XMLStreamLocation2 location) { if (location == null) { // just for impls that might pass null..."
+      },
+      {
+        "txt": "} return new JsonLocation(_sourceReference, location.getCharacterOffset(), location.getLineNumber(), location.getColumnNumber()); } <extra_id_0> @Override public String toString() { StringBuilder sb = new StringBuilder(); sb.append(\"(Token stream:\"); sb.append(\" state=\").append(_currentState);"
+      },
+      {
+        "txt": "sb.append(\"(Token stream:\"); sb.append(\" state=\").append(_currentState); sb.append(\" attr#=\").append(_attributeCount); sb.append(\" nextAttr#=\").append(_nextAttributeIndex); sb.append(\" name=\").append(_localName); sb.append(\" text=\").append(_textValue); sb.append(\" repeat?=\").append(_repeatElement); sb.append(\" wrapper=[\").append(_currentWrapper); sb.append(\"] repeatElement=\").append(_repeatElement); sb.append(\" nextName=\").append(_nextLocalName);"
+      },
+      {
+        "txt": "sb.append(\")\"); return sb.toString(); }"
+      }
+    ]
+  }
+]

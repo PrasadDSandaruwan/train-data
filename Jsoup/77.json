@@ -1,0 +1,47 @@
+[
+  {
+    "id": 2057,
+    "file_path": "src/main/java/org/jsoup/parser/XmlTreeBuilder.java",
+    "start-bug-line": 117,
+    "end-bug-line": 117,
+    "bug": "String elName = endTag.name();",
+    "fix": "String elName = endTag.normalName();",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.jsoup.parser; import org.jsoup.Jsoup; import org.jsoup.helper.Validate; import org.jsoup.nodes.*; import java.io.Reader; import java.io.StringReader; import java.util.List; public class XmlTreeBuilder extends TreeBuilder { ParseSettings defaultSettings() { return ParseSettings.preserveCase;"
+      },
+      {
+        "txt": "} Document parse(Reader input, String baseUri) { return parse(input, baseUri, ParseErrorList.noTracking(), ParseSettings.preserveCase); } Document parse(String input, String baseUri) { return parse(new StringReader(input), baseUri, ParseErrorList.noTracking(), ParseSettings.preserveCase); } @Override protected void initialiseParse(Reader input, String baseUri, ParseErrorList errors, ParseSettings settings) { super.initialiseParse(input, baseUri, errors, settings);"
+      },
+      {
+        "txt": "stack.add(doc); // place the document onto the stack. differs from HtmlTreeBuilder (not on stack) doc.outputSettings().syntax(Document.OutputSettings.Syntax.xml); } @Override protected boolean process(Token token) { switch (token.type) { case StartTag: insert(token.asStartTag()); break; case EndTag:"
+      },
+      {
+        "txt": "popStackToClose(token.asEndTag()); break; case Comment: insert(token.asComment()); break; case Character: insert(token.asCharacter()); break; case Doctype: insert(token.asDoctype());"
+      },
+      {
+        "txt": "break; case EOF: // could put some normalisation here if desired break; default: Validate.fail(\"Unexpected token type: \" + token.type); } return true; } private void insertNode(Node node) { currentElement().appendChild(node);"
+      },
+      {
+        "txt": "} Element insert(Token.StartTag startTag) { Tag tag = Tag.valueOf(startTag.name(), settings); Element el = new Element(tag, baseUri, settings.normalizeAttributes(startTag.attributes)); insertNode(el); if (startTag.isSelfClosing()) { if (!tag.isKnownTag()) // unknown tag, remember this is self closing for output. see above. tag.setSelfClosing(); } else { stack.add(el);"
+      },
+      {
+        "txt": "} return el; } void insert(Token.Comment commentToken) { Comment comment = new Comment(commentToken.getData()); Node insert = comment; if (commentToken.bogus) { // xml declarations are emitted as bogus comments (which is right for html, but not xml) String data = comment.getData(); if (data.length() > 1 && (data.startsWith(\"!\") || data.startsWith(\"?\"))) { Document doc = Jsoup.parse(\"<\" + data.substring(1, data.length() -1) + \">\", baseUri, Parser.xmlParser());"
+      },
+      {
+        "txt": "Element el = doc.child(0); insert = new XmlDeclaration(settings.normalizeTag(el.tagName()), data.startsWith(\"!\")); insert.attributes().addAll(el.attributes()); } } insertNode(insert); } void insert(Token.Character token) { final String data = token.getData(); insertNode(token.isCData() ? new CDataNode(data) : new TextNode(data));"
+      },
+      {
+        "txt": "void insert(Token.Doctype d) { DocumentType doctypeNode = new DocumentType(settings.normalizeTag(d.getName()), d.getPublicIdentifier(), d.getSystemIdentifier()); doctypeNode.setPubSysKey(d.getPubSysKey()); insertNode(doctypeNode); } private void popStackToClose(Token.EndTag endTag) { <extra_id_0> Element firstFound = null; for (int pos = stack.size() -1; pos >= 0; pos--) { Element next = stack.get(pos); if (next.nodeName().equals(elName)) { firstFound = next; break;"
+      },
+      {
+        "txt": "firstFound = next; break; } } if (firstFound == null) return; // not found, skip for (int pos = stack.size() -1; pos >= 0; pos--) { Element next = stack.get(pos); stack.remove(pos); if (next == firstFound)"
+      },
+      {
+        "txt": "break; } } List<Node> parseFragment(String inputFragment, String baseUri, ParseErrorList errors, ParseSettings settings) { initialiseParse(new StringReader(inputFragment), baseUri, errors, settings); runParser(); return doc.childNodes(); }"
+      }
+    ]
+  }
+]

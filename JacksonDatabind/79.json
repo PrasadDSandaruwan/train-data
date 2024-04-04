@@ -1,0 +1,1040 @@
+[
+  {
+    "id": 1678,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/introspect/JacksonAnnotationIntrospector.java",
+    "start-bug-line": 579,
+    "end-bug-line": 580,
+    "bug": "if (ref != null) { objectIdInfo = objectIdInfo.withAlwaysAsId(ref.alwaysAsId());",
+    "fix": "if (ref == null) { return objectIdInfo;",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind.introspect; import java.beans.ConstructorProperties;"
+      },
+      {
+        "txt": "import java.beans.Transient; import java.lang.annotation.Annotation; import java.lang.reflect.Field; import java.util.*; import com.fasterxml.jackson.annotation.*; import com.fasterxml.jackson.core.Version; import com.fasterxml.jackson.databind.*; import com.fasterxml.jackson.databind.annotation.*; import com.fasterxml.jackson.databind.cfg.HandlerInstantiator; import com.fasterxml.jackson.databind.cfg.MapperConfig;"
+      },
+      {
+        "txt": "import com.fasterxml.jackson.databind.jsontype.NamedType; import com.fasterxml.jackson.databind.jsontype.TypeIdResolver; import com.fasterxml.jackson.databind.jsontype.TypeResolverBuilder; import com.fasterxml.jackson.databind.jsontype.impl.StdTypeResolverBuilder; import com.fasterxml.jackson.databind.ser.BeanPropertyWriter; import com.fasterxml.jackson.databind.ser.VirtualBeanPropertyWriter; import com.fasterxml.jackson.databind.ser.impl.AttributePropertyWriter; import com.fasterxml.jackson.databind.ser.std.RawSerializer; import com.fasterxml.jackson.databind.util.*; public class JacksonAnnotationIntrospector"
+      },
+      {
+        "txt": "extends AnnotationIntrospector implements java.io.Serializable { private static final long serialVersionUID = 1L; @SuppressWarnings(\"unchecked\") private final static Class<? extends Annotation>[] ANNOTATIONS_TO_INFER_SER = (Class<? extends Annotation>[]) new Class<?>[] { JsonSerialize.class, JsonView.class, JsonFormat.class,"
+      },
+      {
+        "txt": "JsonTypeInfo.class, JsonRawValue.class, JsonUnwrapped.class, JsonBackReference.class, JsonManagedReference.class }; @SuppressWarnings(\"unchecked\") private final static Class<? extends Annotation>[] ANNOTATIONS_TO_INFER_DESER = (Class<? extends Annotation>[]) new Class<?>[] { JsonDeserialize.class,"
+      },
+      {
+        "txt": "JsonView.class, JsonFormat.class, JsonTypeInfo.class, JsonUnwrapped.class, JsonBackReference.class, JsonManagedReference.class }; private static final Java7Support _jdk7Helper; static { Java7Support x = null;"
+      },
+      {
+        "txt": "try { x = Java7Support.class.newInstance(); } catch (Throwable t) { java.util.logging.Logger.getLogger(JacksonAnnotationIntrospector.class.getName()) .warning(\"Unable to load JDK7 annotation types; will have to skip\"); } _jdk7Helper = x; } protected transient LRUMap<Class<?>,Boolean> _annotationsInside = new LRUMap<Class<?>,Boolean>(48, 48); protected boolean _cfgConstructorPropertiesImpliesCreator = true;"
+      },
+      {
+        "txt": "public JacksonAnnotationIntrospector() { } @Override public Version version() { return com.fasterxml.jackson.databind.cfg.PackageVersion.VERSION; } protected Object readResolve() { if (_annotationsInside == null) { _annotationsInside = new LRUMap<Class<?>,Boolean>(48, 48); } return this;"
+      },
+      {
+        "txt": "} public JacksonAnnotationIntrospector setConstructorPropertiesImpliesCreator(boolean b) { _cfgConstructorPropertiesImpliesCreator = b; return this; } @Override public boolean isAnnotationBundle(Annotation ann) { Class<?> type = ann.annotationType(); Boolean b = _annotationsInside.get(type);"
+      },
+      {
+        "txt": "if (b == null) { b = type.getAnnotation(JacksonAnnotationsInside.class) != null; _annotationsInside.putIfAbsent(type, b); } return b.booleanValue(); } @Override public String findEnumValue(Enum<?> value) { try {"
+      },
+      {
+        "txt": "Field f = value.getClass().getField(value.name()); if (f != null) { JsonProperty prop = f.getAnnotation(JsonProperty.class); if (prop != null) { String n = prop.value(); if (n != null && !n.isEmpty()) { return n; } } }"
+      },
+      {
+        "txt": "} catch (SecurityException e) { } catch (NoSuchFieldException e) { } return value.name(); } @Override // since 2.7 public String[] findEnumValues(Class<?> enumType, Enum<?>[] enumValues, String[] names) { HashMap<String,String> expl = null; for (Field f : ClassUtil.getDeclaredFields(enumType)) { if (!f.isEnumConstant()) {"
+      },
+      {
+        "txt": "continue; } JsonProperty prop = f.getAnnotation(JsonProperty.class); if (prop == null) { continue; } String n = prop.value(); if (n.isEmpty()) { continue; }"
+      },
+      {
+        "txt": "if (expl == null) { expl = new HashMap<String,String>(); } expl.put(f.getName(), n); } if (expl != null) { for (int i = 0, end = enumValues.length; i < end; ++i) { String defName = enumValues[i].name(); String explValue = expl.get(defName); if (explValue != null) {"
+      },
+      {
+        "txt": "names[i] = explValue; } } } return names; } @Override public PropertyName findRootName(AnnotatedClass ac) { JsonRootName ann = _findAnnotation(ac, JsonRootName.class);"
+      },
+      {
+        "txt": "if (ann == null) { return null; } String ns = ann.namespace(); if (ns != null && ns.length() == 0) { ns = null; } return PropertyName.construct(ann.value(), ns); } @Override"
+      },
+      {
+        "txt": "@Deprecated // since 2.6, remove from 2.7 or later public String[] findPropertiesToIgnore(Annotated ac) { JsonIgnoreProperties ignore = _findAnnotation(ac, JsonIgnoreProperties.class); return (ignore == null) ? null : ignore.value(); } @Override // since 2.6 public String[] findPropertiesToIgnore(Annotated ac, boolean forSerialization) { JsonIgnoreProperties ignore = _findAnnotation(ac, JsonIgnoreProperties.class); if (ignore == null) { return null;"
+      },
+      {
+        "txt": "} if (forSerialization) { if (ignore.allowGetters()) { return null; } } else { if (ignore.allowSetters()) { return null; } }"
+      },
+      {
+        "txt": "return ignore.value(); } @Override public Boolean findIgnoreUnknownProperties(AnnotatedClass ac) { JsonIgnoreProperties ignore = _findAnnotation(ac, JsonIgnoreProperties.class); return (ignore == null) ? null : ignore.ignoreUnknown(); } @Override public Boolean isIgnorableType(AnnotatedClass ac) { JsonIgnoreType ignore = _findAnnotation(ac, JsonIgnoreType.class);"
+      },
+      {
+        "txt": "return (ignore == null) ? null : ignore.value(); } @Override public Object findFilterId(Annotated a) { JsonFilter ann = _findAnnotation(a, JsonFilter.class); if (ann != null) { String id = ann.value(); if (id.length() > 0) { return id; }"
+      },
+      {
+        "txt": "} return null; } @Override public Object findNamingStrategy(AnnotatedClass ac) { JsonNaming ann = _findAnnotation(ac, JsonNaming.class); return (ann == null) ? null : ann.value(); } @Override"
+      },
+      {
+        "txt": "public String findClassDescription(AnnotatedClass ac) { JsonClassDescription ann = _findAnnotation(ac, JsonClassDescription.class); return (ann == null) ? null : ann.value(); } @Override public VisibilityChecker<?> findAutoDetectVisibility(AnnotatedClass ac, VisibilityChecker<?> checker) { JsonAutoDetect ann = _findAnnotation(ac, JsonAutoDetect.class); return (ann == null) ? checker : checker.with(ann);"
+      },
+      {
+        "txt": "} @Override public String findImplicitPropertyName(AnnotatedMember m) { PropertyName n = _findConstructorName(m); return (n == null) ? null : n.getSimpleName(); } @Override public boolean hasIgnoreMarker(AnnotatedMember m) { return _isIgnorable(m); }"
+      },
+      {
+        "txt": "@Override public Boolean hasRequiredMarker(AnnotatedMember m) { JsonProperty ann = _findAnnotation(m, JsonProperty.class); if (ann != null) { return ann.required(); } return null; } @Override"
+      },
+      {
+        "txt": "public JsonProperty.Access findPropertyAccess(Annotated m) { JsonProperty ann = _findAnnotation(m, JsonProperty.class); if (ann != null) { return ann.access(); } return null; } @Override public String findPropertyDescription(Annotated ann) { JsonPropertyDescription desc = _findAnnotation(ann, JsonPropertyDescription.class);"
+      },
+      {
+        "txt": "return (desc == null) ? null : desc.value(); } @Override public Integer findPropertyIndex(Annotated ann) { JsonProperty prop = _findAnnotation(ann, JsonProperty.class); if (prop != null) { int ix = prop.index(); if (ix != JsonProperty.INDEX_UNKNOWN) { return Integer.valueOf(ix); }"
+      },
+      {
+        "txt": "} return null; } @Override public String findPropertyDefaultValue(Annotated ann) { JsonProperty prop = _findAnnotation(ann, JsonProperty.class); if (prop == null) { return null; } String str = prop.defaultValue();"
+      },
+      {
+        "txt": "return str.isEmpty() ? null : str; } @Override public JsonFormat.Value findFormat(Annotated ann) { JsonFormat f = _findAnnotation(ann, JsonFormat.class); return (f == null) ? null : new JsonFormat.Value(f); } @Override public ReferenceProperty findReferenceType(AnnotatedMember member) {"
+      },
+      {
+        "txt": "JsonManagedReference ref1 = _findAnnotation(member, JsonManagedReference.class); if (ref1 != null) { return AnnotationIntrospector.ReferenceProperty.managed(ref1.value()); } JsonBackReference ref2 = _findAnnotation(member, JsonBackReference.class); if (ref2 != null) { return AnnotationIntrospector.ReferenceProperty.back(ref2.value()); } return null; }"
+      },
+      {
+        "txt": "@Override public NameTransformer findUnwrappingNameTransformer(AnnotatedMember member) { JsonUnwrapped ann = _findAnnotation(member, JsonUnwrapped.class); if (ann == null || !ann.enabled()) { return null; } String prefix = ann.prefix(); String suffix = ann.suffix(); return NameTransformer.simpleTransformer(prefix, suffix);"
+      },
+      {
+        "txt": "} @Override public Object findInjectableValueId(AnnotatedMember m) { JacksonInject ann = _findAnnotation(m, JacksonInject.class); if (ann == null) { return null; } String id = ann.value(); if (id.length() == 0) {"
+      },
+      {
+        "txt": "if (!(m instanceof AnnotatedMethod)) { return m.getRawType().getName(); } AnnotatedMethod am = (AnnotatedMethod) m; if (am.getParameterCount() == 0) { return m.getRawType().getName(); } return am.getRawParameterType(0).getName(); } return id;"
+      },
+      {
+        "txt": "} @Override public Class<?>[] findViews(Annotated a) { JsonView ann = _findAnnotation(a, JsonView.class); return (ann == null) ? null : ann.value(); } @Override // since 2.7 public AnnotatedMethod resolveSetterConflict(MapperConfig<?> config, AnnotatedMethod setter1, AnnotatedMethod setter2)"
+      },
+      {
+        "txt": "{ Class<?> cls1 = setter1.getRawParameterType(0); Class<?> cls2 = setter2.getRawParameterType(0); if (cls1.isPrimitive()) { if (!cls2.isPrimitive()) { return setter1; } } else if (cls2.isPrimitive()) { return setter2; }"
+      },
+      {
+        "txt": "if (cls1 == String.class) { if (cls2 != String.class) { return setter1; } } else if (cls2 == String.class) { return setter2; } return null; } @Override"
+      },
+      {
+        "txt": "public TypeResolverBuilder<?> findTypeResolver(MapperConfig<?> config, AnnotatedClass ac, JavaType baseType) { return _findTypeResolver(config, ac, baseType); } @Override public TypeResolverBuilder<?> findPropertyTypeResolver(MapperConfig<?> config, AnnotatedMember am, JavaType baseType) { if (baseType.isContainerType() || baseType.isReferenceType()) {"
+      },
+      {
+        "txt": "return null; } return _findTypeResolver(config, am, baseType); } @Override public TypeResolverBuilder<?> findPropertyContentTypeResolver(MapperConfig<?> config, AnnotatedMember am, JavaType containerType) { if (containerType.getContentType() == null) { throw new IllegalArgumentException(\"Must call method with a container or reference type (got \"+containerType+\")\");"
+      },
+      {
+        "txt": "} return _findTypeResolver(config, am, containerType); } @Override public List<NamedType> findSubtypes(Annotated a) { JsonSubTypes t = _findAnnotation(a, JsonSubTypes.class); if (t == null) return null; JsonSubTypes.Type[] types = t.value(); ArrayList<NamedType> result = new ArrayList<NamedType>(types.length);"
+      },
+      {
+        "txt": "for (JsonSubTypes.Type type : types) { result.add(new NamedType(type.value(), type.name())); } return result; } @Override public String findTypeName(AnnotatedClass ac) { JsonTypeName tn = _findAnnotation(ac, JsonTypeName.class); return (tn == null) ? null : tn.value();"
+      },
+      {
+        "txt": "} @Override public Boolean isTypeId(AnnotatedMember member) { return _hasAnnotation(member, JsonTypeId.class); } @Override public ObjectIdInfo findObjectIdInfo(Annotated ann) { JsonIdentityInfo info = _findAnnotation(ann, JsonIdentityInfo.class); if (info == null || info.generator() == ObjectIdGenerators.None.class) { return null;"
+      },
+      {
+        "txt": "PropertyName name = PropertyName.construct(info.property()); return new ObjectIdInfo(name, info.scope(), info.generator(), info.resolver()); } @Override public ObjectIdInfo findObjectReferenceInfo(Annotated ann, ObjectIdInfo objectIdInfo) { JsonIdentityReference ref = _findAnnotation(ann, JsonIdentityReference.class); <extra_id_0> } return objectIdInfo; } @Override public Object findSerializer(Annotated a) {"
+      },
+      {
+        "txt": "public Object findSerializer(Annotated a) { JsonSerialize ann = _findAnnotation(a, JsonSerialize.class); if (ann != null) { @SuppressWarnings(\"rawtypes\") Class<? extends JsonSerializer> serClass = ann.using(); if (serClass != JsonSerializer.None.class) { return serClass; } }"
+      },
+      {
+        "txt": "JsonRawValue annRaw = _findAnnotation(a, JsonRawValue.class); if ((annRaw != null) && annRaw.value()) { Class<?> cls = a.getRawType(); return new RawSerializer<Object>(cls); } return null; } @Override public Object findKeySerializer(Annotated a) {"
+      },
+      {
+        "txt": "JsonSerialize ann = _findAnnotation(a, JsonSerialize.class); if (ann != null) { @SuppressWarnings(\"rawtypes\") Class<? extends JsonSerializer> serClass = ann.keyUsing(); if (serClass != JsonSerializer.None.class) { return serClass; } } return null; }"
+      },
+      {
+        "txt": "@Override public Object findContentSerializer(Annotated a) { JsonSerialize ann = _findAnnotation(a, JsonSerialize.class); if (ann != null) { @SuppressWarnings(\"rawtypes\") Class<? extends JsonSerializer> serClass = ann.contentUsing(); if (serClass != JsonSerializer.None.class) { return serClass; }"
+      },
+      {
+        "txt": "} return null; } @Override public Object findNullSerializer(Annotated a) { JsonSerialize ann = _findAnnotation(a, JsonSerialize.class); if (ann != null) { @SuppressWarnings(\"rawtypes\") Class<? extends JsonSerializer> serClass = ann.nullsUsing();"
+      },
+      {
+        "txt": "if (serClass != JsonSerializer.None.class) { return serClass; } } return null; } @Override @SuppressWarnings(\"deprecation\") public JsonInclude.Include findSerializationInclusion(Annotated a, JsonInclude.Include defValue) {"
+      },
+      {
+        "txt": "JsonInclude inc = _findAnnotation(a, JsonInclude.class); if (inc != null) { JsonInclude.Include v = inc.value(); if (v != JsonInclude.Include.USE_DEFAULTS) { return v; } } JsonSerialize ann = _findAnnotation(a, JsonSerialize.class); if (ann != null) { JsonSerialize.Inclusion i2 = ann.include();"
+      },
+      {
+        "txt": "switch (i2) { case ALWAYS: return JsonInclude.Include.ALWAYS; case NON_NULL: return JsonInclude.Include.NON_NULL; case NON_DEFAULT: return JsonInclude.Include.NON_DEFAULT; case NON_EMPTY: return JsonInclude.Include.NON_EMPTY; case DEFAULT_INCLUSION: // since 2.3 -- fall through, use default"
+      },
+      {
+        "txt": "break; } } return defValue; } @Override @Deprecated public JsonInclude.Include findSerializationInclusionForContent(Annotated a, JsonInclude.Include defValue) { JsonInclude inc = _findAnnotation(a, JsonInclude.class);"
+      },
+      {
+        "txt": "if (inc != null) { JsonInclude.Include incl = inc.content(); if (incl != JsonInclude.Include.USE_DEFAULTS) { return incl; } } return defValue; } @Override @SuppressWarnings(\"deprecation\")"
+      },
+      {
+        "txt": "public JsonInclude.Value findPropertyInclusion(Annotated a) { JsonInclude inc = _findAnnotation(a, JsonInclude.class); JsonInclude.Include valueIncl = (inc == null) ? JsonInclude.Include.USE_DEFAULTS : inc.value(); if (valueIncl == JsonInclude.Include.USE_DEFAULTS) { JsonSerialize ann = _findAnnotation(a, JsonSerialize.class); if (ann != null) { JsonSerialize.Inclusion i2 = ann.include(); switch (i2) { case ALWAYS:"
+      },
+      {
+        "txt": "valueIncl = JsonInclude.Include.ALWAYS; break; case NON_NULL: valueIncl = JsonInclude.Include.NON_NULL; break; case NON_DEFAULT: valueIncl = JsonInclude.Include.NON_DEFAULT; break; case NON_EMPTY: valueIncl = JsonInclude.Include.NON_EMPTY;"
+      },
+      {
+        "txt": "break; case DEFAULT_INCLUSION: default: } } } JsonInclude.Include contentIncl = (inc == null) ? JsonInclude.Include.USE_DEFAULTS : inc.content(); return JsonInclude.Value.construct(valueIncl, contentIncl); } @Override"
+      },
+      {
+        "txt": "@Deprecated public Class<?> findSerializationType(Annotated am) { JsonSerialize ann = _findAnnotation(am, JsonSerialize.class); return (ann == null) ? null : _classIfExplicit(ann.as()); } @Override @Deprecated public Class<?> findSerializationKeyType(Annotated am, JavaType baseType) {"
+      },
+      {
+        "txt": "JsonSerialize ann = _findAnnotation(am, JsonSerialize.class); return (ann == null) ? null : _classIfExplicit(ann.keyAs()); } @Override @Deprecated public Class<?> findSerializationContentType(Annotated am, JavaType baseType) { JsonSerialize ann = _findAnnotation(am, JsonSerialize.class); return (ann == null) ? null : _classIfExplicit(ann.contentAs()); }"
+      },
+      {
+        "txt": "@Override public JsonSerialize.Typing findSerializationTyping(Annotated a) { JsonSerialize ann = _findAnnotation(a, JsonSerialize.class); return (ann == null) ? null : ann.typing(); } @Override public Object findSerializationConverter(Annotated a) { JsonSerialize ann = _findAnnotation(a, JsonSerialize.class); return (ann == null) ? null : _classIfExplicit(ann.converter(), Converter.None.class);"
+      },
+      {
+        "txt": "} @Override public Object findSerializationContentConverter(AnnotatedMember a) { JsonSerialize ann = _findAnnotation(a, JsonSerialize.class); return (ann == null) ? null : _classIfExplicit(ann.contentConverter(), Converter.None.class); } @Override public String[] findSerializationPropertyOrder(AnnotatedClass ac) { JsonPropertyOrder order = _findAnnotation(ac, JsonPropertyOrder.class); return (order == null) ? null : order.value();"
+      },
+      {
+        "txt": "} @Override public Boolean findSerializationSortAlphabetically(Annotated ann) { return _findSortAlpha(ann); } private final Boolean _findSortAlpha(Annotated ann) { JsonPropertyOrder order = _findAnnotation(ann, JsonPropertyOrder.class); if ((order != null) && order.alphabetic()) { return Boolean.TRUE; }"
+      },
+      {
+        "txt": "return null; } @Override public void findAndAddVirtualProperties(MapperConfig<?> config, AnnotatedClass ac, List<BeanPropertyWriter> properties) { JsonAppend ann = _findAnnotation(ac, JsonAppend.class); if (ann == null) { return; } final boolean prepend = ann.prepend();"
+      },
+      {
+        "txt": "JavaType propType = null; JsonAppend.Attr[] attrs = ann.attrs(); for (int i = 0, len = attrs.length; i < len; ++i) { if (propType == null) { propType = config.constructType(Object.class); } BeanPropertyWriter bpw = _constructVirtualProperty(attrs[i], config, ac, propType); if (prepend) { properties.add(i, bpw);"
+      },
+      {
+        "txt": "} else { properties.add(bpw); } } JsonAppend.Prop[] props = ann.props(); for (int i = 0, len = props.length; i < len; ++i) { BeanPropertyWriter bpw = _constructVirtualProperty(props[i], config, ac); if (prepend) { properties.add(i, bpw);"
+      },
+      {
+        "txt": "} else { properties.add(bpw); } } } protected BeanPropertyWriter _constructVirtualProperty(JsonAppend.Attr attr, MapperConfig<?> config, AnnotatedClass ac, JavaType type) { PropertyMetadata metadata = attr.required() ? PropertyMetadata.STD_REQUIRED : PropertyMetadata.STD_OPTIONAL;"
+      },
+      {
+        "txt": "String attrName = attr.value(); PropertyName propName = _propertyName(attr.propName(), attr.propNamespace()); if (!propName.hasSimpleName()) { propName = PropertyName.construct(attrName); } AnnotatedMember member = new VirtualAnnotatedMember(ac, ac.getRawType(), attrName, type.getRawClass()); SimpleBeanPropertyDefinition propDef = SimpleBeanPropertyDefinition.construct(config, member, propName, metadata, attr.include()); return AttributePropertyWriter.construct(attrName, propDef,"
+      },
+      {
+        "txt": "ac.getAnnotations(), type); } protected BeanPropertyWriter _constructVirtualProperty(JsonAppend.Prop prop, MapperConfig<?> config, AnnotatedClass ac) { PropertyMetadata metadata = prop.required() ? PropertyMetadata.STD_REQUIRED : PropertyMetadata.STD_OPTIONAL; PropertyName propName = _propertyName(prop.name(), prop.namespace()); JavaType type = config.constructType(prop.type()); AnnotatedMember member = new VirtualAnnotatedMember(ac, ac.getRawType(),"
+      },
+      {
+        "txt": "propName.getSimpleName(), type.getRawClass()); SimpleBeanPropertyDefinition propDef = SimpleBeanPropertyDefinition.construct(config, member, propName, metadata, prop.include()); Class<?> implClass = prop.value(); HandlerInstantiator hi = config.getHandlerInstantiator(); VirtualBeanPropertyWriter bpw = (hi == null) ? null : hi.virtualPropertyWriterInstance(config, implClass); if (bpw == null) { bpw = (VirtualBeanPropertyWriter) ClassUtil.createInstance(implClass, config.canOverrideAccessModifiers());"
+      },
+      {
+        "txt": "} return bpw.withConfig(config, ac, propDef, type); } @Override public PropertyName findNameForSerialization(Annotated a) { JsonGetter jg = _findAnnotation(a, JsonGetter.class); if (jg != null) { return PropertyName.construct(jg.value()); }"
+      },
+      {
+        "txt": "JsonProperty pann = _findAnnotation(a, JsonProperty.class); if (pann != null) { return PropertyName.construct(pann.value()); } if (_hasOneOf(a, ANNOTATIONS_TO_INFER_SER)) { return PropertyName.USE_DEFAULT; } return null; } @Override"
+      },
+      {
+        "txt": "public boolean hasAsValueAnnotation(AnnotatedMethod am) { JsonValue ann = _findAnnotation(am, JsonValue.class); return (ann != null && ann.value()); } @Override public Object findDeserializer(Annotated a) { JsonDeserialize ann = _findAnnotation(a, JsonDeserialize.class); if (ann != null) { @SuppressWarnings(\"rawtypes\")"
+      },
+      {
+        "txt": "Class<? extends JsonDeserializer> deserClass = ann.using(); if (deserClass != JsonDeserializer.None.class) { return deserClass; } } return null; } @Override public Object findKeyDeserializer(Annotated a) {"
+      },
+      {
+        "txt": "JsonDeserialize ann = _findAnnotation(a, JsonDeserialize.class); if (ann != null) { Class<? extends KeyDeserializer> deserClass = ann.keyUsing(); if (deserClass != KeyDeserializer.None.class) { return deserClass; } } return null; } @Override"
+      },
+      {
+        "txt": "public Object findContentDeserializer(Annotated a) { JsonDeserialize ann = _findAnnotation(a, JsonDeserialize.class); if (ann != null) { @SuppressWarnings(\"rawtypes\") Class<? extends JsonDeserializer> deserClass = ann.contentUsing(); if (deserClass != JsonDeserializer.None.class) { return deserClass; } }"
+      },
+      {
+        "txt": "return null; } @Override public Object findDeserializationConverter(Annotated a) { JsonDeserialize ann = _findAnnotation(a, JsonDeserialize.class); return (ann == null) ? null : _classIfExplicit(ann.converter(), Converter.None.class); } @Override public Object findDeserializationContentConverter(AnnotatedMember a)"
+      },
+      {
+        "txt": "{ JsonDeserialize ann = _findAnnotation(a, JsonDeserialize.class); return (ann == null) ? null : _classIfExplicit(ann.contentConverter(), Converter.None.class); } @Override @Deprecated public Class<?> findDeserializationContentType(Annotated am, JavaType baseContentType) { JsonDeserialize ann = _findAnnotation(am, JsonDeserialize.class); return (ann == null) ? null : _classIfExplicit(ann.contentAs());"
+      },
+      {
+        "txt": "} @Deprecated @Override public Class<?> findDeserializationType(Annotated am, JavaType baseType) { JsonDeserialize ann = _findAnnotation(am, JsonDeserialize.class); return (ann == null) ? null : _classIfExplicit(ann.as()); } @Override @Deprecated public Class<?> findDeserializationKeyType(Annotated am, JavaType baseKeyType) {"
+      },
+      {
+        "txt": "JsonDeserialize ann = _findAnnotation(am, JsonDeserialize.class); return (ann == null) ? null : _classIfExplicit(ann.keyAs()); } @Override public Object findValueInstantiator(AnnotatedClass ac) { JsonValueInstantiator ann = _findAnnotation(ac, JsonValueInstantiator.class); return (ann == null) ? null : ann.value(); } @Override"
+      },
+      {
+        "txt": "public Class<?> findPOJOBuilder(AnnotatedClass ac) { JsonDeserialize ann = _findAnnotation(ac, JsonDeserialize.class); return (ann == null) ? null : _classIfExplicit(ann.builder()); } @Override public JsonPOJOBuilder.Value findPOJOBuilderConfig(AnnotatedClass ac) { JsonPOJOBuilder ann = _findAnnotation(ac, JsonPOJOBuilder.class); return (ann == null) ? null : new JsonPOJOBuilder.Value(ann);"
+      },
+      {
+        "txt": "} @Override public PropertyName findNameForDeserialization(Annotated a) { JsonSetter js = _findAnnotation(a, JsonSetter.class); if (js != null) { return PropertyName.construct(js.value()); } JsonProperty pann = _findAnnotation(a, JsonProperty.class); if (pann != null) {"
+      },
+      {
+        "txt": "return PropertyName.construct(pann.value()); } if (_hasOneOf(a, ANNOTATIONS_TO_INFER_DESER)) { return PropertyName.USE_DEFAULT; } return null; } @Override public boolean hasAnySetterAnnotation(AnnotatedMethod am) {"
+      },
+      {
+        "txt": "return _hasAnnotation(am, JsonAnySetter.class); } @Override public boolean hasAnyGetterAnnotation(AnnotatedMethod am) { return _hasAnnotation(am, JsonAnyGetter.class); } @Override public boolean hasCreatorAnnotation(Annotated a) {"
+      },
+      {
+        "txt": "JsonCreator ann = _findAnnotation(a, JsonCreator.class); if (ann != null) { return (ann.mode() != JsonCreator.Mode.DISABLED); } if (_cfgConstructorPropertiesImpliesCreator ) { if (a instanceof AnnotatedConstructor) { if (_jdk7Helper != null) { Boolean b = _jdk7Helper.hasCreatorAnnotation(a); if (b != null) { return b.booleanValue();"
+      },
+      {
+        "txt": "} } } } return false; } @Override public JsonCreator.Mode findCreatorBinding(Annotated a) { JsonCreator ann = _findAnnotation(a, JsonCreator.class); return (ann == null) ? null : ann.mode();"
+      },
+      {
+        "txt": "} protected boolean _isIgnorable(Annotated a) { JsonIgnore ann = _findAnnotation(a, JsonIgnore.class); if (ann != null) { return ann.value(); } if (_jdk7Helper != null) { Boolean b = _jdk7Helper.findTransient(a); if (b != null) {"
+      },
+      {
+        "txt": "return b.booleanValue(); } } return false; } protected Class<?> _classIfExplicit(Class<?> cls) { if (cls == null || ClassUtil.isBogusClass(cls)) { return null; } return cls;"
+      },
+      {
+        "txt": "} protected Class<?> _classIfExplicit(Class<?> cls, Class<?> implicit) { cls = _classIfExplicit(cls); return (cls == null || cls == implicit) ? null : cls; } protected PropertyName _propertyName(String localName, String namespace) { if (localName.isEmpty()) { return PropertyName.USE_DEFAULT; } if (namespace == null || namespace.isEmpty()) {"
+      },
+      {
+        "txt": "return PropertyName.construct(localName); } return PropertyName.construct(localName, namespace); } protected PropertyName _findConstructorName(Annotated a) { if (a instanceof AnnotatedParameter) { AnnotatedParameter p = (AnnotatedParameter) a; AnnotatedWithParams ctor = p.getOwner(); if (ctor != null) {"
+      },
+      {
+        "txt": "if (_jdk7Helper != null) { PropertyName name = _jdk7Helper.findConstructorName(p); if (name != null) { return name; } } } } return null; }"
+      },
+      {
+        "txt": "@SuppressWarnings(\"deprecation\") protected TypeResolverBuilder<?> _findTypeResolver(MapperConfig<?> config, Annotated ann, JavaType baseType) { TypeResolverBuilder<?> b; JsonTypeInfo info = _findAnnotation(ann, JsonTypeInfo.class); JsonTypeResolver resAnn = _findAnnotation(ann, JsonTypeResolver.class); if (resAnn != null) { if (info == null) { return null;"
+      },
+      {
+        "txt": "} b = config.typeResolverBuilderInstance(ann, resAnn.value()); } else { // if not, use standard one, if indicated by annotations if (info == null) { return null; } if (info.use() == JsonTypeInfo.Id.NONE) { return _constructNoTypeResolverBuilder(); } b = _constructStdTypeResolverBuilder();"
+      },
+      {
+        "txt": "} JsonTypeIdResolver idResInfo = _findAnnotation(ann, JsonTypeIdResolver.class); TypeIdResolver idRes = (idResInfo == null) ? null : config.typeIdResolverInstance(ann, idResInfo.value()); if (idRes != null) { idRes.init(baseType); } b = b.init(info.use(), idRes); JsonTypeInfo.As inclusion = info.include(); if (inclusion == JsonTypeInfo.As.EXTERNAL_PROPERTY && (ann instanceof AnnotatedClass)) {"
+      },
+      {
+        "txt": "inclusion = JsonTypeInfo.As.PROPERTY; } b = b.inclusion(inclusion); b = b.typeProperty(info.property()); Class<?> defaultImpl = info.defaultImpl(); if (defaultImpl != JsonTypeInfo.None.class && !defaultImpl.isAnnotation()) { b = b.defaultImpl(defaultImpl); } b = b.typeIdVisibility(info.visible()); return b;"
+      },
+      {
+        "txt": "} protected StdTypeResolverBuilder _constructStdTypeResolverBuilder() { return new StdTypeResolverBuilder(); } protected StdTypeResolverBuilder _constructNoTypeResolverBuilder() { return StdTypeResolverBuilder.noTypeInfoBuilder(); } private static class Java7Support { @SuppressWarnings(\"unused\") // compiler warns, just needed side-effects"
+      },
+      {
+        "txt": "private final Class<?> _bogus; @SuppressWarnings(\"unused\") // compiler warns; called via Reflection public Java7Support() { Class<?> cls = Transient.class; cls = ConstructorProperties.class; _bogus = cls; } public Boolean findTransient(Annotated a) { Transient t = a.getAnnotation(Transient.class); if (t != null) {"
+      },
+      {
+        "txt": "return t.value(); } return null; } public Boolean hasCreatorAnnotation(Annotated a) { ConstructorProperties props = a.getAnnotation(ConstructorProperties.class); if (props != null) { return Boolean.TRUE; } return null;"
+      },
+      {
+        "txt": "} public PropertyName findConstructorName(AnnotatedParameter p) { AnnotatedWithParams ctor = p.getOwner(); if (ctor != null) { ConstructorProperties props = ctor.getAnnotation(ConstructorProperties.class); if (props != null) { String[] names = props.value(); int ix = p.getIndex(); if (ix < names.length) {"
+      },
+      {
+        "txt": "return PropertyName.construct(names[ix]); } } } return null; } }"
+      }
+    ]
+  },
+  {
+    "id": 1679,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/introspect/JacksonAnnotationIntrospector.java",
+    "start-bug-line": 582,
+    "end-bug-line": 582,
+    "bug": "return objectIdInfo;",
+    "fix": "if (objectIdInfo == null) { objectIdInfo = ObjectIdInfo.empty(); } return objectIdInfo.withAlwaysAsId(ref.alwaysAsId());",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind.introspect; import java.beans.ConstructorProperties; import java.beans.Transient; import java.lang.annotation.Annotation; import java.lang.reflect.Field;"
+      },
+      {
+        "txt": "import java.util.*; import com.fasterxml.jackson.annotation.*; import com.fasterxml.jackson.core.Version; import com.fasterxml.jackson.databind.*; import com.fasterxml.jackson.databind.annotation.*; import com.fasterxml.jackson.databind.cfg.HandlerInstantiator; import com.fasterxml.jackson.databind.cfg.MapperConfig; import com.fasterxml.jackson.databind.jsontype.NamedType; import com.fasterxml.jackson.databind.jsontype.TypeIdResolver; import com.fasterxml.jackson.databind.jsontype.TypeResolverBuilder;"
+      },
+      {
+        "txt": "import com.fasterxml.jackson.databind.jsontype.impl.StdTypeResolverBuilder; import com.fasterxml.jackson.databind.ser.BeanPropertyWriter; import com.fasterxml.jackson.databind.ser.VirtualBeanPropertyWriter; import com.fasterxml.jackson.databind.ser.impl.AttributePropertyWriter; import com.fasterxml.jackson.databind.ser.std.RawSerializer; import com.fasterxml.jackson.databind.util.*; public class JacksonAnnotationIntrospector extends AnnotationIntrospector implements java.io.Serializable {"
+      },
+      {
+        "txt": "private static final long serialVersionUID = 1L; @SuppressWarnings(\"unchecked\") private final static Class<? extends Annotation>[] ANNOTATIONS_TO_INFER_SER = (Class<? extends Annotation>[]) new Class<?>[] { JsonSerialize.class, JsonView.class, JsonFormat.class, JsonTypeInfo.class, JsonRawValue.class, JsonUnwrapped.class,"
+      },
+      {
+        "txt": "JsonBackReference.class, JsonManagedReference.class }; @SuppressWarnings(\"unchecked\") private final static Class<? extends Annotation>[] ANNOTATIONS_TO_INFER_DESER = (Class<? extends Annotation>[]) new Class<?>[] { JsonDeserialize.class, JsonView.class, JsonFormat.class, JsonTypeInfo.class,"
+      },
+      {
+        "txt": "JsonUnwrapped.class, JsonBackReference.class, JsonManagedReference.class }; private static final Java7Support _jdk7Helper; static { Java7Support x = null; try { x = Java7Support.class.newInstance(); } catch (Throwable t) {"
+      },
+      {
+        "txt": "java.util.logging.Logger.getLogger(JacksonAnnotationIntrospector.class.getName()) .warning(\"Unable to load JDK7 annotation types; will have to skip\"); } _jdk7Helper = x; } protected transient LRUMap<Class<?>,Boolean> _annotationsInside = new LRUMap<Class<?>,Boolean>(48, 48); protected boolean _cfgConstructorPropertiesImpliesCreator = true; public JacksonAnnotationIntrospector() { } @Override public Version version() {"
+      },
+      {
+        "txt": "return com.fasterxml.jackson.databind.cfg.PackageVersion.VERSION; } protected Object readResolve() { if (_annotationsInside == null) { _annotationsInside = new LRUMap<Class<?>,Boolean>(48, 48); } return this; } public JacksonAnnotationIntrospector setConstructorPropertiesImpliesCreator(boolean b) {"
+      },
+      {
+        "txt": "_cfgConstructorPropertiesImpliesCreator = b; return this; } @Override public boolean isAnnotationBundle(Annotation ann) { Class<?> type = ann.annotationType(); Boolean b = _annotationsInside.get(type); if (b == null) { b = type.getAnnotation(JacksonAnnotationsInside.class) != null; _annotationsInside.putIfAbsent(type, b);"
+      },
+      {
+        "txt": "} return b.booleanValue(); } @Override public String findEnumValue(Enum<?> value) { try { Field f = value.getClass().getField(value.name()); if (f != null) { JsonProperty prop = f.getAnnotation(JsonProperty.class);"
+      },
+      {
+        "txt": "if (prop != null) { String n = prop.value(); if (n != null && !n.isEmpty()) { return n; } } } } catch (SecurityException e) { } catch (NoSuchFieldException e) { }"
+      },
+      {
+        "txt": "return value.name(); } @Override // since 2.7 public String[] findEnumValues(Class<?> enumType, Enum<?>[] enumValues, String[] names) { HashMap<String,String> expl = null; for (Field f : ClassUtil.getDeclaredFields(enumType)) { if (!f.isEnumConstant()) { continue; } JsonProperty prop = f.getAnnotation(JsonProperty.class);"
+      },
+      {
+        "txt": "if (prop == null) { continue; } String n = prop.value(); if (n.isEmpty()) { continue; } if (expl == null) { expl = new HashMap<String,String>(); }"
+      },
+      {
+        "txt": "expl.put(f.getName(), n); } if (expl != null) { for (int i = 0, end = enumValues.length; i < end; ++i) { String defName = enumValues[i].name(); String explValue = expl.get(defName); if (explValue != null) { names[i] = explValue; } }"
+      },
+      {
+        "txt": "} return names; } @Override public PropertyName findRootName(AnnotatedClass ac) { JsonRootName ann = _findAnnotation(ac, JsonRootName.class); if (ann == null) { return null; }"
+      },
+      {
+        "txt": "String ns = ann.namespace(); if (ns != null && ns.length() == 0) { ns = null; } return PropertyName.construct(ann.value(), ns); } @Override @Deprecated // since 2.6, remove from 2.7 or later public String[] findPropertiesToIgnore(Annotated ac) { JsonIgnoreProperties ignore = _findAnnotation(ac, JsonIgnoreProperties.class);"
+      },
+      {
+        "txt": "return (ignore == null) ? null : ignore.value(); } @Override // since 2.6 public String[] findPropertiesToIgnore(Annotated ac, boolean forSerialization) { JsonIgnoreProperties ignore = _findAnnotation(ac, JsonIgnoreProperties.class); if (ignore == null) { return null; } if (forSerialization) { if (ignore.allowGetters()) {"
+      },
+      {
+        "txt": "return null; } } else { if (ignore.allowSetters()) { return null; } } return ignore.value(); } @Override"
+      },
+      {
+        "txt": "public Boolean findIgnoreUnknownProperties(AnnotatedClass ac) { JsonIgnoreProperties ignore = _findAnnotation(ac, JsonIgnoreProperties.class); return (ignore == null) ? null : ignore.ignoreUnknown(); } @Override public Boolean isIgnorableType(AnnotatedClass ac) { JsonIgnoreType ignore = _findAnnotation(ac, JsonIgnoreType.class); return (ignore == null) ? null : ignore.value(); } @Override"
+      },
+      {
+        "txt": "public Object findFilterId(Annotated a) { JsonFilter ann = _findAnnotation(a, JsonFilter.class); if (ann != null) { String id = ann.value(); if (id.length() > 0) { return id; } } return null; }"
+      },
+      {
+        "txt": "@Override public Object findNamingStrategy(AnnotatedClass ac) { JsonNaming ann = _findAnnotation(ac, JsonNaming.class); return (ann == null) ? null : ann.value(); } @Override public String findClassDescription(AnnotatedClass ac) { JsonClassDescription ann = _findAnnotation(ac, JsonClassDescription.class); return (ann == null) ? null : ann.value();"
+      },
+      {
+        "txt": "} @Override public VisibilityChecker<?> findAutoDetectVisibility(AnnotatedClass ac, VisibilityChecker<?> checker) { JsonAutoDetect ann = _findAnnotation(ac, JsonAutoDetect.class); return (ann == null) ? checker : checker.with(ann); } @Override public String findImplicitPropertyName(AnnotatedMember m) {"
+      },
+      {
+        "txt": "PropertyName n = _findConstructorName(m); return (n == null) ? null : n.getSimpleName(); } @Override public boolean hasIgnoreMarker(AnnotatedMember m) { return _isIgnorable(m); } @Override public Boolean hasRequiredMarker(AnnotatedMember m) {"
+      },
+      {
+        "txt": "JsonProperty ann = _findAnnotation(m, JsonProperty.class); if (ann != null) { return ann.required(); } return null; } @Override public JsonProperty.Access findPropertyAccess(Annotated m) { JsonProperty ann = _findAnnotation(m, JsonProperty.class); if (ann != null) {"
+      },
+      {
+        "txt": "return ann.access(); } return null; } @Override public String findPropertyDescription(Annotated ann) { JsonPropertyDescription desc = _findAnnotation(ann, JsonPropertyDescription.class); return (desc == null) ? null : desc.value(); } @Override"
+      },
+      {
+        "txt": "public Integer findPropertyIndex(Annotated ann) { JsonProperty prop = _findAnnotation(ann, JsonProperty.class); if (prop != null) { int ix = prop.index(); if (ix != JsonProperty.INDEX_UNKNOWN) { return Integer.valueOf(ix); } } return null; }"
+      },
+      {
+        "txt": "@Override public String findPropertyDefaultValue(Annotated ann) { JsonProperty prop = _findAnnotation(ann, JsonProperty.class); if (prop == null) { return null; } String str = prop.defaultValue(); return str.isEmpty() ? null : str; } @Override"
+      },
+      {
+        "txt": "public JsonFormat.Value findFormat(Annotated ann) { JsonFormat f = _findAnnotation(ann, JsonFormat.class); return (f == null) ? null : new JsonFormat.Value(f); } @Override public ReferenceProperty findReferenceType(AnnotatedMember member) { JsonManagedReference ref1 = _findAnnotation(member, JsonManagedReference.class); if (ref1 != null) { return AnnotationIntrospector.ReferenceProperty.managed(ref1.value());"
+      },
+      {
+        "txt": "} JsonBackReference ref2 = _findAnnotation(member, JsonBackReference.class); if (ref2 != null) { return AnnotationIntrospector.ReferenceProperty.back(ref2.value()); } return null; } @Override public NameTransformer findUnwrappingNameTransformer(AnnotatedMember member) {"
+      },
+      {
+        "txt": "JsonUnwrapped ann = _findAnnotation(member, JsonUnwrapped.class); if (ann == null || !ann.enabled()) { return null; } String prefix = ann.prefix(); String suffix = ann.suffix(); return NameTransformer.simpleTransformer(prefix, suffix); } @Override public Object findInjectableValueId(AnnotatedMember m)"
+      },
+      {
+        "txt": "{ JacksonInject ann = _findAnnotation(m, JacksonInject.class); if (ann == null) { return null; } String id = ann.value(); if (id.length() == 0) { if (!(m instanceof AnnotatedMethod)) { return m.getRawType().getName(); }"
+      },
+      {
+        "txt": "AnnotatedMethod am = (AnnotatedMethod) m; if (am.getParameterCount() == 0) { return m.getRawType().getName(); } return am.getRawParameterType(0).getName(); } return id; } @Override public Class<?>[] findViews(Annotated a)"
+      },
+      {
+        "txt": "{ JsonView ann = _findAnnotation(a, JsonView.class); return (ann == null) ? null : ann.value(); } @Override // since 2.7 public AnnotatedMethod resolveSetterConflict(MapperConfig<?> config, AnnotatedMethod setter1, AnnotatedMethod setter2) { Class<?> cls1 = setter1.getRawParameterType(0); Class<?> cls2 = setter2.getRawParameterType(0);"
+      },
+      {
+        "txt": "if (cls1.isPrimitive()) { if (!cls2.isPrimitive()) { return setter1; } } else if (cls2.isPrimitive()) { return setter2; } if (cls1 == String.class) { if (cls2 != String.class) { return setter1;"
+      },
+      {
+        "txt": "} } else if (cls2 == String.class) { return setter2; } return null; } @Override public TypeResolverBuilder<?> findTypeResolver(MapperConfig<?> config, AnnotatedClass ac, JavaType baseType) {"
+      },
+      {
+        "txt": "return _findTypeResolver(config, ac, baseType); } @Override public TypeResolverBuilder<?> findPropertyTypeResolver(MapperConfig<?> config, AnnotatedMember am, JavaType baseType) { if (baseType.isContainerType() || baseType.isReferenceType()) { return null; } return _findTypeResolver(config, am, baseType);"
+      },
+      {
+        "txt": "} @Override public TypeResolverBuilder<?> findPropertyContentTypeResolver(MapperConfig<?> config, AnnotatedMember am, JavaType containerType) { if (containerType.getContentType() == null) { throw new IllegalArgumentException(\"Must call method with a container or reference type (got \"+containerType+\")\"); } return _findTypeResolver(config, am, containerType); }"
+      },
+      {
+        "txt": "@Override public List<NamedType> findSubtypes(Annotated a) { JsonSubTypes t = _findAnnotation(a, JsonSubTypes.class); if (t == null) return null; JsonSubTypes.Type[] types = t.value(); ArrayList<NamedType> result = new ArrayList<NamedType>(types.length); for (JsonSubTypes.Type type : types) { result.add(new NamedType(type.value(), type.name())); }"
+      },
+      {
+        "txt": "return result; } @Override public String findTypeName(AnnotatedClass ac) { JsonTypeName tn = _findAnnotation(ac, JsonTypeName.class); return (tn == null) ? null : tn.value(); } @Override public Boolean isTypeId(AnnotatedMember member) {"
+      },
+      {
+        "txt": "return _hasAnnotation(member, JsonTypeId.class); } @Override public ObjectIdInfo findObjectIdInfo(Annotated ann) { JsonIdentityInfo info = _findAnnotation(ann, JsonIdentityInfo.class); if (info == null || info.generator() == ObjectIdGenerators.None.class) { return null; } PropertyName name = PropertyName.construct(info.property()); return new ObjectIdInfo(name, info.scope(), info.generator(), info.resolver());"
+      },
+      {
+        "txt": "@Override public ObjectIdInfo findObjectReferenceInfo(Annotated ann, ObjectIdInfo objectIdInfo) { JsonIdentityReference ref = _findAnnotation(ann, JsonIdentityReference.class); if (ref != null) { objectIdInfo = objectIdInfo.withAlwaysAsId(ref.alwaysAsId()); } <extra_id_0> } @Override public Object findSerializer(Annotated a) { JsonSerialize ann = _findAnnotation(a, JsonSerialize.class); if (ann != null) {"
+      },
+      {
+        "txt": "JsonSerialize ann = _findAnnotation(a, JsonSerialize.class); if (ann != null) { @SuppressWarnings(\"rawtypes\") Class<? extends JsonSerializer> serClass = ann.using(); if (serClass != JsonSerializer.None.class) { return serClass; } } JsonRawValue annRaw = _findAnnotation(a, JsonRawValue.class); if ((annRaw != null) && annRaw.value()) {"
+      },
+      {
+        "txt": "Class<?> cls = a.getRawType(); return new RawSerializer<Object>(cls); } return null; } @Override public Object findKeySerializer(Annotated a) { JsonSerialize ann = _findAnnotation(a, JsonSerialize.class); if (ann != null) {"
+      },
+      {
+        "txt": "@SuppressWarnings(\"rawtypes\") Class<? extends JsonSerializer> serClass = ann.keyUsing(); if (serClass != JsonSerializer.None.class) { return serClass; } } return null; } @Override public Object findContentSerializer(Annotated a)"
+      },
+      {
+        "txt": "{ JsonSerialize ann = _findAnnotation(a, JsonSerialize.class); if (ann != null) { @SuppressWarnings(\"rawtypes\") Class<? extends JsonSerializer> serClass = ann.contentUsing(); if (serClass != JsonSerializer.None.class) { return serClass; } } return null;"
+      },
+      {
+        "txt": "} @Override public Object findNullSerializer(Annotated a) { JsonSerialize ann = _findAnnotation(a, JsonSerialize.class); if (ann != null) { @SuppressWarnings(\"rawtypes\") Class<? extends JsonSerializer> serClass = ann.nullsUsing(); if (serClass != JsonSerializer.None.class) { return serClass;"
+      },
+      {
+        "txt": "} } return null; } @Override @SuppressWarnings(\"deprecation\") public JsonInclude.Include findSerializationInclusion(Annotated a, JsonInclude.Include defValue) { JsonInclude inc = _findAnnotation(a, JsonInclude.class); if (inc != null) {"
+      },
+      {
+        "txt": "JsonInclude.Include v = inc.value(); if (v != JsonInclude.Include.USE_DEFAULTS) { return v; } } JsonSerialize ann = _findAnnotation(a, JsonSerialize.class); if (ann != null) { JsonSerialize.Inclusion i2 = ann.include(); switch (i2) { case ALWAYS:"
+      },
+      {
+        "txt": "return JsonInclude.Include.ALWAYS; case NON_NULL: return JsonInclude.Include.NON_NULL; case NON_DEFAULT: return JsonInclude.Include.NON_DEFAULT; case NON_EMPTY: return JsonInclude.Include.NON_EMPTY; case DEFAULT_INCLUSION: // since 2.3 -- fall through, use default break; }"
+      },
+      {
+        "txt": "} return defValue; } @Override @Deprecated public JsonInclude.Include findSerializationInclusionForContent(Annotated a, JsonInclude.Include defValue) { JsonInclude inc = _findAnnotation(a, JsonInclude.class); if (inc != null) { JsonInclude.Include incl = inc.content();"
+      },
+      {
+        "txt": "if (incl != JsonInclude.Include.USE_DEFAULTS) { return incl; } } return defValue; } @Override @SuppressWarnings(\"deprecation\") public JsonInclude.Value findPropertyInclusion(Annotated a) {"
+      },
+      {
+        "txt": "JsonInclude inc = _findAnnotation(a, JsonInclude.class); JsonInclude.Include valueIncl = (inc == null) ? JsonInclude.Include.USE_DEFAULTS : inc.value(); if (valueIncl == JsonInclude.Include.USE_DEFAULTS) { JsonSerialize ann = _findAnnotation(a, JsonSerialize.class); if (ann != null) { JsonSerialize.Inclusion i2 = ann.include(); switch (i2) { case ALWAYS: valueIncl = JsonInclude.Include.ALWAYS; break;"
+      },
+      {
+        "txt": "case NON_NULL: valueIncl = JsonInclude.Include.NON_NULL; break; case NON_DEFAULT: valueIncl = JsonInclude.Include.NON_DEFAULT; break; case NON_EMPTY: valueIncl = JsonInclude.Include.NON_EMPTY; break; case DEFAULT_INCLUSION:"
+      },
+      {
+        "txt": "default: } } } JsonInclude.Include contentIncl = (inc == null) ? JsonInclude.Include.USE_DEFAULTS : inc.content(); return JsonInclude.Value.construct(valueIncl, contentIncl); } @Override @Deprecated public Class<?> findSerializationType(Annotated am)"
+      },
+      {
+        "txt": "{ JsonSerialize ann = _findAnnotation(am, JsonSerialize.class); return (ann == null) ? null : _classIfExplicit(ann.as()); } @Override @Deprecated public Class<?> findSerializationKeyType(Annotated am, JavaType baseType) { JsonSerialize ann = _findAnnotation(am, JsonSerialize.class); return (ann == null) ? null : _classIfExplicit(ann.keyAs());"
+      },
+      {
+        "txt": "} @Override @Deprecated public Class<?> findSerializationContentType(Annotated am, JavaType baseType) { JsonSerialize ann = _findAnnotation(am, JsonSerialize.class); return (ann == null) ? null : _classIfExplicit(ann.contentAs()); } @Override public JsonSerialize.Typing findSerializationTyping(Annotated a)"
+      },
+      {
+        "txt": "{ JsonSerialize ann = _findAnnotation(a, JsonSerialize.class); return (ann == null) ? null : ann.typing(); } @Override public Object findSerializationConverter(Annotated a) { JsonSerialize ann = _findAnnotation(a, JsonSerialize.class); return (ann == null) ? null : _classIfExplicit(ann.converter(), Converter.None.class); } @Override"
+      },
+      {
+        "txt": "public Object findSerializationContentConverter(AnnotatedMember a) { JsonSerialize ann = _findAnnotation(a, JsonSerialize.class); return (ann == null) ? null : _classIfExplicit(ann.contentConverter(), Converter.None.class); } @Override public String[] findSerializationPropertyOrder(AnnotatedClass ac) { JsonPropertyOrder order = _findAnnotation(ac, JsonPropertyOrder.class); return (order == null) ? null : order.value(); } @Override"
+      },
+      {
+        "txt": "public Boolean findSerializationSortAlphabetically(Annotated ann) { return _findSortAlpha(ann); } private final Boolean _findSortAlpha(Annotated ann) { JsonPropertyOrder order = _findAnnotation(ann, JsonPropertyOrder.class); if ((order != null) && order.alphabetic()) { return Boolean.TRUE; } return null; }"
+      },
+      {
+        "txt": "@Override public void findAndAddVirtualProperties(MapperConfig<?> config, AnnotatedClass ac, List<BeanPropertyWriter> properties) { JsonAppend ann = _findAnnotation(ac, JsonAppend.class); if (ann == null) { return; } final boolean prepend = ann.prepend(); JavaType propType = null; JsonAppend.Attr[] attrs = ann.attrs();"
+      },
+      {
+        "txt": "for (int i = 0, len = attrs.length; i < len; ++i) { if (propType == null) { propType = config.constructType(Object.class); } BeanPropertyWriter bpw = _constructVirtualProperty(attrs[i], config, ac, propType); if (prepend) { properties.add(i, bpw); } else { properties.add(bpw);"
+      },
+      {
+        "txt": "} } JsonAppend.Prop[] props = ann.props(); for (int i = 0, len = props.length; i < len; ++i) { BeanPropertyWriter bpw = _constructVirtualProperty(props[i], config, ac); if (prepend) { properties.add(i, bpw); } else { properties.add(bpw);"
+      },
+      {
+        "txt": "} } } protected BeanPropertyWriter _constructVirtualProperty(JsonAppend.Attr attr, MapperConfig<?> config, AnnotatedClass ac, JavaType type) { PropertyMetadata metadata = attr.required() ? PropertyMetadata.STD_REQUIRED : PropertyMetadata.STD_OPTIONAL; String attrName = attr.value(); PropertyName propName = _propertyName(attr.propName(), attr.propNamespace());"
+      },
+      {
+        "txt": "if (!propName.hasSimpleName()) { propName = PropertyName.construct(attrName); } AnnotatedMember member = new VirtualAnnotatedMember(ac, ac.getRawType(), attrName, type.getRawClass()); SimpleBeanPropertyDefinition propDef = SimpleBeanPropertyDefinition.construct(config, member, propName, metadata, attr.include()); return AttributePropertyWriter.construct(attrName, propDef, ac.getAnnotations(), type); }"
+      },
+      {
+        "txt": "protected BeanPropertyWriter _constructVirtualProperty(JsonAppend.Prop prop, MapperConfig<?> config, AnnotatedClass ac) { PropertyMetadata metadata = prop.required() ? PropertyMetadata.STD_REQUIRED : PropertyMetadata.STD_OPTIONAL; PropertyName propName = _propertyName(prop.name(), prop.namespace()); JavaType type = config.constructType(prop.type()); AnnotatedMember member = new VirtualAnnotatedMember(ac, ac.getRawType(), propName.getSimpleName(), type.getRawClass()); SimpleBeanPropertyDefinition propDef = SimpleBeanPropertyDefinition.construct(config,"
+      },
+      {
+        "txt": "member, propName, metadata, prop.include()); Class<?> implClass = prop.value(); HandlerInstantiator hi = config.getHandlerInstantiator(); VirtualBeanPropertyWriter bpw = (hi == null) ? null : hi.virtualPropertyWriterInstance(config, implClass); if (bpw == null) { bpw = (VirtualBeanPropertyWriter) ClassUtil.createInstance(implClass, config.canOverrideAccessModifiers()); } return bpw.withConfig(config, ac, propDef, type);"
+      },
+      {
+        "txt": "} @Override public PropertyName findNameForSerialization(Annotated a) { JsonGetter jg = _findAnnotation(a, JsonGetter.class); if (jg != null) { return PropertyName.construct(jg.value()); } JsonProperty pann = _findAnnotation(a, JsonProperty.class); if (pann != null) {"
+      },
+      {
+        "txt": "return PropertyName.construct(pann.value()); } if (_hasOneOf(a, ANNOTATIONS_TO_INFER_SER)) { return PropertyName.USE_DEFAULT; } return null; } @Override public boolean hasAsValueAnnotation(AnnotatedMethod am) { JsonValue ann = _findAnnotation(am, JsonValue.class);"
+      },
+      {
+        "txt": "return (ann != null && ann.value()); } @Override public Object findDeserializer(Annotated a) { JsonDeserialize ann = _findAnnotation(a, JsonDeserialize.class); if (ann != null) { @SuppressWarnings(\"rawtypes\") Class<? extends JsonDeserializer> deserClass = ann.using(); if (deserClass != JsonDeserializer.None.class) {"
+      },
+      {
+        "txt": "return deserClass; } } return null; } @Override public Object findKeyDeserializer(Annotated a) { JsonDeserialize ann = _findAnnotation(a, JsonDeserialize.class); if (ann != null) {"
+      },
+      {
+        "txt": "Class<? extends KeyDeserializer> deserClass = ann.keyUsing(); if (deserClass != KeyDeserializer.None.class) { return deserClass; } } return null; } @Override public Object findContentDeserializer(Annotated a) {"
+      },
+      {
+        "txt": "JsonDeserialize ann = _findAnnotation(a, JsonDeserialize.class); if (ann != null) { @SuppressWarnings(\"rawtypes\") Class<? extends JsonDeserializer> deserClass = ann.contentUsing(); if (deserClass != JsonDeserializer.None.class) { return deserClass; } } return null; }"
+      },
+      {
+        "txt": "@Override public Object findDeserializationConverter(Annotated a) { JsonDeserialize ann = _findAnnotation(a, JsonDeserialize.class); return (ann == null) ? null : _classIfExplicit(ann.converter(), Converter.None.class); } @Override public Object findDeserializationContentConverter(AnnotatedMember a) { JsonDeserialize ann = _findAnnotation(a, JsonDeserialize.class);"
+      },
+      {
+        "txt": "return (ann == null) ? null : _classIfExplicit(ann.contentConverter(), Converter.None.class); } @Override @Deprecated public Class<?> findDeserializationContentType(Annotated am, JavaType baseContentType) { JsonDeserialize ann = _findAnnotation(am, JsonDeserialize.class); return (ann == null) ? null : _classIfExplicit(ann.contentAs()); } @Deprecated"
+      },
+      {
+        "txt": "@Override public Class<?> findDeserializationType(Annotated am, JavaType baseType) { JsonDeserialize ann = _findAnnotation(am, JsonDeserialize.class); return (ann == null) ? null : _classIfExplicit(ann.as()); } @Override @Deprecated public Class<?> findDeserializationKeyType(Annotated am, JavaType baseKeyType) { JsonDeserialize ann = _findAnnotation(am, JsonDeserialize.class); return (ann == null) ? null : _classIfExplicit(ann.keyAs());"
+      },
+      {
+        "txt": "} @Override public Object findValueInstantiator(AnnotatedClass ac) { JsonValueInstantiator ann = _findAnnotation(ac, JsonValueInstantiator.class); return (ann == null) ? null : ann.value(); } @Override public Class<?> findPOJOBuilder(AnnotatedClass ac) {"
+      },
+      {
+        "txt": "JsonDeserialize ann = _findAnnotation(ac, JsonDeserialize.class); return (ann == null) ? null : _classIfExplicit(ann.builder()); } @Override public JsonPOJOBuilder.Value findPOJOBuilderConfig(AnnotatedClass ac) { JsonPOJOBuilder ann = _findAnnotation(ac, JsonPOJOBuilder.class); return (ann == null) ? null : new JsonPOJOBuilder.Value(ann); } @Override"
+      },
+      {
+        "txt": "public PropertyName findNameForDeserialization(Annotated a) { JsonSetter js = _findAnnotation(a, JsonSetter.class); if (js != null) { return PropertyName.construct(js.value()); } JsonProperty pann = _findAnnotation(a, JsonProperty.class); if (pann != null) { return PropertyName.construct(pann.value()); }"
+      },
+      {
+        "txt": "if (_hasOneOf(a, ANNOTATIONS_TO_INFER_DESER)) { return PropertyName.USE_DEFAULT; } return null; } @Override public boolean hasAnySetterAnnotation(AnnotatedMethod am) { return _hasAnnotation(am, JsonAnySetter.class); }"
+      },
+      {
+        "txt": "@Override public boolean hasAnyGetterAnnotation(AnnotatedMethod am) { return _hasAnnotation(am, JsonAnyGetter.class); } @Override public boolean hasCreatorAnnotation(Annotated a) { JsonCreator ann = _findAnnotation(a, JsonCreator.class); if (ann != null) {"
+      },
+      {
+        "txt": "return (ann.mode() != JsonCreator.Mode.DISABLED); } if (_cfgConstructorPropertiesImpliesCreator ) { if (a instanceof AnnotatedConstructor) { if (_jdk7Helper != null) { Boolean b = _jdk7Helper.hasCreatorAnnotation(a); if (b != null) { return b.booleanValue(); } }"
+      },
+      {
+        "txt": "} } return false; } @Override public JsonCreator.Mode findCreatorBinding(Annotated a) { JsonCreator ann = _findAnnotation(a, JsonCreator.class); return (ann == null) ? null : ann.mode(); } protected boolean _isIgnorable(Annotated a)"
+      },
+      {
+        "txt": "{ JsonIgnore ann = _findAnnotation(a, JsonIgnore.class); if (ann != null) { return ann.value(); } if (_jdk7Helper != null) { Boolean b = _jdk7Helper.findTransient(a); if (b != null) { return b.booleanValue(); }"
+      },
+      {
+        "txt": "} return false; } protected Class<?> _classIfExplicit(Class<?> cls) { if (cls == null || ClassUtil.isBogusClass(cls)) { return null; } return cls; } protected Class<?> _classIfExplicit(Class<?> cls, Class<?> implicit) {"
+      },
+      {
+        "txt": "cls = _classIfExplicit(cls); return (cls == null || cls == implicit) ? null : cls; } protected PropertyName _propertyName(String localName, String namespace) { if (localName.isEmpty()) { return PropertyName.USE_DEFAULT; } if (namespace == null || namespace.isEmpty()) { return PropertyName.construct(localName); }"
+      },
+      {
+        "txt": "return PropertyName.construct(localName, namespace); } protected PropertyName _findConstructorName(Annotated a) { if (a instanceof AnnotatedParameter) { AnnotatedParameter p = (AnnotatedParameter) a; AnnotatedWithParams ctor = p.getOwner(); if (ctor != null) { if (_jdk7Helper != null) { PropertyName name = _jdk7Helper.findConstructorName(p);"
+      },
+      {
+        "txt": "if (name != null) { return name; } } } } return null; } @SuppressWarnings(\"deprecation\") protected TypeResolverBuilder<?> _findTypeResolver(MapperConfig<?> config,"
+      },
+      {
+        "txt": "Annotated ann, JavaType baseType) { TypeResolverBuilder<?> b; JsonTypeInfo info = _findAnnotation(ann, JsonTypeInfo.class); JsonTypeResolver resAnn = _findAnnotation(ann, JsonTypeResolver.class); if (resAnn != null) { if (info == null) { return null; } b = config.typeResolverBuilderInstance(ann, resAnn.value());"
+      },
+      {
+        "txt": "} else { // if not, use standard one, if indicated by annotations if (info == null) { return null; } if (info.use() == JsonTypeInfo.Id.NONE) { return _constructNoTypeResolverBuilder(); } b = _constructStdTypeResolverBuilder(); } JsonTypeIdResolver idResInfo = _findAnnotation(ann, JsonTypeIdResolver.class);"
+      },
+      {
+        "txt": "TypeIdResolver idRes = (idResInfo == null) ? null : config.typeIdResolverInstance(ann, idResInfo.value()); if (idRes != null) { idRes.init(baseType); } b = b.init(info.use(), idRes); JsonTypeInfo.As inclusion = info.include(); if (inclusion == JsonTypeInfo.As.EXTERNAL_PROPERTY && (ann instanceof AnnotatedClass)) { inclusion = JsonTypeInfo.As.PROPERTY; }"
+      },
+      {
+        "txt": "b = b.inclusion(inclusion); b = b.typeProperty(info.property()); Class<?> defaultImpl = info.defaultImpl(); if (defaultImpl != JsonTypeInfo.None.class && !defaultImpl.isAnnotation()) { b = b.defaultImpl(defaultImpl); } b = b.typeIdVisibility(info.visible()); return b; } protected StdTypeResolverBuilder _constructStdTypeResolverBuilder() {"
+      },
+      {
+        "txt": "return new StdTypeResolverBuilder(); } protected StdTypeResolverBuilder _constructNoTypeResolverBuilder() { return StdTypeResolverBuilder.noTypeInfoBuilder(); } private static class Java7Support { @SuppressWarnings(\"unused\") // compiler warns, just needed side-effects private final Class<?> _bogus; @SuppressWarnings(\"unused\") // compiler warns; called via Reflection"
+      },
+      {
+        "txt": "public Java7Support() { Class<?> cls = Transient.class; cls = ConstructorProperties.class; _bogus = cls; } public Boolean findTransient(Annotated a) { Transient t = a.getAnnotation(Transient.class); if (t != null) { return t.value(); }"
+      },
+      {
+        "txt": "return null; } public Boolean hasCreatorAnnotation(Annotated a) { ConstructorProperties props = a.getAnnotation(ConstructorProperties.class); if (props != null) { return Boolean.TRUE; } return null; } public PropertyName findConstructorName(AnnotatedParameter p)"
+      },
+      {
+        "txt": "{ AnnotatedWithParams ctor = p.getOwner(); if (ctor != null) { ConstructorProperties props = ctor.getAnnotation(ConstructorProperties.class); if (props != null) { String[] names = props.value(); int ix = p.getIndex(); if (ix < names.length) { return PropertyName.construct(names[ix]); }"
+      },
+      {
+        "txt": "} } return null; } }"
+      }
+    ]
+  },
+  {
+    "id": 1680,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/introspect/ObjectIdInfo.java",
+    "start-bug-line": 25,
+    "end-bug-line": 25,
+    "bug": "",
+    "fix": "private final static ObjectIdInfo EMPTY = new ObjectIdInfo(PropertyName.NO_NAME, Object.class, null, false, null);",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind.introspect; import com.fasterxml.jackson.annotation.JsonIdentityInfo; import com.fasterxml.jackson.annotation.ObjectIdGenerator; import com.fasterxml.jackson.annotation.ObjectIdResolver; import com.fasterxml.jackson.annotation.SimpleObjectIdResolver; import com.fasterxml.jackson.databind.PropertyName;"
+      },
+      {
+        "txt": "{ protected final PropertyName _propertyName; protected final Class<? extends ObjectIdGenerator<?>> _generator; protected final Class<? extends ObjectIdResolver> _resolver; protected final Class<?> _scope; protected final boolean _alwaysAsId; <extra_id_0> public ObjectIdInfo(PropertyName name, Class<?> scope, Class<? extends ObjectIdGenerator<?>> gen, Class<? extends ObjectIdResolver> resolver) { this(name, scope, gen, false, resolver); } @Deprecated // since 2.4"
+      },
+      {
+        "txt": "} @Deprecated // since 2.4 public ObjectIdInfo(PropertyName name, Class<?> scope, Class<? extends ObjectIdGenerator<?>> gen) { this(name, scope, gen, false); } @Deprecated // since 2.3 public ObjectIdInfo(String name, Class<?> scope, Class<? extends ObjectIdGenerator<?>> gen) { this(new PropertyName(name), scope, gen, false); }"
+      },
+      {
+        "txt": "protected ObjectIdInfo(PropertyName prop, Class<?> scope, Class<? extends ObjectIdGenerator<?>> gen, boolean alwaysAsId) { this(prop, scope, gen, alwaysAsId, SimpleObjectIdResolver.class); } protected ObjectIdInfo(PropertyName prop, Class<?> scope, Class<? extends ObjectIdGenerator<?>> gen, boolean alwaysAsId, Class<? extends ObjectIdResolver> resolver) { _propertyName = prop; _scope = scope;"
+      },
+      {
+        "txt": "_generator = gen; _alwaysAsId = alwaysAsId; if (resolver == null) { resolver = SimpleObjectIdResolver.class; } _resolver = resolver; } public ObjectIdInfo withAlwaysAsId(boolean state) { if (_alwaysAsId == state) { return this;"
+      },
+      {
+        "txt": "} return new ObjectIdInfo(_propertyName, _scope, _generator, state, _resolver); } public PropertyName getPropertyName() { return _propertyName; } public Class<?> getScope() { return _scope; } public Class<? extends ObjectIdGenerator<?>> getGeneratorType() { return _generator; } public Class<? extends ObjectIdResolver> getResolverType() { return _resolver; } public boolean getAlwaysAsId() { return _alwaysAsId; } @Override public String toString() {"
+      },
+      {
+        "txt": "return \"ObjectIdInfo: propName=\"+_propertyName +\", scope=\"+(_scope == null ? \"null\" : _scope.getName()) +\", generatorType=\"+(_generator == null ? \"null\" : _generator.getName()) +\", alwaysAsId=\"+_alwaysAsId; }"
+      }
+    ]
+  },
+  {
+    "id": 1681,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/introspect/ObjectIdInfo.java",
+    "start-bug-line": 63,
+    "end-bug-line": 63,
+    "bug": "",
+    "fix": "public static ObjectIdInfo empty() { return EMPTY; }",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind.introspect; import com.fasterxml.jackson.annotation.JsonIdentityInfo; import com.fasterxml.jackson.annotation.ObjectIdGenerator; import com.fasterxml.jackson.annotation.ObjectIdResolver; import com.fasterxml.jackson.annotation.SimpleObjectIdResolver; import com.fasterxml.jackson.databind.PropertyName; public class ObjectIdInfo"
+      },
+      {
+        "txt": "{ protected final PropertyName _propertyName; protected final Class<? extends ObjectIdGenerator<?>> _generator; protected final Class<? extends ObjectIdResolver> _resolver; protected final Class<?> _scope; protected final boolean _alwaysAsId; public ObjectIdInfo(PropertyName name, Class<?> scope, Class<? extends ObjectIdGenerator<?>> gen, Class<? extends ObjectIdResolver> resolver) { this(name, scope, gen, false, resolver);"
+      },
+      {
+        "txt": "} @Deprecated // since 2.4 public ObjectIdInfo(PropertyName name, Class<?> scope, Class<? extends ObjectIdGenerator<?>> gen) { this(name, scope, gen, false); } @Deprecated // since 2.3 public ObjectIdInfo(String name, Class<?> scope, Class<? extends ObjectIdGenerator<?>> gen) { this(new PropertyName(name), scope, gen, false); }"
+      },
+      {
+        "txt": "protected ObjectIdInfo(PropertyName prop, Class<?> scope, Class<? extends ObjectIdGenerator<?>> gen, boolean alwaysAsId) { this(prop, scope, gen, alwaysAsId, SimpleObjectIdResolver.class); } protected ObjectIdInfo(PropertyName prop, Class<?> scope, Class<? extends ObjectIdGenerator<?>> gen, boolean alwaysAsId, Class<? extends ObjectIdResolver> resolver) { _propertyName = prop; _scope = scope;"
+      },
+      {
+        "txt": "_alwaysAsId = alwaysAsId; if (resolver == null) { resolver = SimpleObjectIdResolver.class; } _resolver = resolver; } <extra_id_0> public ObjectIdInfo withAlwaysAsId(boolean state) { if (_alwaysAsId == state) { return this; } return new ObjectIdInfo(_propertyName, _scope, _generator, state, _resolver); }"
+      },
+      {
+        "txt": "return new ObjectIdInfo(_propertyName, _scope, _generator, state, _resolver); } public PropertyName getPropertyName() { return _propertyName; } public Class<?> getScope() { return _scope; } public Class<? extends ObjectIdGenerator<?>> getGeneratorType() { return _generator; } public Class<? extends ObjectIdResolver> getResolverType() { return _resolver; } public boolean getAlwaysAsId() { return _alwaysAsId; } @Override public String toString() { return \"ObjectIdInfo: propName=\"+_propertyName"
+      },
+      {
+        "txt": "+\", scope=\"+(_scope == null ? \"null\" : _scope.getName()) +\", generatorType=\"+(_generator == null ? \"null\" : _generator.getName()) +\", alwaysAsId=\"+_alwaysAsId; }"
+      }
+    ]
+  },
+  {
+    "id": 1682,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/ser/std/BeanSerializerBase.java",
+    "start-bug-line": 432,
+    "end-bug-line": 433,
+    "bug": "objectIdInfo = intr.findObjectReferenceInfo(accessor, new ObjectIdInfo(NAME_FOR_OBJECT_REF, null, null, null));",
+    "fix": "objectIdInfo = intr.findObjectReferenceInfo(accessor, null); if (objectIdInfo != null) {",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind.ser.std; import java.io.IOException; import java.lang.reflect.Type; import java.util.*;"
+      },
+      {
+        "txt": "import com.fasterxml.jackson.annotation.JsonFormat; import com.fasterxml.jackson.annotation.ObjectIdGenerator; import com.fasterxml.jackson.annotation.ObjectIdGenerators; import com.fasterxml.jackson.core.*; import com.fasterxml.jackson.databind.*; import com.fasterxml.jackson.databind.introspect.Annotated; import com.fasterxml.jackson.databind.introspect.AnnotatedMember; import com.fasterxml.jackson.databind.introspect.ObjectIdInfo; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonFormatVisitable; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonFormatVisitorWrapper;"
+      },
+      {
+        "txt": "import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonObjectFormatVisitor; import com.fasterxml.jackson.databind.jsonschema.JsonSerializableSchema; import com.fasterxml.jackson.databind.jsonschema.SchemaAware; import com.fasterxml.jackson.databind.jsontype.TypeSerializer; import com.fasterxml.jackson.databind.node.ObjectNode; import com.fasterxml.jackson.databind.ser.*; import com.fasterxml.jackson.databind.ser.impl.ObjectIdWriter; import com.fasterxml.jackson.databind.ser.impl.PropertyBasedObjectIdGenerator; import com.fasterxml.jackson.databind.ser.impl.WritableObjectId; import com.fasterxml.jackson.databind.util.ArrayBuilders;"
+      },
+      {
+        "txt": "import com.fasterxml.jackson.databind.util.Converter; import com.fasterxml.jackson.databind.util.NameTransformer; @SuppressWarnings(\"serial\") public abstract class BeanSerializerBase extends StdSerializer<Object> implements ContextualSerializer, ResolvableSerializer, JsonFormatVisitable, SchemaAware { protected final static PropertyName NAME_FOR_OBJECT_REF = new PropertyName(\"#object-ref\"); final protected static BeanPropertyWriter[] NO_PROPS = new BeanPropertyWriter[0];"
+      },
+      {
+        "txt": "final protected BeanPropertyWriter[] _props; final protected BeanPropertyWriter[] _filteredProps; final protected AnyGetterWriter _anyGetterWriter; final protected Object _propertyFilterId; final protected AnnotatedMember _typeId; final protected ObjectIdWriter _objectIdWriter; final protected JsonFormat.Shape _serializationShape; protected BeanSerializerBase(JavaType type, BeanSerializerBuilder builder, BeanPropertyWriter[] properties, BeanPropertyWriter[] filteredProperties) {"
+      },
+      {
+        "txt": "super(type); _props = properties; _filteredProps = filteredProperties; if (builder == null) { // mostly for testing _typeId = null; _anyGetterWriter = null; _propertyFilterId = null; _objectIdWriter = null; _serializationShape = null; } else {"
+      },
+      {
+        "txt": "_typeId = builder.getTypeId(); _anyGetterWriter = builder.getAnyGetter(); _propertyFilterId = builder.getFilterId(); _objectIdWriter = builder.getObjectIdWriter(); JsonFormat.Value format = builder.getBeanDescription().findExpectedFormat(null); _serializationShape = (format == null) ? null : format.getShape(); } } public BeanSerializerBase(BeanSerializerBase src, BeanPropertyWriter[] properties, BeanPropertyWriter[] filteredProperties)"
+      },
+      {
+        "txt": "{ super(src._handledType); _props = properties; _filteredProps = filteredProperties; _typeId = src._typeId; _anyGetterWriter = src._anyGetterWriter; _objectIdWriter = src._objectIdWriter; _propertyFilterId = src._propertyFilterId; _serializationShape = src._serializationShape; }"
+      },
+      {
+        "txt": "protected BeanSerializerBase(BeanSerializerBase src, ObjectIdWriter objectIdWriter) { this(src, objectIdWriter, src._propertyFilterId); } protected BeanSerializerBase(BeanSerializerBase src, ObjectIdWriter objectIdWriter, Object filterId) { super(src._handledType); _props = src._props;"
+      },
+      {
+        "txt": "_filteredProps = src._filteredProps; _typeId = src._typeId; _anyGetterWriter = src._anyGetterWriter; _objectIdWriter = objectIdWriter; _propertyFilterId = filterId; _serializationShape = src._serializationShape; } protected BeanSerializerBase(BeanSerializerBase src, String[] toIgnore) { super(src._handledType);"
+      },
+      {
+        "txt": "HashSet<String> ignoredSet = ArrayBuilders.arrayToSet(toIgnore); final BeanPropertyWriter[] propsIn = src._props; final BeanPropertyWriter[] fpropsIn = src._filteredProps; final int len = propsIn.length; ArrayList<BeanPropertyWriter> propsOut = new ArrayList<BeanPropertyWriter>(len); ArrayList<BeanPropertyWriter> fpropsOut = (fpropsIn == null) ? null : new ArrayList<BeanPropertyWriter>(len); for (int i = 0; i < len; ++i) { BeanPropertyWriter bpw = propsIn[i]; if (ignoredSet.contains(bpw.getName())) { continue;"
+      },
+      {
+        "txt": "} propsOut.add(bpw); if (fpropsIn != null) { fpropsOut.add(fpropsIn[i]); } } _props = propsOut.toArray(new BeanPropertyWriter[propsOut.size()]); _filteredProps = (fpropsOut == null) ? null : fpropsOut.toArray(new BeanPropertyWriter[fpropsOut.size()]); _typeId = src._typeId; _anyGetterWriter = src._anyGetterWriter;"
+      },
+      {
+        "txt": "_objectIdWriter = src._objectIdWriter; _propertyFilterId = src._propertyFilterId; _serializationShape = src._serializationShape; } public abstract BeanSerializerBase withObjectIdWriter(ObjectIdWriter objectIdWriter); protected abstract BeanSerializerBase withIgnorals(String[] toIgnore); protected abstract BeanSerializerBase asArraySerializer(); @Override public abstract BeanSerializerBase withFilterId(Object filterId); protected BeanSerializerBase(BeanSerializerBase src) {"
+      },
+      {
+        "txt": "this(src, src._props, src._filteredProps); } protected BeanSerializerBase(BeanSerializerBase src, NameTransformer unwrapper) { this(src, rename(src._props, unwrapper), rename(src._filteredProps, unwrapper)); } private final static BeanPropertyWriter[] rename(BeanPropertyWriter[] props, NameTransformer transformer) { if (props == null || props.length == 0 || transformer == null || transformer == NameTransformer.NOP) { return props;"
+      },
+      {
+        "txt": "} final int len = props.length; BeanPropertyWriter[] result = new BeanPropertyWriter[len]; for (int i = 0; i < len; ++i) { BeanPropertyWriter bpw = props[i]; if (bpw != null) { result[i] = bpw.rename(transformer); } } return result;"
+      },
+      {
+        "txt": "} @Override public void resolve(SerializerProvider provider) throws JsonMappingException { int filteredCount = (_filteredProps == null) ? 0 : _filteredProps.length; for (int i = 0, len = _props.length; i < len; ++i) { BeanPropertyWriter prop = _props[i]; if (!prop.willSuppressNulls() && !prop.hasNullSerializer()) { JsonSerializer<Object> nullSer = provider.findNullValueSerializer(prop);"
+      },
+      {
+        "txt": "if (nullSer != null) { prop.assignNullSerializer(nullSer); if (i < filteredCount) { BeanPropertyWriter w2 = _filteredProps[i]; if (w2 != null) { w2.assignNullSerializer(nullSer); } } } }"
+      },
+      {
+        "txt": "if (prop.hasSerializer()) { continue; } JsonSerializer<Object> ser = findConvertingSerializer(provider, prop); if (ser == null) { JavaType type = prop.getSerializationType(); if (type == null) { type = prop.getType(); if (!type.isFinal()) { if (type.isContainerType() || type.containedTypeCount() > 0) {"
+      },
+      {
+        "txt": "prop.setNonTrivialBaseType(type); } continue; } } ser = provider.findValueSerializer(type, prop); if (type.isContainerType()) { TypeSerializer typeSer = type.getContentType().getTypeHandler(); if (typeSer != null) { if (ser instanceof ContainerSerializer<?>) {"
+      },
+      {
+        "txt": "@SuppressWarnings(\"unchecked\") JsonSerializer<Object> ser2 = (JsonSerializer<Object>)((ContainerSerializer<?>) ser).withValueTypeSerializer(typeSer); ser = ser2; } } } } prop.assignSerializer(ser); if (i < filteredCount) { BeanPropertyWriter w2 = _filteredProps[i];"
+      },
+      {
+        "txt": "if (w2 != null) { w2.assignSerializer(ser); } } } if (_anyGetterWriter != null) { _anyGetterWriter.resolve(provider); } } protected JsonSerializer<Object> findConvertingSerializer(SerializerProvider provider,"
+      },
+      {
+        "txt": "BeanPropertyWriter prop) throws JsonMappingException { final AnnotationIntrospector intr = provider.getAnnotationIntrospector(); if (intr != null) { AnnotatedMember m = prop.getMember(); if (m != null) { Object convDef = intr.findSerializationConverter(m); if (convDef != null) { Converter<Object,Object> conv = provider.converterInstance(prop.getMember(), convDef);"
+      },
+      {
+        "txt": "JavaType delegateType = conv.getOutputType(provider.getTypeFactory()); JsonSerializer<?> ser = delegateType.isJavaLangObject() ? null : provider.findValueSerializer(delegateType, prop); return new StdDelegatingSerializer(conv, delegateType, ser); } } } return null; } @SuppressWarnings(\"incomplete-switch\")"
+      },
+      {
+        "txt": "@Override public JsonSerializer<?> createContextual(SerializerProvider provider, BeanProperty property) throws JsonMappingException { final AnnotationIntrospector intr = provider.getAnnotationIntrospector(); final AnnotatedMember accessor = (property == null || intr == null) ? null : property.getMember(); final SerializationConfig config = provider.getConfig(); JsonFormat.Shape shape = null;"
+      },
+      {
+        "txt": "if (accessor != null) { JsonFormat.Value format = intr.findFormat((Annotated) accessor); if (format != null) { shape = format.getShape(); if (shape != _serializationShape) { if (_handledType.isEnum()) { switch (shape) { case STRING: case NUMBER: case NUMBER_INT:"
+      },
+      {
+        "txt": "BeanDescription desc = config.introspectClassAnnotations(_handledType); JsonSerializer<?> ser = EnumSerializer.construct(_handledType, provider.getConfig(), desc, format); return provider.handlePrimaryContextualization(ser, property); } } } } } ObjectIdWriter oiw = _objectIdWriter;"
+      },
+      {
+        "txt": "Object newFilterId = null; if (accessor != null) { ignorals = intr.findPropertiesToIgnore(accessor, true); ObjectIdInfo objectIdInfo = intr.findObjectIdInfo(accessor); if (objectIdInfo == null) { if (oiw != null) { <extra_id_0> oiw = _objectIdWriter.withAlwaysAsId(objectIdInfo.getAlwaysAsId()); } } else { objectIdInfo = intr.findObjectReferenceInfo(accessor, objectIdInfo); ObjectIdGenerator<?> gen; Class<?> implClass = objectIdInfo.getGeneratorType();"
+      },
+      {
+        "txt": "ObjectIdGenerator<?> gen; Class<?> implClass = objectIdInfo.getGeneratorType(); JavaType type = provider.constructType(implClass); JavaType idType = provider.getTypeFactory().findTypeParameters(type, ObjectIdGenerator.class)[0]; if (implClass == ObjectIdGenerators.PropertyGenerator.class) { // most special one, needs extra work String propName = objectIdInfo.getPropertyName().getSimpleName(); BeanPropertyWriter idProp = null; for (int i = 0, len = _props.length ;; ++i) { if (i == len) { throw new IllegalArgumentException(\"Invalid Object Id definition for \"+_handledType.getName()"
+      },
+      {
+        "txt": "+\": can not find property with name '\"+propName+\"'\"); } BeanPropertyWriter prop = _props[i]; if (propName.equals(prop.getName())) { idProp = prop; if (i > 0) { // note: must shuffle both regular properties and filtered System.arraycopy(_props, 0, _props, 1, i); _props[0] = idProp; if (_filteredProps != null) { BeanPropertyWriter fp = _filteredProps[i];"
+      },
+      {
+        "txt": "System.arraycopy(_filteredProps, 0, _filteredProps, 1, i); _filteredProps[0] = fp; } } break; } } idType = idProp.getType(); gen = new PropertyBasedObjectIdGenerator(objectIdInfo, idProp); oiw = ObjectIdWriter.construct(idType, (PropertyName) null, gen, objectIdInfo.getAlwaysAsId());"
+      },
+      {
+        "txt": "} else { // other types need to be simpler gen = provider.objectIdGeneratorInstance(accessor, objectIdInfo); oiw = ObjectIdWriter.construct(idType, objectIdInfo.getPropertyName(), gen, objectIdInfo.getAlwaysAsId()); } } Object filterId = intr.findFilterId(accessor); if (filterId != null) { if (_propertyFilterId == null || !filterId.equals(_propertyFilterId)) { newFilterId = filterId;"
+      },
+      {
+        "txt": "} } } BeanSerializerBase contextual = this; if (oiw != null) { JsonSerializer<?> ser = provider.findValueSerializer(oiw.idType, property); oiw = oiw.withSerializer(ser); if (oiw != _objectIdWriter) { contextual = contextual.withObjectIdWriter(oiw); }"
+      },
+      {
+        "txt": "} if (ignorals != null && ignorals.length != 0) { contextual = contextual.withIgnorals(ignorals); } if (newFilterId != null) { contextual = contextual.withFilterId(newFilterId); } if (shape == null) { shape = _serializationShape; }"
+      },
+      {
+        "txt": "if (shape == JsonFormat.Shape.ARRAY) { return contextual.asArraySerializer(); } return contextual; } @Override public Iterator<PropertyWriter> properties() { return Arrays.<PropertyWriter>asList(_props).iterator(); } @Override"
+      },
+      {
+        "txt": "public boolean usesObjectId() { return (_objectIdWriter != null); } @Override public abstract void serialize(Object bean, JsonGenerator gen, SerializerProvider provider) throws IOException; @Override public void serializeWithType(Object bean, JsonGenerator gen, SerializerProvider provider, TypeSerializer typeSer) throws IOException"
+      },
+      {
+        "txt": "{ if (_objectIdWriter != null) { gen.setCurrentValue(bean); // [databind#631] _serializeWithObjectId(bean, gen, provider, typeSer); return; } String typeStr = (_typeId == null) ? null : _customTypeId(bean); if (typeStr == null) { typeSer.writeTypePrefixForObject(bean, gen); } else {"
+      },
+      {
+        "txt": "typeSer.writeCustomTypePrefixForObject(bean, gen, typeStr); } gen.setCurrentValue(bean); // [databind#631] if (_propertyFilterId != null) { serializeFieldsFiltered(bean, gen, provider); } else { serializeFields(bean, gen, provider); } if (typeStr == null) { typeSer.writeTypeSuffixForObject(bean, gen);"
+      },
+      {
+        "txt": "} else { typeSer.writeCustomTypeSuffixForObject(bean, gen, typeStr); } } protected final void _serializeWithObjectId(Object bean, JsonGenerator gen, SerializerProvider provider, boolean startEndObject) throws IOException { final ObjectIdWriter w = _objectIdWriter; WritableObjectId objectId = provider.findObjectId(bean, w.generator); if (objectId.writeAsId(gen, provider, w)) {"
+      },
+      {
+        "txt": "return; } Object id = objectId.generateId(bean); if (w.alwaysAsId) { w.serializer.serialize(id, gen, provider); return; } if (startEndObject) { gen.writeStartObject(); }"
+      },
+      {
+        "txt": "objectId.writeAsField(gen, provider, w); if (_propertyFilterId != null) { serializeFieldsFiltered(bean, gen, provider); } else { serializeFields(bean, gen, provider); } if (startEndObject) { gen.writeEndObject(); } }"
+      },
+      {
+        "txt": "protected final void _serializeWithObjectId(Object bean, JsonGenerator gen, SerializerProvider provider, TypeSerializer typeSer) throws IOException { final ObjectIdWriter w = _objectIdWriter; WritableObjectId objectId = provider.findObjectId(bean, w.generator); if (objectId.writeAsId(gen, provider, w)) { return; } Object id = objectId.generateId(bean); if (w.alwaysAsId) {"
+      },
+      {
+        "txt": "w.serializer.serialize(id, gen, provider); return; } _serializeObjectId(bean, gen, provider, typeSer, objectId); } protected void _serializeObjectId(Object bean, JsonGenerator gen,SerializerProvider provider, TypeSerializer typeSer, WritableObjectId objectId) throws IOException { final ObjectIdWriter w = _objectIdWriter; String typeStr = (_typeId == null) ? null :_customTypeId(bean);"
+      },
+      {
+        "txt": "if (typeStr == null) { typeSer.writeTypePrefixForObject(bean, gen); } else { typeSer.writeCustomTypePrefixForObject(bean, gen, typeStr); } objectId.writeAsField(gen, provider, w); if (_propertyFilterId != null) { serializeFieldsFiltered(bean, gen, provider); } else { serializeFields(bean, gen, provider);"
+      },
+      {
+        "txt": "} if (typeStr == null) { typeSer.writeTypeSuffixForObject(bean, gen); } else { typeSer.writeCustomTypeSuffixForObject(bean, gen, typeStr); } } protected final String _customTypeId(Object bean) { final Object typeId = _typeId.getValue(bean);"
+      },
+      {
+        "txt": "if (typeId == null) { return \"\"; } return (typeId instanceof String) ? (String) typeId : typeId.toString(); } protected void serializeFields(Object bean, JsonGenerator gen, SerializerProvider provider) throws IOException { final BeanPropertyWriter[] props; if (_filteredProps != null && provider.getActiveView() != null) {"
+      },
+      {
+        "txt": "props = _filteredProps; } else { props = _props; } int i = 0; try { for (final int len = props.length; i < len; ++i) { BeanPropertyWriter prop = props[i]; if (prop != null) { // can have nulls in filtered list prop.serializeAsField(bean, gen, provider);"
+      },
+      {
+        "txt": "} } if (_anyGetterWriter != null) { _anyGetterWriter.getAndSerialize(bean, gen, provider); } } catch (Exception e) { String name = (i == props.length) ? \"[anySetter]\" : props[i].getName(); wrapAndThrow(provider, e, bean, name); } catch (StackOverflowError e) { JsonMappingException mapE = new JsonMappingException(gen, \"Infinite recursion (StackOverflowError)\", e);"
+      },
+      {
+        "txt": "String name = (i == props.length) ? \"[anySetter]\" : props[i].getName(); mapE.prependPath(new JsonMappingException.Reference(bean, name)); throw mapE; } } protected void serializeFieldsFiltered(Object bean, JsonGenerator gen, SerializerProvider provider) throws IOException, JsonGenerationException { final BeanPropertyWriter[] props;"
+      },
+      {
+        "txt": "if (_filteredProps != null && provider.getActiveView() != null) { props = _filteredProps; } else { props = _props; } final PropertyFilter filter = findPropertyFilter(provider, _propertyFilterId, bean); if (filter == null) { serializeFields(bean, gen, provider); return; }"
+      },
+      {
+        "txt": "int i = 0; try { for (final int len = props.length; i < len; ++i) { BeanPropertyWriter prop = props[i]; if (prop != null) { // can have nulls in filtered list filter.serializeAsField(bean, gen, provider, prop); } } if (_anyGetterWriter != null) { _anyGetterWriter.getAndFilter(bean, gen, provider, filter);"
+      },
+      {
+        "txt": "} } catch (Exception e) { String name = (i == props.length) ? \"[anySetter]\" : props[i].getName(); wrapAndThrow(provider, e, bean, name); } catch (StackOverflowError e) { JsonMappingException mapE = new JsonMappingException(gen, \"Infinite recursion (StackOverflowError)\", e); String name = (i == props.length) ? \"[anySetter]\" : props[i].getName(); mapE.prependPath(new JsonMappingException.Reference(bean, name)); throw mapE; }"
+      },
+      {
+        "txt": "} @Deprecated @Override public JsonNode getSchema(SerializerProvider provider, Type typeHint) throws JsonMappingException { ObjectNode o = createSchemaNode(\"object\", true); JsonSerializableSchema ann = _handledType.getAnnotation(JsonSerializableSchema.class); if (ann != null) { String id = ann.id();"
+      },
+      {
+        "txt": "if (id != null && id.length() > 0) { o.put(\"id\", id); } } ObjectNode propertiesNode = o.objectNode(); final PropertyFilter filter; if (_propertyFilterId != null) { filter = findPropertyFilter(provider, _propertyFilterId, null); } else { filter = null;"
+      },
+      {
+        "txt": "} for (int i = 0; i < _props.length; i++) { BeanPropertyWriter prop = _props[i]; if (filter == null) { prop.depositSchemaProperty(propertiesNode, provider); } else { filter.depositSchemaProperty(prop, propertiesNode, provider); } } o.set(\"properties\", propertiesNode);"
+      },
+      {
+        "txt": "return o; } @Override public void acceptJsonFormatVisitor(JsonFormatVisitorWrapper visitor, JavaType typeHint) throws JsonMappingException { if (visitor == null) { return; } JsonObjectFormatVisitor objectVisitor = visitor.expectObjectFormat(typeHint);"
+      },
+      {
+        "txt": "if (objectVisitor == null) { return; } final SerializerProvider provider = visitor.getProvider(); if (_propertyFilterId != null) { PropertyFilter filter = findPropertyFilter(visitor.getProvider(), _propertyFilterId, null); for (int i = 0, end = _props.length; i < end; ++i) { filter.depositSchemaProperty(_props[i], objectVisitor, provider); }"
+      },
+      {
+        "txt": "} else { Class<?> view = ((_filteredProps == null) || (provider == null)) ? null : provider.getActiveView(); final BeanPropertyWriter[] props; if (view != null) { props = _filteredProps; } else { props = _props; } for (int i = 0, end = props.length; i < end; ++i) {"
+      },
+      {
+        "txt": "BeanPropertyWriter prop = props[i]; if (prop != null) { // may be filtered out unconditionally prop.depositSchemaProperty(objectVisitor, provider); } } } }"
+      }
+    ]
+  },
+  {
+    "id": 1683,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/ser/std/BeanSerializerBase.java",
+    "start-bug-line": 435,
+    "end-bug-line": 435,
+    "bug": "",
+    "fix": "}",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind.ser.std; import java.io.IOException; import java.lang.reflect.Type; import java.util.*; import com.fasterxml.jackson.annotation.JsonFormat; import com.fasterxml.jackson.annotation.ObjectIdGenerator; import com.fasterxml.jackson.annotation.ObjectIdGenerators;"
+      },
+      {
+        "txt": "import com.fasterxml.jackson.core.*; import com.fasterxml.jackson.databind.*; import com.fasterxml.jackson.databind.introspect.Annotated; import com.fasterxml.jackson.databind.introspect.AnnotatedMember; import com.fasterxml.jackson.databind.introspect.ObjectIdInfo; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonFormatVisitable; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonFormatVisitorWrapper; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonObjectFormatVisitor; import com.fasterxml.jackson.databind.jsonschema.JsonSerializableSchema; import com.fasterxml.jackson.databind.jsonschema.SchemaAware;"
+      },
+      {
+        "txt": "import com.fasterxml.jackson.databind.jsontype.TypeSerializer; import com.fasterxml.jackson.databind.node.ObjectNode; import com.fasterxml.jackson.databind.ser.*; import com.fasterxml.jackson.databind.ser.impl.ObjectIdWriter; import com.fasterxml.jackson.databind.ser.impl.PropertyBasedObjectIdGenerator; import com.fasterxml.jackson.databind.ser.impl.WritableObjectId; import com.fasterxml.jackson.databind.util.ArrayBuilders; import com.fasterxml.jackson.databind.util.Converter; import com.fasterxml.jackson.databind.util.NameTransformer; @SuppressWarnings(\"serial\")"
+      },
+      {
+        "txt": "public abstract class BeanSerializerBase extends StdSerializer<Object> implements ContextualSerializer, ResolvableSerializer, JsonFormatVisitable, SchemaAware { protected final static PropertyName NAME_FOR_OBJECT_REF = new PropertyName(\"#object-ref\"); final protected static BeanPropertyWriter[] NO_PROPS = new BeanPropertyWriter[0]; final protected BeanPropertyWriter[] _props; final protected BeanPropertyWriter[] _filteredProps; final protected AnyGetterWriter _anyGetterWriter;"
+      },
+      {
+        "txt": "final protected Object _propertyFilterId; final protected AnnotatedMember _typeId; final protected ObjectIdWriter _objectIdWriter; final protected JsonFormat.Shape _serializationShape; protected BeanSerializerBase(JavaType type, BeanSerializerBuilder builder, BeanPropertyWriter[] properties, BeanPropertyWriter[] filteredProperties) { super(type); _props = properties; _filteredProps = filteredProperties;"
+      },
+      {
+        "txt": "if (builder == null) { // mostly for testing _typeId = null; _anyGetterWriter = null; _propertyFilterId = null; _objectIdWriter = null; _serializationShape = null; } else { _typeId = builder.getTypeId(); _anyGetterWriter = builder.getAnyGetter(); _propertyFilterId = builder.getFilterId();"
+      },
+      {
+        "txt": "_objectIdWriter = builder.getObjectIdWriter(); JsonFormat.Value format = builder.getBeanDescription().findExpectedFormat(null); _serializationShape = (format == null) ? null : format.getShape(); } } public BeanSerializerBase(BeanSerializerBase src, BeanPropertyWriter[] properties, BeanPropertyWriter[] filteredProperties) { super(src._handledType); _props = properties;"
+      },
+      {
+        "txt": "_filteredProps = filteredProperties; _typeId = src._typeId; _anyGetterWriter = src._anyGetterWriter; _objectIdWriter = src._objectIdWriter; _propertyFilterId = src._propertyFilterId; _serializationShape = src._serializationShape; } protected BeanSerializerBase(BeanSerializerBase src, ObjectIdWriter objectIdWriter) {"
+      },
+      {
+        "txt": "this(src, objectIdWriter, src._propertyFilterId); } protected BeanSerializerBase(BeanSerializerBase src, ObjectIdWriter objectIdWriter, Object filterId) { super(src._handledType); _props = src._props; _filteredProps = src._filteredProps; _typeId = src._typeId; _anyGetterWriter = src._anyGetterWriter;"
+      },
+      {
+        "txt": "_objectIdWriter = objectIdWriter; _propertyFilterId = filterId; _serializationShape = src._serializationShape; } protected BeanSerializerBase(BeanSerializerBase src, String[] toIgnore) { super(src._handledType); HashSet<String> ignoredSet = ArrayBuilders.arrayToSet(toIgnore); final BeanPropertyWriter[] propsIn = src._props; final BeanPropertyWriter[] fpropsIn = src._filteredProps;"
+      },
+      {
+        "txt": "final int len = propsIn.length; ArrayList<BeanPropertyWriter> propsOut = new ArrayList<BeanPropertyWriter>(len); ArrayList<BeanPropertyWriter> fpropsOut = (fpropsIn == null) ? null : new ArrayList<BeanPropertyWriter>(len); for (int i = 0; i < len; ++i) { BeanPropertyWriter bpw = propsIn[i]; if (ignoredSet.contains(bpw.getName())) { continue; } propsOut.add(bpw); if (fpropsIn != null) {"
+      },
+      {
+        "txt": "fpropsOut.add(fpropsIn[i]); } } _props = propsOut.toArray(new BeanPropertyWriter[propsOut.size()]); _filteredProps = (fpropsOut == null) ? null : fpropsOut.toArray(new BeanPropertyWriter[fpropsOut.size()]); _typeId = src._typeId; _anyGetterWriter = src._anyGetterWriter; _objectIdWriter = src._objectIdWriter; _propertyFilterId = src._propertyFilterId; _serializationShape = src._serializationShape;"
+      },
+      {
+        "txt": "} public abstract BeanSerializerBase withObjectIdWriter(ObjectIdWriter objectIdWriter); protected abstract BeanSerializerBase withIgnorals(String[] toIgnore); protected abstract BeanSerializerBase asArraySerializer(); @Override public abstract BeanSerializerBase withFilterId(Object filterId); protected BeanSerializerBase(BeanSerializerBase src) { this(src, src._props, src._filteredProps); } protected BeanSerializerBase(BeanSerializerBase src, NameTransformer unwrapper) {"
+      },
+      {
+        "txt": "this(src, rename(src._props, unwrapper), rename(src._filteredProps, unwrapper)); } private final static BeanPropertyWriter[] rename(BeanPropertyWriter[] props, NameTransformer transformer) { if (props == null || props.length == 0 || transformer == null || transformer == NameTransformer.NOP) { return props; } final int len = props.length; BeanPropertyWriter[] result = new BeanPropertyWriter[len];"
+      },
+      {
+        "txt": "for (int i = 0; i < len; ++i) { BeanPropertyWriter bpw = props[i]; if (bpw != null) { result[i] = bpw.rename(transformer); } } return result; } @Override public void resolve(SerializerProvider provider)"
+      },
+      {
+        "txt": "throws JsonMappingException { int filteredCount = (_filteredProps == null) ? 0 : _filteredProps.length; for (int i = 0, len = _props.length; i < len; ++i) { BeanPropertyWriter prop = _props[i]; if (!prop.willSuppressNulls() && !prop.hasNullSerializer()) { JsonSerializer<Object> nullSer = provider.findNullValueSerializer(prop); if (nullSer != null) { prop.assignNullSerializer(nullSer); if (i < filteredCount) {"
+      },
+      {
+        "txt": "BeanPropertyWriter w2 = _filteredProps[i]; if (w2 != null) { w2.assignNullSerializer(nullSer); } } } } if (prop.hasSerializer()) { continue; }"
+      },
+      {
+        "txt": "JsonSerializer<Object> ser = findConvertingSerializer(provider, prop); if (ser == null) { JavaType type = prop.getSerializationType(); if (type == null) { type = prop.getType(); if (!type.isFinal()) { if (type.isContainerType() || type.containedTypeCount() > 0) { prop.setNonTrivialBaseType(type); } continue;"
+      },
+      {
+        "txt": "} } ser = provider.findValueSerializer(type, prop); if (type.isContainerType()) { TypeSerializer typeSer = type.getContentType().getTypeHandler(); if (typeSer != null) { if (ser instanceof ContainerSerializer<?>) { @SuppressWarnings(\"unchecked\") JsonSerializer<Object> ser2 = (JsonSerializer<Object>)((ContainerSerializer<?>) ser).withValueTypeSerializer(typeSer); ser = ser2;"
+      },
+      {
+        "txt": "} } } } prop.assignSerializer(ser); if (i < filteredCount) { BeanPropertyWriter w2 = _filteredProps[i]; if (w2 != null) { w2.assignSerializer(ser); }"
+      },
+      {
+        "txt": "} } if (_anyGetterWriter != null) { _anyGetterWriter.resolve(provider); } } protected JsonSerializer<Object> findConvertingSerializer(SerializerProvider provider, BeanPropertyWriter prop) throws JsonMappingException {"
+      },
+      {
+        "txt": "final AnnotationIntrospector intr = provider.getAnnotationIntrospector(); if (intr != null) { AnnotatedMember m = prop.getMember(); if (m != null) { Object convDef = intr.findSerializationConverter(m); if (convDef != null) { Converter<Object,Object> conv = provider.converterInstance(prop.getMember(), convDef); JavaType delegateType = conv.getOutputType(provider.getTypeFactory()); JsonSerializer<?> ser = delegateType.isJavaLangObject() ? null : provider.findValueSerializer(delegateType, prop);"
+      },
+      {
+        "txt": "return new StdDelegatingSerializer(conv, delegateType, ser); } } } return null; } @SuppressWarnings(\"incomplete-switch\") @Override public JsonSerializer<?> createContextual(SerializerProvider provider, BeanProperty property)"
+      },
+      {
+        "txt": "throws JsonMappingException { final AnnotationIntrospector intr = provider.getAnnotationIntrospector(); final AnnotatedMember accessor = (property == null || intr == null) ? null : property.getMember(); final SerializationConfig config = provider.getConfig(); JsonFormat.Shape shape = null; if (accessor != null) { JsonFormat.Value format = intr.findFormat((Annotated) accessor); if (format != null) {"
+      },
+      {
+        "txt": "shape = format.getShape(); if (shape != _serializationShape) { if (_handledType.isEnum()) { switch (shape) { case STRING: case NUMBER: case NUMBER_INT: BeanDescription desc = config.introspectClassAnnotations(_handledType); JsonSerializer<?> ser = EnumSerializer.construct(_handledType, provider.getConfig(), desc, format);"
+      },
+      {
+        "txt": "return provider.handlePrimaryContextualization(ser, property); } } } } } ObjectIdWriter oiw = _objectIdWriter; String[] ignorals = null; Object newFilterId = null; if (accessor != null) {"
+      },
+      {
+        "txt": "ObjectIdInfo objectIdInfo = intr.findObjectIdInfo(accessor); if (objectIdInfo == null) { if (oiw != null) { objectIdInfo = intr.findObjectReferenceInfo(accessor, new ObjectIdInfo(NAME_FOR_OBJECT_REF, null, null, null)); oiw = _objectIdWriter.withAlwaysAsId(objectIdInfo.getAlwaysAsId()); <extra_id_0> } else { objectIdInfo = intr.findObjectReferenceInfo(accessor, objectIdInfo); ObjectIdGenerator<?> gen; Class<?> implClass = objectIdInfo.getGeneratorType(); JavaType type = provider.constructType(implClass); JavaType idType = provider.getTypeFactory().findTypeParameters(type, ObjectIdGenerator.class)[0];"
+      },
+      {
+        "txt": "JavaType type = provider.constructType(implClass); JavaType idType = provider.getTypeFactory().findTypeParameters(type, ObjectIdGenerator.class)[0]; if (implClass == ObjectIdGenerators.PropertyGenerator.class) { // most special one, needs extra work String propName = objectIdInfo.getPropertyName().getSimpleName(); BeanPropertyWriter idProp = null; for (int i = 0, len = _props.length ;; ++i) { if (i == len) { throw new IllegalArgumentException(\"Invalid Object Id definition for \"+_handledType.getName() +\": can not find property with name '\"+propName+\"'\"); }"
+      },
+      {
+        "txt": "BeanPropertyWriter prop = _props[i]; if (propName.equals(prop.getName())) { idProp = prop; if (i > 0) { // note: must shuffle both regular properties and filtered System.arraycopy(_props, 0, _props, 1, i); _props[0] = idProp; if (_filteredProps != null) { BeanPropertyWriter fp = _filteredProps[i]; System.arraycopy(_filteredProps, 0, _filteredProps, 1, i); _filteredProps[0] = fp;"
+      },
+      {
+        "txt": "} } break; } } idType = idProp.getType(); gen = new PropertyBasedObjectIdGenerator(objectIdInfo, idProp); oiw = ObjectIdWriter.construct(idType, (PropertyName) null, gen, objectIdInfo.getAlwaysAsId()); } else { // other types need to be simpler gen = provider.objectIdGeneratorInstance(accessor, objectIdInfo);"
+      },
+      {
+        "txt": "oiw = ObjectIdWriter.construct(idType, objectIdInfo.getPropertyName(), gen, objectIdInfo.getAlwaysAsId()); } } Object filterId = intr.findFilterId(accessor); if (filterId != null) { if (_propertyFilterId == null || !filterId.equals(_propertyFilterId)) { newFilterId = filterId; } }"
+      },
+      {
+        "txt": "} BeanSerializerBase contextual = this; if (oiw != null) { JsonSerializer<?> ser = provider.findValueSerializer(oiw.idType, property); oiw = oiw.withSerializer(ser); if (oiw != _objectIdWriter) { contextual = contextual.withObjectIdWriter(oiw); } } if (ignorals != null && ignorals.length != 0) {"
+      },
+      {
+        "txt": "contextual = contextual.withIgnorals(ignorals); } if (newFilterId != null) { contextual = contextual.withFilterId(newFilterId); } if (shape == null) { shape = _serializationShape; } if (shape == JsonFormat.Shape.ARRAY) { return contextual.asArraySerializer();"
+      },
+      {
+        "txt": "} return contextual; } @Override public Iterator<PropertyWriter> properties() { return Arrays.<PropertyWriter>asList(_props).iterator(); } @Override public boolean usesObjectId() { return (_objectIdWriter != null);"
+      },
+      {
+        "txt": "} @Override public abstract void serialize(Object bean, JsonGenerator gen, SerializerProvider provider) throws IOException; @Override public void serializeWithType(Object bean, JsonGenerator gen, SerializerProvider provider, TypeSerializer typeSer) throws IOException { if (_objectIdWriter != null) {"
+      },
+      {
+        "txt": "gen.setCurrentValue(bean); // [databind#631] _serializeWithObjectId(bean, gen, provider, typeSer); return; } String typeStr = (_typeId == null) ? null : _customTypeId(bean); if (typeStr == null) { typeSer.writeTypePrefixForObject(bean, gen); } else { typeSer.writeCustomTypePrefixForObject(bean, gen, typeStr); }"
+      },
+      {
+        "txt": "gen.setCurrentValue(bean); // [databind#631] if (_propertyFilterId != null) { serializeFieldsFiltered(bean, gen, provider); } else { serializeFields(bean, gen, provider); } if (typeStr == null) { typeSer.writeTypeSuffixForObject(bean, gen); } else { typeSer.writeCustomTypeSuffixForObject(bean, gen, typeStr);"
+      },
+      {
+        "txt": "} } protected final void _serializeWithObjectId(Object bean, JsonGenerator gen, SerializerProvider provider, boolean startEndObject) throws IOException { final ObjectIdWriter w = _objectIdWriter; WritableObjectId objectId = provider.findObjectId(bean, w.generator); if (objectId.writeAsId(gen, provider, w)) { return; }"
+      },
+      {
+        "txt": "Object id = objectId.generateId(bean); if (w.alwaysAsId) { w.serializer.serialize(id, gen, provider); return; } if (startEndObject) { gen.writeStartObject(); } objectId.writeAsField(gen, provider, w); if (_propertyFilterId != null) {"
+      },
+      {
+        "txt": "serializeFieldsFiltered(bean, gen, provider); } else { serializeFields(bean, gen, provider); } if (startEndObject) { gen.writeEndObject(); } } protected final void _serializeWithObjectId(Object bean, JsonGenerator gen, SerializerProvider provider, TypeSerializer typeSer) throws IOException"
+      },
+      {
+        "txt": "{ final ObjectIdWriter w = _objectIdWriter; WritableObjectId objectId = provider.findObjectId(bean, w.generator); if (objectId.writeAsId(gen, provider, w)) { return; } Object id = objectId.generateId(bean); if (w.alwaysAsId) { w.serializer.serialize(id, gen, provider); return;"
+      },
+      {
+        "txt": "} _serializeObjectId(bean, gen, provider, typeSer, objectId); } protected void _serializeObjectId(Object bean, JsonGenerator gen,SerializerProvider provider, TypeSerializer typeSer, WritableObjectId objectId) throws IOException { final ObjectIdWriter w = _objectIdWriter; String typeStr = (_typeId == null) ? null :_customTypeId(bean); if (typeStr == null) { typeSer.writeTypePrefixForObject(bean, gen);"
+      },
+      {
+        "txt": "} else { typeSer.writeCustomTypePrefixForObject(bean, gen, typeStr); } objectId.writeAsField(gen, provider, w); if (_propertyFilterId != null) { serializeFieldsFiltered(bean, gen, provider); } else { serializeFields(bean, gen, provider); } if (typeStr == null) {"
+      },
+      {
+        "txt": "typeSer.writeTypeSuffixForObject(bean, gen); } else { typeSer.writeCustomTypeSuffixForObject(bean, gen, typeStr); } } protected final String _customTypeId(Object bean) { final Object typeId = _typeId.getValue(bean); if (typeId == null) { return \"\";"
+      },
+      {
+        "txt": "} return (typeId instanceof String) ? (String) typeId : typeId.toString(); } protected void serializeFields(Object bean, JsonGenerator gen, SerializerProvider provider) throws IOException { final BeanPropertyWriter[] props; if (_filteredProps != null && provider.getActiveView() != null) { props = _filteredProps; } else {"
+      },
+      {
+        "txt": "props = _props; } int i = 0; try { for (final int len = props.length; i < len; ++i) { BeanPropertyWriter prop = props[i]; if (prop != null) { // can have nulls in filtered list prop.serializeAsField(bean, gen, provider); } }"
+      },
+      {
+        "txt": "if (_anyGetterWriter != null) { _anyGetterWriter.getAndSerialize(bean, gen, provider); } } catch (Exception e) { String name = (i == props.length) ? \"[anySetter]\" : props[i].getName(); wrapAndThrow(provider, e, bean, name); } catch (StackOverflowError e) { JsonMappingException mapE = new JsonMappingException(gen, \"Infinite recursion (StackOverflowError)\", e); String name = (i == props.length) ? \"[anySetter]\" : props[i].getName(); mapE.prependPath(new JsonMappingException.Reference(bean, name));"
+      },
+      {
+        "txt": "throw mapE; } } protected void serializeFieldsFiltered(Object bean, JsonGenerator gen, SerializerProvider provider) throws IOException, JsonGenerationException { final BeanPropertyWriter[] props; if (_filteredProps != null && provider.getActiveView() != null) { props = _filteredProps;"
+      },
+      {
+        "txt": "} else { props = _props; } final PropertyFilter filter = findPropertyFilter(provider, _propertyFilterId, bean); if (filter == null) { serializeFields(bean, gen, provider); return; } int i = 0; try {"
+      },
+      {
+        "txt": "for (final int len = props.length; i < len; ++i) { BeanPropertyWriter prop = props[i]; if (prop != null) { // can have nulls in filtered list filter.serializeAsField(bean, gen, provider, prop); } } if (_anyGetterWriter != null) { _anyGetterWriter.getAndFilter(bean, gen, provider, filter); } } catch (Exception e) {"
+      },
+      {
+        "txt": "String name = (i == props.length) ? \"[anySetter]\" : props[i].getName(); wrapAndThrow(provider, e, bean, name); } catch (StackOverflowError e) { JsonMappingException mapE = new JsonMappingException(gen, \"Infinite recursion (StackOverflowError)\", e); String name = (i == props.length) ? \"[anySetter]\" : props[i].getName(); mapE.prependPath(new JsonMappingException.Reference(bean, name)); throw mapE; } } @Deprecated"
+      },
+      {
+        "txt": "@Override public JsonNode getSchema(SerializerProvider provider, Type typeHint) throws JsonMappingException { ObjectNode o = createSchemaNode(\"object\", true); JsonSerializableSchema ann = _handledType.getAnnotation(JsonSerializableSchema.class); if (ann != null) { String id = ann.id(); if (id != null && id.length() > 0) { o.put(\"id\", id);"
+      },
+      {
+        "txt": "} } ObjectNode propertiesNode = o.objectNode(); final PropertyFilter filter; if (_propertyFilterId != null) { filter = findPropertyFilter(provider, _propertyFilterId, null); } else { filter = null; } for (int i = 0; i < _props.length; i++) {"
+      },
+      {
+        "txt": "BeanPropertyWriter prop = _props[i]; if (filter == null) { prop.depositSchemaProperty(propertiesNode, provider); } else { filter.depositSchemaProperty(prop, propertiesNode, provider); } } o.set(\"properties\", propertiesNode); return o; }"
+      },
+      {
+        "txt": "@Override public void acceptJsonFormatVisitor(JsonFormatVisitorWrapper visitor, JavaType typeHint) throws JsonMappingException { if (visitor == null) { return; } JsonObjectFormatVisitor objectVisitor = visitor.expectObjectFormat(typeHint); if (objectVisitor == null) { return;"
+      },
+      {
+        "txt": "} final SerializerProvider provider = visitor.getProvider(); if (_propertyFilterId != null) { PropertyFilter filter = findPropertyFilter(visitor.getProvider(), _propertyFilterId, null); for (int i = 0, end = _props.length; i < end; ++i) { filter.depositSchemaProperty(_props[i], objectVisitor, provider); } } else { Class<?> view = ((_filteredProps == null) || (provider == null))"
+      },
+      {
+        "txt": "? null : provider.getActiveView(); final BeanPropertyWriter[] props; if (view != null) { props = _filteredProps; } else { props = _props; } for (int i = 0, end = props.length; i < end; ++i) { BeanPropertyWriter prop = props[i]; if (prop != null) { // may be filtered out unconditionally"
+      },
+      {
+        "txt": "prop.depositSchemaProperty(objectVisitor, provider); } } } }"
+      }
+    ]
+  }
+]

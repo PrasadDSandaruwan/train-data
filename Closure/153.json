@@ -1,0 +1,1715 @@
+[
+  {
+    "id": 664,
+    "file_path": "src/com/google/javascript/jscomp/Normalize.java",
+    "start-bug-line": 631,
+    "end-bug-line": 631,
+    "bug": "",
+    "fix": "private Set<Var> hasOkDuplicateDeclaration = Sets.newHashSet();",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.google.javascript.jscomp; import com.google.common.base.Preconditions; import com.google.common.collect.Lists; import com.google.common.collect.Maps; import com.google.common.collect.Sets;"
+      },
+      {
+        "txt": "import com.google.javascript.jscomp.MakeDeclaredNamesUnique.BoilerplateRenamer; import com.google.javascript.jscomp.NodeTraversal.AbstractPostOrderCallback; import com.google.javascript.jscomp.NodeTraversal.Callback; import com.google.javascript.jscomp.Scope.Var; import com.google.javascript.rhino.JSDocInfo; import com.google.javascript.rhino.Node; import com.google.javascript.rhino.Token; import java.util.Map; import java.util.Set; class Normalize implements CompilerPass {"
+      },
+      {
+        "txt": "private final AbstractCompiler compiler; private final boolean assertOnChange; private static final boolean CONVERT_WHILE_TO_FOR = true; static final boolean MAKE_LOCAL_NAMES_UNIQUE = true; public static final DiagnosticType CATCH_BLOCK_VAR_ERROR = DiagnosticType.error( \"JSC_CATCH_BLOCK_VAR_ERROR\", \"The use of scope variable {0} is not allowed within a catch block \" + \"with a catch exception of the same name.\"); Normalize(AbstractCompiler compiler, boolean assertOnChange) {"
+      },
+      {
+        "txt": "this.compiler = compiler; this.assertOnChange = assertOnChange; } static Node parseAndNormalizeSyntheticCode( AbstractCompiler compiler, String code, String prefix) { Node js = compiler.parseSyntheticCode(code); NodeTraversal.traverse(compiler, js, new Normalize.NormalizeStatements(compiler, false)); NodeTraversal.traverse( compiler, js,"
+      },
+      {
+        "txt": "new MakeDeclaredNamesUnique( new BoilerplateRenamer( compiler.getUniqueNameIdSupplier(), prefix))); return js; } static Node parseAndNormalizeTestCode( AbstractCompiler compiler, String code, String prefix) { Node js = compiler.parseTestCode(code); NodeTraversal.traverse(compiler, js,"
+      },
+      {
+        "txt": "new Normalize.NormalizeStatements(compiler, false)); NodeTraversal.traverse( compiler, js, new MakeDeclaredNamesUnique()); return js; } private void reportCodeChange(String changeDescription) { if (assertOnChange) { throw new IllegalStateException( \"Normalize constraints violated:\\n\" + changeDescription);"
+      },
+      {
+        "txt": "} compiler.reportCodeChange(); } @Override public void process(Node externs, Node root) { NodeTraversal.traverse(compiler, root, new NormalizeStatements(compiler, assertOnChange)); if (MAKE_LOCAL_NAMES_UNIQUE) { MakeDeclaredNamesUnique renamer = new MakeDeclaredNamesUnique(); NodeTraversal t = new NodeTraversal(compiler, renamer);"
+      },
+      {
+        "txt": "t.traverseRoots(externs, root); } removeDuplicateDeclarations(externs, root); new PropagateConstantAnnotationsOverVars(compiler, assertOnChange) .process(externs, root); compiler.setNormalized(); } static class PropagateConstantAnnotationsOverVars extends AbstractPostOrderCallback implements CompilerPass {"
+      },
+      {
+        "txt": "private final AbstractCompiler compiler; private final boolean assertOnChange; PropagateConstantAnnotationsOverVars( AbstractCompiler compiler, boolean forbidChanges) { this.compiler = compiler; this.assertOnChange = forbidChanges; } @Override public void process(Node externs, Node root) { new NodeTraversal(compiler, this).traverseRoots(externs, root);"
+      },
+      {
+        "txt": "} @Override public void visit(NodeTraversal t, Node n, Node parent) { if (n.getType() == Token.NAME) { if (n.getString().isEmpty()) { return; } JSDocInfo info = null; Var var = t.getScope().getVar(n.getString()); if (var != null) {"
+      },
+      {
+        "txt": "info = var.getJSDocInfo(); } boolean shouldBeConstant = (info != null && info.isConstant()) || NodeUtil.isConstantByConvention( compiler.getCodingConvention(), n, parent); boolean isMarkedConstant = n.getBooleanProp(Node.IS_CONSTANT_NAME); if (shouldBeConstant && !isMarkedConstant) { if (assertOnChange) { String name = n.getString();"
+      },
+      {
+        "txt": "throw new IllegalStateException( \"Unexpected const change.\\n\" + \" name: \"+ name + \"\\n\" + \" parent:\" + n.getParent().toStringTree()); } n.putBooleanProp(Node.IS_CONSTANT_NAME, true); } } } }"
+      },
+      {
+        "txt": "static class VerifyConstants extends AbstractPostOrderCallback implements CompilerPass { final private AbstractCompiler compiler; final private boolean checkUserDeclarations; VerifyConstants(AbstractCompiler compiler, boolean checkUserDeclarations) { this.compiler = compiler; this.checkUserDeclarations = checkUserDeclarations; } @Override public void process(Node externs, Node root) {"
+      },
+      {
+        "txt": "Node externsAndJs = root.getParent(); Preconditions.checkState(externsAndJs != null); Preconditions.checkState(externsAndJs.hasChild(externs)); NodeTraversal.traverseRoots( compiler, Lists.newArrayList(externs, root), this); } private Map<String, Boolean> constantMap = Maps.newHashMap(); @Override public void visit(NodeTraversal t, Node n, Node parent) { if (n.getType() == Token.NAME) {"
+      },
+      {
+        "txt": "String name = n.getString(); if (n.getString().isEmpty()) { return; } boolean isConst = n.getBooleanProp(Node.IS_CONSTANT_NAME); if (checkUserDeclarations) { boolean expectedConst = false; CodingConvention convention = compiler.getCodingConvention(); if (NodeUtil.isConstantName(n) || NodeUtil.isConstantByConvention(convention, n, parent)) {"
+      },
+      {
+        "txt": "expectedConst = true; } else { expectedConst = false; JSDocInfo info = null; Var var = t.getScope().getVar(n.getString()); if (var != null) { info = var.getJSDocInfo(); } if (info != null && info.isConstant()) { expectedConst = true;"
+      },
+      {
+        "txt": "} else { expectedConst = false; } } if (expectedConst) { Preconditions.checkState(expectedConst == isConst, \"The name \" + name + \" is not annotated as constant.\"); } else { Preconditions.checkState(expectedConst == isConst, \"The name \" + name + \" should not be annotated as constant.\");"
+      },
+      {
+        "txt": "} } Boolean value = constantMap.get(name); if (value == null) { constantMap.put(name, isConst); } else { Preconditions.checkState(value.booleanValue() == isConst, \"The name \" + name + \" is not consistently annotated as \" + \"constant.\"); }"
+      },
+      {
+        "txt": "} } } static class NormalizeStatements implements Callback { private final AbstractCompiler compiler; private final boolean assertOnChange; NormalizeStatements(AbstractCompiler compiler, boolean assertOnChange) { this.compiler = compiler; this.assertOnChange = assertOnChange; }"
+      },
+      {
+        "txt": "private void reportCodeChange(String changeDescription) { if (assertOnChange) { throw new IllegalStateException( \"Normalize constraints violated:\\n\" + changeDescription); } compiler.reportCodeChange(); } @Override public boolean shouldTraverse(NodeTraversal t, Node n, Node parent) { doStatementNormalizations(t, n, parent);"
+      },
+      {
+        "txt": "return true; } @Override public void visit(NodeTraversal t, Node n, Node parent) { switch (n.getType()) { case Token.WHILE: if (CONVERT_WHILE_TO_FOR) { Node expr = n.getFirstChild(); n.setType(Token.FOR); Node empty = new Node(Token.EMPTY);"
+      },
+      {
+        "txt": "empty.copyInformationFrom(n); n.addChildBefore(empty, expr); n.addChildAfter(empty.cloneNode(), expr); reportCodeChange(\"WHILE node\"); } break; case Token.FUNCTION: normalizeFunctionDeclaration(n); break; case Token.NAME:"
+      },
+      {
+        "txt": "case Token.STRING: annotateConstantsByConvention(n, parent); break; } } private void annotateConstantsByConvention(Node n, Node parent) { Preconditions.checkState( n.getType() == Token.NAME || n.getType() == Token.STRING); boolean isObjLitKey = NodeUtil.isObjectLitKey(n, parent); boolean isProperty = isObjLitKey ||"
+      },
+      {
+        "txt": "(parent.getType() == Token.GETPROP && parent.getLastChild() == n); if (n.getType() == Token.NAME || isProperty) { boolean isMarkedConstant = n.getBooleanProp(Node.IS_CONSTANT_NAME); if (!isMarkedConstant && NodeUtil.isConstantByConvention( compiler.getCodingConvention(), n, parent)) { if (assertOnChange) { String name = n.getString(); throw new IllegalStateException("
+      },
+      {
+        "txt": "\"Unexpected const change.\\n\" + \" name: \"+ name + \"\\n\" + \" parent:\" + n.getParent().toStringTree()); } n.putBooleanProp(Node.IS_CONSTANT_NAME, true); } } } private void normalizeFunctionDeclaration(Node n) { Preconditions.checkState(n.getType() == Token.FUNCTION);"
+      },
+      {
+        "txt": "if (!NodeUtil.isFunctionExpression(n) && !NodeUtil.isHoistedFunctionDeclaration(n)) { rewriteFunctionDeclaration(n); } } private void rewriteFunctionDeclaration(Node n) { Node oldNameNode = n.getFirstChild(); Node fnNameNode = oldNameNode.cloneNode(); Node var = new Node(Token.VAR, fnNameNode, n.getLineno(), n.getCharno()); var.copyInformationFrom(n);"
+      },
+      {
+        "txt": "oldNameNode.setString(\"\"); Node parent = n.getParent(); parent.replaceChild(n, var); fnNameNode.addChildToFront(n); reportCodeChange(\"Function declaration\"); } private void doStatementNormalizations( NodeTraversal t, Node n, Node parent) { if (n.getType() == Token.LABEL) { normalizeLabels(n);"
+      },
+      {
+        "txt": "} if (NodeUtil.isStatementBlock(n) || n.getType() == Token.LABEL) { extractForInitializer(n, null, null); } if (NodeUtil.isStatementBlock(n)) { splitVarDeclarations(n); } if (n.getType() == Token.FUNCTION) { moveNamedFunctions(n.getLastChild()); }"
+      },
+      {
+        "txt": "} private void normalizeLabels(Node n) { Preconditions.checkArgument(n.getType() == Token.LABEL); Node last = n.getLastChild(); switch (last.getType()) { case Token.LABEL: case Token.BLOCK: case Token.FOR: case Token.WHILE: case Token.DO:"
+      },
+      {
+        "txt": "return; default: Node block = new Node(Token.BLOCK); block.copyInformationFrom(last); n.replaceChild(last, block); block.addChildToFront(last); reportCodeChange(\"LABEL normalization\"); return; } }"
+      },
+      {
+        "txt": "private void extractForInitializer( Node n, Node before, Node beforeParent) { for (Node next, c = n.getFirstChild(); c != null; c = next) { next = c.getNext(); Node insertBefore = (before == null) ? c : before; Node insertBeforeParent = (before == null) ? n : beforeParent; switch (c.getType()) { case Token.LABEL: extractForInitializer(c, insertBefore, insertBeforeParent); break;"
+      },
+      {
+        "txt": "case Token.FOR: if (NodeUtil.isForIn(c)) { Node first = c.getFirstChild(); if (first.getType() == Token.VAR) { Node newStatement = first.cloneTree(); Node name = first.removeFirstChild(); first.getParent().replaceChild(first, name); insertBeforeParent.addChildBefore(newStatement, insertBefore); reportCodeChange(\"FOR-IN var declaration\"); }"
+      },
+      {
+        "txt": "} else if (c.getFirstChild().getType() != Token.EMPTY) { Node init = c.getFirstChild(); Node empty = new Node(Token.EMPTY); empty.copyInformationFrom(c); c.replaceChild(init, empty); Node newStatement; if (init.getType() == Token.VAR) { newStatement = init; } else { newStatement = NodeUtil.newExpr(init);"
+      },
+      {
+        "txt": "} insertBeforeParent.addChildBefore(newStatement, insertBefore); reportCodeChange(\"FOR initializer\"); } break; } } } private void splitVarDeclarations(Node n) { for (Node next, c = n.getFirstChild(); c != null; c = next) {"
+      },
+      {
+        "txt": "next = c.getNext(); if (c.getType() == Token.VAR) { if (assertOnChange && !c.hasChildren()) { throw new IllegalStateException(\"Empty VAR node.\"); } while (c.getFirstChild() != c.getLastChild()) { Node name = c.getFirstChild(); c.removeChild(name); Node newVar = new Node( Token.VAR, name, n.getLineno(), n.getCharno());"
+      },
+      {
+        "txt": "n.addChildBefore(newVar, c); reportCodeChange(\"VAR with multiple children\"); } } } } private void moveNamedFunctions(Node functionBody) { Preconditions.checkState( functionBody.getParent().getType() == Token.FUNCTION); Node previous = null;"
+      },
+      {
+        "txt": "Node current = functionBody.getFirstChild(); while (current != null && NodeUtil.isFunctionDeclaration(current)) { previous = current; current = current.getNext(); } Node insertAfter = previous; while (current != null) { Node next = current.getNext(); if (NodeUtil.isFunctionDeclaration(current)) { Preconditions.checkNotNull(previous);"
+      },
+      {
+        "txt": "functionBody.removeChildAfter(previous); insertAfter = addToFront(functionBody, current, insertAfter); reportCodeChange(\"Move function declaration not at top of function\"); } else { previous = current; } current = next; } } private Node addToFront(Node parent, Node newChild, Node after) {"
+      },
+      {
+        "txt": "if (after == null) { parent.addChildToFront(newChild); } else { parent.addChildAfter(newChild, after); } return newChild; } } private void removeDuplicateDeclarations(Node externs, Node root) { Callback tickler = new ScopeTicklingCallback();"
+      },
+      {
+        "txt": "compiler, new DuplicateDeclarationHandler()); NodeTraversal t = new NodeTraversal(compiler, tickler, scopeCreator); t.traverseRoots(externs, root); } private final class DuplicateDeclarationHandler implements SyntacticScopeCreator.RedeclarationHandler { <extra_id_0> @Override public void onRedeclaration( Scope s, String name, Node n, Node parent, Node gramps, Node nodeWithLineNumber) { Preconditions.checkState(n.getType() == Token.NAME); Var v = s.getVar(name);"
+      },
+      {
+        "txt": "Preconditions.checkState(n.getType() == Token.NAME); Var v = s.getVar(name); if (v != null && v.getParentNode().getType() == Token.CATCH) { name = MakeDeclaredNamesUnique.ContextualRenameInverter.getOrginalName( name); compiler.report( JSError.make( NodeUtil.getSourceName(nodeWithLineNumber), nodeWithLineNumber, CATCH_BLOCK_VAR_ERROR, name)); } else if (v != null && parent.getType() == Token.FUNCTION) {"
+      },
+      {
+        "txt": "if (v.getParentNode().getType() == Token.VAR) { s.undeclare(v); s.declare(name, n, n.getJSType(), v.input); replaceVarWithAssignment(v.getNameNode(), v.getParentNode(), v.getParentNode().getParent()); } } else if (parent.getType() == Token.VAR) { Preconditions.checkState(parent.hasOneChild()); replaceVarWithAssignment(n, parent, gramps); }"
+      },
+      {
+        "txt": "} private void replaceVarWithAssignment(Node n, Node parent, Node gramps) { if (n.hasChildren()) { parent.removeChild(n); Node value = n.getFirstChild(); n.removeChild(value); Node replacement = new Node(Token.ASSIGN, n, value); replacement.copyInformationFrom(parent); gramps.replaceChild(parent, NodeUtil.newExpr(replacement)); } else {"
+      },
+      {
+        "txt": "if (NodeUtil.isStatementBlock(gramps)) { gramps.removeChild(parent); } else if (gramps.getType() == Token.FOR) { parent.removeChild(n); gramps.replaceChild(parent, n); } else { Preconditions.checkState(gramps.getType() == Token.LABEL); throw new IllegalStateException(\"Unexpected LABEL\"); } }"
+      },
+      {
+        "txt": "reportCodeChange(\"Duplicate VAR declaration\"); } } private final class ScopeTicklingCallback implements NodeTraversal.ScopedCallback { @Override public void enterScope(NodeTraversal t) { t.getScope(); } @Override"
+      },
+      {
+        "txt": "public void exitScope(NodeTraversal t) { } @Override public boolean shouldTraverse( NodeTraversal nodeTraversal, Node n, Node parent) { return true; } @Override public void visit(NodeTraversal t, Node n, Node parent) { }"
+      }
+    ]
+  },
+  {
+    "id": 665,
+    "file_path": "src/com/google/javascript/jscomp/Normalize.java",
+    "start-bug-line": 638,
+    "end-bug-line": 639,
+    "bug": "Scope s, String name, Node n, Node parent, Node gramps, Node nodeWithLineNumber) {",
+    "fix": "Scope s, String name, Node n, CompilerInput input) {",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.google.javascript.jscomp; import com.google.common.base.Preconditions; import com.google.common.collect.Lists; import com.google.common.collect.Maps; import com.google.common.collect.Sets; import com.google.javascript.jscomp.MakeDeclaredNamesUnique.BoilerplateRenamer; import com.google.javascript.jscomp.NodeTraversal.AbstractPostOrderCallback;"
+      },
+      {
+        "txt": "import com.google.javascript.jscomp.NodeTraversal.Callback; import com.google.javascript.jscomp.Scope.Var; import com.google.javascript.rhino.JSDocInfo; import com.google.javascript.rhino.Node; import com.google.javascript.rhino.Token; import java.util.Map; import java.util.Set; class Normalize implements CompilerPass { private final AbstractCompiler compiler; private final boolean assertOnChange;"
+      },
+      {
+        "txt": "private static final boolean CONVERT_WHILE_TO_FOR = true; static final boolean MAKE_LOCAL_NAMES_UNIQUE = true; public static final DiagnosticType CATCH_BLOCK_VAR_ERROR = DiagnosticType.error( \"JSC_CATCH_BLOCK_VAR_ERROR\", \"The use of scope variable {0} is not allowed within a catch block \" + \"with a catch exception of the same name.\"); Normalize(AbstractCompiler compiler, boolean assertOnChange) { this.compiler = compiler; this.assertOnChange = assertOnChange;"
+      },
+      {
+        "txt": "} static Node parseAndNormalizeSyntheticCode( AbstractCompiler compiler, String code, String prefix) { Node js = compiler.parseSyntheticCode(code); NodeTraversal.traverse(compiler, js, new Normalize.NormalizeStatements(compiler, false)); NodeTraversal.traverse( compiler, js, new MakeDeclaredNamesUnique( new BoilerplateRenamer("
+      },
+      {
+        "txt": "compiler.getUniqueNameIdSupplier(), prefix))); return js; } static Node parseAndNormalizeTestCode( AbstractCompiler compiler, String code, String prefix) { Node js = compiler.parseTestCode(code); NodeTraversal.traverse(compiler, js, new Normalize.NormalizeStatements(compiler, false)); NodeTraversal.traverse("
+      },
+      {
+        "txt": "compiler, js, new MakeDeclaredNamesUnique()); return js; } private void reportCodeChange(String changeDescription) { if (assertOnChange) { throw new IllegalStateException( \"Normalize constraints violated:\\n\" + changeDescription); } compiler.reportCodeChange();"
+      },
+      {
+        "txt": "} @Override public void process(Node externs, Node root) { NodeTraversal.traverse(compiler, root, new NormalizeStatements(compiler, assertOnChange)); if (MAKE_LOCAL_NAMES_UNIQUE) { MakeDeclaredNamesUnique renamer = new MakeDeclaredNamesUnique(); NodeTraversal t = new NodeTraversal(compiler, renamer); t.traverseRoots(externs, root); }"
+      },
+      {
+        "txt": "removeDuplicateDeclarations(externs, root); new PropagateConstantAnnotationsOverVars(compiler, assertOnChange) .process(externs, root); compiler.setNormalized(); } static class PropagateConstantAnnotationsOverVars extends AbstractPostOrderCallback implements CompilerPass { private final AbstractCompiler compiler; private final boolean assertOnChange;"
+      },
+      {
+        "txt": "PropagateConstantAnnotationsOverVars( AbstractCompiler compiler, boolean forbidChanges) { this.compiler = compiler; this.assertOnChange = forbidChanges; } @Override public void process(Node externs, Node root) { new NodeTraversal(compiler, this).traverseRoots(externs, root); } @Override"
+      },
+      {
+        "txt": "public void visit(NodeTraversal t, Node n, Node parent) { if (n.getType() == Token.NAME) { if (n.getString().isEmpty()) { return; } JSDocInfo info = null; Var var = t.getScope().getVar(n.getString()); if (var != null) { info = var.getJSDocInfo(); }"
+      },
+      {
+        "txt": "boolean shouldBeConstant = (info != null && info.isConstant()) || NodeUtil.isConstantByConvention( compiler.getCodingConvention(), n, parent); boolean isMarkedConstant = n.getBooleanProp(Node.IS_CONSTANT_NAME); if (shouldBeConstant && !isMarkedConstant) { if (assertOnChange) { String name = n.getString(); throw new IllegalStateException( \"Unexpected const change.\\n\" +"
+      },
+      {
+        "txt": "\" name: \"+ name + \"\\n\" + \" parent:\" + n.getParent().toStringTree()); } n.putBooleanProp(Node.IS_CONSTANT_NAME, true); } } } } static class VerifyConstants extends AbstractPostOrderCallback implements CompilerPass {"
+      },
+      {
+        "txt": "final private AbstractCompiler compiler; final private boolean checkUserDeclarations; VerifyConstants(AbstractCompiler compiler, boolean checkUserDeclarations) { this.compiler = compiler; this.checkUserDeclarations = checkUserDeclarations; } @Override public void process(Node externs, Node root) { Node externsAndJs = root.getParent(); Preconditions.checkState(externsAndJs != null);"
+      },
+      {
+        "txt": "Preconditions.checkState(externsAndJs.hasChild(externs)); NodeTraversal.traverseRoots( compiler, Lists.newArrayList(externs, root), this); } private Map<String, Boolean> constantMap = Maps.newHashMap(); @Override public void visit(NodeTraversal t, Node n, Node parent) { if (n.getType() == Token.NAME) { String name = n.getString(); if (n.getString().isEmpty()) {"
+      },
+      {
+        "txt": "return; } boolean isConst = n.getBooleanProp(Node.IS_CONSTANT_NAME); if (checkUserDeclarations) { boolean expectedConst = false; CodingConvention convention = compiler.getCodingConvention(); if (NodeUtil.isConstantName(n) || NodeUtil.isConstantByConvention(convention, n, parent)) { expectedConst = true; } else {"
+      },
+      {
+        "txt": "expectedConst = false; JSDocInfo info = null; Var var = t.getScope().getVar(n.getString()); if (var != null) { info = var.getJSDocInfo(); } if (info != null && info.isConstant()) { expectedConst = true; } else { expectedConst = false;"
+      },
+      {
+        "txt": "} } if (expectedConst) { Preconditions.checkState(expectedConst == isConst, \"The name \" + name + \" is not annotated as constant.\"); } else { Preconditions.checkState(expectedConst == isConst, \"The name \" + name + \" should not be annotated as constant.\"); } }"
+      },
+      {
+        "txt": "Boolean value = constantMap.get(name); if (value == null) { constantMap.put(name, isConst); } else { Preconditions.checkState(value.booleanValue() == isConst, \"The name \" + name + \" is not consistently annotated as \" + \"constant.\"); } } }"
+      },
+      {
+        "txt": "} static class NormalizeStatements implements Callback { private final AbstractCompiler compiler; private final boolean assertOnChange; NormalizeStatements(AbstractCompiler compiler, boolean assertOnChange) { this.compiler = compiler; this.assertOnChange = assertOnChange; } private void reportCodeChange(String changeDescription) { if (assertOnChange) {"
+      },
+      {
+        "txt": "throw new IllegalStateException( \"Normalize constraints violated:\\n\" + changeDescription); } compiler.reportCodeChange(); } @Override public boolean shouldTraverse(NodeTraversal t, Node n, Node parent) { doStatementNormalizations(t, n, parent); return true; }"
+      },
+      {
+        "txt": "@Override public void visit(NodeTraversal t, Node n, Node parent) { switch (n.getType()) { case Token.WHILE: if (CONVERT_WHILE_TO_FOR) { Node expr = n.getFirstChild(); n.setType(Token.FOR); Node empty = new Node(Token.EMPTY); empty.copyInformationFrom(n); n.addChildBefore(empty, expr);"
+      },
+      {
+        "txt": "n.addChildAfter(empty.cloneNode(), expr); reportCodeChange(\"WHILE node\"); } break; case Token.FUNCTION: normalizeFunctionDeclaration(n); break; case Token.NAME: case Token.STRING: annotateConstantsByConvention(n, parent);"
+      },
+      {
+        "txt": "break; } } private void annotateConstantsByConvention(Node n, Node parent) { Preconditions.checkState( n.getType() == Token.NAME || n.getType() == Token.STRING); boolean isObjLitKey = NodeUtil.isObjectLitKey(n, parent); boolean isProperty = isObjLitKey || (parent.getType() == Token.GETPROP && parent.getLastChild() == n);"
+      },
+      {
+        "txt": "if (n.getType() == Token.NAME || isProperty) { boolean isMarkedConstant = n.getBooleanProp(Node.IS_CONSTANT_NAME); if (!isMarkedConstant && NodeUtil.isConstantByConvention( compiler.getCodingConvention(), n, parent)) { if (assertOnChange) { String name = n.getString(); throw new IllegalStateException( \"Unexpected const change.\\n\" + \" name: \"+ name + \"\\n\" +"
+      },
+      {
+        "txt": "\" parent:\" + n.getParent().toStringTree()); } n.putBooleanProp(Node.IS_CONSTANT_NAME, true); } } } private void normalizeFunctionDeclaration(Node n) { Preconditions.checkState(n.getType() == Token.FUNCTION); if (!NodeUtil.isFunctionExpression(n) && !NodeUtil.isHoistedFunctionDeclaration(n)) {"
+      },
+      {
+        "txt": "rewriteFunctionDeclaration(n); } } private void rewriteFunctionDeclaration(Node n) { Node oldNameNode = n.getFirstChild(); Node fnNameNode = oldNameNode.cloneNode(); Node var = new Node(Token.VAR, fnNameNode, n.getLineno(), n.getCharno()); var.copyInformationFrom(n); oldNameNode.setString(\"\"); Node parent = n.getParent();"
+      },
+      {
+        "txt": "parent.replaceChild(n, var); fnNameNode.addChildToFront(n); reportCodeChange(\"Function declaration\"); } private void doStatementNormalizations( NodeTraversal t, Node n, Node parent) { if (n.getType() == Token.LABEL) { normalizeLabels(n); } if (NodeUtil.isStatementBlock(n) || n.getType() == Token.LABEL) {"
+      },
+      {
+        "txt": "extractForInitializer(n, null, null); } if (NodeUtil.isStatementBlock(n)) { splitVarDeclarations(n); } if (n.getType() == Token.FUNCTION) { moveNamedFunctions(n.getLastChild()); } } private void normalizeLabels(Node n) {"
+      },
+      {
+        "txt": "Preconditions.checkArgument(n.getType() == Token.LABEL); Node last = n.getLastChild(); switch (last.getType()) { case Token.LABEL: case Token.BLOCK: case Token.FOR: case Token.WHILE: case Token.DO: return; default:"
+      },
+      {
+        "txt": "Node block = new Node(Token.BLOCK); block.copyInformationFrom(last); n.replaceChild(last, block); block.addChildToFront(last); reportCodeChange(\"LABEL normalization\"); return; } } private void extractForInitializer( Node n, Node before, Node beforeParent) {"
+      },
+      {
+        "txt": "for (Node next, c = n.getFirstChild(); c != null; c = next) { next = c.getNext(); Node insertBefore = (before == null) ? c : before; Node insertBeforeParent = (before == null) ? n : beforeParent; switch (c.getType()) { case Token.LABEL: extractForInitializer(c, insertBefore, insertBeforeParent); break; case Token.FOR: if (NodeUtil.isForIn(c)) {"
+      },
+      {
+        "txt": "Node first = c.getFirstChild(); if (first.getType() == Token.VAR) { Node newStatement = first.cloneTree(); Node name = first.removeFirstChild(); first.getParent().replaceChild(first, name); insertBeforeParent.addChildBefore(newStatement, insertBefore); reportCodeChange(\"FOR-IN var declaration\"); } } else if (c.getFirstChild().getType() != Token.EMPTY) { Node init = c.getFirstChild();"
+      },
+      {
+        "txt": "Node empty = new Node(Token.EMPTY); empty.copyInformationFrom(c); c.replaceChild(init, empty); Node newStatement; if (init.getType() == Token.VAR) { newStatement = init; } else { newStatement = NodeUtil.newExpr(init); } insertBeforeParent.addChildBefore(newStatement, insertBefore);"
+      },
+      {
+        "txt": "reportCodeChange(\"FOR initializer\"); } break; } } } private void splitVarDeclarations(Node n) { for (Node next, c = n.getFirstChild(); c != null; c = next) { next = c.getNext(); if (c.getType() == Token.VAR) {"
+      },
+      {
+        "txt": "if (assertOnChange && !c.hasChildren()) { throw new IllegalStateException(\"Empty VAR node.\"); } while (c.getFirstChild() != c.getLastChild()) { Node name = c.getFirstChild(); c.removeChild(name); Node newVar = new Node( Token.VAR, name, n.getLineno(), n.getCharno()); n.addChildBefore(newVar, c); reportCodeChange(\"VAR with multiple children\");"
+      },
+      {
+        "txt": "} } } } private void moveNamedFunctions(Node functionBody) { Preconditions.checkState( functionBody.getParent().getType() == Token.FUNCTION); Node previous = null; Node current = functionBody.getFirstChild(); while (current != null && NodeUtil.isFunctionDeclaration(current)) {"
+      },
+      {
+        "txt": "previous = current; current = current.getNext(); } Node insertAfter = previous; while (current != null) { Node next = current.getNext(); if (NodeUtil.isFunctionDeclaration(current)) { Preconditions.checkNotNull(previous); functionBody.removeChildAfter(previous); insertAfter = addToFront(functionBody, current, insertAfter);"
+      },
+      {
+        "txt": "reportCodeChange(\"Move function declaration not at top of function\"); } else { previous = current; } current = next; } } private Node addToFront(Node parent, Node newChild, Node after) { if (after == null) { parent.addChildToFront(newChild);"
+      },
+      {
+        "txt": "} else { parent.addChildAfter(newChild, after); } return newChild; } } private void removeDuplicateDeclarations(Node externs, Node root) { Callback tickler = new ScopeTicklingCallback(); ScopeCreator scopeCreator = new SyntacticScopeCreator( compiler, new DuplicateDeclarationHandler());"
+      },
+      {
+        "txt": "t.traverseRoots(externs, root); } private final class DuplicateDeclarationHandler implements SyntacticScopeCreator.RedeclarationHandler { @Override public void onRedeclaration( <extra_id_0> Preconditions.checkState(n.getType() == Token.NAME); Var v = s.getVar(name); if (v != null && v.getParentNode().getType() == Token.CATCH) { name = MakeDeclaredNamesUnique.ContextualRenameInverter.getOrginalName( name); compiler.report("
+      },
+      {
+        "txt": "name); compiler.report( JSError.make( NodeUtil.getSourceName(nodeWithLineNumber), nodeWithLineNumber, CATCH_BLOCK_VAR_ERROR, name)); } else if (v != null && parent.getType() == Token.FUNCTION) { if (v.getParentNode().getType() == Token.VAR) { s.undeclare(v); s.declare(name, n, n.getJSType(), v.input); replaceVarWithAssignment(v.getNameNode(), v.getParentNode(),"
+      },
+      {
+        "txt": "v.getParentNode().getParent()); } } else if (parent.getType() == Token.VAR) { Preconditions.checkState(parent.hasOneChild()); replaceVarWithAssignment(n, parent, gramps); } } private void replaceVarWithAssignment(Node n, Node parent, Node gramps) { if (n.hasChildren()) { parent.removeChild(n);"
+      },
+      {
+        "txt": "Node value = n.getFirstChild(); n.removeChild(value); Node replacement = new Node(Token.ASSIGN, n, value); replacement.copyInformationFrom(parent); gramps.replaceChild(parent, NodeUtil.newExpr(replacement)); } else { if (NodeUtil.isStatementBlock(gramps)) { gramps.removeChild(parent); } else if (gramps.getType() == Token.FOR) { parent.removeChild(n);"
+      },
+      {
+        "txt": "gramps.replaceChild(parent, n); } else { Preconditions.checkState(gramps.getType() == Token.LABEL); throw new IllegalStateException(\"Unexpected LABEL\"); } } reportCodeChange(\"Duplicate VAR declaration\"); } } private final class ScopeTicklingCallback"
+      },
+      {
+        "txt": "implements NodeTraversal.ScopedCallback { @Override public void enterScope(NodeTraversal t) { t.getScope(); } @Override public void exitScope(NodeTraversal t) { } @Override public boolean shouldTraverse("
+      },
+      {
+        "txt": "NodeTraversal nodeTraversal, Node n, Node parent) { return true; } @Override public void visit(NodeTraversal t, Node n, Node parent) { } }"
+      }
+    ]
+  },
+  {
+    "id": 666,
+    "file_path": "src/com/google/javascript/jscomp/Normalize.java",
+    "start-bug-line": 641,
+    "end-bug-line": 641,
+    "bug": "",
+    "fix": "Node parent = n.getParent();",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.google.javascript.jscomp; import com.google.common.base.Preconditions; import com.google.common.collect.Lists; import com.google.common.collect.Maps; import com.google.common.collect.Sets; import com.google.javascript.jscomp.MakeDeclaredNamesUnique.BoilerplateRenamer; import com.google.javascript.jscomp.NodeTraversal.AbstractPostOrderCallback; import com.google.javascript.jscomp.NodeTraversal.Callback; import com.google.javascript.jscomp.Scope.Var; import com.google.javascript.rhino.JSDocInfo;"
+      },
+      {
+        "txt": "import com.google.javascript.rhino.Node; import com.google.javascript.rhino.Token; import java.util.Map; import java.util.Set; class Normalize implements CompilerPass { private final AbstractCompiler compiler; private final boolean assertOnChange; private static final boolean CONVERT_WHILE_TO_FOR = true; static final boolean MAKE_LOCAL_NAMES_UNIQUE = true; public static final DiagnosticType CATCH_BLOCK_VAR_ERROR ="
+      },
+      {
+        "txt": "DiagnosticType.error( \"JSC_CATCH_BLOCK_VAR_ERROR\", \"The use of scope variable {0} is not allowed within a catch block \" + \"with a catch exception of the same name.\"); Normalize(AbstractCompiler compiler, boolean assertOnChange) { this.compiler = compiler; this.assertOnChange = assertOnChange; } static Node parseAndNormalizeSyntheticCode( AbstractCompiler compiler, String code, String prefix) {"
+      },
+      {
+        "txt": "Node js = compiler.parseSyntheticCode(code); NodeTraversal.traverse(compiler, js, new Normalize.NormalizeStatements(compiler, false)); NodeTraversal.traverse( compiler, js, new MakeDeclaredNamesUnique( new BoilerplateRenamer( compiler.getUniqueNameIdSupplier(), prefix))); return js;"
+      },
+      {
+        "txt": "} static Node parseAndNormalizeTestCode( AbstractCompiler compiler, String code, String prefix) { Node js = compiler.parseTestCode(code); NodeTraversal.traverse(compiler, js, new Normalize.NormalizeStatements(compiler, false)); NodeTraversal.traverse( compiler, js, new MakeDeclaredNamesUnique()); return js;"
+      },
+      {
+        "txt": "} private void reportCodeChange(String changeDescription) { if (assertOnChange) { throw new IllegalStateException( \"Normalize constraints violated:\\n\" + changeDescription); } compiler.reportCodeChange(); } @Override public void process(Node externs, Node root) {"
+      },
+      {
+        "txt": "NodeTraversal.traverse(compiler, root, new NormalizeStatements(compiler, assertOnChange)); if (MAKE_LOCAL_NAMES_UNIQUE) { MakeDeclaredNamesUnique renamer = new MakeDeclaredNamesUnique(); NodeTraversal t = new NodeTraversal(compiler, renamer); t.traverseRoots(externs, root); } removeDuplicateDeclarations(externs, root); new PropagateConstantAnnotationsOverVars(compiler, assertOnChange) .process(externs, root);"
+      },
+      {
+        "txt": "compiler.setNormalized(); } static class PropagateConstantAnnotationsOverVars extends AbstractPostOrderCallback implements CompilerPass { private final AbstractCompiler compiler; private final boolean assertOnChange; PropagateConstantAnnotationsOverVars( AbstractCompiler compiler, boolean forbidChanges) { this.compiler = compiler;"
+      },
+      {
+        "txt": "this.assertOnChange = forbidChanges; } @Override public void process(Node externs, Node root) { new NodeTraversal(compiler, this).traverseRoots(externs, root); } @Override public void visit(NodeTraversal t, Node n, Node parent) { if (n.getType() == Token.NAME) { if (n.getString().isEmpty()) {"
+      },
+      {
+        "txt": "return; } JSDocInfo info = null; Var var = t.getScope().getVar(n.getString()); if (var != null) { info = var.getJSDocInfo(); } boolean shouldBeConstant = (info != null && info.isConstant()) || NodeUtil.isConstantByConvention("
+      },
+      {
+        "txt": "compiler.getCodingConvention(), n, parent); boolean isMarkedConstant = n.getBooleanProp(Node.IS_CONSTANT_NAME); if (shouldBeConstant && !isMarkedConstant) { if (assertOnChange) { String name = n.getString(); throw new IllegalStateException( \"Unexpected const change.\\n\" + \" name: \"+ name + \"\\n\" + \" parent:\" + n.getParent().toStringTree()); }"
+      },
+      {
+        "txt": "n.putBooleanProp(Node.IS_CONSTANT_NAME, true); } } } } static class VerifyConstants extends AbstractPostOrderCallback implements CompilerPass { final private AbstractCompiler compiler; final private boolean checkUserDeclarations; VerifyConstants(AbstractCompiler compiler, boolean checkUserDeclarations) {"
+      },
+      {
+        "txt": "this.compiler = compiler; this.checkUserDeclarations = checkUserDeclarations; } @Override public void process(Node externs, Node root) { Node externsAndJs = root.getParent(); Preconditions.checkState(externsAndJs != null); Preconditions.checkState(externsAndJs.hasChild(externs)); NodeTraversal.traverseRoots( compiler, Lists.newArrayList(externs, root), this);"
+      },
+      {
+        "txt": "} private Map<String, Boolean> constantMap = Maps.newHashMap(); @Override public void visit(NodeTraversal t, Node n, Node parent) { if (n.getType() == Token.NAME) { String name = n.getString(); if (n.getString().isEmpty()) { return; } boolean isConst = n.getBooleanProp(Node.IS_CONSTANT_NAME);"
+      },
+      {
+        "txt": "if (checkUserDeclarations) { boolean expectedConst = false; CodingConvention convention = compiler.getCodingConvention(); if (NodeUtil.isConstantName(n) || NodeUtil.isConstantByConvention(convention, n, parent)) { expectedConst = true; } else { expectedConst = false; JSDocInfo info = null; Var var = t.getScope().getVar(n.getString());"
+      },
+      {
+        "txt": "if (var != null) { info = var.getJSDocInfo(); } if (info != null && info.isConstant()) { expectedConst = true; } else { expectedConst = false; } } if (expectedConst) {"
+      },
+      {
+        "txt": "Preconditions.checkState(expectedConst == isConst, \"The name \" + name + \" is not annotated as constant.\"); } else { Preconditions.checkState(expectedConst == isConst, \"The name \" + name + \" should not be annotated as constant.\"); } } Boolean value = constantMap.get(name); if (value == null) { constantMap.put(name, isConst);"
+      },
+      {
+        "txt": "} else { Preconditions.checkState(value.booleanValue() == isConst, \"The name \" + name + \" is not consistently annotated as \" + \"constant.\"); } } } } static class NormalizeStatements implements Callback { private final AbstractCompiler compiler;"
+      },
+      {
+        "txt": "private final boolean assertOnChange; NormalizeStatements(AbstractCompiler compiler, boolean assertOnChange) { this.compiler = compiler; this.assertOnChange = assertOnChange; } private void reportCodeChange(String changeDescription) { if (assertOnChange) { throw new IllegalStateException( \"Normalize constraints violated:\\n\" + changeDescription); }"
+      },
+      {
+        "txt": "compiler.reportCodeChange(); } @Override public boolean shouldTraverse(NodeTraversal t, Node n, Node parent) { doStatementNormalizations(t, n, parent); return true; } @Override public void visit(NodeTraversal t, Node n, Node parent) { switch (n.getType()) {"
+      },
+      {
+        "txt": "case Token.WHILE: if (CONVERT_WHILE_TO_FOR) { Node expr = n.getFirstChild(); n.setType(Token.FOR); Node empty = new Node(Token.EMPTY); empty.copyInformationFrom(n); n.addChildBefore(empty, expr); n.addChildAfter(empty.cloneNode(), expr); reportCodeChange(\"WHILE node\"); }"
+      },
+      {
+        "txt": "break; case Token.FUNCTION: normalizeFunctionDeclaration(n); break; case Token.NAME: case Token.STRING: annotateConstantsByConvention(n, parent); break; } }"
+      },
+      {
+        "txt": "private void annotateConstantsByConvention(Node n, Node parent) { Preconditions.checkState( n.getType() == Token.NAME || n.getType() == Token.STRING); boolean isObjLitKey = NodeUtil.isObjectLitKey(n, parent); boolean isProperty = isObjLitKey || (parent.getType() == Token.GETPROP && parent.getLastChild() == n); if (n.getType() == Token.NAME || isProperty) { boolean isMarkedConstant = n.getBooleanProp(Node.IS_CONSTANT_NAME); if (!isMarkedConstant &&"
+      },
+      {
+        "txt": "NodeUtil.isConstantByConvention( compiler.getCodingConvention(), n, parent)) { if (assertOnChange) { String name = n.getString(); throw new IllegalStateException( \"Unexpected const change.\\n\" + \" name: \"+ name + \"\\n\" + \" parent:\" + n.getParent().toStringTree()); } n.putBooleanProp(Node.IS_CONSTANT_NAME, true);"
+      },
+      {
+        "txt": "} } } private void normalizeFunctionDeclaration(Node n) { Preconditions.checkState(n.getType() == Token.FUNCTION); if (!NodeUtil.isFunctionExpression(n) && !NodeUtil.isHoistedFunctionDeclaration(n)) { rewriteFunctionDeclaration(n); } }"
+      },
+      {
+        "txt": "private void rewriteFunctionDeclaration(Node n) { Node oldNameNode = n.getFirstChild(); Node fnNameNode = oldNameNode.cloneNode(); Node var = new Node(Token.VAR, fnNameNode, n.getLineno(), n.getCharno()); var.copyInformationFrom(n); oldNameNode.setString(\"\"); Node parent = n.getParent(); parent.replaceChild(n, var); fnNameNode.addChildToFront(n); reportCodeChange(\"Function declaration\");"
+      },
+      {
+        "txt": "} private void doStatementNormalizations( NodeTraversal t, Node n, Node parent) { if (n.getType() == Token.LABEL) { normalizeLabels(n); } if (NodeUtil.isStatementBlock(n) || n.getType() == Token.LABEL) { extractForInitializer(n, null, null); } if (NodeUtil.isStatementBlock(n)) {"
+      },
+      {
+        "txt": "splitVarDeclarations(n); } if (n.getType() == Token.FUNCTION) { moveNamedFunctions(n.getLastChild()); } } private void normalizeLabels(Node n) { Preconditions.checkArgument(n.getType() == Token.LABEL); Node last = n.getLastChild(); switch (last.getType()) {"
+      },
+      {
+        "txt": "case Token.LABEL: case Token.BLOCK: case Token.FOR: case Token.WHILE: case Token.DO: return; default: Node block = new Node(Token.BLOCK); block.copyInformationFrom(last); n.replaceChild(last, block);"
+      },
+      {
+        "txt": "block.addChildToFront(last); reportCodeChange(\"LABEL normalization\"); return; } } private void extractForInitializer( Node n, Node before, Node beforeParent) { for (Node next, c = n.getFirstChild(); c != null; c = next) { next = c.getNext(); Node insertBefore = (before == null) ? c : before;"
+      },
+      {
+        "txt": "Node insertBeforeParent = (before == null) ? n : beforeParent; switch (c.getType()) { case Token.LABEL: extractForInitializer(c, insertBefore, insertBeforeParent); break; case Token.FOR: if (NodeUtil.isForIn(c)) { Node first = c.getFirstChild(); if (first.getType() == Token.VAR) { Node newStatement = first.cloneTree();"
+      },
+      {
+        "txt": "Node name = first.removeFirstChild(); first.getParent().replaceChild(first, name); insertBeforeParent.addChildBefore(newStatement, insertBefore); reportCodeChange(\"FOR-IN var declaration\"); } } else if (c.getFirstChild().getType() != Token.EMPTY) { Node init = c.getFirstChild(); Node empty = new Node(Token.EMPTY); empty.copyInformationFrom(c); c.replaceChild(init, empty);"
+      },
+      {
+        "txt": "Node newStatement; if (init.getType() == Token.VAR) { newStatement = init; } else { newStatement = NodeUtil.newExpr(init); } insertBeforeParent.addChildBefore(newStatement, insertBefore); reportCodeChange(\"FOR initializer\"); } break;"
+      },
+      {
+        "txt": "} } } private void splitVarDeclarations(Node n) { for (Node next, c = n.getFirstChild(); c != null; c = next) { next = c.getNext(); if (c.getType() == Token.VAR) { if (assertOnChange && !c.hasChildren()) { throw new IllegalStateException(\"Empty VAR node.\"); }"
+      },
+      {
+        "txt": "while (c.getFirstChild() != c.getLastChild()) { Node name = c.getFirstChild(); c.removeChild(name); Node newVar = new Node( Token.VAR, name, n.getLineno(), n.getCharno()); n.addChildBefore(newVar, c); reportCodeChange(\"VAR with multiple children\"); } } }"
+      },
+      {
+        "txt": "} private void moveNamedFunctions(Node functionBody) { Preconditions.checkState( functionBody.getParent().getType() == Token.FUNCTION); Node previous = null; Node current = functionBody.getFirstChild(); while (current != null && NodeUtil.isFunctionDeclaration(current)) { previous = current; current = current.getNext(); }"
+      },
+      {
+        "txt": "Node insertAfter = previous; while (current != null) { Node next = current.getNext(); if (NodeUtil.isFunctionDeclaration(current)) { Preconditions.checkNotNull(previous); functionBody.removeChildAfter(previous); insertAfter = addToFront(functionBody, current, insertAfter); reportCodeChange(\"Move function declaration not at top of function\"); } else { previous = current;"
+      },
+      {
+        "txt": "} current = next; } } private Node addToFront(Node parent, Node newChild, Node after) { if (after == null) { parent.addChildToFront(newChild); } else { parent.addChildAfter(newChild, after); }"
+      },
+      {
+        "txt": "return newChild; } } private void removeDuplicateDeclarations(Node externs, Node root) { Callback tickler = new ScopeTicklingCallback(); ScopeCreator scopeCreator = new SyntacticScopeCreator( compiler, new DuplicateDeclarationHandler()); NodeTraversal t = new NodeTraversal(compiler, tickler, scopeCreator); t.traverseRoots(externs, root); }"
+      },
+      {
+        "txt": "SyntacticScopeCreator.RedeclarationHandler { @Override public void onRedeclaration( Scope s, String name, Node n, Node parent, Node gramps, Node nodeWithLineNumber) { Preconditions.checkState(n.getType() == Token.NAME); <extra_id_0> if (v != null && v.getParentNode().getType() == Token.CATCH) { name = MakeDeclaredNamesUnique.ContextualRenameInverter.getOrginalName( name); compiler.report( JSError.make( NodeUtil.getSourceName(nodeWithLineNumber), nodeWithLineNumber,"
+      },
+      {
+        "txt": "JSError.make( NodeUtil.getSourceName(nodeWithLineNumber), nodeWithLineNumber, CATCH_BLOCK_VAR_ERROR, name)); } else if (v != null && parent.getType() == Token.FUNCTION) { if (v.getParentNode().getType() == Token.VAR) { s.undeclare(v); s.declare(name, n, n.getJSType(), v.input); replaceVarWithAssignment(v.getNameNode(), v.getParentNode(), v.getParentNode().getParent()); }"
+      },
+      {
+        "txt": "} else if (parent.getType() == Token.VAR) { Preconditions.checkState(parent.hasOneChild()); replaceVarWithAssignment(n, parent, gramps); } } private void replaceVarWithAssignment(Node n, Node parent, Node gramps) { if (n.hasChildren()) { parent.removeChild(n); Node value = n.getFirstChild(); n.removeChild(value);"
+      },
+      {
+        "txt": "Node replacement = new Node(Token.ASSIGN, n, value); replacement.copyInformationFrom(parent); gramps.replaceChild(parent, NodeUtil.newExpr(replacement)); } else { if (NodeUtil.isStatementBlock(gramps)) { gramps.removeChild(parent); } else if (gramps.getType() == Token.FOR) { parent.removeChild(n); gramps.replaceChild(parent, n); } else {"
+      },
+      {
+        "txt": "Preconditions.checkState(gramps.getType() == Token.LABEL); throw new IllegalStateException(\"Unexpected LABEL\"); } } reportCodeChange(\"Duplicate VAR declaration\"); } } private final class ScopeTicklingCallback implements NodeTraversal.ScopedCallback { @Override"
+      },
+      {
+        "txt": "public void enterScope(NodeTraversal t) { t.getScope(); } @Override public void exitScope(NodeTraversal t) { } @Override public boolean shouldTraverse( NodeTraversal nodeTraversal, Node n, Node parent) { return true;"
+      },
+      {
+        "txt": "} @Override public void visit(NodeTraversal t, Node n, Node parent) { } }"
+      }
+    ]
+  },
+  {
+    "id": 667,
+    "file_path": "src/com/google/javascript/jscomp/Normalize.java",
+    "start-bug-line": 643,
+    "end-bug-line": 643,
+    "bug": "",
+    "fix": "if (v != null && s.isGlobal()) {",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "import com.google.common.base.Preconditions; import com.google.common.collect.Lists; import com.google.common.collect.Maps; import com.google.common.collect.Sets; import com.google.javascript.jscomp.MakeDeclaredNamesUnique.BoilerplateRenamer; import com.google.javascript.jscomp.NodeTraversal.AbstractPostOrderCallback; import com.google.javascript.jscomp.NodeTraversal.Callback; import com.google.javascript.jscomp.Scope.Var; import com.google.javascript.rhino.JSDocInfo; import com.google.javascript.rhino.Node;"
+      },
+      {
+        "txt": "import com.google.javascript.rhino.Token; import java.util.Map; import java.util.Set; class Normalize implements CompilerPass { private final AbstractCompiler compiler; private final boolean assertOnChange; private static final boolean CONVERT_WHILE_TO_FOR = true; static final boolean MAKE_LOCAL_NAMES_UNIQUE = true; public static final DiagnosticType CATCH_BLOCK_VAR_ERROR = DiagnosticType.error("
+      },
+      {
+        "txt": "\"JSC_CATCH_BLOCK_VAR_ERROR\", \"The use of scope variable {0} is not allowed within a catch block \" + \"with a catch exception of the same name.\"); Normalize(AbstractCompiler compiler, boolean assertOnChange) { this.compiler = compiler; this.assertOnChange = assertOnChange; } static Node parseAndNormalizeSyntheticCode( AbstractCompiler compiler, String code, String prefix) { Node js = compiler.parseSyntheticCode(code);"
+      },
+      {
+        "txt": "NodeTraversal.traverse(compiler, js, new Normalize.NormalizeStatements(compiler, false)); NodeTraversal.traverse( compiler, js, new MakeDeclaredNamesUnique( new BoilerplateRenamer( compiler.getUniqueNameIdSupplier(), prefix))); return js; }"
+      },
+      {
+        "txt": "static Node parseAndNormalizeTestCode( AbstractCompiler compiler, String code, String prefix) { Node js = compiler.parseTestCode(code); NodeTraversal.traverse(compiler, js, new Normalize.NormalizeStatements(compiler, false)); NodeTraversal.traverse( compiler, js, new MakeDeclaredNamesUnique()); return js; }"
+      },
+      {
+        "txt": "private void reportCodeChange(String changeDescription) { if (assertOnChange) { throw new IllegalStateException( \"Normalize constraints violated:\\n\" + changeDescription); } compiler.reportCodeChange(); } @Override public void process(Node externs, Node root) { NodeTraversal.traverse(compiler, root,"
+      },
+      {
+        "txt": "new NormalizeStatements(compiler, assertOnChange)); if (MAKE_LOCAL_NAMES_UNIQUE) { MakeDeclaredNamesUnique renamer = new MakeDeclaredNamesUnique(); NodeTraversal t = new NodeTraversal(compiler, renamer); t.traverseRoots(externs, root); } removeDuplicateDeclarations(externs, root); new PropagateConstantAnnotationsOverVars(compiler, assertOnChange) .process(externs, root); compiler.setNormalized();"
+      },
+      {
+        "txt": "} static class PropagateConstantAnnotationsOverVars extends AbstractPostOrderCallback implements CompilerPass { private final AbstractCompiler compiler; private final boolean assertOnChange; PropagateConstantAnnotationsOverVars( AbstractCompiler compiler, boolean forbidChanges) { this.compiler = compiler; this.assertOnChange = forbidChanges;"
+      },
+      {
+        "txt": "} @Override public void process(Node externs, Node root) { new NodeTraversal(compiler, this).traverseRoots(externs, root); } @Override public void visit(NodeTraversal t, Node n, Node parent) { if (n.getType() == Token.NAME) { if (n.getString().isEmpty()) { return;"
+      },
+      {
+        "txt": "} JSDocInfo info = null; Var var = t.getScope().getVar(n.getString()); if (var != null) { info = var.getJSDocInfo(); } boolean shouldBeConstant = (info != null && info.isConstant()) || NodeUtil.isConstantByConvention( compiler.getCodingConvention(), n, parent);"
+      },
+      {
+        "txt": "boolean isMarkedConstant = n.getBooleanProp(Node.IS_CONSTANT_NAME); if (shouldBeConstant && !isMarkedConstant) { if (assertOnChange) { String name = n.getString(); throw new IllegalStateException( \"Unexpected const change.\\n\" + \" name: \"+ name + \"\\n\" + \" parent:\" + n.getParent().toStringTree()); } n.putBooleanProp(Node.IS_CONSTANT_NAME, true);"
+      },
+      {
+        "txt": "} } } } static class VerifyConstants extends AbstractPostOrderCallback implements CompilerPass { final private AbstractCompiler compiler; final private boolean checkUserDeclarations; VerifyConstants(AbstractCompiler compiler, boolean checkUserDeclarations) { this.compiler = compiler;"
+      },
+      {
+        "txt": "this.checkUserDeclarations = checkUserDeclarations; } @Override public void process(Node externs, Node root) { Node externsAndJs = root.getParent(); Preconditions.checkState(externsAndJs != null); Preconditions.checkState(externsAndJs.hasChild(externs)); NodeTraversal.traverseRoots( compiler, Lists.newArrayList(externs, root), this); }"
+      },
+      {
+        "txt": "private Map<String, Boolean> constantMap = Maps.newHashMap(); @Override public void visit(NodeTraversal t, Node n, Node parent) { if (n.getType() == Token.NAME) { String name = n.getString(); if (n.getString().isEmpty()) { return; } boolean isConst = n.getBooleanProp(Node.IS_CONSTANT_NAME); if (checkUserDeclarations) {"
+      },
+      {
+        "txt": "boolean expectedConst = false; CodingConvention convention = compiler.getCodingConvention(); if (NodeUtil.isConstantName(n) || NodeUtil.isConstantByConvention(convention, n, parent)) { expectedConst = true; } else { expectedConst = false; JSDocInfo info = null; Var var = t.getScope().getVar(n.getString()); if (var != null) {"
+      },
+      {
+        "txt": "info = var.getJSDocInfo(); } if (info != null && info.isConstant()) { expectedConst = true; } else { expectedConst = false; } } if (expectedConst) { Preconditions.checkState(expectedConst == isConst,"
+      },
+      {
+        "txt": "\"The name \" + name + \" is not annotated as constant.\"); } else { Preconditions.checkState(expectedConst == isConst, \"The name \" + name + \" should not be annotated as constant.\"); } } Boolean value = constantMap.get(name); if (value == null) { constantMap.put(name, isConst); } else {"
+      },
+      {
+        "txt": "Preconditions.checkState(value.booleanValue() == isConst, \"The name \" + name + \" is not consistently annotated as \" + \"constant.\"); } } } } static class NormalizeStatements implements Callback { private final AbstractCompiler compiler; private final boolean assertOnChange;"
+      },
+      {
+        "txt": "NormalizeStatements(AbstractCompiler compiler, boolean assertOnChange) { this.compiler = compiler; this.assertOnChange = assertOnChange; } private void reportCodeChange(String changeDescription) { if (assertOnChange) { throw new IllegalStateException( \"Normalize constraints violated:\\n\" + changeDescription); } compiler.reportCodeChange();"
+      },
+      {
+        "txt": "} @Override public boolean shouldTraverse(NodeTraversal t, Node n, Node parent) { doStatementNormalizations(t, n, parent); return true; } @Override public void visit(NodeTraversal t, Node n, Node parent) { switch (n.getType()) { case Token.WHILE:"
+      },
+      {
+        "txt": "if (CONVERT_WHILE_TO_FOR) { Node expr = n.getFirstChild(); n.setType(Token.FOR); Node empty = new Node(Token.EMPTY); empty.copyInformationFrom(n); n.addChildBefore(empty, expr); n.addChildAfter(empty.cloneNode(), expr); reportCodeChange(\"WHILE node\"); } break;"
+      },
+      {
+        "txt": "case Token.FUNCTION: normalizeFunctionDeclaration(n); break; case Token.NAME: case Token.STRING: annotateConstantsByConvention(n, parent); break; } } private void annotateConstantsByConvention(Node n, Node parent) {"
+      },
+      {
+        "txt": "Preconditions.checkState( n.getType() == Token.NAME || n.getType() == Token.STRING); boolean isObjLitKey = NodeUtil.isObjectLitKey(n, parent); boolean isProperty = isObjLitKey || (parent.getType() == Token.GETPROP && parent.getLastChild() == n); if (n.getType() == Token.NAME || isProperty) { boolean isMarkedConstant = n.getBooleanProp(Node.IS_CONSTANT_NAME); if (!isMarkedConstant && NodeUtil.isConstantByConvention("
+      },
+      {
+        "txt": "compiler.getCodingConvention(), n, parent)) { if (assertOnChange) { String name = n.getString(); throw new IllegalStateException( \"Unexpected const change.\\n\" + \" name: \"+ name + \"\\n\" + \" parent:\" + n.getParent().toStringTree()); } n.putBooleanProp(Node.IS_CONSTANT_NAME, true); }"
+      },
+      {
+        "txt": "} } private void normalizeFunctionDeclaration(Node n) { Preconditions.checkState(n.getType() == Token.FUNCTION); if (!NodeUtil.isFunctionExpression(n) && !NodeUtil.isHoistedFunctionDeclaration(n)) { rewriteFunctionDeclaration(n); } } private void rewriteFunctionDeclaration(Node n) {"
+      },
+      {
+        "txt": "Node oldNameNode = n.getFirstChild(); Node fnNameNode = oldNameNode.cloneNode(); Node var = new Node(Token.VAR, fnNameNode, n.getLineno(), n.getCharno()); var.copyInformationFrom(n); oldNameNode.setString(\"\"); Node parent = n.getParent(); parent.replaceChild(n, var); fnNameNode.addChildToFront(n); reportCodeChange(\"Function declaration\"); }"
+      },
+      {
+        "txt": "private void doStatementNormalizations( NodeTraversal t, Node n, Node parent) { if (n.getType() == Token.LABEL) { normalizeLabels(n); } if (NodeUtil.isStatementBlock(n) || n.getType() == Token.LABEL) { extractForInitializer(n, null, null); } if (NodeUtil.isStatementBlock(n)) { splitVarDeclarations(n);"
+      },
+      {
+        "txt": "} if (n.getType() == Token.FUNCTION) { moveNamedFunctions(n.getLastChild()); } } private void normalizeLabels(Node n) { Preconditions.checkArgument(n.getType() == Token.LABEL); Node last = n.getLastChild(); switch (last.getType()) { case Token.LABEL:"
+      },
+      {
+        "txt": "case Token.BLOCK: case Token.FOR: case Token.WHILE: case Token.DO: return; default: Node block = new Node(Token.BLOCK); block.copyInformationFrom(last); n.replaceChild(last, block); block.addChildToFront(last);"
+      },
+      {
+        "txt": "reportCodeChange(\"LABEL normalization\"); return; } } private void extractForInitializer( Node n, Node before, Node beforeParent) { for (Node next, c = n.getFirstChild(); c != null; c = next) { next = c.getNext(); Node insertBefore = (before == null) ? c : before; Node insertBeforeParent = (before == null) ? n : beforeParent;"
+      },
+      {
+        "txt": "switch (c.getType()) { case Token.LABEL: extractForInitializer(c, insertBefore, insertBeforeParent); break; case Token.FOR: if (NodeUtil.isForIn(c)) { Node first = c.getFirstChild(); if (first.getType() == Token.VAR) { Node newStatement = first.cloneTree(); Node name = first.removeFirstChild();"
+      },
+      {
+        "txt": "first.getParent().replaceChild(first, name); insertBeforeParent.addChildBefore(newStatement, insertBefore); reportCodeChange(\"FOR-IN var declaration\"); } } else if (c.getFirstChild().getType() != Token.EMPTY) { Node init = c.getFirstChild(); Node empty = new Node(Token.EMPTY); empty.copyInformationFrom(c); c.replaceChild(init, empty); Node newStatement;"
+      },
+      {
+        "txt": "if (init.getType() == Token.VAR) { newStatement = init; } else { newStatement = NodeUtil.newExpr(init); } insertBeforeParent.addChildBefore(newStatement, insertBefore); reportCodeChange(\"FOR initializer\"); } break; }"
+      },
+      {
+        "txt": "} } private void splitVarDeclarations(Node n) { for (Node next, c = n.getFirstChild(); c != null; c = next) { next = c.getNext(); if (c.getType() == Token.VAR) { if (assertOnChange && !c.hasChildren()) { throw new IllegalStateException(\"Empty VAR node.\"); } while (c.getFirstChild() != c.getLastChild()) {"
+      },
+      {
+        "txt": "Node name = c.getFirstChild(); c.removeChild(name); Node newVar = new Node( Token.VAR, name, n.getLineno(), n.getCharno()); n.addChildBefore(newVar, c); reportCodeChange(\"VAR with multiple children\"); } } } }"
+      },
+      {
+        "txt": "private void moveNamedFunctions(Node functionBody) { Preconditions.checkState( functionBody.getParent().getType() == Token.FUNCTION); Node previous = null; Node current = functionBody.getFirstChild(); while (current != null && NodeUtil.isFunctionDeclaration(current)) { previous = current; current = current.getNext(); } Node insertAfter = previous;"
+      },
+      {
+        "txt": "while (current != null) { Node next = current.getNext(); if (NodeUtil.isFunctionDeclaration(current)) { Preconditions.checkNotNull(previous); functionBody.removeChildAfter(previous); insertAfter = addToFront(functionBody, current, insertAfter); reportCodeChange(\"Move function declaration not at top of function\"); } else { previous = current; }"
+      },
+      {
+        "txt": "current = next; } } private Node addToFront(Node parent, Node newChild, Node after) { if (after == null) { parent.addChildToFront(newChild); } else { parent.addChildAfter(newChild, after); } return newChild;"
+      },
+      {
+        "txt": "} } private void removeDuplicateDeclarations(Node externs, Node root) { Callback tickler = new ScopeTicklingCallback(); ScopeCreator scopeCreator = new SyntacticScopeCreator( compiler, new DuplicateDeclarationHandler()); NodeTraversal t = new NodeTraversal(compiler, tickler, scopeCreator); t.traverseRoots(externs, root); } private final class DuplicateDeclarationHandler implements"
+      },
+      {
+        "txt": "@Override public void onRedeclaration( Scope s, String name, Node n, Node parent, Node gramps, Node nodeWithLineNumber) { Preconditions.checkState(n.getType() == Token.NAME); Var v = s.getVar(name); <extra_id_0> if (v != null && v.getParentNode().getType() == Token.CATCH) { name = MakeDeclaredNamesUnique.ContextualRenameInverter.getOrginalName( name); compiler.report( JSError.make( NodeUtil.getSourceName(nodeWithLineNumber), nodeWithLineNumber,"
+      },
+      {
+        "txt": "JSError.make( NodeUtil.getSourceName(nodeWithLineNumber), nodeWithLineNumber, CATCH_BLOCK_VAR_ERROR, name)); } else if (v != null && parent.getType() == Token.FUNCTION) { if (v.getParentNode().getType() == Token.VAR) { s.undeclare(v); s.declare(name, n, n.getJSType(), v.input); replaceVarWithAssignment(v.getNameNode(), v.getParentNode(), v.getParentNode().getParent()); }"
+      },
+      {
+        "txt": "} else if (parent.getType() == Token.VAR) { Preconditions.checkState(parent.hasOneChild()); replaceVarWithAssignment(n, parent, gramps); } } private void replaceVarWithAssignment(Node n, Node parent, Node gramps) { if (n.hasChildren()) { parent.removeChild(n); Node value = n.getFirstChild(); n.removeChild(value);"
+      },
+      {
+        "txt": "Node replacement = new Node(Token.ASSIGN, n, value); replacement.copyInformationFrom(parent); gramps.replaceChild(parent, NodeUtil.newExpr(replacement)); } else { if (NodeUtil.isStatementBlock(gramps)) { gramps.removeChild(parent); } else if (gramps.getType() == Token.FOR) { parent.removeChild(n); gramps.replaceChild(parent, n); } else {"
+      },
+      {
+        "txt": "Preconditions.checkState(gramps.getType() == Token.LABEL); throw new IllegalStateException(\"Unexpected LABEL\"); } } reportCodeChange(\"Duplicate VAR declaration\"); } } private final class ScopeTicklingCallback implements NodeTraversal.ScopedCallback { @Override"
+      },
+      {
+        "txt": "public void enterScope(NodeTraversal t) { t.getScope(); } @Override public void exitScope(NodeTraversal t) { } @Override public boolean shouldTraverse( NodeTraversal nodeTraversal, Node n, Node parent) { return true;"
+      },
+      {
+        "txt": "} @Override public void visit(NodeTraversal t, Node n, Node parent) { } }"
+      }
+    ]
+  },
+  {
+    "id": 668,
+    "file_path": "src/com/google/javascript/jscomp/Normalize.java",
+    "start-bug-line": 647,
+    "end-bug-line": 647,
+    "bug": "",
+    "fix": "if (v.isExtern() && !input.isExtern()) { if (hasOkDuplicateDeclaration.add(v)) { return; } } }",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "import com.google.common.base.Preconditions; import com.google.common.collect.Lists; import com.google.common.collect.Maps; import com.google.common.collect.Sets; import com.google.javascript.jscomp.MakeDeclaredNamesUnique.BoilerplateRenamer; import com.google.javascript.jscomp.NodeTraversal.AbstractPostOrderCallback; import com.google.javascript.jscomp.NodeTraversal.Callback; import com.google.javascript.jscomp.Scope.Var; import com.google.javascript.rhino.JSDocInfo; import com.google.javascript.rhino.Node;"
+      },
+      {
+        "txt": "import com.google.javascript.rhino.Token; import java.util.Map; import java.util.Set; class Normalize implements CompilerPass { private final AbstractCompiler compiler; private final boolean assertOnChange; private static final boolean CONVERT_WHILE_TO_FOR = true; static final boolean MAKE_LOCAL_NAMES_UNIQUE = true; public static final DiagnosticType CATCH_BLOCK_VAR_ERROR = DiagnosticType.error("
+      },
+      {
+        "txt": "\"JSC_CATCH_BLOCK_VAR_ERROR\", \"The use of scope variable {0} is not allowed within a catch block \" + \"with a catch exception of the same name.\"); Normalize(AbstractCompiler compiler, boolean assertOnChange) { this.compiler = compiler; this.assertOnChange = assertOnChange; } static Node parseAndNormalizeSyntheticCode( AbstractCompiler compiler, String code, String prefix) { Node js = compiler.parseSyntheticCode(code);"
+      },
+      {
+        "txt": "NodeTraversal.traverse(compiler, js, new Normalize.NormalizeStatements(compiler, false)); NodeTraversal.traverse( compiler, js, new MakeDeclaredNamesUnique( new BoilerplateRenamer( compiler.getUniqueNameIdSupplier(), prefix))); return js; }"
+      },
+      {
+        "txt": "static Node parseAndNormalizeTestCode( AbstractCompiler compiler, String code, String prefix) { Node js = compiler.parseTestCode(code); NodeTraversal.traverse(compiler, js, new Normalize.NormalizeStatements(compiler, false)); NodeTraversal.traverse( compiler, js, new MakeDeclaredNamesUnique()); return js; }"
+      },
+      {
+        "txt": "private void reportCodeChange(String changeDescription) { if (assertOnChange) { throw new IllegalStateException( \"Normalize constraints violated:\\n\" + changeDescription); } compiler.reportCodeChange(); } @Override public void process(Node externs, Node root) { NodeTraversal.traverse(compiler, root,"
+      },
+      {
+        "txt": "new NormalizeStatements(compiler, assertOnChange)); if (MAKE_LOCAL_NAMES_UNIQUE) { MakeDeclaredNamesUnique renamer = new MakeDeclaredNamesUnique(); NodeTraversal t = new NodeTraversal(compiler, renamer); t.traverseRoots(externs, root); } removeDuplicateDeclarations(externs, root); new PropagateConstantAnnotationsOverVars(compiler, assertOnChange) .process(externs, root); compiler.setNormalized();"
+      },
+      {
+        "txt": "} static class PropagateConstantAnnotationsOverVars extends AbstractPostOrderCallback implements CompilerPass { private final AbstractCompiler compiler; private final boolean assertOnChange; PropagateConstantAnnotationsOverVars( AbstractCompiler compiler, boolean forbidChanges) { this.compiler = compiler; this.assertOnChange = forbidChanges;"
+      },
+      {
+        "txt": "} @Override public void process(Node externs, Node root) { new NodeTraversal(compiler, this).traverseRoots(externs, root); } @Override public void visit(NodeTraversal t, Node n, Node parent) { if (n.getType() == Token.NAME) { if (n.getString().isEmpty()) { return;"
+      },
+      {
+        "txt": "} JSDocInfo info = null; Var var = t.getScope().getVar(n.getString()); if (var != null) { info = var.getJSDocInfo(); } boolean shouldBeConstant = (info != null && info.isConstant()) || NodeUtil.isConstantByConvention( compiler.getCodingConvention(), n, parent);"
+      },
+      {
+        "txt": "boolean isMarkedConstant = n.getBooleanProp(Node.IS_CONSTANT_NAME); if (shouldBeConstant && !isMarkedConstant) { if (assertOnChange) { String name = n.getString(); throw new IllegalStateException( \"Unexpected const change.\\n\" + \" name: \"+ name + \"\\n\" + \" parent:\" + n.getParent().toStringTree()); } n.putBooleanProp(Node.IS_CONSTANT_NAME, true);"
+      },
+      {
+        "txt": "} } } } static class VerifyConstants extends AbstractPostOrderCallback implements CompilerPass { final private AbstractCompiler compiler; final private boolean checkUserDeclarations; VerifyConstants(AbstractCompiler compiler, boolean checkUserDeclarations) { this.compiler = compiler;"
+      },
+      {
+        "txt": "this.checkUserDeclarations = checkUserDeclarations; } @Override public void process(Node externs, Node root) { Node externsAndJs = root.getParent(); Preconditions.checkState(externsAndJs != null); Preconditions.checkState(externsAndJs.hasChild(externs)); NodeTraversal.traverseRoots( compiler, Lists.newArrayList(externs, root), this); }"
+      },
+      {
+        "txt": "private Map<String, Boolean> constantMap = Maps.newHashMap(); @Override public void visit(NodeTraversal t, Node n, Node parent) { if (n.getType() == Token.NAME) { String name = n.getString(); if (n.getString().isEmpty()) { return; } boolean isConst = n.getBooleanProp(Node.IS_CONSTANT_NAME); if (checkUserDeclarations) {"
+      },
+      {
+        "txt": "boolean expectedConst = false; CodingConvention convention = compiler.getCodingConvention(); if (NodeUtil.isConstantName(n) || NodeUtil.isConstantByConvention(convention, n, parent)) { expectedConst = true; } else { expectedConst = false; JSDocInfo info = null; Var var = t.getScope().getVar(n.getString()); if (var != null) {"
+      },
+      {
+        "txt": "info = var.getJSDocInfo(); } if (info != null && info.isConstant()) { expectedConst = true; } else { expectedConst = false; } } if (expectedConst) { Preconditions.checkState(expectedConst == isConst,"
+      },
+      {
+        "txt": "\"The name \" + name + \" is not annotated as constant.\"); } else { Preconditions.checkState(expectedConst == isConst, \"The name \" + name + \" should not be annotated as constant.\"); } } Boolean value = constantMap.get(name); if (value == null) { constantMap.put(name, isConst); } else {"
+      },
+      {
+        "txt": "Preconditions.checkState(value.booleanValue() == isConst, \"The name \" + name + \" is not consistently annotated as \" + \"constant.\"); } } } } static class NormalizeStatements implements Callback { private final AbstractCompiler compiler; private final boolean assertOnChange;"
+      },
+      {
+        "txt": "NormalizeStatements(AbstractCompiler compiler, boolean assertOnChange) { this.compiler = compiler; this.assertOnChange = assertOnChange; } private void reportCodeChange(String changeDescription) { if (assertOnChange) { throw new IllegalStateException( \"Normalize constraints violated:\\n\" + changeDescription); } compiler.reportCodeChange();"
+      },
+      {
+        "txt": "} @Override public boolean shouldTraverse(NodeTraversal t, Node n, Node parent) { doStatementNormalizations(t, n, parent); return true; } @Override public void visit(NodeTraversal t, Node n, Node parent) { switch (n.getType()) { case Token.WHILE:"
+      },
+      {
+        "txt": "if (CONVERT_WHILE_TO_FOR) { Node expr = n.getFirstChild(); n.setType(Token.FOR); Node empty = new Node(Token.EMPTY); empty.copyInformationFrom(n); n.addChildBefore(empty, expr); n.addChildAfter(empty.cloneNode(), expr); reportCodeChange(\"WHILE node\"); } break;"
+      },
+      {
+        "txt": "case Token.FUNCTION: normalizeFunctionDeclaration(n); break; case Token.NAME: case Token.STRING: annotateConstantsByConvention(n, parent); break; } } private void annotateConstantsByConvention(Node n, Node parent) {"
+      },
+      {
+        "txt": "Preconditions.checkState( n.getType() == Token.NAME || n.getType() == Token.STRING); boolean isObjLitKey = NodeUtil.isObjectLitKey(n, parent); boolean isProperty = isObjLitKey || (parent.getType() == Token.GETPROP && parent.getLastChild() == n); if (n.getType() == Token.NAME || isProperty) { boolean isMarkedConstant = n.getBooleanProp(Node.IS_CONSTANT_NAME); if (!isMarkedConstant && NodeUtil.isConstantByConvention("
+      },
+      {
+        "txt": "compiler.getCodingConvention(), n, parent)) { if (assertOnChange) { String name = n.getString(); throw new IllegalStateException( \"Unexpected const change.\\n\" + \" name: \"+ name + \"\\n\" + \" parent:\" + n.getParent().toStringTree()); } n.putBooleanProp(Node.IS_CONSTANT_NAME, true); }"
+      },
+      {
+        "txt": "} } private void normalizeFunctionDeclaration(Node n) { Preconditions.checkState(n.getType() == Token.FUNCTION); if (!NodeUtil.isFunctionExpression(n) && !NodeUtil.isHoistedFunctionDeclaration(n)) { rewriteFunctionDeclaration(n); } } private void rewriteFunctionDeclaration(Node n) {"
+      },
+      {
+        "txt": "Node oldNameNode = n.getFirstChild(); Node fnNameNode = oldNameNode.cloneNode(); Node var = new Node(Token.VAR, fnNameNode, n.getLineno(), n.getCharno()); var.copyInformationFrom(n); oldNameNode.setString(\"\"); Node parent = n.getParent(); parent.replaceChild(n, var); fnNameNode.addChildToFront(n); reportCodeChange(\"Function declaration\"); }"
+      },
+      {
+        "txt": "private void doStatementNormalizations( NodeTraversal t, Node n, Node parent) { if (n.getType() == Token.LABEL) { normalizeLabels(n); } if (NodeUtil.isStatementBlock(n) || n.getType() == Token.LABEL) { extractForInitializer(n, null, null); } if (NodeUtil.isStatementBlock(n)) { splitVarDeclarations(n);"
+      },
+      {
+        "txt": "} if (n.getType() == Token.FUNCTION) { moveNamedFunctions(n.getLastChild()); } } private void normalizeLabels(Node n) { Preconditions.checkArgument(n.getType() == Token.LABEL); Node last = n.getLastChild(); switch (last.getType()) { case Token.LABEL:"
+      },
+      {
+        "txt": "case Token.BLOCK: case Token.FOR: case Token.WHILE: case Token.DO: return; default: Node block = new Node(Token.BLOCK); block.copyInformationFrom(last); n.replaceChild(last, block); block.addChildToFront(last);"
+      },
+      {
+        "txt": "reportCodeChange(\"LABEL normalization\"); return; } } private void extractForInitializer( Node n, Node before, Node beforeParent) { for (Node next, c = n.getFirstChild(); c != null; c = next) { next = c.getNext(); Node insertBefore = (before == null) ? c : before; Node insertBeforeParent = (before == null) ? n : beforeParent;"
+      },
+      {
+        "txt": "switch (c.getType()) { case Token.LABEL: extractForInitializer(c, insertBefore, insertBeforeParent); break; case Token.FOR: if (NodeUtil.isForIn(c)) { Node first = c.getFirstChild(); if (first.getType() == Token.VAR) { Node newStatement = first.cloneTree(); Node name = first.removeFirstChild();"
+      },
+      {
+        "txt": "first.getParent().replaceChild(first, name); insertBeforeParent.addChildBefore(newStatement, insertBefore); reportCodeChange(\"FOR-IN var declaration\"); } } else if (c.getFirstChild().getType() != Token.EMPTY) { Node init = c.getFirstChild(); Node empty = new Node(Token.EMPTY); empty.copyInformationFrom(c); c.replaceChild(init, empty); Node newStatement;"
+      },
+      {
+        "txt": "if (init.getType() == Token.VAR) { newStatement = init; } else { newStatement = NodeUtil.newExpr(init); } insertBeforeParent.addChildBefore(newStatement, insertBefore); reportCodeChange(\"FOR initializer\"); } break; }"
+      },
+      {
+        "txt": "} } private void splitVarDeclarations(Node n) { for (Node next, c = n.getFirstChild(); c != null; c = next) { next = c.getNext(); if (c.getType() == Token.VAR) { if (assertOnChange && !c.hasChildren()) { throw new IllegalStateException(\"Empty VAR node.\"); } while (c.getFirstChild() != c.getLastChild()) {"
+      },
+      {
+        "txt": "Node name = c.getFirstChild(); c.removeChild(name); Node newVar = new Node( Token.VAR, name, n.getLineno(), n.getCharno()); n.addChildBefore(newVar, c); reportCodeChange(\"VAR with multiple children\"); } } } }"
+      },
+      {
+        "txt": "private void moveNamedFunctions(Node functionBody) { Preconditions.checkState( functionBody.getParent().getType() == Token.FUNCTION); Node previous = null; Node current = functionBody.getFirstChild(); while (current != null && NodeUtil.isFunctionDeclaration(current)) { previous = current; current = current.getNext(); } Node insertAfter = previous;"
+      },
+      {
+        "txt": "while (current != null) { Node next = current.getNext(); if (NodeUtil.isFunctionDeclaration(current)) { Preconditions.checkNotNull(previous); functionBody.removeChildAfter(previous); insertAfter = addToFront(functionBody, current, insertAfter); reportCodeChange(\"Move function declaration not at top of function\"); } else { previous = current; }"
+      },
+      {
+        "txt": "current = next; } } private Node addToFront(Node parent, Node newChild, Node after) { if (after == null) { parent.addChildToFront(newChild); } else { parent.addChildAfter(newChild, after); } return newChild;"
+      },
+      {
+        "txt": "} } private void removeDuplicateDeclarations(Node externs, Node root) { Callback tickler = new ScopeTicklingCallback(); ScopeCreator scopeCreator = new SyntacticScopeCreator( compiler, new DuplicateDeclarationHandler()); NodeTraversal t = new NodeTraversal(compiler, tickler, scopeCreator); t.traverseRoots(externs, root); } private final class DuplicateDeclarationHandler implements"
+      },
+      {
+        "txt": "@Override public void onRedeclaration( Scope s, String name, Node n, Node parent, Node gramps, Node nodeWithLineNumber) { Preconditions.checkState(n.getType() == Token.NAME); Var v = s.getVar(name); <extra_id_0> if (v != null && v.getParentNode().getType() == Token.CATCH) { name = MakeDeclaredNamesUnique.ContextualRenameInverter.getOrginalName( name); compiler.report( JSError.make( NodeUtil.getSourceName(nodeWithLineNumber), nodeWithLineNumber,"
+      },
+      {
+        "txt": "JSError.make( NodeUtil.getSourceName(nodeWithLineNumber), nodeWithLineNumber, CATCH_BLOCK_VAR_ERROR, name)); } else if (v != null && parent.getType() == Token.FUNCTION) { if (v.getParentNode().getType() == Token.VAR) { s.undeclare(v); s.declare(name, n, n.getJSType(), v.input); replaceVarWithAssignment(v.getNameNode(), v.getParentNode(), v.getParentNode().getParent()); }"
+      },
+      {
+        "txt": "} else if (parent.getType() == Token.VAR) { Preconditions.checkState(parent.hasOneChild()); replaceVarWithAssignment(n, parent, gramps); } } private void replaceVarWithAssignment(Node n, Node parent, Node gramps) { if (n.hasChildren()) { parent.removeChild(n); Node value = n.getFirstChild(); n.removeChild(value);"
+      },
+      {
+        "txt": "Node replacement = new Node(Token.ASSIGN, n, value); replacement.copyInformationFrom(parent); gramps.replaceChild(parent, NodeUtil.newExpr(replacement)); } else { if (NodeUtil.isStatementBlock(gramps)) { gramps.removeChild(parent); } else if (gramps.getType() == Token.FOR) { parent.removeChild(n); gramps.replaceChild(parent, n); } else {"
+      },
+      {
+        "txt": "Preconditions.checkState(gramps.getType() == Token.LABEL); throw new IllegalStateException(\"Unexpected LABEL\"); } } reportCodeChange(\"Duplicate VAR declaration\"); } } private final class ScopeTicklingCallback implements NodeTraversal.ScopedCallback { @Override"
+      },
+      {
+        "txt": "public void enterScope(NodeTraversal t) { t.getScope(); } @Override public void exitScope(NodeTraversal t) { } @Override public boolean shouldTraverse( NodeTraversal nodeTraversal, Node n, Node parent) { return true;"
+      },
+      {
+        "txt": "} @Override public void visit(NodeTraversal t, Node n, Node parent) { } }"
+      }
+    ]
+  },
+  {
+    "id": 669,
+    "file_path": "src/com/google/javascript/jscomp/Normalize.java",
+    "start-bug-line": 669,
+    "end-bug-line": 669,
+    "bug": "NodeUtil.getSourceName(nodeWithLineNumber), nodeWithLineNumber,",
+    "fix": "input.getName(), n,",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.google.javascript.jscomp; import com.google.common.base.Preconditions; import com.google.common.collect.Lists; import com.google.common.collect.Maps; import com.google.common.collect.Sets; import com.google.javascript.jscomp.MakeDeclaredNamesUnique.BoilerplateRenamer;"
+      },
+      {
+        "txt": "import com.google.javascript.jscomp.NodeTraversal.AbstractPostOrderCallback; import com.google.javascript.jscomp.NodeTraversal.Callback; import com.google.javascript.jscomp.Scope.Var; import com.google.javascript.rhino.JSDocInfo; import com.google.javascript.rhino.Node; import com.google.javascript.rhino.Token; import java.util.Map; import java.util.Set; class Normalize implements CompilerPass { private final AbstractCompiler compiler;"
+      },
+      {
+        "txt": "private final boolean assertOnChange; private static final boolean CONVERT_WHILE_TO_FOR = true; static final boolean MAKE_LOCAL_NAMES_UNIQUE = true; public static final DiagnosticType CATCH_BLOCK_VAR_ERROR = DiagnosticType.error( \"JSC_CATCH_BLOCK_VAR_ERROR\", \"The use of scope variable {0} is not allowed within a catch block \" + \"with a catch exception of the same name.\"); Normalize(AbstractCompiler compiler, boolean assertOnChange) { this.compiler = compiler;"
+      },
+      {
+        "txt": "this.assertOnChange = assertOnChange; } static Node parseAndNormalizeSyntheticCode( AbstractCompiler compiler, String code, String prefix) { Node js = compiler.parseSyntheticCode(code); NodeTraversal.traverse(compiler, js, new Normalize.NormalizeStatements(compiler, false)); NodeTraversal.traverse( compiler, js, new MakeDeclaredNamesUnique("
+      },
+      {
+        "txt": "new BoilerplateRenamer( compiler.getUniqueNameIdSupplier(), prefix))); return js; } static Node parseAndNormalizeTestCode( AbstractCompiler compiler, String code, String prefix) { Node js = compiler.parseTestCode(code); NodeTraversal.traverse(compiler, js, new Normalize.NormalizeStatements(compiler, false));"
+      },
+      {
+        "txt": "NodeTraversal.traverse( compiler, js, new MakeDeclaredNamesUnique()); return js; } private void reportCodeChange(String changeDescription) { if (assertOnChange) { throw new IllegalStateException( \"Normalize constraints violated:\\n\" + changeDescription); }"
+      },
+      {
+        "txt": "compiler.reportCodeChange(); } @Override public void process(Node externs, Node root) { NodeTraversal.traverse(compiler, root, new NormalizeStatements(compiler, assertOnChange)); if (MAKE_LOCAL_NAMES_UNIQUE) { MakeDeclaredNamesUnique renamer = new MakeDeclaredNamesUnique(); NodeTraversal t = new NodeTraversal(compiler, renamer); t.traverseRoots(externs, root);"
+      },
+      {
+        "txt": "} removeDuplicateDeclarations(externs, root); new PropagateConstantAnnotationsOverVars(compiler, assertOnChange) .process(externs, root); compiler.setNormalized(); } static class PropagateConstantAnnotationsOverVars extends AbstractPostOrderCallback implements CompilerPass { private final AbstractCompiler compiler;"
+      },
+      {
+        "txt": "private final boolean assertOnChange; PropagateConstantAnnotationsOverVars( AbstractCompiler compiler, boolean forbidChanges) { this.compiler = compiler; this.assertOnChange = forbidChanges; } @Override public void process(Node externs, Node root) { new NodeTraversal(compiler, this).traverseRoots(externs, root); }"
+      },
+      {
+        "txt": "@Override public void visit(NodeTraversal t, Node n, Node parent) { if (n.getType() == Token.NAME) { if (n.getString().isEmpty()) { return; } JSDocInfo info = null; Var var = t.getScope().getVar(n.getString()); if (var != null) { info = var.getJSDocInfo();"
+      },
+      {
+        "txt": "} boolean shouldBeConstant = (info != null && info.isConstant()) || NodeUtil.isConstantByConvention( compiler.getCodingConvention(), n, parent); boolean isMarkedConstant = n.getBooleanProp(Node.IS_CONSTANT_NAME); if (shouldBeConstant && !isMarkedConstant) { if (assertOnChange) { String name = n.getString(); throw new IllegalStateException("
+      },
+      {
+        "txt": "\"Unexpected const change.\\n\" + \" name: \"+ name + \"\\n\" + \" parent:\" + n.getParent().toStringTree()); } n.putBooleanProp(Node.IS_CONSTANT_NAME, true); } } } } static class VerifyConstants extends AbstractPostOrderCallback"
+      },
+      {
+        "txt": "implements CompilerPass { final private AbstractCompiler compiler; final private boolean checkUserDeclarations; VerifyConstants(AbstractCompiler compiler, boolean checkUserDeclarations) { this.compiler = compiler; this.checkUserDeclarations = checkUserDeclarations; } @Override public void process(Node externs, Node root) { Node externsAndJs = root.getParent();"
+      },
+      {
+        "txt": "Preconditions.checkState(externsAndJs != null); Preconditions.checkState(externsAndJs.hasChild(externs)); NodeTraversal.traverseRoots( compiler, Lists.newArrayList(externs, root), this); } private Map<String, Boolean> constantMap = Maps.newHashMap(); @Override public void visit(NodeTraversal t, Node n, Node parent) { if (n.getType() == Token.NAME) { String name = n.getString();"
+      },
+      {
+        "txt": "if (n.getString().isEmpty()) { return; } boolean isConst = n.getBooleanProp(Node.IS_CONSTANT_NAME); if (checkUserDeclarations) { boolean expectedConst = false; CodingConvention convention = compiler.getCodingConvention(); if (NodeUtil.isConstantName(n) || NodeUtil.isConstantByConvention(convention, n, parent)) { expectedConst = true;"
+      },
+      {
+        "txt": "} else { expectedConst = false; JSDocInfo info = null; Var var = t.getScope().getVar(n.getString()); if (var != null) { info = var.getJSDocInfo(); } if (info != null && info.isConstant()) { expectedConst = true; } else {"
+      },
+      {
+        "txt": "expectedConst = false; } } if (expectedConst) { Preconditions.checkState(expectedConst == isConst, \"The name \" + name + \" is not annotated as constant.\"); } else { Preconditions.checkState(expectedConst == isConst, \"The name \" + name + \" should not be annotated as constant.\"); }"
+      },
+      {
+        "txt": "} Boolean value = constantMap.get(name); if (value == null) { constantMap.put(name, isConst); } else { Preconditions.checkState(value.booleanValue() == isConst, \"The name \" + name + \" is not consistently annotated as \" + \"constant.\"); } }"
+      },
+      {
+        "txt": "} } static class NormalizeStatements implements Callback { private final AbstractCompiler compiler; private final boolean assertOnChange; NormalizeStatements(AbstractCompiler compiler, boolean assertOnChange) { this.compiler = compiler; this.assertOnChange = assertOnChange; } private void reportCodeChange(String changeDescription) {"
+      },
+      {
+        "txt": "if (assertOnChange) { throw new IllegalStateException( \"Normalize constraints violated:\\n\" + changeDescription); } compiler.reportCodeChange(); } @Override public boolean shouldTraverse(NodeTraversal t, Node n, Node parent) { doStatementNormalizations(t, n, parent); return true;"
+      },
+      {
+        "txt": "} @Override public void visit(NodeTraversal t, Node n, Node parent) { switch (n.getType()) { case Token.WHILE: if (CONVERT_WHILE_TO_FOR) { Node expr = n.getFirstChild(); n.setType(Token.FOR); Node empty = new Node(Token.EMPTY); empty.copyInformationFrom(n);"
+      },
+      {
+        "txt": "n.addChildBefore(empty, expr); n.addChildAfter(empty.cloneNode(), expr); reportCodeChange(\"WHILE node\"); } break; case Token.FUNCTION: normalizeFunctionDeclaration(n); break; case Token.NAME: case Token.STRING:"
+      },
+      {
+        "txt": "annotateConstantsByConvention(n, parent); break; } } private void annotateConstantsByConvention(Node n, Node parent) { Preconditions.checkState( n.getType() == Token.NAME || n.getType() == Token.STRING); boolean isObjLitKey = NodeUtil.isObjectLitKey(n, parent); boolean isProperty = isObjLitKey || (parent.getType() == Token.GETPROP &&"
+      },
+      {
+        "txt": "parent.getLastChild() == n); if (n.getType() == Token.NAME || isProperty) { boolean isMarkedConstant = n.getBooleanProp(Node.IS_CONSTANT_NAME); if (!isMarkedConstant && NodeUtil.isConstantByConvention( compiler.getCodingConvention(), n, parent)) { if (assertOnChange) { String name = n.getString(); throw new IllegalStateException( \"Unexpected const change.\\n\" +"
+      },
+      {
+        "txt": "\" name: \"+ name + \"\\n\" + \" parent:\" + n.getParent().toStringTree()); } n.putBooleanProp(Node.IS_CONSTANT_NAME, true); } } } private void normalizeFunctionDeclaration(Node n) { Preconditions.checkState(n.getType() == Token.FUNCTION); if (!NodeUtil.isFunctionExpression(n)"
+      },
+      {
+        "txt": "&& !NodeUtil.isHoistedFunctionDeclaration(n)) { rewriteFunctionDeclaration(n); } } private void rewriteFunctionDeclaration(Node n) { Node oldNameNode = n.getFirstChild(); Node fnNameNode = oldNameNode.cloneNode(); Node var = new Node(Token.VAR, fnNameNode, n.getLineno(), n.getCharno()); var.copyInformationFrom(n); oldNameNode.setString(\"\");"
+      },
+      {
+        "txt": "Node parent = n.getParent(); parent.replaceChild(n, var); fnNameNode.addChildToFront(n); reportCodeChange(\"Function declaration\"); } private void doStatementNormalizations( NodeTraversal t, Node n, Node parent) { if (n.getType() == Token.LABEL) { normalizeLabels(n); }"
+      },
+      {
+        "txt": "if (NodeUtil.isStatementBlock(n) || n.getType() == Token.LABEL) { extractForInitializer(n, null, null); } if (NodeUtil.isStatementBlock(n)) { splitVarDeclarations(n); } if (n.getType() == Token.FUNCTION) { moveNamedFunctions(n.getLastChild()); } }"
+      },
+      {
+        "txt": "private void normalizeLabels(Node n) { Preconditions.checkArgument(n.getType() == Token.LABEL); Node last = n.getLastChild(); switch (last.getType()) { case Token.LABEL: case Token.BLOCK: case Token.FOR: case Token.WHILE: case Token.DO: return;"
+      },
+      {
+        "txt": "default: Node block = new Node(Token.BLOCK); block.copyInformationFrom(last); n.replaceChild(last, block); block.addChildToFront(last); reportCodeChange(\"LABEL normalization\"); return; } } private void extractForInitializer("
+      },
+      {
+        "txt": "Node n, Node before, Node beforeParent) { for (Node next, c = n.getFirstChild(); c != null; c = next) { next = c.getNext(); Node insertBefore = (before == null) ? c : before; Node insertBeforeParent = (before == null) ? n : beforeParent; switch (c.getType()) { case Token.LABEL: extractForInitializer(c, insertBefore, insertBeforeParent); break; case Token.FOR:"
+      },
+      {
+        "txt": "if (NodeUtil.isForIn(c)) { Node first = c.getFirstChild(); if (first.getType() == Token.VAR) { Node newStatement = first.cloneTree(); Node name = first.removeFirstChild(); first.getParent().replaceChild(first, name); insertBeforeParent.addChildBefore(newStatement, insertBefore); reportCodeChange(\"FOR-IN var declaration\"); } } else if (c.getFirstChild().getType() != Token.EMPTY) {"
+      },
+      {
+        "txt": "Node init = c.getFirstChild(); Node empty = new Node(Token.EMPTY); empty.copyInformationFrom(c); c.replaceChild(init, empty); Node newStatement; if (init.getType() == Token.VAR) { newStatement = init; } else { newStatement = NodeUtil.newExpr(init); }"
+      },
+      {
+        "txt": "insertBeforeParent.addChildBefore(newStatement, insertBefore); reportCodeChange(\"FOR initializer\"); } break; } } } private void splitVarDeclarations(Node n) { for (Node next, c = n.getFirstChild(); c != null; c = next) { next = c.getNext();"
+      },
+      {
+        "txt": "if (c.getType() == Token.VAR) { if (assertOnChange && !c.hasChildren()) { throw new IllegalStateException(\"Empty VAR node.\"); } while (c.getFirstChild() != c.getLastChild()) { Node name = c.getFirstChild(); c.removeChild(name); Node newVar = new Node( Token.VAR, name, n.getLineno(), n.getCharno()); n.addChildBefore(newVar, c);"
+      },
+      {
+        "txt": "reportCodeChange(\"VAR with multiple children\"); } } } } private void moveNamedFunctions(Node functionBody) { Preconditions.checkState( functionBody.getParent().getType() == Token.FUNCTION); Node previous = null; Node current = functionBody.getFirstChild();"
+      },
+      {
+        "txt": "while (current != null && NodeUtil.isFunctionDeclaration(current)) { previous = current; current = current.getNext(); } Node insertAfter = previous; while (current != null) { Node next = current.getNext(); if (NodeUtil.isFunctionDeclaration(current)) { Preconditions.checkNotNull(previous); functionBody.removeChildAfter(previous);"
+      },
+      {
+        "txt": "insertAfter = addToFront(functionBody, current, insertAfter); reportCodeChange(\"Move function declaration not at top of function\"); } else { previous = current; } current = next; } } private Node addToFront(Node parent, Node newChild, Node after) { if (after == null) {"
+      },
+      {
+        "txt": "parent.addChildToFront(newChild); } else { parent.addChildAfter(newChild, after); } return newChild; } } private void removeDuplicateDeclarations(Node externs, Node root) { Callback tickler = new ScopeTicklingCallback(); ScopeCreator scopeCreator = new SyntacticScopeCreator("
+      },
+      {
+        "txt": "compiler, new DuplicateDeclarationHandler()); NodeTraversal t = new NodeTraversal(compiler, tickler, scopeCreator); t.traverseRoots(externs, root); } private final class DuplicateDeclarationHandler implements SyntacticScopeCreator.RedeclarationHandler { @Override public void onRedeclaration( Scope s, String name, Node n, Node parent, Node gramps, Node nodeWithLineNumber) {"
+      },
+      {
+        "txt": "Var v = s.getVar(name); if (v != null && v.getParentNode().getType() == Token.CATCH) { name = MakeDeclaredNamesUnique.ContextualRenameInverter.getOrginalName( name); compiler.report( JSError.make( <extra_id_0> CATCH_BLOCK_VAR_ERROR, name)); } else if (v != null && parent.getType() == Token.FUNCTION) { if (v.getParentNode().getType() == Token.VAR) { s.undeclare(v); s.declare(name, n, n.getJSType(), v.input); replaceVarWithAssignment(v.getNameNode(), v.getParentNode(),"
+      },
+      {
+        "txt": "s.declare(name, n, n.getJSType(), v.input); replaceVarWithAssignment(v.getNameNode(), v.getParentNode(), v.getParentNode().getParent()); } } else if (parent.getType() == Token.VAR) { Preconditions.checkState(parent.hasOneChild()); replaceVarWithAssignment(n, parent, gramps); } } private void replaceVarWithAssignment(Node n, Node parent, Node gramps) {"
+      },
+      {
+        "txt": "if (n.hasChildren()) { parent.removeChild(n); Node value = n.getFirstChild(); n.removeChild(value); Node replacement = new Node(Token.ASSIGN, n, value); replacement.copyInformationFrom(parent); gramps.replaceChild(parent, NodeUtil.newExpr(replacement)); } else { if (NodeUtil.isStatementBlock(gramps)) { gramps.removeChild(parent);"
+      },
+      {
+        "txt": "} else if (gramps.getType() == Token.FOR) { parent.removeChild(n); gramps.replaceChild(parent, n); } else { Preconditions.checkState(gramps.getType() == Token.LABEL); throw new IllegalStateException(\"Unexpected LABEL\"); } } reportCodeChange(\"Duplicate VAR declaration\"); }"
+      },
+      {
+        "txt": "} private final class ScopeTicklingCallback implements NodeTraversal.ScopedCallback { @Override public void enterScope(NodeTraversal t) { t.getScope(); } @Override public void exitScope(NodeTraversal t) { }"
+      },
+      {
+        "txt": "@Override public boolean shouldTraverse( NodeTraversal nodeTraversal, Node n, Node parent) { return true; } @Override public void visit(NodeTraversal t, Node n, Node parent) { } }"
+      }
+    ]
+  },
+  {
+    "id": 670,
+    "file_path": "src/com/google/javascript/jscomp/Normalize.java",
+    "start-bug-line": 681,
+    "end-bug-line": 681,
+    "bug": "replaceVarWithAssignment(n, parent, gramps);",
+    "fix": "replaceVarWithAssignment(n, parent, parent.getParent());",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.google.javascript.jscomp; import com.google.common.base.Preconditions; import com.google.common.collect.Lists; import com.google.common.collect.Maps; import com.google.common.collect.Sets; import com.google.javascript.jscomp.MakeDeclaredNamesUnique.BoilerplateRenamer; import com.google.javascript.jscomp.NodeTraversal.AbstractPostOrderCallback;"
+      },
+      {
+        "txt": "import com.google.javascript.jscomp.NodeTraversal.Callback; import com.google.javascript.jscomp.Scope.Var; import com.google.javascript.rhino.JSDocInfo; import com.google.javascript.rhino.Node; import com.google.javascript.rhino.Token; import java.util.Map; import java.util.Set; class Normalize implements CompilerPass { private final AbstractCompiler compiler; private final boolean assertOnChange;"
+      },
+      {
+        "txt": "private static final boolean CONVERT_WHILE_TO_FOR = true; static final boolean MAKE_LOCAL_NAMES_UNIQUE = true; public static final DiagnosticType CATCH_BLOCK_VAR_ERROR = DiagnosticType.error( \"JSC_CATCH_BLOCK_VAR_ERROR\", \"The use of scope variable {0} is not allowed within a catch block \" + \"with a catch exception of the same name.\"); Normalize(AbstractCompiler compiler, boolean assertOnChange) { this.compiler = compiler; this.assertOnChange = assertOnChange;"
+      },
+      {
+        "txt": "} static Node parseAndNormalizeSyntheticCode( AbstractCompiler compiler, String code, String prefix) { Node js = compiler.parseSyntheticCode(code); NodeTraversal.traverse(compiler, js, new Normalize.NormalizeStatements(compiler, false)); NodeTraversal.traverse( compiler, js, new MakeDeclaredNamesUnique( new BoilerplateRenamer("
+      },
+      {
+        "txt": "compiler.getUniqueNameIdSupplier(), prefix))); return js; } static Node parseAndNormalizeTestCode( AbstractCompiler compiler, String code, String prefix) { Node js = compiler.parseTestCode(code); NodeTraversal.traverse(compiler, js, new Normalize.NormalizeStatements(compiler, false)); NodeTraversal.traverse("
+      },
+      {
+        "txt": "compiler, js, new MakeDeclaredNamesUnique()); return js; } private void reportCodeChange(String changeDescription) { if (assertOnChange) { throw new IllegalStateException( \"Normalize constraints violated:\\n\" + changeDescription); } compiler.reportCodeChange();"
+      },
+      {
+        "txt": "} @Override public void process(Node externs, Node root) { NodeTraversal.traverse(compiler, root, new NormalizeStatements(compiler, assertOnChange)); if (MAKE_LOCAL_NAMES_UNIQUE) { MakeDeclaredNamesUnique renamer = new MakeDeclaredNamesUnique(); NodeTraversal t = new NodeTraversal(compiler, renamer); t.traverseRoots(externs, root); }"
+      },
+      {
+        "txt": "removeDuplicateDeclarations(externs, root); new PropagateConstantAnnotationsOverVars(compiler, assertOnChange) .process(externs, root); compiler.setNormalized(); } static class PropagateConstantAnnotationsOverVars extends AbstractPostOrderCallback implements CompilerPass { private final AbstractCompiler compiler; private final boolean assertOnChange;"
+      },
+      {
+        "txt": "PropagateConstantAnnotationsOverVars( AbstractCompiler compiler, boolean forbidChanges) { this.compiler = compiler; this.assertOnChange = forbidChanges; } @Override public void process(Node externs, Node root) { new NodeTraversal(compiler, this).traverseRoots(externs, root); } @Override"
+      },
+      {
+        "txt": "public void visit(NodeTraversal t, Node n, Node parent) { if (n.getType() == Token.NAME) { if (n.getString().isEmpty()) { return; } JSDocInfo info = null; Var var = t.getScope().getVar(n.getString()); if (var != null) { info = var.getJSDocInfo(); }"
+      },
+      {
+        "txt": "boolean shouldBeConstant = (info != null && info.isConstant()) || NodeUtil.isConstantByConvention( compiler.getCodingConvention(), n, parent); boolean isMarkedConstant = n.getBooleanProp(Node.IS_CONSTANT_NAME); if (shouldBeConstant && !isMarkedConstant) { if (assertOnChange) { String name = n.getString(); throw new IllegalStateException( \"Unexpected const change.\\n\" +"
+      },
+      {
+        "txt": "\" name: \"+ name + \"\\n\" + \" parent:\" + n.getParent().toStringTree()); } n.putBooleanProp(Node.IS_CONSTANT_NAME, true); } } } } static class VerifyConstants extends AbstractPostOrderCallback implements CompilerPass {"
+      },
+      {
+        "txt": "final private AbstractCompiler compiler; final private boolean checkUserDeclarations; VerifyConstants(AbstractCompiler compiler, boolean checkUserDeclarations) { this.compiler = compiler; this.checkUserDeclarations = checkUserDeclarations; } @Override public void process(Node externs, Node root) { Node externsAndJs = root.getParent(); Preconditions.checkState(externsAndJs != null);"
+      },
+      {
+        "txt": "Preconditions.checkState(externsAndJs.hasChild(externs)); NodeTraversal.traverseRoots( compiler, Lists.newArrayList(externs, root), this); } private Map<String, Boolean> constantMap = Maps.newHashMap(); @Override public void visit(NodeTraversal t, Node n, Node parent) { if (n.getType() == Token.NAME) { String name = n.getString(); if (n.getString().isEmpty()) {"
+      },
+      {
+        "txt": "return; } boolean isConst = n.getBooleanProp(Node.IS_CONSTANT_NAME); if (checkUserDeclarations) { boolean expectedConst = false; CodingConvention convention = compiler.getCodingConvention(); if (NodeUtil.isConstantName(n) || NodeUtil.isConstantByConvention(convention, n, parent)) { expectedConst = true; } else {"
+      },
+      {
+        "txt": "expectedConst = false; JSDocInfo info = null; Var var = t.getScope().getVar(n.getString()); if (var != null) { info = var.getJSDocInfo(); } if (info != null && info.isConstant()) { expectedConst = true; } else { expectedConst = false;"
+      },
+      {
+        "txt": "} } if (expectedConst) { Preconditions.checkState(expectedConst == isConst, \"The name \" + name + \" is not annotated as constant.\"); } else { Preconditions.checkState(expectedConst == isConst, \"The name \" + name + \" should not be annotated as constant.\"); } }"
+      },
+      {
+        "txt": "Boolean value = constantMap.get(name); if (value == null) { constantMap.put(name, isConst); } else { Preconditions.checkState(value.booleanValue() == isConst, \"The name \" + name + \" is not consistently annotated as \" + \"constant.\"); } } }"
+      },
+      {
+        "txt": "} static class NormalizeStatements implements Callback { private final AbstractCompiler compiler; private final boolean assertOnChange; NormalizeStatements(AbstractCompiler compiler, boolean assertOnChange) { this.compiler = compiler; this.assertOnChange = assertOnChange; } private void reportCodeChange(String changeDescription) { if (assertOnChange) {"
+      },
+      {
+        "txt": "throw new IllegalStateException( \"Normalize constraints violated:\\n\" + changeDescription); } compiler.reportCodeChange(); } @Override public boolean shouldTraverse(NodeTraversal t, Node n, Node parent) { doStatementNormalizations(t, n, parent); return true; }"
+      },
+      {
+        "txt": "@Override public void visit(NodeTraversal t, Node n, Node parent) { switch (n.getType()) { case Token.WHILE: if (CONVERT_WHILE_TO_FOR) { Node expr = n.getFirstChild(); n.setType(Token.FOR); Node empty = new Node(Token.EMPTY); empty.copyInformationFrom(n); n.addChildBefore(empty, expr);"
+      },
+      {
+        "txt": "n.addChildAfter(empty.cloneNode(), expr); reportCodeChange(\"WHILE node\"); } break; case Token.FUNCTION: normalizeFunctionDeclaration(n); break; case Token.NAME: case Token.STRING: annotateConstantsByConvention(n, parent);"
+      },
+      {
+        "txt": "break; } } private void annotateConstantsByConvention(Node n, Node parent) { Preconditions.checkState( n.getType() == Token.NAME || n.getType() == Token.STRING); boolean isObjLitKey = NodeUtil.isObjectLitKey(n, parent); boolean isProperty = isObjLitKey || (parent.getType() == Token.GETPROP && parent.getLastChild() == n);"
+      },
+      {
+        "txt": "if (n.getType() == Token.NAME || isProperty) { boolean isMarkedConstant = n.getBooleanProp(Node.IS_CONSTANT_NAME); if (!isMarkedConstant && NodeUtil.isConstantByConvention( compiler.getCodingConvention(), n, parent)) { if (assertOnChange) { String name = n.getString(); throw new IllegalStateException( \"Unexpected const change.\\n\" + \" name: \"+ name + \"\\n\" +"
+      },
+      {
+        "txt": "\" parent:\" + n.getParent().toStringTree()); } n.putBooleanProp(Node.IS_CONSTANT_NAME, true); } } } private void normalizeFunctionDeclaration(Node n) { Preconditions.checkState(n.getType() == Token.FUNCTION); if (!NodeUtil.isFunctionExpression(n) && !NodeUtil.isHoistedFunctionDeclaration(n)) {"
+      },
+      {
+        "txt": "rewriteFunctionDeclaration(n); } } private void rewriteFunctionDeclaration(Node n) { Node oldNameNode = n.getFirstChild(); Node fnNameNode = oldNameNode.cloneNode(); Node var = new Node(Token.VAR, fnNameNode, n.getLineno(), n.getCharno()); var.copyInformationFrom(n); oldNameNode.setString(\"\"); Node parent = n.getParent();"
+      },
+      {
+        "txt": "parent.replaceChild(n, var); fnNameNode.addChildToFront(n); reportCodeChange(\"Function declaration\"); } private void doStatementNormalizations( NodeTraversal t, Node n, Node parent) { if (n.getType() == Token.LABEL) { normalizeLabels(n); } if (NodeUtil.isStatementBlock(n) || n.getType() == Token.LABEL) {"
+      },
+      {
+        "txt": "extractForInitializer(n, null, null); } if (NodeUtil.isStatementBlock(n)) { splitVarDeclarations(n); } if (n.getType() == Token.FUNCTION) { moveNamedFunctions(n.getLastChild()); } } private void normalizeLabels(Node n) {"
+      },
+      {
+        "txt": "Preconditions.checkArgument(n.getType() == Token.LABEL); Node last = n.getLastChild(); switch (last.getType()) { case Token.LABEL: case Token.BLOCK: case Token.FOR: case Token.WHILE: case Token.DO: return; default:"
+      },
+      {
+        "txt": "Node block = new Node(Token.BLOCK); block.copyInformationFrom(last); n.replaceChild(last, block); block.addChildToFront(last); reportCodeChange(\"LABEL normalization\"); return; } } private void extractForInitializer( Node n, Node before, Node beforeParent) {"
+      },
+      {
+        "txt": "for (Node next, c = n.getFirstChild(); c != null; c = next) { next = c.getNext(); Node insertBefore = (before == null) ? c : before; Node insertBeforeParent = (before == null) ? n : beforeParent; switch (c.getType()) { case Token.LABEL: extractForInitializer(c, insertBefore, insertBeforeParent); break; case Token.FOR: if (NodeUtil.isForIn(c)) {"
+      },
+      {
+        "txt": "Node first = c.getFirstChild(); if (first.getType() == Token.VAR) { Node newStatement = first.cloneTree(); Node name = first.removeFirstChild(); first.getParent().replaceChild(first, name); insertBeforeParent.addChildBefore(newStatement, insertBefore); reportCodeChange(\"FOR-IN var declaration\"); } } else if (c.getFirstChild().getType() != Token.EMPTY) { Node init = c.getFirstChild();"
+      },
+      {
+        "txt": "Node empty = new Node(Token.EMPTY); empty.copyInformationFrom(c); c.replaceChild(init, empty); Node newStatement; if (init.getType() == Token.VAR) { newStatement = init; } else { newStatement = NodeUtil.newExpr(init); } insertBeforeParent.addChildBefore(newStatement, insertBefore);"
+      },
+      {
+        "txt": "reportCodeChange(\"FOR initializer\"); } break; } } } private void splitVarDeclarations(Node n) { for (Node next, c = n.getFirstChild(); c != null; c = next) { next = c.getNext(); if (c.getType() == Token.VAR) {"
+      },
+      {
+        "txt": "if (assertOnChange && !c.hasChildren()) { throw new IllegalStateException(\"Empty VAR node.\"); } while (c.getFirstChild() != c.getLastChild()) { Node name = c.getFirstChild(); c.removeChild(name); Node newVar = new Node( Token.VAR, name, n.getLineno(), n.getCharno()); n.addChildBefore(newVar, c); reportCodeChange(\"VAR with multiple children\");"
+      },
+      {
+        "txt": "} } } } private void moveNamedFunctions(Node functionBody) { Preconditions.checkState( functionBody.getParent().getType() == Token.FUNCTION); Node previous = null; Node current = functionBody.getFirstChild(); while (current != null && NodeUtil.isFunctionDeclaration(current)) {"
+      },
+      {
+        "txt": "previous = current; current = current.getNext(); } Node insertAfter = previous; while (current != null) { Node next = current.getNext(); if (NodeUtil.isFunctionDeclaration(current)) { Preconditions.checkNotNull(previous); functionBody.removeChildAfter(previous); insertAfter = addToFront(functionBody, current, insertAfter);"
+      },
+      {
+        "txt": "reportCodeChange(\"Move function declaration not at top of function\"); } else { previous = current; } current = next; } } private Node addToFront(Node parent, Node newChild, Node after) { if (after == null) { parent.addChildToFront(newChild);"
+      },
+      {
+        "txt": "} else { parent.addChildAfter(newChild, after); } return newChild; } } private void removeDuplicateDeclarations(Node externs, Node root) { Callback tickler = new ScopeTicklingCallback(); ScopeCreator scopeCreator = new SyntacticScopeCreator( compiler, new DuplicateDeclarationHandler());"
+      },
+      {
+        "txt": "NodeTraversal t = new NodeTraversal(compiler, tickler, scopeCreator); t.traverseRoots(externs, root); } private final class DuplicateDeclarationHandler implements SyntacticScopeCreator.RedeclarationHandler { @Override public void onRedeclaration( Scope s, String name, Node n, Node parent, Node gramps, Node nodeWithLineNumber) { Preconditions.checkState(n.getType() == Token.NAME);"
+      },
+      {
+        "txt": "Var v = s.getVar(name); if (v != null && v.getParentNode().getType() == Token.CATCH) { name = MakeDeclaredNamesUnique.ContextualRenameInverter.getOrginalName( name); compiler.report( JSError.make( NodeUtil.getSourceName(nodeWithLineNumber), nodeWithLineNumber, CATCH_BLOCK_VAR_ERROR, name)); } else if (v != null && parent.getType() == Token.FUNCTION) { if (v.getParentNode().getType() == Token.VAR) {"
+      },
+      {
+        "txt": "s.declare(name, n, n.getJSType(), v.input); replaceVarWithAssignment(v.getNameNode(), v.getParentNode(), v.getParentNode().getParent()); } } else if (parent.getType() == Token.VAR) { Preconditions.checkState(parent.hasOneChild()); <extra_id_0> } } private void replaceVarWithAssignment(Node n, Node parent, Node gramps) { if (n.hasChildren()) { parent.removeChild(n); Node value = n.getFirstChild();"
+      },
+      {
+        "txt": "parent.removeChild(n); Node value = n.getFirstChild(); n.removeChild(value); Node replacement = new Node(Token.ASSIGN, n, value); replacement.copyInformationFrom(parent); gramps.replaceChild(parent, NodeUtil.newExpr(replacement)); } else { if (NodeUtil.isStatementBlock(gramps)) { gramps.removeChild(parent); } else if (gramps.getType() == Token.FOR) {"
+      },
+      {
+        "txt": "parent.removeChild(n); gramps.replaceChild(parent, n); } else { Preconditions.checkState(gramps.getType() == Token.LABEL); throw new IllegalStateException(\"Unexpected LABEL\"); } } reportCodeChange(\"Duplicate VAR declaration\"); } }"
+      },
+      {
+        "txt": "private final class ScopeTicklingCallback implements NodeTraversal.ScopedCallback { @Override public void enterScope(NodeTraversal t) { t.getScope(); } @Override public void exitScope(NodeTraversal t) { } @Override"
+      },
+      {
+        "txt": "public boolean shouldTraverse( NodeTraversal nodeTraversal, Node n, Node parent) { return true; } @Override public void visit(NodeTraversal t, Node n, Node parent) { } }"
+      }
+    ]
+  },
+  {
+    "id": 671,
+    "file_path": "src/com/google/javascript/jscomp/SyntacticScopeCreator.java",
+    "start-bug-line": 94,
+    "end-bug-line": 94,
+    "bug": "declareVar(fnName, fnNameNode, n, null, null, n);",
+    "fix": "declareVar(fnNameNode);",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.google.javascript.jscomp; import com.google.common.base.Preconditions;"
+      },
+      {
+        "txt": "import com.google.javascript.rhino.JSDocInfo; import com.google.javascript.rhino.Node; import com.google.javascript.rhino.Token; class SyntacticScopeCreator implements ScopeCreator { private final AbstractCompiler compiler; private Scope scope; private String sourceName; private final RedeclarationHandler redeclarationHandler; private static final String ARGUMENTS = \"arguments\"; public static final DiagnosticType VAR_MULTIPLY_DECLARED_ERROR ="
+      },
+      {
+        "txt": "DiagnosticType.error( \"JSC_VAR_MULTIPLY_DECLARED_ERROR\", \"Variable {0} first declared in {1}\"); public static final DiagnosticType VAR_ARGUMENTS_SHADOWED_ERROR = DiagnosticType.error( \"JSC_VAR_ARGUMENTS_SHADOWED_ERROR\", \"Shadowing \\\"arguments\\\" is not allowed\"); SyntacticScopeCreator(AbstractCompiler compiler) { this.compiler = compiler; this.redeclarationHandler = new DefaultRedeclarationHandler();"
+      },
+      {
+        "txt": "} SyntacticScopeCreator( AbstractCompiler compiler, RedeclarationHandler redeclarationHandler) { this.compiler = compiler; this.redeclarationHandler = redeclarationHandler; } public Scope createScope(Node n, Scope parent) { sourceName = null; if (parent == null) { scope = new Scope(n, compiler);"
+      },
+      {
+        "txt": "} else { scope = new Scope(parent, n); } scanRoot(n, parent); sourceName = null; Scope returnedScope = scope; scope = null; return returnedScope; } private void scanRoot(Node n, Scope parent) {"
+      },
+      {
+        "txt": "sourceName = (String) n.getProp(Node.SOURCENAME_PROP); final Node fnNameNode = n.getFirstChild(); final Node args = fnNameNode.getNext(); final Node body = args.getNext(); String fnName = fnNameNode.getString(); if (!fnName.isEmpty() && NodeUtil.isFunctionExpression(n)) { <extra_id_0> } Preconditions.checkState(args.getType() == Token.LP); for (Node a = args.getFirstChild(); a != null; a = a.getNext()) { Preconditions.checkState(a.getType() == Token.NAME); declareVar(a.getString(), a, args, n, null, n);"
+      },
+      {
+        "txt": "Preconditions.checkState(a.getType() == Token.NAME); declareVar(a.getString(), a, args, n, null, n); } scanVars(body, n); } else { Preconditions.checkState(scope.getParent() == null); scanVars(n, null); } } private void scanVars(Node n, Node parent) {"
+      },
+      {
+        "txt": "switch (n.getType()) { case Token.VAR: for (Node child = n.getFirstChild(); child != null;) { Node next = child.getNext(); Preconditions.checkState(child.getType() == Token.NAME); String name = child.getString(); declareVar(name, child, n, parent, null, n); child = next; }"
+      },
+      {
+        "txt": "return; case Token.FUNCTION: if (NodeUtil.isFunctionExpression(n)) { return; } String fnName = n.getFirstChild().getString(); if (fnName.isEmpty()) { return; } declareVar(fnName, n.getFirstChild(), n, parent, null, n);"
+      },
+      {
+        "txt": "return; // should not examine function's children case Token.CATCH: Preconditions.checkState(n.getChildCount() == 2); Preconditions.checkState(n.getFirstChild().getType() == Token.NAME); final Node var = n.getFirstChild(); final Node block = var.getNext(); declareVar(var.getString(), var, n, parent, null, n); scanVars(block, n); return; // only one child to scan case Token.SCRIPT:"
+      },
+      {
+        "txt": "sourceName = (String) n.getProp(Node.SOURCENAME_PROP); break; } if (NodeUtil.isControlStructure(n) || NodeUtil.isStatementBlock(n)) { for (Node child = n.getFirstChild(); child != null;) { Node next = child.getNext(); scanVars(child, n); child = next; }"
+      },
+      {
+        "txt": "} } interface RedeclarationHandler { void onRedeclaration( Scope s, String name, Node n, Node parent, Node gramps, Node nodeWithLineNumber); } private class DefaultRedeclarationHandler implements RedeclarationHandler { public void onRedeclaration( Scope s, String name,"
+      },
+      {
+        "txt": "Node n, Node parent, Node gramps, Node nodeWithLineNumber) { if (scope.isGlobal()) { Scope.Var origVar = scope.getVar(name); Node origParent = origVar.getParentNode(); if (origParent.getType() == Token.CATCH && parent.getType() == Token.CATCH) { return; } boolean allowDupe = false; JSDocInfo info = n.getJSDocInfo();"
+      },
+      {
+        "txt": "if (info == null) { info = parent.getJSDocInfo(); } allowDupe = info != null && info.getSuppressions().contains(\"duplicate\"); if (!allowDupe) { compiler.report( JSError.make(sourceName, n, VAR_MULTIPLY_DECLARED_ERROR, name,"
+      },
+      {
+        "txt": "(origVar.input != null ? origVar.input.getName() : \"??\"))); } } else if (name.equals(ARGUMENTS) && !NodeUtil.isVarDeclaration(n)) { compiler.report( JSError.make(sourceName, n, VAR_ARGUMENTS_SHADOWED_ERROR)); } }"
+      },
+      {
+        "txt": "} private void declareVar(String name, Node n, Node parent, Node gramps, com.google.javascript.rhino.jstype.JSType declaredType, Node nodeWithLineNumber) { if (scope.isDeclared(name, false) || (scope.isLocal() && name.equals(ARGUMENTS))) { redeclarationHandler.onRedeclaration( scope, name, n, parent, gramps, nodeWithLineNumber); } else { scope.declare(name, n, declaredType, compiler.getInput(sourceName));"
+      },
+      {
+        "txt": "} }"
+      }
+    ]
+  },
+  {
+    "id": 672,
+    "file_path": "src/com/google/javascript/jscomp/SyntacticScopeCreator.java",
+    "start-bug-line": 102,
+    "end-bug-line": 102,
+    "bug": "declareVar(a.getString(), a, args, n, null, n);",
+    "fix": "declareVar(a);",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.google.javascript.jscomp; import com.google.common.base.Preconditions; import com.google.javascript.rhino.JSDocInfo; import com.google.javascript.rhino.Node; import com.google.javascript.rhino.Token; class SyntacticScopeCreator implements ScopeCreator { private final AbstractCompiler compiler; private Scope scope;"
+      },
+      {
+        "txt": "private String sourceName; private final RedeclarationHandler redeclarationHandler; private static final String ARGUMENTS = \"arguments\"; public static final DiagnosticType VAR_MULTIPLY_DECLARED_ERROR = DiagnosticType.error( \"JSC_VAR_MULTIPLY_DECLARED_ERROR\", \"Variable {0} first declared in {1}\"); public static final DiagnosticType VAR_ARGUMENTS_SHADOWED_ERROR = DiagnosticType.error( \"JSC_VAR_ARGUMENTS_SHADOWED_ERROR\","
+      },
+      {
+        "txt": "\"Shadowing \\\"arguments\\\" is not allowed\"); SyntacticScopeCreator(AbstractCompiler compiler) { this.compiler = compiler; this.redeclarationHandler = new DefaultRedeclarationHandler(); } SyntacticScopeCreator( AbstractCompiler compiler, RedeclarationHandler redeclarationHandler) { this.compiler = compiler; this.redeclarationHandler = redeclarationHandler; }"
+      },
+      {
+        "txt": "public Scope createScope(Node n, Scope parent) { sourceName = null; if (parent == null) { scope = new Scope(n, compiler); } else { scope = new Scope(parent, n); } scanRoot(n, parent); sourceName = null; Scope returnedScope = scope;"
+      },
+      {
+        "txt": "scope = null; return returnedScope; } private void scanRoot(Node n, Scope parent) { if (n.getType() == Token.FUNCTION) { sourceName = (String) n.getProp(Node.SOURCENAME_PROP); final Node fnNameNode = n.getFirstChild(); final Node args = fnNameNode.getNext(); final Node body = args.getNext(); String fnName = fnNameNode.getString();"
+      },
+      {
+        "txt": "declareVar(fnName, fnNameNode, n, null, null, n); } Preconditions.checkState(args.getType() == Token.LP); for (Node a = args.getFirstChild(); a != null; a = a.getNext()) { Preconditions.checkState(a.getType() == Token.NAME); <extra_id_0> } scanVars(body, n); } else { Preconditions.checkState(scope.getParent() == null); scanVars(n, null); }"
+      },
+      {
+        "txt": "scanVars(n, null); } } private void scanVars(Node n, Node parent) { switch (n.getType()) { case Token.VAR: for (Node child = n.getFirstChild(); child != null;) { Node next = child.getNext(); Preconditions.checkState(child.getType() == Token.NAME);"
+      },
+      {
+        "txt": "String name = child.getString(); declareVar(name, child, n, parent, null, n); child = next; } return; case Token.FUNCTION: if (NodeUtil.isFunctionExpression(n)) { return; } String fnName = n.getFirstChild().getString();"
+      },
+      {
+        "txt": "if (fnName.isEmpty()) { return; } declareVar(fnName, n.getFirstChild(), n, parent, null, n); return; // should not examine function's children case Token.CATCH: Preconditions.checkState(n.getChildCount() == 2); Preconditions.checkState(n.getFirstChild().getType() == Token.NAME); final Node var = n.getFirstChild(); final Node block = var.getNext();"
+      },
+      {
+        "txt": "declareVar(var.getString(), var, n, parent, null, n); scanVars(block, n); return; // only one child to scan case Token.SCRIPT: sourceName = (String) n.getProp(Node.SOURCENAME_PROP); break; } if (NodeUtil.isControlStructure(n) || NodeUtil.isStatementBlock(n)) { for (Node child = n.getFirstChild(); child != null;) {"
+      },
+      {
+        "txt": "Node next = child.getNext(); scanVars(child, n); child = next; } } } interface RedeclarationHandler { void onRedeclaration( Scope s, String name, Node n, Node parent, Node gramps, Node nodeWithLineNumber);"
+      },
+      {
+        "txt": "} private class DefaultRedeclarationHandler implements RedeclarationHandler { public void onRedeclaration( Scope s, String name, Node n, Node parent, Node gramps, Node nodeWithLineNumber) { if (scope.isGlobal()) { Scope.Var origVar = scope.getVar(name); Node origParent = origVar.getParentNode(); if (origParent.getType() == Token.CATCH && parent.getType() == Token.CATCH) {"
+      },
+      {
+        "txt": "return; } boolean allowDupe = false; JSDocInfo info = n.getJSDocInfo(); if (info == null) { info = parent.getJSDocInfo(); } allowDupe = info != null && info.getSuppressions().contains(\"duplicate\"); if (!allowDupe) {"
+      },
+      {
+        "txt": "compiler.report( JSError.make(sourceName, n, VAR_MULTIPLY_DECLARED_ERROR, name, (origVar.input != null ? origVar.input.getName() : \"??\"))); } } else if (name.equals(ARGUMENTS) && !NodeUtil.isVarDeclaration(n)) { compiler.report("
+      },
+      {
+        "txt": "JSError.make(sourceName, n, VAR_ARGUMENTS_SHADOWED_ERROR)); } } } private void declareVar(String name, Node n, Node parent, Node gramps, com.google.javascript.rhino.jstype.JSType declaredType, Node nodeWithLineNumber) { if (scope.isDeclared(name, false) || (scope.isLocal() && name.equals(ARGUMENTS))) {"
+      },
+      {
+        "txt": "redeclarationHandler.onRedeclaration( scope, name, n, parent, gramps, nodeWithLineNumber); } else { scope.declare(name, n, declaredType, compiler.getInput(sourceName)); } }"
+      }
+    ]
+  },
+  {
+    "id": 673,
+    "file_path": "src/com/google/javascript/jscomp/SyntacticScopeCreator.java",
+    "start-bug-line": 124,
+    "end-bug-line": 126,
+    "bug": "Preconditions.checkState(child.getType() == Token.NAME); String name = child.getString(); declareVar(name, child, n, parent, null, n);",
+    "fix": "declareVar(child);",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.google.javascript.jscomp; import com.google.common.base.Preconditions;"
+      },
+      {
+        "txt": "import com.google.javascript.rhino.JSDocInfo; import com.google.javascript.rhino.Node; import com.google.javascript.rhino.Token; class SyntacticScopeCreator implements ScopeCreator { private final AbstractCompiler compiler; private Scope scope; private String sourceName; private final RedeclarationHandler redeclarationHandler; private static final String ARGUMENTS = \"arguments\"; public static final DiagnosticType VAR_MULTIPLY_DECLARED_ERROR ="
+      },
+      {
+        "txt": "DiagnosticType.error( \"JSC_VAR_MULTIPLY_DECLARED_ERROR\", \"Variable {0} first declared in {1}\"); public static final DiagnosticType VAR_ARGUMENTS_SHADOWED_ERROR = DiagnosticType.error( \"JSC_VAR_ARGUMENTS_SHADOWED_ERROR\", \"Shadowing \\\"arguments\\\" is not allowed\"); SyntacticScopeCreator(AbstractCompiler compiler) { this.compiler = compiler; this.redeclarationHandler = new DefaultRedeclarationHandler();"
+      },
+      {
+        "txt": "} SyntacticScopeCreator( AbstractCompiler compiler, RedeclarationHandler redeclarationHandler) { this.compiler = compiler; this.redeclarationHandler = redeclarationHandler; } public Scope createScope(Node n, Scope parent) { sourceName = null; if (parent == null) { scope = new Scope(n, compiler);"
+      },
+      {
+        "txt": "} else { scope = new Scope(parent, n); } scanRoot(n, parent); sourceName = null; Scope returnedScope = scope; scope = null; return returnedScope; } private void scanRoot(Node n, Scope parent) {"
+      },
+      {
+        "txt": "if (n.getType() == Token.FUNCTION) { sourceName = (String) n.getProp(Node.SOURCENAME_PROP); final Node fnNameNode = n.getFirstChild(); final Node args = fnNameNode.getNext(); final Node body = args.getNext(); String fnName = fnNameNode.getString(); if (!fnName.isEmpty() && NodeUtil.isFunctionExpression(n)) { declareVar(fnName, fnNameNode, n, null, null, n); } Preconditions.checkState(args.getType() == Token.LP);"
+      },
+      {
+        "txt": "for (Node a = args.getFirstChild(); a != null; a = a.getNext()) { Preconditions.checkState(a.getType() == Token.NAME); declareVar(a.getString(), a, args, n, null, n); } scanVars(body, n); } else { Preconditions.checkState(scope.getParent() == null); scanVars(n, null); }"
+      },
+      {
+        "txt": "private void scanVars(Node n, Node parent) { switch (n.getType()) { case Token.VAR: for (Node child = n.getFirstChild(); child != null;) { Node next = child.getNext(); <extra_id_0> child = next; } return; case Token.FUNCTION: if (NodeUtil.isFunctionExpression(n)) { return;"
+      },
+      {
+        "txt": "if (NodeUtil.isFunctionExpression(n)) { return; } String fnName = n.getFirstChild().getString(); if (fnName.isEmpty()) { return; } declareVar(fnName, n.getFirstChild(), n, parent, null, n); return; // should not examine function's children case Token.CATCH:"
+      },
+      {
+        "txt": "Preconditions.checkState(n.getChildCount() == 2); Preconditions.checkState(n.getFirstChild().getType() == Token.NAME); final Node var = n.getFirstChild(); final Node block = var.getNext(); declareVar(var.getString(), var, n, parent, null, n); scanVars(block, n); return; // only one child to scan case Token.SCRIPT: sourceName = (String) n.getProp(Node.SOURCENAME_PROP); break;"
+      },
+      {
+        "txt": "} if (NodeUtil.isControlStructure(n) || NodeUtil.isStatementBlock(n)) { for (Node child = n.getFirstChild(); child != null;) { Node next = child.getNext(); scanVars(child, n); child = next; } } }"
+      },
+      {
+        "txt": "interface RedeclarationHandler { void onRedeclaration( Scope s, String name, Node n, Node parent, Node gramps, Node nodeWithLineNumber); } private class DefaultRedeclarationHandler implements RedeclarationHandler { public void onRedeclaration( Scope s, String name, Node n, Node parent, Node gramps, Node nodeWithLineNumber) { if (scope.isGlobal()) {"
+      },
+      {
+        "txt": "Scope.Var origVar = scope.getVar(name); Node origParent = origVar.getParentNode(); if (origParent.getType() == Token.CATCH && parent.getType() == Token.CATCH) { return; } boolean allowDupe = false; JSDocInfo info = n.getJSDocInfo(); if (info == null) { info = parent.getJSDocInfo();"
+      },
+      {
+        "txt": "} allowDupe = info != null && info.getSuppressions().contains(\"duplicate\"); if (!allowDupe) { compiler.report( JSError.make(sourceName, n, VAR_MULTIPLY_DECLARED_ERROR, name, (origVar.input != null ? origVar.input.getName()"
+      },
+      {
+        "txt": ": \"??\"))); } } else if (name.equals(ARGUMENTS) && !NodeUtil.isVarDeclaration(n)) { compiler.report( JSError.make(sourceName, n, VAR_ARGUMENTS_SHADOWED_ERROR)); } } } private void declareVar(String name, Node n, Node parent,"
+      },
+      {
+        "txt": "Node gramps, com.google.javascript.rhino.jstype.JSType declaredType, Node nodeWithLineNumber) { if (scope.isDeclared(name, false) || (scope.isLocal() && name.equals(ARGUMENTS))) { redeclarationHandler.onRedeclaration( scope, name, n, parent, gramps, nodeWithLineNumber); } else { scope.declare(name, n, declaredType, compiler.getInput(sourceName)); } }"
+      }
+    ]
+  },
+  {
+    "id": 674,
+    "file_path": "src/com/google/javascript/jscomp/SyntacticScopeCreator.java",
+    "start-bug-line": 141,
+    "end-bug-line": 141,
+    "bug": "declareVar(fnName, n.getFirstChild(), n, parent, null, n);",
+    "fix": "declareVar(n.getFirstChild());",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.google.javascript.jscomp; import com.google.common.base.Preconditions; import com.google.javascript.rhino.JSDocInfo; import com.google.javascript.rhino.Node; import com.google.javascript.rhino.Token; class SyntacticScopeCreator implements ScopeCreator {"
+      },
+      {
+        "txt": "private final AbstractCompiler compiler; private Scope scope; private String sourceName; private final RedeclarationHandler redeclarationHandler; private static final String ARGUMENTS = \"arguments\"; public static final DiagnosticType VAR_MULTIPLY_DECLARED_ERROR = DiagnosticType.error( \"JSC_VAR_MULTIPLY_DECLARED_ERROR\", \"Variable {0} first declared in {1}\"); public static final DiagnosticType VAR_ARGUMENTS_SHADOWED_ERROR ="
+      },
+      {
+        "txt": "DiagnosticType.error( \"JSC_VAR_ARGUMENTS_SHADOWED_ERROR\", \"Shadowing \\\"arguments\\\" is not allowed\"); SyntacticScopeCreator(AbstractCompiler compiler) { this.compiler = compiler; this.redeclarationHandler = new DefaultRedeclarationHandler(); } SyntacticScopeCreator( AbstractCompiler compiler, RedeclarationHandler redeclarationHandler) { this.compiler = compiler;"
+      },
+      {
+        "txt": "this.redeclarationHandler = redeclarationHandler; } public Scope createScope(Node n, Scope parent) { sourceName = null; if (parent == null) { scope = new Scope(n, compiler); } else { scope = new Scope(parent, n); } scanRoot(n, parent);"
+      },
+      {
+        "txt": "sourceName = null; Scope returnedScope = scope; scope = null; return returnedScope; } private void scanRoot(Node n, Scope parent) { if (n.getType() == Token.FUNCTION) { sourceName = (String) n.getProp(Node.SOURCENAME_PROP); final Node fnNameNode = n.getFirstChild(); final Node args = fnNameNode.getNext();"
+      },
+      {
+        "txt": "final Node body = args.getNext(); String fnName = fnNameNode.getString(); if (!fnName.isEmpty() && NodeUtil.isFunctionExpression(n)) { declareVar(fnName, fnNameNode, n, null, null, n); } Preconditions.checkState(args.getType() == Token.LP); for (Node a = args.getFirstChild(); a != null; a = a.getNext()) { Preconditions.checkState(a.getType() == Token.NAME); declareVar(a.getString(), a, args, n, null, n);"
+      },
+      {
+        "txt": "} scanVars(body, n); } else { Preconditions.checkState(scope.getParent() == null); scanVars(n, null); } } private void scanVars(Node n, Node parent) { switch (n.getType()) { case Token.VAR:"
+      },
+      {
+        "txt": "for (Node child = n.getFirstChild(); child != null;) { Node next = child.getNext(); Preconditions.checkState(child.getType() == Token.NAME); String name = child.getString(); declareVar(name, child, n, parent, null, n); child = next; } return; case Token.FUNCTION:"
+      },
+      {
+        "txt": "return; } String fnName = n.getFirstChild().getString(); if (fnName.isEmpty()) { return; } <extra_id_0> return; // should not examine function's children case Token.CATCH: Preconditions.checkState(n.getChildCount() == 2); Preconditions.checkState(n.getFirstChild().getType() == Token.NAME); final Node var = n.getFirstChild(); final Node block = var.getNext();"
+      },
+      {
+        "txt": "final Node var = n.getFirstChild(); final Node block = var.getNext(); declareVar(var.getString(), var, n, parent, null, n); scanVars(block, n); return; // only one child to scan case Token.SCRIPT: sourceName = (String) n.getProp(Node.SOURCENAME_PROP); break; } if (NodeUtil.isControlStructure(n) || NodeUtil.isStatementBlock(n)) {"
+      },
+      {
+        "txt": "for (Node child = n.getFirstChild(); child != null;) { Node next = child.getNext(); scanVars(child, n); child = next; } } } interface RedeclarationHandler { void onRedeclaration("
+      },
+      {
+        "txt": "Scope s, String name, Node n, Node parent, Node gramps, Node nodeWithLineNumber); } private class DefaultRedeclarationHandler implements RedeclarationHandler { public void onRedeclaration( Scope s, String name, Node n, Node parent, Node gramps, Node nodeWithLineNumber) { if (scope.isGlobal()) { Scope.Var origVar = scope.getVar(name); Node origParent = origVar.getParentNode();"
+      },
+      {
+        "txt": "if (origParent.getType() == Token.CATCH && parent.getType() == Token.CATCH) { return; } boolean allowDupe = false; JSDocInfo info = n.getJSDocInfo(); if (info == null) { info = parent.getJSDocInfo(); } allowDupe ="
+      },
+      {
+        "txt": "info != null && info.getSuppressions().contains(\"duplicate\"); if (!allowDupe) { compiler.report( JSError.make(sourceName, n, VAR_MULTIPLY_DECLARED_ERROR, name, (origVar.input != null ? origVar.input.getName() : \"??\"))); }"
+      },
+      {
+        "txt": "} else if (name.equals(ARGUMENTS) && !NodeUtil.isVarDeclaration(n)) { compiler.report( JSError.make(sourceName, n, VAR_ARGUMENTS_SHADOWED_ERROR)); } } } private void declareVar(String name, Node n, Node parent, Node gramps, com.google.javascript.rhino.jstype.JSType declaredType, Node nodeWithLineNumber) {"
+      },
+      {
+        "txt": "if (scope.isDeclared(name, false) || (scope.isLocal() && name.equals(ARGUMENTS))) { redeclarationHandler.onRedeclaration( scope, name, n, parent, gramps, nodeWithLineNumber); } else { scope.declare(name, n, declaredType, compiler.getInput(sourceName)); } }"
+      }
+    ]
+  },
+  {
+    "id": 675,
+    "file_path": "src/com/google/javascript/jscomp/SyntacticScopeCreator.java",
+    "start-bug-line": 153,
+    "end-bug-line": 153,
+    "bug": "declareVar(var.getString(), var, n, parent, null, n);",
+    "fix": "declareVar(var);",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.google.javascript.jscomp; import com.google.common.base.Preconditions; import com.google.javascript.rhino.JSDocInfo;"
+      },
+      {
+        "txt": "import com.google.javascript.rhino.Node; import com.google.javascript.rhino.Token; class SyntacticScopeCreator implements ScopeCreator { private final AbstractCompiler compiler; private Scope scope; private String sourceName; private final RedeclarationHandler redeclarationHandler; private static final String ARGUMENTS = \"arguments\"; public static final DiagnosticType VAR_MULTIPLY_DECLARED_ERROR = DiagnosticType.error("
+      },
+      {
+        "txt": "\"JSC_VAR_MULTIPLY_DECLARED_ERROR\", \"Variable {0} first declared in {1}\"); public static final DiagnosticType VAR_ARGUMENTS_SHADOWED_ERROR = DiagnosticType.error( \"JSC_VAR_ARGUMENTS_SHADOWED_ERROR\", \"Shadowing \\\"arguments\\\" is not allowed\"); SyntacticScopeCreator(AbstractCompiler compiler) { this.compiler = compiler; this.redeclarationHandler = new DefaultRedeclarationHandler(); }"
+      },
+      {
+        "txt": "SyntacticScopeCreator( AbstractCompiler compiler, RedeclarationHandler redeclarationHandler) { this.compiler = compiler; this.redeclarationHandler = redeclarationHandler; } public Scope createScope(Node n, Scope parent) { sourceName = null; if (parent == null) { scope = new Scope(n, compiler); } else {"
+      },
+      {
+        "txt": "scope = new Scope(parent, n); } scanRoot(n, parent); sourceName = null; Scope returnedScope = scope; scope = null; return returnedScope; } private void scanRoot(Node n, Scope parent) { if (n.getType() == Token.FUNCTION) {"
+      },
+      {
+        "txt": "sourceName = (String) n.getProp(Node.SOURCENAME_PROP); final Node fnNameNode = n.getFirstChild(); final Node args = fnNameNode.getNext(); final Node body = args.getNext(); String fnName = fnNameNode.getString(); if (!fnName.isEmpty() && NodeUtil.isFunctionExpression(n)) { declareVar(fnName, fnNameNode, n, null, null, n); } Preconditions.checkState(args.getType() == Token.LP); for (Node a = args.getFirstChild(); a != null;"
+      },
+      {
+        "txt": "a = a.getNext()) { Preconditions.checkState(a.getType() == Token.NAME); declareVar(a.getString(), a, args, n, null, n); } scanVars(body, n); } else { Preconditions.checkState(scope.getParent() == null); scanVars(n, null); } }"
+      },
+      {
+        "txt": "private void scanVars(Node n, Node parent) { switch (n.getType()) { case Token.VAR: for (Node child = n.getFirstChild(); child != null;) { Node next = child.getNext(); Preconditions.checkState(child.getType() == Token.NAME); String name = child.getString(); declareVar(name, child, n, parent, null, n); child = next;"
+      },
+      {
+        "txt": "} return; case Token.FUNCTION: if (NodeUtil.isFunctionExpression(n)) { return; } String fnName = n.getFirstChild().getString(); if (fnName.isEmpty()) { return; }"
+      },
+      {
+        "txt": "return; // should not examine function's children case Token.CATCH: Preconditions.checkState(n.getChildCount() == 2); Preconditions.checkState(n.getFirstChild().getType() == Token.NAME); final Node var = n.getFirstChild(); final Node block = var.getNext(); <extra_id_0> scanVars(block, n); return; // only one child to scan case Token.SCRIPT: sourceName = (String) n.getProp(Node.SOURCENAME_PROP); break; }"
+      },
+      {
+        "txt": "break; } if (NodeUtil.isControlStructure(n) || NodeUtil.isStatementBlock(n)) { for (Node child = n.getFirstChild(); child != null;) { Node next = child.getNext(); scanVars(child, n); child = next; } }"
+      },
+      {
+        "txt": "} interface RedeclarationHandler { void onRedeclaration( Scope s, String name, Node n, Node parent, Node gramps, Node nodeWithLineNumber); } private class DefaultRedeclarationHandler implements RedeclarationHandler { public void onRedeclaration( Scope s, String name, Node n, Node parent, Node gramps, Node nodeWithLineNumber) {"
+      },
+      {
+        "txt": "if (scope.isGlobal()) { Scope.Var origVar = scope.getVar(name); Node origParent = origVar.getParentNode(); if (origParent.getType() == Token.CATCH && parent.getType() == Token.CATCH) { return; } boolean allowDupe = false; JSDocInfo info = n.getJSDocInfo(); if (info == null) {"
+      },
+      {
+        "txt": "info = parent.getJSDocInfo(); } allowDupe = info != null && info.getSuppressions().contains(\"duplicate\"); if (!allowDupe) { compiler.report( JSError.make(sourceName, n, VAR_MULTIPLY_DECLARED_ERROR, name, (origVar.input != null"
+      },
+      {
+        "txt": "? origVar.input.getName() : \"??\"))); } } else if (name.equals(ARGUMENTS) && !NodeUtil.isVarDeclaration(n)) { compiler.report( JSError.make(sourceName, n, VAR_ARGUMENTS_SHADOWED_ERROR)); } } }"
+      },
+      {
+        "txt": "private void declareVar(String name, Node n, Node parent, Node gramps, com.google.javascript.rhino.jstype.JSType declaredType, Node nodeWithLineNumber) { if (scope.isDeclared(name, false) || (scope.isLocal() && name.equals(ARGUMENTS))) { redeclarationHandler.onRedeclaration( scope, name, n, parent, gramps, nodeWithLineNumber); } else { scope.declare(name, n, declaredType, compiler.getInput(sourceName)); }"
+      }
+    ]
+  },
+  {
+    "id": 676,
+    "file_path": "src/com/google/javascript/jscomp/SyntacticScopeCreator.java",
+    "start-bug-line": 179,
+    "end-bug-line": 180,
+    "bug": "Scope s, String name, Node n, Node parent, Node gramps, Node nodeWithLineNumber);",
+    "fix": "Scope s, String name, Node n, CompilerInput input);",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "import com.google.common.base.Preconditions; import com.google.javascript.rhino.JSDocInfo; import com.google.javascript.rhino.Node; import com.google.javascript.rhino.Token; class SyntacticScopeCreator implements ScopeCreator { private final AbstractCompiler compiler; private Scope scope; private String sourceName; private final RedeclarationHandler redeclarationHandler; private static final String ARGUMENTS = \"arguments\";"
+      },
+      {
+        "txt": "public static final DiagnosticType VAR_MULTIPLY_DECLARED_ERROR = DiagnosticType.error( \"JSC_VAR_MULTIPLY_DECLARED_ERROR\", \"Variable {0} first declared in {1}\"); public static final DiagnosticType VAR_ARGUMENTS_SHADOWED_ERROR = DiagnosticType.error( \"JSC_VAR_ARGUMENTS_SHADOWED_ERROR\", \"Shadowing \\\"arguments\\\" is not allowed\"); SyntacticScopeCreator(AbstractCompiler compiler) { this.compiler = compiler;"
+      },
+      {
+        "txt": "this.redeclarationHandler = new DefaultRedeclarationHandler(); } SyntacticScopeCreator( AbstractCompiler compiler, RedeclarationHandler redeclarationHandler) { this.compiler = compiler; this.redeclarationHandler = redeclarationHandler; } public Scope createScope(Node n, Scope parent) { sourceName = null; if (parent == null) {"
+      },
+      {
+        "txt": "scope = new Scope(n, compiler); } else { scope = new Scope(parent, n); } scanRoot(n, parent); sourceName = null; Scope returnedScope = scope; scope = null; return returnedScope; }"
+      },
+      {
+        "txt": "private void scanRoot(Node n, Scope parent) { if (n.getType() == Token.FUNCTION) { sourceName = (String) n.getProp(Node.SOURCENAME_PROP); final Node fnNameNode = n.getFirstChild(); final Node args = fnNameNode.getNext(); final Node body = args.getNext(); String fnName = fnNameNode.getString(); if (!fnName.isEmpty() && NodeUtil.isFunctionExpression(n)) { declareVar(fnName, fnNameNode, n, null, null, n); }"
+      },
+      {
+        "txt": "Preconditions.checkState(args.getType() == Token.LP); for (Node a = args.getFirstChild(); a != null; a = a.getNext()) { Preconditions.checkState(a.getType() == Token.NAME); declareVar(a.getString(), a, args, n, null, n); } scanVars(body, n); } else { Preconditions.checkState(scope.getParent() == null); scanVars(n, null);"
+      },
+      {
+        "txt": "} } private void scanVars(Node n, Node parent) { switch (n.getType()) { case Token.VAR: for (Node child = n.getFirstChild(); child != null;) { Node next = child.getNext(); Preconditions.checkState(child.getType() == Token.NAME); String name = child.getString();"
+      },
+      {
+        "txt": "declareVar(name, child, n, parent, null, n); child = next; } return; case Token.FUNCTION: if (NodeUtil.isFunctionExpression(n)) { return; } String fnName = n.getFirstChild().getString(); if (fnName.isEmpty()) {"
+      },
+      {
+        "txt": "return; } declareVar(fnName, n.getFirstChild(), n, parent, null, n); return; // should not examine function's children case Token.CATCH: Preconditions.checkState(n.getChildCount() == 2); Preconditions.checkState(n.getFirstChild().getType() == Token.NAME); final Node var = n.getFirstChild(); final Node block = var.getNext(); declareVar(var.getString(), var, n, parent, null, n);"
+      },
+      {
+        "txt": "scanVars(block, n); return; // only one child to scan case Token.SCRIPT: sourceName = (String) n.getProp(Node.SOURCENAME_PROP); break; } if (NodeUtil.isControlStructure(n) || NodeUtil.isStatementBlock(n)) { for (Node child = n.getFirstChild(); child != null;) { Node next = child.getNext();"
+      },
+      {
+        "txt": "child = next; } } } interface RedeclarationHandler { void onRedeclaration( <extra_id_0> } private class DefaultRedeclarationHandler implements RedeclarationHandler { public void onRedeclaration( Scope s, String name, Node n, Node parent, Node gramps, Node nodeWithLineNumber) { if (scope.isGlobal()) {"
+      },
+      {
+        "txt": "Node n, Node parent, Node gramps, Node nodeWithLineNumber) { if (scope.isGlobal()) { Scope.Var origVar = scope.getVar(name); Node origParent = origVar.getParentNode(); if (origParent.getType() == Token.CATCH && parent.getType() == Token.CATCH) { return; } boolean allowDupe = false; JSDocInfo info = n.getJSDocInfo();"
+      },
+      {
+        "txt": "if (info == null) { info = parent.getJSDocInfo(); } allowDupe = info != null && info.getSuppressions().contains(\"duplicate\"); if (!allowDupe) { compiler.report( JSError.make(sourceName, n, VAR_MULTIPLY_DECLARED_ERROR, name,"
+      },
+      {
+        "txt": "(origVar.input != null ? origVar.input.getName() : \"??\"))); } } else if (name.equals(ARGUMENTS) && !NodeUtil.isVarDeclaration(n)) { compiler.report( JSError.make(sourceName, n, VAR_ARGUMENTS_SHADOWED_ERROR)); } }"
+      },
+      {
+        "txt": "} private void declareVar(String name, Node n, Node parent, Node gramps, com.google.javascript.rhino.jstype.JSType declaredType, Node nodeWithLineNumber) { if (scope.isDeclared(name, false) || (scope.isLocal() && name.equals(ARGUMENTS))) { redeclarationHandler.onRedeclaration( scope, name, n, parent, gramps, nodeWithLineNumber); } else { scope.declare(name, n, declaredType, compiler.getInput(sourceName));"
+      },
+      {
+        "txt": "} }"
+      }
+    ]
+  },
+  {
+    "id": 677,
+    "file_path": "src/com/google/javascript/jscomp/SyntacticScopeCreator.java",
+    "start-bug-line": 188,
+    "end-bug-line": 189,
+    "bug": "Scope s, String name, Node n, Node parent, Node gramps, Node nodeWithLineNumber) {",
+    "fix": "Scope s, String name, Node n, CompilerInput input) { Node parent = n.getParent();",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.google.javascript.jscomp; import com.google.common.base.Preconditions; import com.google.javascript.rhino.JSDocInfo; import com.google.javascript.rhino.Node; import com.google.javascript.rhino.Token; class SyntacticScopeCreator implements ScopeCreator {"
+      },
+      {
+        "txt": "private final AbstractCompiler compiler; private Scope scope; private String sourceName; private final RedeclarationHandler redeclarationHandler; private static final String ARGUMENTS = \"arguments\"; public static final DiagnosticType VAR_MULTIPLY_DECLARED_ERROR = DiagnosticType.error( \"JSC_VAR_MULTIPLY_DECLARED_ERROR\", \"Variable {0} first declared in {1}\"); public static final DiagnosticType VAR_ARGUMENTS_SHADOWED_ERROR ="
+      },
+      {
+        "txt": "DiagnosticType.error( \"JSC_VAR_ARGUMENTS_SHADOWED_ERROR\", \"Shadowing \\\"arguments\\\" is not allowed\"); SyntacticScopeCreator(AbstractCompiler compiler) { this.compiler = compiler; this.redeclarationHandler = new DefaultRedeclarationHandler(); } SyntacticScopeCreator( AbstractCompiler compiler, RedeclarationHandler redeclarationHandler) { this.compiler = compiler;"
+      },
+      {
+        "txt": "this.redeclarationHandler = redeclarationHandler; } public Scope createScope(Node n, Scope parent) { sourceName = null; if (parent == null) { scope = new Scope(n, compiler); } else { scope = new Scope(parent, n); } scanRoot(n, parent);"
+      },
+      {
+        "txt": "sourceName = null; Scope returnedScope = scope; scope = null; return returnedScope; } private void scanRoot(Node n, Scope parent) { if (n.getType() == Token.FUNCTION) { sourceName = (String) n.getProp(Node.SOURCENAME_PROP); final Node fnNameNode = n.getFirstChild(); final Node args = fnNameNode.getNext();"
+      },
+      {
+        "txt": "final Node body = args.getNext(); String fnName = fnNameNode.getString(); if (!fnName.isEmpty() && NodeUtil.isFunctionExpression(n)) { declareVar(fnName, fnNameNode, n, null, null, n); } Preconditions.checkState(args.getType() == Token.LP); for (Node a = args.getFirstChild(); a != null; a = a.getNext()) { Preconditions.checkState(a.getType() == Token.NAME); declareVar(a.getString(), a, args, n, null, n);"
+      },
+      {
+        "txt": "} scanVars(body, n); } else { Preconditions.checkState(scope.getParent() == null); scanVars(n, null); } } private void scanVars(Node n, Node parent) { switch (n.getType()) { case Token.VAR:"
+      },
+      {
+        "txt": "for (Node child = n.getFirstChild(); child != null;) { Node next = child.getNext(); Preconditions.checkState(child.getType() == Token.NAME); String name = child.getString(); declareVar(name, child, n, parent, null, n); child = next; } return; case Token.FUNCTION:"
+      },
+      {
+        "txt": "if (NodeUtil.isFunctionExpression(n)) { return; } String fnName = n.getFirstChild().getString(); if (fnName.isEmpty()) { return; } declareVar(fnName, n.getFirstChild(), n, parent, null, n); return; // should not examine function's children case Token.CATCH:"
+      },
+      {
+        "txt": "Preconditions.checkState(n.getChildCount() == 2); Preconditions.checkState(n.getFirstChild().getType() == Token.NAME); final Node var = n.getFirstChild(); final Node block = var.getNext(); declareVar(var.getString(), var, n, parent, null, n); scanVars(block, n); return; // only one child to scan case Token.SCRIPT: sourceName = (String) n.getProp(Node.SOURCENAME_PROP); break;"
+      },
+      {
+        "txt": "} if (NodeUtil.isControlStructure(n) || NodeUtil.isStatementBlock(n)) { for (Node child = n.getFirstChild(); child != null;) { Node next = child.getNext(); scanVars(child, n); child = next; } } }"
+      },
+      {
+        "txt": "void onRedeclaration( Scope s, String name, Node n, Node parent, Node gramps, Node nodeWithLineNumber); } private class DefaultRedeclarationHandler implements RedeclarationHandler { public void onRedeclaration( <extra_id_0> if (scope.isGlobal()) { Scope.Var origVar = scope.getVar(name); Node origParent = origVar.getParentNode(); if (origParent.getType() == Token.CATCH && parent.getType() == Token.CATCH) { return;"
+      },
+      {
+        "txt": "parent.getType() == Token.CATCH) { return; } boolean allowDupe = false; JSDocInfo info = n.getJSDocInfo(); if (info == null) { info = parent.getJSDocInfo(); } allowDupe = info != null && info.getSuppressions().contains(\"duplicate\");"
+      },
+      {
+        "txt": "if (!allowDupe) { compiler.report( JSError.make(sourceName, n, VAR_MULTIPLY_DECLARED_ERROR, name, (origVar.input != null ? origVar.input.getName() : \"??\"))); } } else if (name.equals(ARGUMENTS) && !NodeUtil.isVarDeclaration(n)) {"
+      },
+      {
+        "txt": "compiler.report( JSError.make(sourceName, n, VAR_ARGUMENTS_SHADOWED_ERROR)); } } } private void declareVar(String name, Node n, Node parent, Node gramps, com.google.javascript.rhino.jstype.JSType declaredType, Node nodeWithLineNumber) { if (scope.isDeclared(name, false)"
+      },
+      {
+        "txt": "|| (scope.isLocal() && name.equals(ARGUMENTS))) { redeclarationHandler.onRedeclaration( scope, name, n, parent, gramps, nodeWithLineNumber); } else { scope.declare(name, n, declaredType, compiler.getInput(sourceName)); } }"
+      }
+    ]
+  },
+  {
+    "id": 678,
+    "file_path": "src/com/google/javascript/jscomp/SyntacticScopeCreator.java",
+    "start-bug-line": 234,
+    "end-bug-line": 236,
+    "bug": "private void declareVar(String name, Node n, Node parent, Node gramps, com.google.javascript.rhino.jstype.JSType declaredType, Node nodeWithLineNumber) {",
+    "fix": "private void declareVar(Node n) { Preconditions.checkState(n.getType() == Token.NAME);",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.google.javascript.jscomp; import com.google.common.base.Preconditions; import com.google.javascript.rhino.JSDocInfo; import com.google.javascript.rhino.Node; import com.google.javascript.rhino.Token; class SyntacticScopeCreator implements ScopeCreator { private final AbstractCompiler compiler; private Scope scope;"
+      },
+      {
+        "txt": "private String sourceName; private final RedeclarationHandler redeclarationHandler; private static final String ARGUMENTS = \"arguments\"; public static final DiagnosticType VAR_MULTIPLY_DECLARED_ERROR = DiagnosticType.error( \"JSC_VAR_MULTIPLY_DECLARED_ERROR\", \"Variable {0} first declared in {1}\"); public static final DiagnosticType VAR_ARGUMENTS_SHADOWED_ERROR = DiagnosticType.error( \"JSC_VAR_ARGUMENTS_SHADOWED_ERROR\","
+      },
+      {
+        "txt": "\"Shadowing \\\"arguments\\\" is not allowed\"); SyntacticScopeCreator(AbstractCompiler compiler) { this.compiler = compiler; this.redeclarationHandler = new DefaultRedeclarationHandler(); } SyntacticScopeCreator( AbstractCompiler compiler, RedeclarationHandler redeclarationHandler) { this.compiler = compiler; this.redeclarationHandler = redeclarationHandler; }"
+      },
+      {
+        "txt": "public Scope createScope(Node n, Scope parent) { sourceName = null; if (parent == null) { scope = new Scope(n, compiler); } else { scope = new Scope(parent, n); } scanRoot(n, parent); sourceName = null; Scope returnedScope = scope;"
+      },
+      {
+        "txt": "scope = null; return returnedScope; } private void scanRoot(Node n, Scope parent) { if (n.getType() == Token.FUNCTION) { sourceName = (String) n.getProp(Node.SOURCENAME_PROP); final Node fnNameNode = n.getFirstChild(); final Node args = fnNameNode.getNext(); final Node body = args.getNext(); String fnName = fnNameNode.getString();"
+      },
+      {
+        "txt": "if (!fnName.isEmpty() && NodeUtil.isFunctionExpression(n)) { declareVar(fnName, fnNameNode, n, null, null, n); } Preconditions.checkState(args.getType() == Token.LP); for (Node a = args.getFirstChild(); a != null; a = a.getNext()) { Preconditions.checkState(a.getType() == Token.NAME); declareVar(a.getString(), a, args, n, null, n); } scanVars(body, n);"
+      },
+      {
+        "txt": "} else { Preconditions.checkState(scope.getParent() == null); scanVars(n, null); } } private void scanVars(Node n, Node parent) { switch (n.getType()) { case Token.VAR: for (Node child = n.getFirstChild(); child != null;) {"
+      },
+      {
+        "txt": "Node next = child.getNext(); Preconditions.checkState(child.getType() == Token.NAME); String name = child.getString(); declareVar(name, child, n, parent, null, n); child = next; } return; case Token.FUNCTION: if (NodeUtil.isFunctionExpression(n)) { return;"
+      },
+      {
+        "txt": "} String fnName = n.getFirstChild().getString(); if (fnName.isEmpty()) { return; } declareVar(fnName, n.getFirstChild(), n, parent, null, n); return; // should not examine function's children case Token.CATCH: Preconditions.checkState(n.getChildCount() == 2); Preconditions.checkState(n.getFirstChild().getType() == Token.NAME);"
+      },
+      {
+        "txt": "final Node var = n.getFirstChild(); final Node block = var.getNext(); declareVar(var.getString(), var, n, parent, null, n); scanVars(block, n); return; // only one child to scan case Token.SCRIPT: sourceName = (String) n.getProp(Node.SOURCENAME_PROP); break; } if (NodeUtil.isControlStructure(n) || NodeUtil.isStatementBlock(n)) {"
+      },
+      {
+        "txt": "for (Node child = n.getFirstChild(); child != null;) { Node next = child.getNext(); scanVars(child, n); child = next; } } } interface RedeclarationHandler { void onRedeclaration("
+      },
+      {
+        "txt": "Scope s, String name, Node n, Node parent, Node gramps, Node nodeWithLineNumber); } private class DefaultRedeclarationHandler implements RedeclarationHandler { public void onRedeclaration( Scope s, String name, Node n, Node parent, Node gramps, Node nodeWithLineNumber) { if (scope.isGlobal()) { Scope.Var origVar = scope.getVar(name); Node origParent = origVar.getParentNode();"
+      },
+      {
+        "txt": "if (origParent.getType() == Token.CATCH && parent.getType() == Token.CATCH) { return; } boolean allowDupe = false; JSDocInfo info = n.getJSDocInfo(); if (info == null) { info = parent.getJSDocInfo(); } allowDupe ="
+      },
+      {
+        "txt": "info != null && info.getSuppressions().contains(\"duplicate\"); if (!allowDupe) { compiler.report( JSError.make(sourceName, n, VAR_MULTIPLY_DECLARED_ERROR, name, (origVar.input != null ? origVar.input.getName() : \"??\"))); }"
+      },
+      {
+        "txt": "compiler.report( JSError.make(sourceName, n, VAR_ARGUMENTS_SHADOWED_ERROR)); } } } <extra_id_0> if (scope.isDeclared(name, false) || (scope.isLocal() && name.equals(ARGUMENTS))) { redeclarationHandler.onRedeclaration( scope, name, n, parent, gramps, nodeWithLineNumber); } else { scope.declare(name, n, declaredType, compiler.getInput(sourceName));"
+      },
+      {
+        "txt": "} else { scope.declare(name, n, declaredType, compiler.getInput(sourceName)); } }"
+      }
+    ]
+  },
+  {
+    "id": 679,
+    "file_path": "src/com/google/javascript/jscomp/SyntacticScopeCreator.java",
+    "start-bug-line": 238,
+    "end-bug-line": 238,
+    "bug": "",
+    "fix": "CompilerInput input = compiler.getInput(sourceName); String name = n.getString();",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "import com.google.common.base.Preconditions; import com.google.javascript.rhino.JSDocInfo; import com.google.javascript.rhino.Node; import com.google.javascript.rhino.Token; class SyntacticScopeCreator implements ScopeCreator { private final AbstractCompiler compiler; private Scope scope; private String sourceName; private final RedeclarationHandler redeclarationHandler; private static final String ARGUMENTS = \"arguments\";"
+      },
+      {
+        "txt": "public static final DiagnosticType VAR_MULTIPLY_DECLARED_ERROR = DiagnosticType.error( \"JSC_VAR_MULTIPLY_DECLARED_ERROR\", \"Variable {0} first declared in {1}\"); public static final DiagnosticType VAR_ARGUMENTS_SHADOWED_ERROR = DiagnosticType.error( \"JSC_VAR_ARGUMENTS_SHADOWED_ERROR\", \"Shadowing \\\"arguments\\\" is not allowed\"); SyntacticScopeCreator(AbstractCompiler compiler) { this.compiler = compiler;"
+      },
+      {
+        "txt": "this.redeclarationHandler = new DefaultRedeclarationHandler(); } SyntacticScopeCreator( AbstractCompiler compiler, RedeclarationHandler redeclarationHandler) { this.compiler = compiler; this.redeclarationHandler = redeclarationHandler; } public Scope createScope(Node n, Scope parent) { sourceName = null; if (parent == null) {"
+      },
+      {
+        "txt": "scope = new Scope(n, compiler); } else { scope = new Scope(parent, n); } scanRoot(n, parent); sourceName = null; Scope returnedScope = scope; scope = null; return returnedScope; }"
+      },
+      {
+        "txt": "private void scanRoot(Node n, Scope parent) { if (n.getType() == Token.FUNCTION) { sourceName = (String) n.getProp(Node.SOURCENAME_PROP); final Node fnNameNode = n.getFirstChild(); final Node args = fnNameNode.getNext(); final Node body = args.getNext(); String fnName = fnNameNode.getString(); if (!fnName.isEmpty() && NodeUtil.isFunctionExpression(n)) { declareVar(fnName, fnNameNode, n, null, null, n); }"
+      },
+      {
+        "txt": "Preconditions.checkState(args.getType() == Token.LP); for (Node a = args.getFirstChild(); a != null; a = a.getNext()) { Preconditions.checkState(a.getType() == Token.NAME); declareVar(a.getString(), a, args, n, null, n); } scanVars(body, n); } else { Preconditions.checkState(scope.getParent() == null); scanVars(n, null);"
+      },
+      {
+        "txt": "} } private void scanVars(Node n, Node parent) { switch (n.getType()) { case Token.VAR: for (Node child = n.getFirstChild(); child != null;) { Node next = child.getNext(); Preconditions.checkState(child.getType() == Token.NAME); String name = child.getString();"
+      },
+      {
+        "txt": "declareVar(name, child, n, parent, null, n); child = next; } return; case Token.FUNCTION: if (NodeUtil.isFunctionExpression(n)) { return; } String fnName = n.getFirstChild().getString(); if (fnName.isEmpty()) {"
+      },
+      {
+        "txt": "return; } declareVar(fnName, n.getFirstChild(), n, parent, null, n); return; // should not examine function's children case Token.CATCH: Preconditions.checkState(n.getChildCount() == 2); Preconditions.checkState(n.getFirstChild().getType() == Token.NAME); final Node var = n.getFirstChild(); final Node block = var.getNext(); declareVar(var.getString(), var, n, parent, null, n);"
+      },
+      {
+        "txt": "scanVars(block, n); return; // only one child to scan case Token.SCRIPT: sourceName = (String) n.getProp(Node.SOURCENAME_PROP); break; } if (NodeUtil.isControlStructure(n) || NodeUtil.isStatementBlock(n)) { for (Node child = n.getFirstChild(); child != null;) { Node next = child.getNext();"
+      },
+      {
+        "txt": "scanVars(child, n); child = next; } } } interface RedeclarationHandler { void onRedeclaration( Scope s, String name, Node n, Node parent, Node gramps, Node nodeWithLineNumber); }"
+      },
+      {
+        "txt": "private class DefaultRedeclarationHandler implements RedeclarationHandler { public void onRedeclaration( Scope s, String name, Node n, Node parent, Node gramps, Node nodeWithLineNumber) { if (scope.isGlobal()) { Scope.Var origVar = scope.getVar(name); Node origParent = origVar.getParentNode(); if (origParent.getType() == Token.CATCH && parent.getType() == Token.CATCH) { return;"
+      },
+      {
+        "txt": "} boolean allowDupe = false; JSDocInfo info = n.getJSDocInfo(); if (info == null) { info = parent.getJSDocInfo(); } allowDupe = info != null && info.getSuppressions().contains(\"duplicate\"); if (!allowDupe) { compiler.report("
+      },
+      {
+        "txt": "JSError.make(sourceName, n, VAR_MULTIPLY_DECLARED_ERROR, name, (origVar.input != null ? origVar.input.getName() : \"??\"))); } } else if (name.equals(ARGUMENTS) && !NodeUtil.isVarDeclaration(n)) { compiler.report( JSError.make(sourceName, n,"
+      },
+      {
+        "txt": "} } } private void declareVar(String name, Node n, Node parent, Node gramps, com.google.javascript.rhino.jstype.JSType declaredType, Node nodeWithLineNumber) { <extra_id_0> || (scope.isLocal() && name.equals(ARGUMENTS))) { redeclarationHandler.onRedeclaration( scope, name, n, parent, gramps, nodeWithLineNumber); } else { scope.declare(name, n, declaredType, compiler.getInput(sourceName)); }"
+      },
+      {
+        "txt": "scope.declare(name, n, declaredType, compiler.getInput(sourceName)); } }"
+      }
+    ]
+  },
+  {
+    "id": 680,
+    "file_path": "src/com/google/javascript/jscomp/SyntacticScopeCreator.java",
+    "start-bug-line": 241,
+    "end-bug-line": 241,
+    "bug": "scope, name, n, parent, gramps, nodeWithLineNumber);",
+    "fix": "scope, name, n, input);",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.google.javascript.jscomp; import com.google.common.base.Preconditions; import com.google.javascript.rhino.JSDocInfo; import com.google.javascript.rhino.Node;"
+      },
+      {
+        "txt": "import com.google.javascript.rhino.Token; class SyntacticScopeCreator implements ScopeCreator { private final AbstractCompiler compiler; private Scope scope; private String sourceName; private final RedeclarationHandler redeclarationHandler; private static final String ARGUMENTS = \"arguments\"; public static final DiagnosticType VAR_MULTIPLY_DECLARED_ERROR = DiagnosticType.error( \"JSC_VAR_MULTIPLY_DECLARED_ERROR\","
+      },
+      {
+        "txt": "\"Variable {0} first declared in {1}\"); public static final DiagnosticType VAR_ARGUMENTS_SHADOWED_ERROR = DiagnosticType.error( \"JSC_VAR_ARGUMENTS_SHADOWED_ERROR\", \"Shadowing \\\"arguments\\\" is not allowed\"); SyntacticScopeCreator(AbstractCompiler compiler) { this.compiler = compiler; this.redeclarationHandler = new DefaultRedeclarationHandler(); } SyntacticScopeCreator("
+      },
+      {
+        "txt": "AbstractCompiler compiler, RedeclarationHandler redeclarationHandler) { this.compiler = compiler; this.redeclarationHandler = redeclarationHandler; } public Scope createScope(Node n, Scope parent) { sourceName = null; if (parent == null) { scope = new Scope(n, compiler); } else { scope = new Scope(parent, n);"
+      },
+      {
+        "txt": "} scanRoot(n, parent); sourceName = null; Scope returnedScope = scope; scope = null; return returnedScope; } private void scanRoot(Node n, Scope parent) { if (n.getType() == Token.FUNCTION) { sourceName = (String) n.getProp(Node.SOURCENAME_PROP);"
+      },
+      {
+        "txt": "final Node fnNameNode = n.getFirstChild(); final Node args = fnNameNode.getNext(); final Node body = args.getNext(); String fnName = fnNameNode.getString(); if (!fnName.isEmpty() && NodeUtil.isFunctionExpression(n)) { declareVar(fnName, fnNameNode, n, null, null, n); } Preconditions.checkState(args.getType() == Token.LP); for (Node a = args.getFirstChild(); a != null; a = a.getNext()) {"
+      },
+      {
+        "txt": "Preconditions.checkState(a.getType() == Token.NAME); declareVar(a.getString(), a, args, n, null, n); } scanVars(body, n); } else { Preconditions.checkState(scope.getParent() == null); scanVars(n, null); } } private void scanVars(Node n, Node parent) {"
+      },
+      {
+        "txt": "switch (n.getType()) { case Token.VAR: for (Node child = n.getFirstChild(); child != null;) { Node next = child.getNext(); Preconditions.checkState(child.getType() == Token.NAME); String name = child.getString(); declareVar(name, child, n, parent, null, n); child = next; }"
+      },
+      {
+        "txt": "return; case Token.FUNCTION: if (NodeUtil.isFunctionExpression(n)) { return; } String fnName = n.getFirstChild().getString(); if (fnName.isEmpty()) { return; } declareVar(fnName, n.getFirstChild(), n, parent, null, n);"
+      },
+      {
+        "txt": "return; // should not examine function's children case Token.CATCH: Preconditions.checkState(n.getChildCount() == 2); Preconditions.checkState(n.getFirstChild().getType() == Token.NAME); final Node var = n.getFirstChild(); final Node block = var.getNext(); declareVar(var.getString(), var, n, parent, null, n); scanVars(block, n); return; // only one child to scan case Token.SCRIPT:"
+      },
+      {
+        "txt": "sourceName = (String) n.getProp(Node.SOURCENAME_PROP); break; } if (NodeUtil.isControlStructure(n) || NodeUtil.isStatementBlock(n)) { for (Node child = n.getFirstChild(); child != null;) { Node next = child.getNext(); scanVars(child, n); child = next; }"
+      },
+      {
+        "txt": "} } interface RedeclarationHandler { void onRedeclaration( Scope s, String name, Node n, Node parent, Node gramps, Node nodeWithLineNumber); } private class DefaultRedeclarationHandler implements RedeclarationHandler { public void onRedeclaration( Scope s, String name,"
+      },
+      {
+        "txt": "Node n, Node parent, Node gramps, Node nodeWithLineNumber) { if (scope.isGlobal()) { Scope.Var origVar = scope.getVar(name); Node origParent = origVar.getParentNode(); if (origParent.getType() == Token.CATCH && parent.getType() == Token.CATCH) { return; } boolean allowDupe = false; JSDocInfo info = n.getJSDocInfo();"
+      },
+      {
+        "txt": "if (info == null) { info = parent.getJSDocInfo(); } allowDupe = info != null && info.getSuppressions().contains(\"duplicate\"); if (!allowDupe) { compiler.report( JSError.make(sourceName, n, VAR_MULTIPLY_DECLARED_ERROR, name,"
+      },
+      {
+        "txt": "(origVar.input != null ? origVar.input.getName() : \"??\"))); } } else if (name.equals(ARGUMENTS) && !NodeUtil.isVarDeclaration(n)) { compiler.report( JSError.make(sourceName, n, VAR_ARGUMENTS_SHADOWED_ERROR)); } }"
+      },
+      {
+        "txt": "private void declareVar(String name, Node n, Node parent, Node gramps, com.google.javascript.rhino.jstype.JSType declaredType, Node nodeWithLineNumber) { if (scope.isDeclared(name, false) || (scope.isLocal() && name.equals(ARGUMENTS))) { redeclarationHandler.onRedeclaration( <extra_id_0> } else { scope.declare(name, n, declaredType, compiler.getInput(sourceName)); } } }"
+      }
+    ]
+  },
+  {
+    "id": 681,
+    "file_path": "src/com/google/javascript/jscomp/SyntacticScopeCreator.java",
+    "start-bug-line": 243,
+    "end-bug-line": 243,
+    "bug": "scope.declare(name, n, declaredType, compiler.getInput(sourceName));",
+    "fix": "scope.declare(name, n, null, input);",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.google.javascript.jscomp; import com.google.common.base.Preconditions; import com.google.javascript.rhino.JSDocInfo; import com.google.javascript.rhino.Node; import com.google.javascript.rhino.Token; class SyntacticScopeCreator implements ScopeCreator {"
+      },
+      {
+        "txt": "private final AbstractCompiler compiler; private Scope scope; private String sourceName; private final RedeclarationHandler redeclarationHandler; private static final String ARGUMENTS = \"arguments\"; public static final DiagnosticType VAR_MULTIPLY_DECLARED_ERROR = DiagnosticType.error( \"JSC_VAR_MULTIPLY_DECLARED_ERROR\", \"Variable {0} first declared in {1}\"); public static final DiagnosticType VAR_ARGUMENTS_SHADOWED_ERROR ="
+      },
+      {
+        "txt": "DiagnosticType.error( \"JSC_VAR_ARGUMENTS_SHADOWED_ERROR\", \"Shadowing \\\"arguments\\\" is not allowed\"); SyntacticScopeCreator(AbstractCompiler compiler) { this.compiler = compiler; this.redeclarationHandler = new DefaultRedeclarationHandler(); } SyntacticScopeCreator( AbstractCompiler compiler, RedeclarationHandler redeclarationHandler) { this.compiler = compiler;"
+      },
+      {
+        "txt": "this.redeclarationHandler = redeclarationHandler; } public Scope createScope(Node n, Scope parent) { sourceName = null; if (parent == null) { scope = new Scope(n, compiler); } else { scope = new Scope(parent, n); } scanRoot(n, parent);"
+      },
+      {
+        "txt": "sourceName = null; Scope returnedScope = scope; scope = null; return returnedScope; } private void scanRoot(Node n, Scope parent) { if (n.getType() == Token.FUNCTION) { sourceName = (String) n.getProp(Node.SOURCENAME_PROP); final Node fnNameNode = n.getFirstChild(); final Node args = fnNameNode.getNext();"
+      },
+      {
+        "txt": "final Node body = args.getNext(); String fnName = fnNameNode.getString(); if (!fnName.isEmpty() && NodeUtil.isFunctionExpression(n)) { declareVar(fnName, fnNameNode, n, null, null, n); } Preconditions.checkState(args.getType() == Token.LP); for (Node a = args.getFirstChild(); a != null; a = a.getNext()) { Preconditions.checkState(a.getType() == Token.NAME); declareVar(a.getString(), a, args, n, null, n);"
+      },
+      {
+        "txt": "} scanVars(body, n); } else { Preconditions.checkState(scope.getParent() == null); scanVars(n, null); } } private void scanVars(Node n, Node parent) { switch (n.getType()) { case Token.VAR:"
+      },
+      {
+        "txt": "for (Node child = n.getFirstChild(); child != null;) { Node next = child.getNext(); Preconditions.checkState(child.getType() == Token.NAME); String name = child.getString(); declareVar(name, child, n, parent, null, n); child = next; } return; case Token.FUNCTION:"
+      },
+      {
+        "txt": "if (NodeUtil.isFunctionExpression(n)) { return; } String fnName = n.getFirstChild().getString(); if (fnName.isEmpty()) { return; } declareVar(fnName, n.getFirstChild(), n, parent, null, n); return; // should not examine function's children case Token.CATCH:"
+      },
+      {
+        "txt": "Preconditions.checkState(n.getChildCount() == 2); Preconditions.checkState(n.getFirstChild().getType() == Token.NAME); final Node var = n.getFirstChild(); final Node block = var.getNext(); declareVar(var.getString(), var, n, parent, null, n); scanVars(block, n); return; // only one child to scan case Token.SCRIPT: sourceName = (String) n.getProp(Node.SOURCENAME_PROP); break;"
+      },
+      {
+        "txt": "} if (NodeUtil.isControlStructure(n) || NodeUtil.isStatementBlock(n)) { for (Node child = n.getFirstChild(); child != null;) { Node next = child.getNext(); scanVars(child, n); child = next; } } }"
+      },
+      {
+        "txt": "interface RedeclarationHandler { void onRedeclaration( Scope s, String name, Node n, Node parent, Node gramps, Node nodeWithLineNumber); } private class DefaultRedeclarationHandler implements RedeclarationHandler { public void onRedeclaration( Scope s, String name, Node n, Node parent, Node gramps, Node nodeWithLineNumber) { if (scope.isGlobal()) {"
+      },
+      {
+        "txt": "Scope.Var origVar = scope.getVar(name); Node origParent = origVar.getParentNode(); if (origParent.getType() == Token.CATCH && parent.getType() == Token.CATCH) { return; } boolean allowDupe = false; JSDocInfo info = n.getJSDocInfo(); if (info == null) { info = parent.getJSDocInfo();"
+      },
+      {
+        "txt": "} allowDupe = info != null && info.getSuppressions().contains(\"duplicate\"); if (!allowDupe) { compiler.report( JSError.make(sourceName, n, VAR_MULTIPLY_DECLARED_ERROR, name, (origVar.input != null ? origVar.input.getName()"
+      },
+      {
+        "txt": ": \"??\"))); } } else if (name.equals(ARGUMENTS) && !NodeUtil.isVarDeclaration(n)) { compiler.report( JSError.make(sourceName, n, VAR_ARGUMENTS_SHADOWED_ERROR)); } } } private void declareVar(String name, Node n, Node parent,"
+      },
+      {
+        "txt": "Node nodeWithLineNumber) { if (scope.isDeclared(name, false) || (scope.isLocal() && name.equals(ARGUMENTS))) { redeclarationHandler.onRedeclaration( scope, name, n, parent, gramps, nodeWithLineNumber); } else { <extra_id_0> } } }"
+      }
+    ]
+  }
+]

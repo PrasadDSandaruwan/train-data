@@ -1,0 +1,548 @@
+[
+  {
+    "id": 1611,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/deser/std/StdKeyDeserializer.java",
+    "start-bug-line": 128,
+    "end-bug-line": 128,
+    "bug": "return ctxt.handleWeirdKey(_keyClass, key, \"not a valid representation, problem: %s\", re.getMessage());",
+    "fix": "return ctxt.handleWeirdKey(_keyClass, key, \"not a valid representation, problem: (%s) %s\", re.getClass().getName(), re.getMessage());",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind.deser.std; import java.io.IOException; import java.lang.reflect.Constructor; import java.lang.reflect.Method; import java.net.MalformedURLException; import java.net.URI; import java.net.URL;"
+      },
+      {
+        "txt": "import java.util.*; import com.fasterxml.jackson.core.JsonProcessingException; import com.fasterxml.jackson.core.io.NumberInput; import com.fasterxml.jackson.databind.*; import com.fasterxml.jackson.databind.annotation.JacksonStdImpl; import com.fasterxml.jackson.databind.introspect.AnnotatedMethod; import com.fasterxml.jackson.databind.util.ClassUtil; import com.fasterxml.jackson.databind.util.EnumResolver; @JacksonStdImpl public class StdKeyDeserializer extends KeyDeserializer"
+      },
+      {
+        "txt": "implements java.io.Serializable { private static final long serialVersionUID = 1L; public final static int TYPE_BOOLEAN = 1; public final static int TYPE_BYTE = 2; public final static int TYPE_SHORT = 3; public final static int TYPE_CHAR = 4; public final static int TYPE_INT = 5; public final static int TYPE_LONG = 6; public final static int TYPE_FLOAT = 7;"
+      },
+      {
+        "txt": "public final static int TYPE_DOUBLE = 8; public final static int TYPE_LOCALE = 9; public final static int TYPE_DATE = 10; public final static int TYPE_CALENDAR = 11; public final static int TYPE_UUID = 12; public final static int TYPE_URI = 13; public final static int TYPE_URL = 14; public final static int TYPE_CLASS = 15; public final static int TYPE_CURRENCY = 16; final protected int _kind;"
+      },
+      {
+        "txt": "final protected Class<?> _keyClass; protected final FromStringDeserializer<?> _deser; protected StdKeyDeserializer(int kind, Class<?> cls) { this(kind, cls, null); } protected StdKeyDeserializer(int kind, Class<?> cls, FromStringDeserializer<?> deser) { _kind = kind; _keyClass = cls; _deser = deser; }"
+      },
+      {
+        "txt": "public static StdKeyDeserializer forType(Class<?> raw) { int kind; if (raw == String.class || raw == Object.class) { return StringKD.forType(raw); } else if (raw == UUID.class) { kind = TYPE_UUID; } else if (raw == Integer.class) { kind = TYPE_INT; } else if (raw == Long.class) {"
+      },
+      {
+        "txt": "kind = TYPE_LONG; } else if (raw == Date.class) { kind = TYPE_DATE; } else if (raw == Calendar.class) { kind = TYPE_CALENDAR; } else if (raw == Boolean.class) { kind = TYPE_BOOLEAN; } else if (raw == Byte.class) { kind = TYPE_BYTE; } else if (raw == Character.class) {"
+      },
+      {
+        "txt": "kind = TYPE_CHAR; } else if (raw == Short.class) { kind = TYPE_SHORT; } else if (raw == Float.class) { kind = TYPE_FLOAT; } else if (raw == Double.class) { kind = TYPE_DOUBLE; } else if (raw == URI.class) { kind = TYPE_URI; } else if (raw == URL.class) {"
+      },
+      {
+        "txt": "kind = TYPE_URL; } else if (raw == Class.class) { kind = TYPE_CLASS; } else if (raw == Locale.class) { FromStringDeserializer<?> deser = FromStringDeserializer.findDeserializer(Locale.class); return new StdKeyDeserializer(TYPE_LOCALE, raw, deser); } else if (raw == Currency.class) { FromStringDeserializer<?> deser = FromStringDeserializer.findDeserializer(Currency.class); return new StdKeyDeserializer(TYPE_CURRENCY, raw, deser); } else {"
+      },
+      {
+        "txt": "return null; } return new StdKeyDeserializer(kind, raw); } @Override public Object deserializeKey(String key, DeserializationContext ctxt) throws IOException { if (key == null) { // is this even legal call? return null;"
+      },
+      {
+        "txt": "try { Object result = _parse(key, ctxt); if (result != null) { return result; } } catch (Exception re) { <extra_id_0> } if (_keyClass.isEnum() && ctxt.getConfig().isEnabled(DeserializationFeature.READ_UNKNOWN_ENUM_VALUES_AS_NULL)) { return null; } return ctxt.handleWeirdKey(_keyClass, key, \"not a valid representation\"); }"
+      },
+      {
+        "txt": "return ctxt.handleWeirdKey(_keyClass, key, \"not a valid representation\"); } public Class<?> getKeyClass() { return _keyClass; } protected Object _parse(String key, DeserializationContext ctxt) throws Exception { switch (_kind) { case TYPE_BOOLEAN: if (\"true\".equals(key)) { return Boolean.TRUE; }"
+      },
+      {
+        "txt": "if (\"false\".equals(key)) { return Boolean.FALSE; } return ctxt.handleWeirdKey(_keyClass, key, \"value not 'true' or 'false'\"); case TYPE_BYTE: { int value = _parseInt(key); if (value < Byte.MIN_VALUE || value > 255) { return ctxt.handleWeirdKey(_keyClass, key, \"overflow, value can not be represented as 8-bit value\"); }"
+      },
+      {
+        "txt": "return Byte.valueOf((byte) value); } case TYPE_SHORT: { int value = _parseInt(key); if (value < Short.MIN_VALUE || value > Short.MAX_VALUE) { return ctxt.handleWeirdKey(_keyClass, key, \"overflow, value can not be represented as 16-bit value\"); } return Short.valueOf((short) value); }"
+      },
+      {
+        "txt": "case TYPE_CHAR: if (key.length() == 1) { return Character.valueOf(key.charAt(0)); } return ctxt.handleWeirdKey(_keyClass, key, \"can only convert 1-character Strings\"); case TYPE_INT: return _parseInt(key); case TYPE_LONG: return _parseLong(key); case TYPE_FLOAT:"
+      },
+      {
+        "txt": "return Float.valueOf((float) _parseDouble(key)); case TYPE_DOUBLE: return _parseDouble(key); case TYPE_LOCALE: try { return _deser._deserialize(key, ctxt); } catch (IOException e) { return ctxt.handleWeirdKey(_keyClass, key, \"unable to parse key as locale\"); } case TYPE_CURRENCY:"
+      },
+      {
+        "txt": "try { return _deser._deserialize(key, ctxt); } catch (IOException e) { return ctxt.handleWeirdKey(_keyClass, key, \"unable to parse key as currency\"); } case TYPE_DATE: return ctxt.parseDate(key); case TYPE_CALENDAR: java.util.Date date = ctxt.parseDate(key); return (date == null) ? null : ctxt.constructCalendar(date);"
+      },
+      {
+        "txt": "case TYPE_UUID: try { return UUID.fromString(key); } catch (Exception e) { return ctxt.handleWeirdKey(_keyClass, key, \"problem: %s\", e.getMessage()); } case TYPE_URI: try { return URI.create(key); } catch (Exception e) {"
+      },
+      {
+        "txt": "return ctxt.handleWeirdKey(_keyClass, key, \"problem: %s\", e.getMessage()); } case TYPE_URL: try { return new URL(key); } catch (MalformedURLException e) { return ctxt.handleWeirdKey(_keyClass, key, \"problem: %s\", e.getMessage()); } case TYPE_CLASS: try {"
+      },
+      {
+        "txt": "return ctxt.findClass(key); } catch (Exception e) { return ctxt.handleWeirdKey(_keyClass, key, \"unable to parse key as Class\"); } default: throw new IllegalStateException(\"Internal error: unknown key type \"+_keyClass); } } protected int _parseInt(String key) throws IllegalArgumentException { return Integer.parseInt(key);"
+      },
+      {
+        "txt": "} protected long _parseLong(String key) throws IllegalArgumentException { return Long.parseLong(key); } protected double _parseDouble(String key) throws IllegalArgumentException { return NumberInput.parseDouble(key); } @JacksonStdImpl final static class StringKD extends StdKeyDeserializer {"
+      },
+      {
+        "txt": "private static final long serialVersionUID = 1L; private final static StringKD sString = new StringKD(String.class); private final static StringKD sObject = new StringKD(Object.class); private StringKD(Class<?> nominalType) { super(-1, nominalType); } public static StringKD forType(Class<?> nominalType) { if (nominalType == String.class) { return sString; } if (nominalType == Object.class) {"
+      },
+      {
+        "txt": "return sObject; } return new StringKD(nominalType); } @Override public Object deserializeKey(String key, DeserializationContext ctxt) throws IOException, JsonProcessingException { return key; } } final static class DelegatingKD"
+      },
+      {
+        "txt": "extends KeyDeserializer // note: NOT the std one implements java.io.Serializable { private static final long serialVersionUID = 1L; final protected Class<?> _keyClass; protected final JsonDeserializer<?> _delegate; protected DelegatingKD(Class<?> cls, JsonDeserializer<?> deser) { _keyClass = cls; _delegate = deser; }"
+      },
+      {
+        "txt": "@Override public final Object deserializeKey(String key, DeserializationContext ctxt) throws IOException, JsonProcessingException { if (key == null) { // is this even legal call? return null; } try { Object result = _delegate.deserialize(ctxt.getParser(), ctxt); if (result != null) {"
+      },
+      {
+        "txt": "return result; } return ctxt.handleWeirdKey(_keyClass, key, \"not a valid representation\"); } catch (Exception re) { return ctxt.handleWeirdKey(_keyClass, key, \"not a valid representation: %s\", re.getMessage()); } } public Class<?> getKeyClass() { return _keyClass; } } @JacksonStdImpl"
+      },
+      {
+        "txt": "final static class EnumKD extends StdKeyDeserializer { private static final long serialVersionUID = 1L; protected final EnumResolver _byNameResolver; protected final AnnotatedMethod _factory; protected EnumResolver _byToStringResolver; protected EnumKD(EnumResolver er, AnnotatedMethod factory) { super(-1, er.getEnumClass()); _byNameResolver = er; _factory = factory;"
+      },
+      {
+        "txt": "} @Override public Object _parse(String key, DeserializationContext ctxt) throws IOException { if (_factory != null) { try { return _factory.call1(key); } catch (Exception e) { ClassUtil.unwrapAndThrowAsIAE(e); }"
+      },
+      {
+        "txt": "} EnumResolver res = ctxt.isEnabled(DeserializationFeature.READ_ENUMS_USING_TO_STRING) ? _getToStringResolver(ctxt) : _byNameResolver; Enum<?> e = res.findEnum(key); if ((e == null) && !ctxt.getConfig().isEnabled(DeserializationFeature.READ_UNKNOWN_ENUM_VALUES_AS_NULL)) { return ctxt.handleWeirdKey(_keyClass, key, \"not one of values excepted for Enum class: %s\", res.getEnumIds()); } return e; }"
+      },
+      {
+        "txt": "private EnumResolver _getToStringResolver(DeserializationContext ctxt) { EnumResolver res = _byToStringResolver; if (res == null) { synchronized (this) { res = EnumResolver.constructUnsafeUsingToString(_byNameResolver.getEnumClass(), ctxt.getAnnotationIntrospector()); } } return res;"
+      },
+      {
+        "txt": "} } final static class StringCtorKeyDeserializer extends StdKeyDeserializer { private static final long serialVersionUID = 1L; protected final Constructor<?> _ctor; public StringCtorKeyDeserializer(Constructor<?> ctor) { super(-1, ctor.getDeclaringClass()); _ctor = ctor; }"
+      },
+      {
+        "txt": "@Override public Object _parse(String key, DeserializationContext ctxt) throws Exception { return _ctor.newInstance(key); } } final static class StringFactoryKeyDeserializer extends StdKeyDeserializer { private static final long serialVersionUID = 1L; final Method _factoryMethod;"
+      },
+      {
+        "txt": "public StringFactoryKeyDeserializer(Method fm) { super(-1, fm.getDeclaringClass()); _factoryMethod = fm; } @Override public Object _parse(String key, DeserializationContext ctxt) throws Exception { return _factoryMethod.invoke(null, key); } }"
+      }
+    ]
+  },
+  {
+    "id": 1612,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/introspect/BasicBeanDescription.java",
+    "start-bug-line": 525,
+    "end-bug-line": 525,
+    "bug": "if (isFactoryMethod(am)) {",
+    "fix": "if (isFactoryMethod(am) && am.getParameterCount() == 1) {",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind.introspect; import java.lang.reflect.Constructor; import java.lang.reflect.Method; import java.util.*; import com.fasterxml.jackson.annotation.JsonFormat; import com.fasterxml.jackson.annotation.JsonInclude; import com.fasterxml.jackson.databind.*; import com.fasterxml.jackson.databind.annotation.JsonPOJOBuilder;"
+      },
+      {
+        "txt": "import com.fasterxml.jackson.databind.cfg.HandlerInstantiator; import com.fasterxml.jackson.databind.cfg.MapperConfig; import com.fasterxml.jackson.databind.type.TypeBindings; import com.fasterxml.jackson.databind.util.Annotations; import com.fasterxml.jackson.databind.util.ClassUtil; import com.fasterxml.jackson.databind.util.Converter; public class BasicBeanDescription extends BeanDescription { final protected POJOPropertiesCollector _propCollector; final protected MapperConfig<?> _config;"
+      },
+      {
+        "txt": "final protected AnnotationIntrospector _annotationIntrospector; final protected AnnotatedClass _classInfo; protected List<BeanPropertyDefinition> _properties; protected ObjectIdInfo _objectIdInfo; protected BasicBeanDescription(POJOPropertiesCollector coll, JavaType type, AnnotatedClass classDef) { super(type); _propCollector = coll; _config = coll.getConfig();"
+      },
+      {
+        "txt": "if (_config == null) { _annotationIntrospector = null; } else { _annotationIntrospector = _config.getAnnotationIntrospector(); } _classInfo = classDef; } protected BasicBeanDescription(MapperConfig<?> config, JavaType type, AnnotatedClass classDef, List<BeanPropertyDefinition> props) {"
+      },
+      {
+        "txt": "super(type); _propCollector = null; _config = config; if (_config == null) { _annotationIntrospector = null; } else { _annotationIntrospector = _config.getAnnotationIntrospector(); } _classInfo = classDef; _properties = props;"
+      },
+      {
+        "txt": "} protected BasicBeanDescription(POJOPropertiesCollector coll) { this(coll, coll.getType(), coll.getClassDef()); _objectIdInfo = coll.getObjectIdInfo(); } public static BasicBeanDescription forDeserialization(POJOPropertiesCollector coll) { return new BasicBeanDescription(coll); } public static BasicBeanDescription forSerialization(POJOPropertiesCollector coll) {"
+      },
+      {
+        "txt": "return new BasicBeanDescription(coll); } public static BasicBeanDescription forOtherUse(MapperConfig<?> config, JavaType type, AnnotatedClass ac) { return new BasicBeanDescription(config, type, ac, Collections.<BeanPropertyDefinition>emptyList()); } protected List<BeanPropertyDefinition> _properties() { if (_properties == null) {"
+      },
+      {
+        "txt": "_properties = _propCollector.getProperties(); } return _properties; } public boolean removeProperty(String propName) { Iterator<BeanPropertyDefinition> it = _properties().iterator(); while (it.hasNext()) { BeanPropertyDefinition prop = it.next(); if (prop.getName().equals(propName)) {"
+      },
+      {
+        "txt": "it.remove(); return true; } } return false; } public boolean addProperty(BeanPropertyDefinition def) { if (hasProperty(def.getFullName())) { return false;"
+      },
+      {
+        "txt": "} _properties().add(def); return true; } public boolean hasProperty(PropertyName name) { return findProperty(name) != null; } public BeanPropertyDefinition findProperty(PropertyName name) { for (BeanPropertyDefinition prop : _properties()) {"
+      },
+      {
+        "txt": "if (prop.hasName(name)) { return prop; } } return null; } @Override public AnnotatedClass getClassInfo() { return _classInfo; } @Override public ObjectIdInfo getObjectIdInfo() { return _objectIdInfo; }"
+      },
+      {
+        "txt": "@Override public List<BeanPropertyDefinition> findProperties() { return _properties(); } @Override public AnnotatedMethod findJsonValueMethod() { return (_propCollector == null) ? null : _propCollector.getJsonValueMethod(); } @Override"
+      },
+      {
+        "txt": "public Set<String> getIgnoredPropertyNames() { Set<String> ign = (_propCollector == null) ? null : _propCollector.getIgnoredPropertyNames(); if (ign == null) { return Collections.emptySet(); } return ign; } @Override public boolean hasKnownClassAnnotations() {"
+      },
+      {
+        "txt": "return _classInfo.hasAnnotations(); } @Override public Annotations getClassAnnotations() { return _classInfo.getAnnotations(); } @Override @Deprecated // since 2.7 public TypeBindings bindingsForBeanType() { return _type.getBindings();"
+      },
+      {
+        "txt": "} @Override @Deprecated // since 2.8 public JavaType resolveType(java.lang.reflect.Type jdkType) { if (jdkType == null) { return null; } return _config.getTypeFactory().constructType(jdkType, _type.getBindings()); } @Override"
+      },
+      {
+        "txt": "public AnnotatedConstructor findDefaultConstructor() { return _classInfo.getDefaultConstructor(); } @Override public AnnotatedMethod findAnySetter() throws IllegalArgumentException { AnnotatedMethod anySetter = (_propCollector == null) ? null : _propCollector.getAnySetterMethod(); if (anySetter != null) { Class<?> type = anySetter.getRawParameterType(0);"
+      },
+      {
+        "txt": "if (type != String.class && type != Object.class) { throw new IllegalArgumentException(\"Invalid 'any-setter' annotation on method \"+anySetter.getName()+\"(): first argument not of type String or Object, but \"+type.getName()); } } return anySetter; } @Override public Map<Object, AnnotatedMember> findInjectables() { if (_propCollector != null) { return _propCollector.getInjectables();"
+      },
+      {
+        "txt": "} return Collections.emptyMap(); } @Override public List<AnnotatedConstructor> getConstructors() { return _classInfo.getConstructors(); } @Override public Object instantiateBean(boolean fixAccess) { AnnotatedConstructor ac = _classInfo.getDefaultConstructor();"
+      },
+      {
+        "txt": "if (ac == null) { return null; } if (fixAccess) { ac.fixAccess(_config.isEnabled(MapperFeature.OVERRIDE_PUBLIC_ACCESS_MODIFIERS)); } try { return ac.getAnnotated().newInstance(); } catch (Exception e) { Throwable t = e;"
+      },
+      {
+        "txt": "while (t.getCause() != null) { t = t.getCause(); } if (t instanceof Error) throw (Error) t; if (t instanceof RuntimeException) throw (RuntimeException) t; throw new IllegalArgumentException(\"Failed to instantiate bean of type \"+_classInfo.getAnnotated().getName()+\": (\"+t.getClass().getName()+\") \"+t.getMessage(), t); } } @Override public AnnotatedMethod findMethod(String name, Class<?>[] paramTypes) {"
+      },
+      {
+        "txt": "return _classInfo.findMethod(name, paramTypes); } @Override public JsonFormat.Value findExpectedFormat(JsonFormat.Value defValue) { if (_annotationIntrospector != null) { JsonFormat.Value v = _annotationIntrospector.findFormat(_classInfo); if (v != null) { if (defValue == null) { defValue = v;"
+      },
+      {
+        "txt": "} else { defValue = defValue.withOverrides(v); } } } JsonFormat.Value v = _config.getDefaultPropertyFormat(_classInfo.getRawType()); if (v != null) { if (defValue == null) { defValue = v; } else {"
+      },
+      {
+        "txt": "defValue = defValue.withOverrides(v); } } return defValue; } @Override public Converter<Object,Object> findSerializationConverter() { if (_annotationIntrospector == null) { return null;"
+      },
+      {
+        "txt": "} return _createConverter(_annotationIntrospector.findSerializationConverter(_classInfo)); } @Override public JsonInclude.Value findPropertyInclusion(JsonInclude.Value defValue) { if (_annotationIntrospector != null) { JsonInclude.Value incl = _annotationIntrospector.findPropertyInclusion(_classInfo); if (incl != null) { return (defValue == null) ? incl : defValue.withOverrides(incl); }"
+      },
+      {
+        "txt": "} return defValue; } @Override public AnnotatedMember findAnyGetter() throws IllegalArgumentException { AnnotatedMember anyGetter = (_propCollector == null) ? null : _propCollector.getAnyGetter(); if (anyGetter != null) { Class<?> type = anyGetter.getRawType();"
+      },
+      {
+        "txt": "if (!Map.class.isAssignableFrom(type)) { throw new IllegalArgumentException(\"Invalid 'any-getter' annotation on method \"+anyGetter.getName()+\"(): return type is not instance of java.util.Map\"); } } return anyGetter; } @Override public AnnotatedMember findAnySetterField() throws IllegalArgumentException { AnnotatedMember anySetter = (_propCollector == null) ? null : _propCollector.getAnySetterField(); if (anySetter != null) {"
+      },
+      {
+        "txt": "Class<?> type = anySetter.getRawType(); if (!Map.class.isAssignableFrom(type)) { throw new IllegalArgumentException(\"Invalid 'any-setter' annotation on field \" + anySetter.getName() + \"(): type is not instance of java.util.Map\"); } } return anySetter; } @Override public Map<String,AnnotatedMember> findBackReferenceProperties()"
+      },
+      {
+        "txt": "{ HashMap<String,AnnotatedMember> result = null; for (BeanPropertyDefinition property : _properties()) { if (hasIgnored && _ignoredPropertyNames.contains(property.getName())) { continue; } AnnotatedMember am = property.getMutator(); if (am == null) { continue; }"
+      },
+      {
+        "txt": "AnnotationIntrospector.ReferenceProperty refDef = _annotationIntrospector.findReferenceType(am); if (refDef != null && refDef.isBackReference()) { if (result == null) { result = new HashMap<String,AnnotatedMember>(); } String refName = refDef.getName(); if (result.put(refName, am) != null) { throw new IllegalArgumentException(\"Multiple back-reference properties with name '\"+refName+\"'\"); } }"
+      },
+      {
+        "txt": "} return result; } @Override public List<AnnotatedMethod> getFactoryMethods() { List<AnnotatedMethod> candidates = _classInfo.getStaticMethods(); if (candidates.isEmpty()) { return candidates; }"
+      },
+      {
+        "txt": "ArrayList<AnnotatedMethod> result = new ArrayList<AnnotatedMethod>(); for (AnnotatedMethod am : candidates) { if (isFactoryMethod(am)) { result.add(am); } } return result; } @Override public Constructor<?> findSingleArgConstructor(Class<?>... argTypes)"
+      },
+      {
+        "txt": "{ for (AnnotatedConstructor ac : _classInfo.getConstructors()) { if (ac.getParameterCount() == 1) { Class<?> actArg = ac.getRawParameterType(0); for (Class<?> expArg : argTypes) { if (expArg == actArg) { return ac.getAnnotated(); } } }"
+      },
+      {
+        "txt": "return null; } @Override public Method findFactoryMethod(Class<?>... expArgTypes) { for (AnnotatedMethod am : _classInfo.getStaticMethods()) { <extra_id_0> Class<?> actualArgType = am.getRawParameterType(0); for (Class<?> expArgType : expArgTypes) { if (actualArgType.isAssignableFrom(expArgType)) { return am.getAnnotated(); } }"
+      },
+      {
+        "txt": "} } } } return null; } protected boolean isFactoryMethod(AnnotatedMethod am) { Class<?> rt = am.getRawReturnType(); if (!getBeanClass().isAssignableFrom(rt)) {"
+      },
+      {
+        "txt": "return false; } if (_annotationIntrospector.hasCreatorAnnotation(am)) { return true; } final String name = am.getName(); if (\"valueOf\".equals(name)) { return true; } if (\"fromString\".equals(name)) {"
+      },
+      {
+        "txt": "if (am.getParameterCount() == 1) { Class<?> cls = am.getRawParameterType(0); if (cls == String.class || CharSequence.class.isAssignableFrom(cls)) { return true; } } } return false; } @Deprecated // since 2.8, not used at least since 2.7"
+      },
+      {
+        "txt": "protected PropertyName _findCreatorPropertyName(AnnotatedParameter param) { PropertyName name = _annotationIntrospector.findNameForDeserialization(param); if (name == null || name.isEmpty()) { String str = _annotationIntrospector.findImplicitPropertyName(param); if (str != null && !str.isEmpty()) { name = PropertyName.construct(str); } } return name;"
+      },
+      {
+        "txt": "} @Override public Class<?> findPOJOBuilder() { return (_annotationIntrospector == null) ? null : _annotationIntrospector.findPOJOBuilder(_classInfo); } @Override public JsonPOJOBuilder.Value findPOJOBuilderConfig() { return (_annotationIntrospector == null) ?"
+      },
+      {
+        "txt": "null : _annotationIntrospector.findPOJOBuilderConfig(_classInfo); } @Override public Converter<Object,Object> findDeserializationConverter() { if (_annotationIntrospector == null) { return null; } return _createConverter(_annotationIntrospector.findDeserializationConverter(_classInfo)); }"
+      },
+      {
+        "txt": "@Override public String findClassDescription() { return (_annotationIntrospector == null) ? null : _annotationIntrospector.findClassDescription(_classInfo); } @Deprecated public LinkedHashMap<String,AnnotatedField> _findPropertyFields( Collection<String> ignoredProperties, boolean forSerialization) { LinkedHashMap<String,AnnotatedField> results = new LinkedHashMap<String,AnnotatedField>();"
+      },
+      {
+        "txt": "for (BeanPropertyDefinition property : _properties()) { AnnotatedField f = property.getField(); if (f != null) { String name = property.getName(); if (ignoredProperties != null) { if (ignoredProperties.contains(name)) { continue; } } results.put(name, f);"
+      },
+      {
+        "txt": "} } return results; } @SuppressWarnings(\"unchecked\") public Converter<Object,Object> _createConverter(Object converterDef) { if (converterDef == null) { return null; }"
+      },
+      {
+        "txt": "if (converterDef instanceof Converter<?,?>) { return (Converter<Object,Object>) converterDef; } if (!(converterDef instanceof Class)) { throw new IllegalStateException(\"AnnotationIntrospector returned Converter definition of type \" +converterDef.getClass().getName()+\"; expected type Converter or Class<Converter> instead\"); } Class<?> converterClass = (Class<?>)converterDef; if (converterClass == Converter.None.class || ClassUtil.isBogusClass(converterClass)) { return null;"
+      },
+      {
+        "txt": "} if (!Converter.class.isAssignableFrom(converterClass)) { throw new IllegalStateException(\"AnnotationIntrospector returned Class \" +converterClass.getName()+\"; expected Class<Converter>\"); } HandlerInstantiator hi = _config.getHandlerInstantiator(); Converter<?,?> conv = (hi == null) ? null : hi.converterInstance(_config, _classInfo, converterClass); if (conv == null) { conv = (Converter<?,?>) ClassUtil.createInstance(converterClass, _config.canOverrideAccessModifiers());"
+      },
+      {
+        "txt": "} return (Converter<Object,Object>) conv; }"
+      }
+    ]
+  },
+  {
+    "id": 1613,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/introspect/BasicBeanDescription.java",
+    "start-bug-line": 558,
+    "end-bug-line": 558,
+    "bug": "",
+    "fix": "if (am.getParameterCount() == 1) {",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind.introspect; import java.lang.reflect.Constructor; import java.lang.reflect.Method; import java.util.*; import com.fasterxml.jackson.annotation.JsonFormat; import com.fasterxml.jackson.annotation.JsonInclude; import com.fasterxml.jackson.databind.*; import com.fasterxml.jackson.databind.annotation.JsonPOJOBuilder; import com.fasterxml.jackson.databind.cfg.HandlerInstantiator; import com.fasterxml.jackson.databind.cfg.MapperConfig;"
+      },
+      {
+        "txt": "import com.fasterxml.jackson.databind.type.TypeBindings; import com.fasterxml.jackson.databind.util.Annotations; import com.fasterxml.jackson.databind.util.ClassUtil; import com.fasterxml.jackson.databind.util.Converter; public class BasicBeanDescription extends BeanDescription { final protected POJOPropertiesCollector _propCollector; final protected MapperConfig<?> _config; final protected AnnotationIntrospector _annotationIntrospector; final protected AnnotatedClass _classInfo;"
+      },
+      {
+        "txt": "protected List<BeanPropertyDefinition> _properties; protected ObjectIdInfo _objectIdInfo; protected BasicBeanDescription(POJOPropertiesCollector coll, JavaType type, AnnotatedClass classDef) { super(type); _propCollector = coll; _config = coll.getConfig(); if (_config == null) { _annotationIntrospector = null;"
+      },
+      {
+        "txt": "} else { _annotationIntrospector = _config.getAnnotationIntrospector(); } _classInfo = classDef; } protected BasicBeanDescription(MapperConfig<?> config, JavaType type, AnnotatedClass classDef, List<BeanPropertyDefinition> props) { super(type); _propCollector = null;"
+      },
+      {
+        "txt": "_config = config; if (_config == null) { _annotationIntrospector = null; } else { _annotationIntrospector = _config.getAnnotationIntrospector(); } _classInfo = classDef; _properties = props; } protected BasicBeanDescription(POJOPropertiesCollector coll)"
+      },
+      {
+        "txt": "{ this(coll, coll.getType(), coll.getClassDef()); _objectIdInfo = coll.getObjectIdInfo(); } public static BasicBeanDescription forDeserialization(POJOPropertiesCollector coll) { return new BasicBeanDescription(coll); } public static BasicBeanDescription forSerialization(POJOPropertiesCollector coll) { return new BasicBeanDescription(coll); }"
+      },
+      {
+        "txt": "public static BasicBeanDescription forOtherUse(MapperConfig<?> config, JavaType type, AnnotatedClass ac) { return new BasicBeanDescription(config, type, ac, Collections.<BeanPropertyDefinition>emptyList()); } protected List<BeanPropertyDefinition> _properties() { if (_properties == null) { _properties = _propCollector.getProperties(); }"
+      },
+      {
+        "txt": "return _properties; } public boolean removeProperty(String propName) { Iterator<BeanPropertyDefinition> it = _properties().iterator(); while (it.hasNext()) { BeanPropertyDefinition prop = it.next(); if (prop.getName().equals(propName)) { it.remove(); return true;"
+      },
+      {
+        "txt": "} } return false; } public boolean addProperty(BeanPropertyDefinition def) { if (hasProperty(def.getFullName())) { return false; } _properties().add(def);"
+      },
+      {
+        "txt": "return true; } public boolean hasProperty(PropertyName name) { return findProperty(name) != null; } public BeanPropertyDefinition findProperty(PropertyName name) { for (BeanPropertyDefinition prop : _properties()) { if (prop.hasName(name)) { return prop;"
+      },
+      {
+        "txt": "} } return null; } @Override public AnnotatedClass getClassInfo() { return _classInfo; } @Override public ObjectIdInfo getObjectIdInfo() { return _objectIdInfo; } @Override public List<BeanPropertyDefinition> findProperties() {"
+      },
+      {
+        "txt": "return _properties(); } @Override public AnnotatedMethod findJsonValueMethod() { return (_propCollector == null) ? null : _propCollector.getJsonValueMethod(); } @Override public Set<String> getIgnoredPropertyNames() { Set<String> ign = (_propCollector == null) ? null"
+      },
+      {
+        "txt": ": _propCollector.getIgnoredPropertyNames(); if (ign == null) { return Collections.emptySet(); } return ign; } @Override public boolean hasKnownClassAnnotations() { return _classInfo.hasAnnotations(); }"
+      },
+      {
+        "txt": "@Override public Annotations getClassAnnotations() { return _classInfo.getAnnotations(); } @Override @Deprecated // since 2.7 public TypeBindings bindingsForBeanType() { return _type.getBindings(); } @Override"
+      },
+      {
+        "txt": "@Deprecated // since 2.8 public JavaType resolveType(java.lang.reflect.Type jdkType) { if (jdkType == null) { return null; } return _config.getTypeFactory().constructType(jdkType, _type.getBindings()); } @Override public AnnotatedConstructor findDefaultConstructor() { return _classInfo.getDefaultConstructor();"
+      },
+      {
+        "txt": "} @Override public AnnotatedMethod findAnySetter() throws IllegalArgumentException { AnnotatedMethod anySetter = (_propCollector == null) ? null : _propCollector.getAnySetterMethod(); if (anySetter != null) { Class<?> type = anySetter.getRawParameterType(0); if (type != String.class && type != Object.class) { throw new IllegalArgumentException(\"Invalid 'any-setter' annotation on method \"+anySetter.getName()+\"(): first argument not of type String or Object, but \"+type.getName());"
+      },
+      {
+        "txt": "} } return anySetter; } @Override public Map<Object, AnnotatedMember> findInjectables() { if (_propCollector != null) { return _propCollector.getInjectables(); } return Collections.emptyMap();"
+      },
+      {
+        "txt": "} @Override public List<AnnotatedConstructor> getConstructors() { return _classInfo.getConstructors(); } @Override public Object instantiateBean(boolean fixAccess) { AnnotatedConstructor ac = _classInfo.getDefaultConstructor(); if (ac == null) { return null;"
+      },
+      {
+        "txt": "} if (fixAccess) { ac.fixAccess(_config.isEnabled(MapperFeature.OVERRIDE_PUBLIC_ACCESS_MODIFIERS)); } try { return ac.getAnnotated().newInstance(); } catch (Exception e) { Throwable t = e; while (t.getCause() != null) { t = t.getCause();"
+      },
+      {
+        "txt": "} if (t instanceof Error) throw (Error) t; if (t instanceof RuntimeException) throw (RuntimeException) t; throw new IllegalArgumentException(\"Failed to instantiate bean of type \"+_classInfo.getAnnotated().getName()+\": (\"+t.getClass().getName()+\") \"+t.getMessage(), t); } } @Override public AnnotatedMethod findMethod(String name, Class<?>[] paramTypes) { return _classInfo.findMethod(name, paramTypes); }"
+      },
+      {
+        "txt": "@Override public JsonFormat.Value findExpectedFormat(JsonFormat.Value defValue) { if (_annotationIntrospector != null) { JsonFormat.Value v = _annotationIntrospector.findFormat(_classInfo); if (v != null) { if (defValue == null) { defValue = v; } else { defValue = defValue.withOverrides(v);"
+      },
+      {
+        "txt": "} } } JsonFormat.Value v = _config.getDefaultPropertyFormat(_classInfo.getRawType()); if (v != null) { if (defValue == null) { defValue = v; } else { defValue = defValue.withOverrides(v); }"
+      },
+      {
+        "txt": "} return defValue; } @Override public Converter<Object,Object> findSerializationConverter() { if (_annotationIntrospector == null) { return null; } return _createConverter(_annotationIntrospector.findSerializationConverter(_classInfo));"
+      },
+      {
+        "txt": "} @Override public JsonInclude.Value findPropertyInclusion(JsonInclude.Value defValue) { if (_annotationIntrospector != null) { JsonInclude.Value incl = _annotationIntrospector.findPropertyInclusion(_classInfo); if (incl != null) { return (defValue == null) ? incl : defValue.withOverrides(incl); } } return defValue;"
+      },
+      {
+        "txt": "} @Override public AnnotatedMember findAnyGetter() throws IllegalArgumentException { AnnotatedMember anyGetter = (_propCollector == null) ? null : _propCollector.getAnyGetter(); if (anyGetter != null) { Class<?> type = anyGetter.getRawType(); if (!Map.class.isAssignableFrom(type)) { throw new IllegalArgumentException(\"Invalid 'any-getter' annotation on method \"+anyGetter.getName()+\"(): return type is not instance of java.util.Map\");"
+      },
+      {
+        "txt": "} } return anyGetter; } @Override public AnnotatedMember findAnySetterField() throws IllegalArgumentException { AnnotatedMember anySetter = (_propCollector == null) ? null : _propCollector.getAnySetterField(); if (anySetter != null) { Class<?> type = anySetter.getRawType(); if (!Map.class.isAssignableFrom(type)) {"
+      },
+      {
+        "txt": "throw new IllegalArgumentException(\"Invalid 'any-setter' annotation on field \" + anySetter.getName() + \"(): type is not instance of java.util.Map\"); } } return anySetter; } @Override public Map<String,AnnotatedMember> findBackReferenceProperties() { HashMap<String,AnnotatedMember> result = null;"
+      },
+      {
+        "txt": "for (BeanPropertyDefinition property : _properties()) { if (hasIgnored && _ignoredPropertyNames.contains(property.getName())) { continue; } AnnotatedMember am = property.getMutator(); if (am == null) { continue; } AnnotationIntrospector.ReferenceProperty refDef = _annotationIntrospector.findReferenceType(am); if (refDef != null && refDef.isBackReference()) {"
+      },
+      {
+        "txt": "if (result == null) { result = new HashMap<String,AnnotatedMember>(); } String refName = refDef.getName(); if (result.put(refName, am) != null) { throw new IllegalArgumentException(\"Multiple back-reference properties with name '\"+refName+\"'\"); } } } return result;"
+      },
+      {
+        "txt": "} @Override public List<AnnotatedMethod> getFactoryMethods() { List<AnnotatedMethod> candidates = _classInfo.getStaticMethods(); if (candidates.isEmpty()) { return candidates; } ArrayList<AnnotatedMethod> result = new ArrayList<AnnotatedMethod>(); for (AnnotatedMethod am : candidates) {"
+      },
+      {
+        "txt": "if (isFactoryMethod(am)) { result.add(am); } } return result; } @Override public Constructor<?> findSingleArgConstructor(Class<?>... argTypes) { for (AnnotatedConstructor ac : _classInfo.getConstructors()) {"
+      },
+      {
+        "txt": "if (ac.getParameterCount() == 1) { Class<?> actArg = ac.getRawParameterType(0); for (Class<?> expArg : argTypes) { if (expArg == actArg) { return ac.getAnnotated(); } } } } return null;"
+      },
+      {
+        "txt": "} @Override public Method findFactoryMethod(Class<?>... expArgTypes) { for (AnnotatedMethod am : _classInfo.getStaticMethods()) { if (isFactoryMethod(am)) { Class<?> actualArgType = am.getRawParameterType(0); for (Class<?> expArgType : expArgTypes) { if (actualArgType.isAssignableFrom(expArgType)) { return am.getAnnotated();"
+      },
+      {
+        "txt": "} } } } return null; } protected boolean isFactoryMethod(AnnotatedMethod am) { Class<?> rt = am.getRawReturnType(); if (!getBeanClass().isAssignableFrom(rt)) {"
+      },
+      {
+        "txt": "} if (_annotationIntrospector.hasCreatorAnnotation(am)) { return true; } final String name = am.getName(); if (\"valueOf\".equals(name)) { <extra_id_0> } if (\"fromString\".equals(name)) { if (am.getParameterCount() == 1) { Class<?> cls = am.getRawParameterType(0); if (cls == String.class || CharSequence.class.isAssignableFrom(cls)) { return true;"
+      },
+      {
+        "txt": "if (cls == String.class || CharSequence.class.isAssignableFrom(cls)) { return true; } } } return false; } @Deprecated // since 2.8, not used at least since 2.7 protected PropertyName _findCreatorPropertyName(AnnotatedParameter param) {"
+      },
+      {
+        "txt": "PropertyName name = _annotationIntrospector.findNameForDeserialization(param); if (name == null || name.isEmpty()) { String str = _annotationIntrospector.findImplicitPropertyName(param); if (str != null && !str.isEmpty()) { name = PropertyName.construct(str); } } return name; } @Override"
+      },
+      {
+        "txt": "public Class<?> findPOJOBuilder() { return (_annotationIntrospector == null) ? null : _annotationIntrospector.findPOJOBuilder(_classInfo); } @Override public JsonPOJOBuilder.Value findPOJOBuilderConfig() { return (_annotationIntrospector == null) ? null : _annotationIntrospector.findPOJOBuilderConfig(_classInfo); }"
+      },
+      {
+        "txt": "@Override public Converter<Object,Object> findDeserializationConverter() { if (_annotationIntrospector == null) { return null; } return _createConverter(_annotationIntrospector.findDeserializationConverter(_classInfo)); } @Override public String findClassDescription() {"
+      },
+      {
+        "txt": "return (_annotationIntrospector == null) ? null : _annotationIntrospector.findClassDescription(_classInfo); } @Deprecated public LinkedHashMap<String,AnnotatedField> _findPropertyFields( Collection<String> ignoredProperties, boolean forSerialization) { LinkedHashMap<String,AnnotatedField> results = new LinkedHashMap<String,AnnotatedField>(); for (BeanPropertyDefinition property : _properties()) { AnnotatedField f = property.getField();"
+      },
+      {
+        "txt": "if (f != null) { String name = property.getName(); if (ignoredProperties != null) { if (ignoredProperties.contains(name)) { continue; } } results.put(name, f); } }"
+      },
+      {
+        "txt": "return results; } @SuppressWarnings(\"unchecked\") public Converter<Object,Object> _createConverter(Object converterDef) { if (converterDef == null) { return null; } if (converterDef instanceof Converter<?,?>) { return (Converter<Object,Object>) converterDef;"
+      },
+      {
+        "txt": "} if (!(converterDef instanceof Class)) { throw new IllegalStateException(\"AnnotationIntrospector returned Converter definition of type \" +converterDef.getClass().getName()+\"; expected type Converter or Class<Converter> instead\"); } Class<?> converterClass = (Class<?>)converterDef; if (converterClass == Converter.None.class || ClassUtil.isBogusClass(converterClass)) { return null; } if (!Converter.class.isAssignableFrom(converterClass)) {"
+      },
+      {
+        "txt": "throw new IllegalStateException(\"AnnotationIntrospector returned Class \" +converterClass.getName()+\"; expected Class<Converter>\"); } HandlerInstantiator hi = _config.getHandlerInstantiator(); Converter<?,?> conv = (hi == null) ? null : hi.converterInstance(_config, _classInfo, converterClass); if (conv == null) { conv = (Converter<?,?>) ClassUtil.createInstance(converterClass, _config.canOverrideAccessModifiers()); } return (Converter<Object,Object>) conv;"
+      }
+    ]
+  },
+  {
+    "id": 1614,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/introspect/BasicBeanDescription.java",
+    "start-bug-line": 559,
+    "end-bug-line": 559,
+    "bug": "",
+    "fix": "}",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "import java.lang.reflect.Constructor; import java.lang.reflect.Method; import java.util.*; import com.fasterxml.jackson.annotation.JsonFormat; import com.fasterxml.jackson.annotation.JsonInclude; import com.fasterxml.jackson.databind.*; import com.fasterxml.jackson.databind.annotation.JsonPOJOBuilder; import com.fasterxml.jackson.databind.cfg.HandlerInstantiator; import com.fasterxml.jackson.databind.cfg.MapperConfig; import com.fasterxml.jackson.databind.type.TypeBindings;"
+      },
+      {
+        "txt": "import com.fasterxml.jackson.databind.util.Annotations; import com.fasterxml.jackson.databind.util.ClassUtil; import com.fasterxml.jackson.databind.util.Converter; public class BasicBeanDescription extends BeanDescription { final protected POJOPropertiesCollector _propCollector; final protected MapperConfig<?> _config; final protected AnnotationIntrospector _annotationIntrospector; final protected AnnotatedClass _classInfo; protected List<BeanPropertyDefinition> _properties;"
+      },
+      {
+        "txt": "protected ObjectIdInfo _objectIdInfo; protected BasicBeanDescription(POJOPropertiesCollector coll, JavaType type, AnnotatedClass classDef) { super(type); _propCollector = coll; _config = coll.getConfig(); if (_config == null) { _annotationIntrospector = null; } else {"
+      },
+      {
+        "txt": "_annotationIntrospector = _config.getAnnotationIntrospector(); } _classInfo = classDef; } protected BasicBeanDescription(MapperConfig<?> config, JavaType type, AnnotatedClass classDef, List<BeanPropertyDefinition> props) { super(type); _propCollector = null; _config = config;"
+      },
+      {
+        "txt": "if (_config == null) { _annotationIntrospector = null; } else { _annotationIntrospector = _config.getAnnotationIntrospector(); } _classInfo = classDef; _properties = props; } protected BasicBeanDescription(POJOPropertiesCollector coll) {"
+      },
+      {
+        "txt": "this(coll, coll.getType(), coll.getClassDef()); _objectIdInfo = coll.getObjectIdInfo(); } public static BasicBeanDescription forDeserialization(POJOPropertiesCollector coll) { return new BasicBeanDescription(coll); } public static BasicBeanDescription forSerialization(POJOPropertiesCollector coll) { return new BasicBeanDescription(coll); } public static BasicBeanDescription forOtherUse(MapperConfig<?> config,"
+      },
+      {
+        "txt": "JavaType type, AnnotatedClass ac) { return new BasicBeanDescription(config, type, ac, Collections.<BeanPropertyDefinition>emptyList()); } protected List<BeanPropertyDefinition> _properties() { if (_properties == null) { _properties = _propCollector.getProperties(); } return _properties;"
+      },
+      {
+        "txt": "} public boolean removeProperty(String propName) { Iterator<BeanPropertyDefinition> it = _properties().iterator(); while (it.hasNext()) { BeanPropertyDefinition prop = it.next(); if (prop.getName().equals(propName)) { it.remove(); return true; }"
+      },
+      {
+        "txt": "} return false; } public boolean addProperty(BeanPropertyDefinition def) { if (hasProperty(def.getFullName())) { return false; } _properties().add(def); return true;"
+      },
+      {
+        "txt": "} public boolean hasProperty(PropertyName name) { return findProperty(name) != null; } public BeanPropertyDefinition findProperty(PropertyName name) { for (BeanPropertyDefinition prop : _properties()) { if (prop.hasName(name)) { return prop; }"
+      },
+      {
+        "txt": "} return null; } @Override public AnnotatedClass getClassInfo() { return _classInfo; } @Override public ObjectIdInfo getObjectIdInfo() { return _objectIdInfo; } @Override public List<BeanPropertyDefinition> findProperties() { return _properties();"
+      },
+      {
+        "txt": "} @Override public AnnotatedMethod findJsonValueMethod() { return (_propCollector == null) ? null : _propCollector.getJsonValueMethod(); } @Override public Set<String> getIgnoredPropertyNames() { Set<String> ign = (_propCollector == null) ? null : _propCollector.getIgnoredPropertyNames();"
+      },
+      {
+        "txt": "if (ign == null) { return Collections.emptySet(); } return ign; } @Override public boolean hasKnownClassAnnotations() { return _classInfo.hasAnnotations(); } @Override"
+      },
+      {
+        "txt": "public Annotations getClassAnnotations() { return _classInfo.getAnnotations(); } @Override @Deprecated // since 2.7 public TypeBindings bindingsForBeanType() { return _type.getBindings(); } @Override @Deprecated // since 2.8"
+      },
+      {
+        "txt": "public JavaType resolveType(java.lang.reflect.Type jdkType) { if (jdkType == null) { return null; } return _config.getTypeFactory().constructType(jdkType, _type.getBindings()); } @Override public AnnotatedConstructor findDefaultConstructor() { return _classInfo.getDefaultConstructor(); }"
+      },
+      {
+        "txt": "@Override public AnnotatedMethod findAnySetter() throws IllegalArgumentException { AnnotatedMethod anySetter = (_propCollector == null) ? null : _propCollector.getAnySetterMethod(); if (anySetter != null) { Class<?> type = anySetter.getRawParameterType(0); if (type != String.class && type != Object.class) { throw new IllegalArgumentException(\"Invalid 'any-setter' annotation on method \"+anySetter.getName()+\"(): first argument not of type String or Object, but \"+type.getName()); }"
+      },
+      {
+        "txt": "} return anySetter; } @Override public Map<Object, AnnotatedMember> findInjectables() { if (_propCollector != null) { return _propCollector.getInjectables(); } return Collections.emptyMap(); }"
+      },
+      {
+        "txt": "@Override public List<AnnotatedConstructor> getConstructors() { return _classInfo.getConstructors(); } @Override public Object instantiateBean(boolean fixAccess) { AnnotatedConstructor ac = _classInfo.getDefaultConstructor(); if (ac == null) { return null; }"
+      },
+      {
+        "txt": "if (fixAccess) { ac.fixAccess(_config.isEnabled(MapperFeature.OVERRIDE_PUBLIC_ACCESS_MODIFIERS)); } try { return ac.getAnnotated().newInstance(); } catch (Exception e) { Throwable t = e; while (t.getCause() != null) { t = t.getCause(); }"
+      },
+      {
+        "txt": "if (t instanceof Error) throw (Error) t; if (t instanceof RuntimeException) throw (RuntimeException) t; throw new IllegalArgumentException(\"Failed to instantiate bean of type \"+_classInfo.getAnnotated().getName()+\": (\"+t.getClass().getName()+\") \"+t.getMessage(), t); } } @Override public AnnotatedMethod findMethod(String name, Class<?>[] paramTypes) { return _classInfo.findMethod(name, paramTypes); } @Override"
+      },
+      {
+        "txt": "public JsonFormat.Value findExpectedFormat(JsonFormat.Value defValue) { if (_annotationIntrospector != null) { JsonFormat.Value v = _annotationIntrospector.findFormat(_classInfo); if (v != null) { if (defValue == null) { defValue = v; } else { defValue = defValue.withOverrides(v); }"
+      },
+      {
+        "txt": "} } JsonFormat.Value v = _config.getDefaultPropertyFormat(_classInfo.getRawType()); if (v != null) { if (defValue == null) { defValue = v; } else { defValue = defValue.withOverrides(v); } }"
+      },
+      {
+        "txt": "return defValue; } @Override public Converter<Object,Object> findSerializationConverter() { if (_annotationIntrospector == null) { return null; } return _createConverter(_annotationIntrospector.findSerializationConverter(_classInfo)); }"
+      },
+      {
+        "txt": "@Override public JsonInclude.Value findPropertyInclusion(JsonInclude.Value defValue) { if (_annotationIntrospector != null) { JsonInclude.Value incl = _annotationIntrospector.findPropertyInclusion(_classInfo); if (incl != null) { return (defValue == null) ? incl : defValue.withOverrides(incl); } } return defValue; }"
+      },
+      {
+        "txt": "@Override public AnnotatedMember findAnyGetter() throws IllegalArgumentException { AnnotatedMember anyGetter = (_propCollector == null) ? null : _propCollector.getAnyGetter(); if (anyGetter != null) { Class<?> type = anyGetter.getRawType(); if (!Map.class.isAssignableFrom(type)) { throw new IllegalArgumentException(\"Invalid 'any-getter' annotation on method \"+anyGetter.getName()+\"(): return type is not instance of java.util.Map\"); }"
+      },
+      {
+        "txt": "} return anyGetter; } @Override public AnnotatedMember findAnySetterField() throws IllegalArgumentException { AnnotatedMember anySetter = (_propCollector == null) ? null : _propCollector.getAnySetterField(); if (anySetter != null) { Class<?> type = anySetter.getRawType(); if (!Map.class.isAssignableFrom(type)) { throw new IllegalArgumentException(\"Invalid 'any-setter' annotation on field \" + anySetter.getName()"
+      },
+      {
+        "txt": "+ \"(): type is not instance of java.util.Map\"); } } return anySetter; } @Override public Map<String,AnnotatedMember> findBackReferenceProperties() { HashMap<String,AnnotatedMember> result = null; for (BeanPropertyDefinition property : _properties()) {"
+      },
+      {
+        "txt": "if (hasIgnored && _ignoredPropertyNames.contains(property.getName())) { continue; } AnnotatedMember am = property.getMutator(); if (am == null) { continue; } AnnotationIntrospector.ReferenceProperty refDef = _annotationIntrospector.findReferenceType(am); if (refDef != null && refDef.isBackReference()) { if (result == null) {"
+      },
+      {
+        "txt": "result = new HashMap<String,AnnotatedMember>(); } String refName = refDef.getName(); if (result.put(refName, am) != null) { throw new IllegalArgumentException(\"Multiple back-reference properties with name '\"+refName+\"'\"); } } } return result; }"
+      },
+      {
+        "txt": "@Override public List<AnnotatedMethod> getFactoryMethods() { List<AnnotatedMethod> candidates = _classInfo.getStaticMethods(); if (candidates.isEmpty()) { return candidates; } ArrayList<AnnotatedMethod> result = new ArrayList<AnnotatedMethod>(); for (AnnotatedMethod am : candidates) { if (isFactoryMethod(am)) {"
+      },
+      {
+        "txt": "result.add(am); } } return result; } @Override public Constructor<?> findSingleArgConstructor(Class<?>... argTypes) { for (AnnotatedConstructor ac : _classInfo.getConstructors()) { if (ac.getParameterCount() == 1) {"
+      },
+      {
+        "txt": "Class<?> actArg = ac.getRawParameterType(0); for (Class<?> expArg : argTypes) { if (expArg == actArg) { return ac.getAnnotated(); } } } } return null; }"
+      },
+      {
+        "txt": "@Override public Method findFactoryMethod(Class<?>... expArgTypes) { for (AnnotatedMethod am : _classInfo.getStaticMethods()) { if (isFactoryMethod(am)) { Class<?> actualArgType = am.getRawParameterType(0); for (Class<?> expArgType : expArgTypes) { if (actualArgType.isAssignableFrom(expArgType)) { return am.getAnnotated(); }"
+      },
+      {
+        "txt": "} } } return null; } protected boolean isFactoryMethod(AnnotatedMethod am) { Class<?> rt = am.getRawReturnType(); if (!getBeanClass().isAssignableFrom(rt)) { return false;"
+      },
+      {
+        "txt": "if (_annotationIntrospector.hasCreatorAnnotation(am)) { return true; } final String name = am.getName(); if (\"valueOf\".equals(name)) { return true; <extra_id_0> if (\"fromString\".equals(name)) { if (am.getParameterCount() == 1) { Class<?> cls = am.getRawParameterType(0); if (cls == String.class || CharSequence.class.isAssignableFrom(cls)) { return true; }"
+      },
+      {
+        "txt": "return true; } } } return false; } @Deprecated // since 2.8, not used at least since 2.7 protected PropertyName _findCreatorPropertyName(AnnotatedParameter param) { PropertyName name = _annotationIntrospector.findNameForDeserialization(param);"
+      },
+      {
+        "txt": "if (name == null || name.isEmpty()) { String str = _annotationIntrospector.findImplicitPropertyName(param); if (str != null && !str.isEmpty()) { name = PropertyName.construct(str); } } return name; } @Override public Class<?> findPOJOBuilder() {"
+      },
+      {
+        "txt": "return (_annotationIntrospector == null) ? null : _annotationIntrospector.findPOJOBuilder(_classInfo); } @Override public JsonPOJOBuilder.Value findPOJOBuilderConfig() { return (_annotationIntrospector == null) ? null : _annotationIntrospector.findPOJOBuilderConfig(_classInfo); } @Override"
+      },
+      {
+        "txt": "public Converter<Object,Object> findDeserializationConverter() { if (_annotationIntrospector == null) { return null; } return _createConverter(_annotationIntrospector.findDeserializationConverter(_classInfo)); } @Override public String findClassDescription() { return (_annotationIntrospector == null) ?"
+      },
+      {
+        "txt": "null : _annotationIntrospector.findClassDescription(_classInfo); } @Deprecated public LinkedHashMap<String,AnnotatedField> _findPropertyFields( Collection<String> ignoredProperties, boolean forSerialization) { LinkedHashMap<String,AnnotatedField> results = new LinkedHashMap<String,AnnotatedField>(); for (BeanPropertyDefinition property : _properties()) { AnnotatedField f = property.getField(); if (f != null) {"
+      },
+      {
+        "txt": "String name = property.getName(); if (ignoredProperties != null) { if (ignoredProperties.contains(name)) { continue; } } results.put(name, f); } } return results;"
+      },
+      {
+        "txt": "} @SuppressWarnings(\"unchecked\") public Converter<Object,Object> _createConverter(Object converterDef) { if (converterDef == null) { return null; } if (converterDef instanceof Converter<?,?>) { return (Converter<Object,Object>) converterDef; }"
+      },
+      {
+        "txt": "if (!(converterDef instanceof Class)) { throw new IllegalStateException(\"AnnotationIntrospector returned Converter definition of type \" +converterDef.getClass().getName()+\"; expected type Converter or Class<Converter> instead\"); } Class<?> converterClass = (Class<?>)converterDef; if (converterClass == Converter.None.class || ClassUtil.isBogusClass(converterClass)) { return null; } if (!Converter.class.isAssignableFrom(converterClass)) { throw new IllegalStateException(\"AnnotationIntrospector returned Class \""
+      },
+      {
+        "txt": "+converterClass.getName()+\"; expected Class<Converter>\"); } HandlerInstantiator hi = _config.getHandlerInstantiator(); Converter<?,?> conv = (hi == null) ? null : hi.converterInstance(_config, _classInfo, converterClass); if (conv == null) { conv = (Converter<?,?>) ClassUtil.createInstance(converterClass, _config.canOverrideAccessModifiers()); } return (Converter<Object,Object>) conv; }"
+      }
+    ]
+  }
+]

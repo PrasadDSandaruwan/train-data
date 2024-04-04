@@ -1,0 +1,683 @@
+[
+  {
+    "id": 1432,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/ser/std/NumberSerializers.java",
+    "start-bug-line": 54,
+    "end-bug-line": 54,
+    "bug": "",
+    "fix": "protected final static Integer EMPTY_INTEGER = Integer.valueOf(0);",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind.ser.std; import java.io.IOException; import java.lang.reflect.Type; import java.util.Map; import com.fasterxml.jackson.annotation.JsonFormat; import com.fasterxml.jackson.core.*; import com.fasterxml.jackson.databind.*; import com.fasterxml.jackson.databind.annotation.JacksonStdImpl; import com.fasterxml.jackson.databind.introspect.AnnotatedMember; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonFormatVisitorWrapper;"
+      },
+      {
+        "txt": "import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonIntegerFormatVisitor; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonNumberFormatVisitor; import com.fasterxml.jackson.databind.jsontype.TypeSerializer; import com.fasterxml.jackson.databind.ser.ContextualSerializer; @SuppressWarnings(\"serial\") public class NumberSerializers { protected NumberSerializers() { } public static void addAll(Map<String, JsonSerializer<?>> allDeserializers) {"
+      },
+      {
+        "txt": "final JsonSerializer<?> intS = new IntegerSerializer(); allDeserializers.put(Integer.class.getName(), intS); allDeserializers.put(Integer.TYPE.getName(), intS); allDeserializers.put(Long.class.getName(), LongSerializer.instance); allDeserializers.put(Long.TYPE.getName(), LongSerializer.instance); allDeserializers.put(Byte.class.getName(), IntLikeSerializer.instance); allDeserializers.put(Byte.TYPE.getName(), IntLikeSerializer.instance); allDeserializers.put(Short.class.getName(), ShortSerializer.instance); allDeserializers.put(Short.TYPE.getName(), ShortSerializer.instance); allDeserializers.put(Float.class.getName(), FloatSerializer.instance);"
+      },
+      {
+        "txt": "allDeserializers.put(Double.class.getName(), DoubleSerializer.instance); allDeserializers.put(Double.TYPE.getName(), DoubleSerializer.instance); } protected abstract static class Base<T> extends StdScalarSerializer<T> implements ContextualSerializer { <extra_id_0> protected final JsonParser.NumberType _numberType; protected final String _schemaType; protected final boolean _isInt; protected Base(Class<?> cls, JsonParser.NumberType numberType, String schemaType) { super(cls, false); _numberType = numberType;"
+      },
+      {
+        "txt": "super(cls, false); _numberType = numberType; _schemaType = schemaType; _isInt = (numberType == JsonParser.NumberType.INT) || (numberType == JsonParser.NumberType.LONG) || (numberType == JsonParser.NumberType.BIG_INTEGER) ; } @Override public JsonNode getSchema(SerializerProvider provider, Type typeHint) {"
+      },
+      {
+        "txt": "return createSchemaNode(_schemaType, true); } @Override public void acceptJsonFormatVisitor(JsonFormatVisitorWrapper visitor, JavaType typeHint) throws JsonMappingException { if (_isInt) { JsonIntegerFormatVisitor v2 = visitor.expectIntegerFormat(typeHint); if (v2 != null) { v2.numberType(_numberType); }"
+      },
+      {
+        "txt": "} else { JsonNumberFormatVisitor v2 = visitor.expectNumberFormat(typeHint); if (v2 != null) { v2.numberType(_numberType); } } } @Override public JsonSerializer<?> createContextual(SerializerProvider prov, BeanProperty property) throws JsonMappingException"
+      },
+      {
+        "txt": "{ if (property != null) { AnnotatedMember m = property.getMember(); if (m != null) { JsonFormat.Value format = prov.getAnnotationIntrospector().findFormat(m); if (format != null) { switch (format.getShape()) { case STRING: return ToStringSerializer.instance; default:"
+      },
+      {
+        "txt": "} } } } return this; } } @JacksonStdImpl public final static class ShortSerializer extends Base<Short> {"
+      },
+      {
+        "txt": "final static ShortSerializer instance = new ShortSerializer(); public ShortSerializer() { super(Short.class, JsonParser.NumberType.INT, \"number\"); } @Override public void serialize(Short value, JsonGenerator gen, SerializerProvider provider) throws IOException { gen.writeNumber(value.shortValue()); } } @JacksonStdImpl public final static class IntegerSerializer extends Base<Object> {"
+      },
+      {
+        "txt": "public IntegerSerializer() { super(Integer.class, JsonParser.NumberType.INT ,\"integer\"); } @Override public void serialize(Object value, JsonGenerator gen, SerializerProvider provider) throws IOException { gen.writeNumber(((Integer) value).intValue()); } @Override public void serializeWithType(Object value, JsonGenerator gen, SerializerProvider provider, TypeSerializer typeSer) throws IOException { serialize(value, gen, provider); }"
+      },
+      {
+        "txt": "} @JacksonStdImpl public final static class IntLikeSerializer extends Base<Number> { final static IntLikeSerializer instance = new IntLikeSerializer(); public IntLikeSerializer() { super(Number.class, JsonParser.NumberType.INT, \"integer\"); } @Override public void serialize(Number value, JsonGenerator gen, SerializerProvider provider) throws IOException {"
+      },
+      {
+        "txt": "gen.writeNumber(value.intValue()); } } @JacksonStdImpl public final static class LongSerializer extends Base<Object> { final static LongSerializer instance = new LongSerializer(); public LongSerializer() { super(Long.class, JsonParser.NumberType.LONG, \"number\"); } @Override public void serialize(Object value, JsonGenerator gen, SerializerProvider provider) throws IOException {"
+      },
+      {
+        "txt": "gen.writeNumber(((Long) value).longValue()); } } @JacksonStdImpl public final static class FloatSerializer extends Base<Object> { final static FloatSerializer instance = new FloatSerializer(); public FloatSerializer() { super(Float.class, JsonParser.NumberType.FLOAT, \"number\"); } @Override public void serialize(Object value, JsonGenerator gen, SerializerProvider provider) throws IOException {"
+      },
+      {
+        "txt": "gen.writeNumber(((Float) value).floatValue()); } } @JacksonStdImpl public final static class DoubleSerializer extends Base<Object> { final static DoubleSerializer instance = new DoubleSerializer(); public DoubleSerializer() { super(Double.class, JsonParser.NumberType.DOUBLE, \"number\"); } @Override public void serialize(Object value, JsonGenerator gen, SerializerProvider provider) throws IOException {"
+      },
+      {
+        "txt": "gen.writeNumber(((Double) value).doubleValue()); } @Override public void serializeWithType(Object value, JsonGenerator gen, SerializerProvider provider, TypeSerializer typeSer) throws IOException { serialize(value, gen, provider); } }"
+      }
+    ]
+  },
+  {
+    "id": 1433,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/ser/std/NumberSerializers.java",
+    "start-bug-line": 120,
+    "end-bug-line": 120,
+    "bug": "",
+    "fix": "private final static Short EMPTY = (short) 0;",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind.ser.std; import java.io.IOException; import java.lang.reflect.Type; import java.util.Map;"
+      },
+      {
+        "txt": "import com.fasterxml.jackson.annotation.JsonFormat; import com.fasterxml.jackson.core.*; import com.fasterxml.jackson.databind.*; import com.fasterxml.jackson.databind.annotation.JacksonStdImpl; import com.fasterxml.jackson.databind.introspect.AnnotatedMember; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonFormatVisitorWrapper; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonIntegerFormatVisitor; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonNumberFormatVisitor; import com.fasterxml.jackson.databind.jsontype.TypeSerializer; import com.fasterxml.jackson.databind.ser.ContextualSerializer;"
+      },
+      {
+        "txt": "@SuppressWarnings(\"serial\") public class NumberSerializers { protected NumberSerializers() { } public static void addAll(Map<String, JsonSerializer<?>> allDeserializers) { final JsonSerializer<?> intS = new IntegerSerializer(); allDeserializers.put(Integer.class.getName(), intS); allDeserializers.put(Integer.TYPE.getName(), intS); allDeserializers.put(Long.class.getName(), LongSerializer.instance);"
+      },
+      {
+        "txt": "allDeserializers.put(Long.TYPE.getName(), LongSerializer.instance); allDeserializers.put(Byte.class.getName(), IntLikeSerializer.instance); allDeserializers.put(Byte.TYPE.getName(), IntLikeSerializer.instance); allDeserializers.put(Short.class.getName(), ShortSerializer.instance); allDeserializers.put(Short.TYPE.getName(), ShortSerializer.instance); allDeserializers.put(Float.class.getName(), FloatSerializer.instance); allDeserializers.put(Float.TYPE.getName(), FloatSerializer.instance); allDeserializers.put(Double.class.getName(), DoubleSerializer.instance); allDeserializers.put(Double.TYPE.getName(), DoubleSerializer.instance); }"
+      },
+      {
+        "txt": "protected abstract static class Base<T> extends StdScalarSerializer<T> implements ContextualSerializer { protected final JsonParser.NumberType _numberType; protected final String _schemaType; protected final boolean _isInt; protected Base(Class<?> cls, JsonParser.NumberType numberType, String schemaType) { super(cls, false); _numberType = numberType; _schemaType = schemaType;"
+      },
+      {
+        "txt": "_isInt = (numberType == JsonParser.NumberType.INT) || (numberType == JsonParser.NumberType.LONG) || (numberType == JsonParser.NumberType.BIG_INTEGER) ; } @Override public JsonNode getSchema(SerializerProvider provider, Type typeHint) { return createSchemaNode(_schemaType, true); } @Override"
+      },
+      {
+        "txt": "public void acceptJsonFormatVisitor(JsonFormatVisitorWrapper visitor, JavaType typeHint) throws JsonMappingException { if (_isInt) { JsonIntegerFormatVisitor v2 = visitor.expectIntegerFormat(typeHint); if (v2 != null) { v2.numberType(_numberType); } } else { JsonNumberFormatVisitor v2 = visitor.expectNumberFormat(typeHint); if (v2 != null) {"
+      },
+      {
+        "txt": "v2.numberType(_numberType); } } } @Override public JsonSerializer<?> createContextual(SerializerProvider prov, BeanProperty property) throws JsonMappingException { if (property != null) { AnnotatedMember m = property.getMember();"
+      },
+      {
+        "txt": "if (m != null) { JsonFormat.Value format = prov.getAnnotationIntrospector().findFormat(m); if (format != null) { switch (format.getShape()) { case STRING: return ToStringSerializer.instance; default: } } }"
+      },
+      {
+        "txt": "return this; } } @JacksonStdImpl public final static class ShortSerializer extends Base<Short> { <extra_id_0> public ShortSerializer() { super(Short.class, JsonParser.NumberType.INT, \"number\"); } @Override public void serialize(Short value, JsonGenerator gen, SerializerProvider provider) throws IOException { gen.writeNumber(value.shortValue()); } }"
+      },
+      {
+        "txt": "} } @JacksonStdImpl public final static class IntegerSerializer extends Base<Object> { public IntegerSerializer() { super(Integer.class, JsonParser.NumberType.INT ,\"integer\"); } @Override public void serialize(Object value, JsonGenerator gen, SerializerProvider provider) throws IOException { gen.writeNumber(((Integer) value).intValue()); }"
+      },
+      {
+        "txt": "@Override public void serializeWithType(Object value, JsonGenerator gen, SerializerProvider provider, TypeSerializer typeSer) throws IOException { serialize(value, gen, provider); } } @JacksonStdImpl public final static class IntLikeSerializer extends Base<Number> { final static IntLikeSerializer instance = new IntLikeSerializer();"
+      },
+      {
+        "txt": "public IntLikeSerializer() { super(Number.class, JsonParser.NumberType.INT, \"integer\"); } @Override public void serialize(Number value, JsonGenerator gen, SerializerProvider provider) throws IOException { gen.writeNumber(value.intValue()); } } @JacksonStdImpl public final static class LongSerializer extends Base<Object>"
+      },
+      {
+        "txt": "{ final static LongSerializer instance = new LongSerializer(); public LongSerializer() { super(Long.class, JsonParser.NumberType.LONG, \"number\"); } @Override public void serialize(Object value, JsonGenerator gen, SerializerProvider provider) throws IOException { gen.writeNumber(((Long) value).longValue()); } } @JacksonStdImpl public final static class FloatSerializer extends Base<Object>"
+      },
+      {
+        "txt": "{ final static FloatSerializer instance = new FloatSerializer(); public FloatSerializer() { super(Float.class, JsonParser.NumberType.FLOAT, \"number\"); } @Override public void serialize(Object value, JsonGenerator gen, SerializerProvider provider) throws IOException { gen.writeNumber(((Float) value).floatValue()); } } @JacksonStdImpl public final static class DoubleSerializer extends Base<Object>"
+      },
+      {
+        "txt": "{ final static DoubleSerializer instance = new DoubleSerializer(); public DoubleSerializer() { super(Double.class, JsonParser.NumberType.DOUBLE, \"number\"); } @Override public void serialize(Object value, JsonGenerator gen, SerializerProvider provider) throws IOException { gen.writeNumber(((Double) value).doubleValue()); } @Override public void serializeWithType(Object value, JsonGenerator gen, SerializerProvider provider, TypeSerializer typeSer) throws IOException {"
+      },
+      {
+        "txt": "serialize(value, gen, provider); } }"
+      }
+    ]
+  },
+  {
+    "id": 1434,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/ser/std/NumberSerializers.java",
+    "start-bug-line": 124,
+    "end-bug-line": 124,
+    "bug": "",
+    "fix": "@Override public boolean isEmpty(SerializerProvider prov, Short value) { return EMPTY.equals(value); }",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind.ser.std; import java.io.IOException; import java.lang.reflect.Type; import java.util.Map; import com.fasterxml.jackson.annotation.JsonFormat; import com.fasterxml.jackson.core.*;"
+      },
+      {
+        "txt": "import com.fasterxml.jackson.databind.*; import com.fasterxml.jackson.databind.annotation.JacksonStdImpl; import com.fasterxml.jackson.databind.introspect.AnnotatedMember; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonFormatVisitorWrapper; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonIntegerFormatVisitor; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonNumberFormatVisitor; import com.fasterxml.jackson.databind.jsontype.TypeSerializer; import com.fasterxml.jackson.databind.ser.ContextualSerializer; @SuppressWarnings(\"serial\") public class NumberSerializers"
+      },
+      {
+        "txt": "{ protected NumberSerializers() { } public static void addAll(Map<String, JsonSerializer<?>> allDeserializers) { final JsonSerializer<?> intS = new IntegerSerializer(); allDeserializers.put(Integer.class.getName(), intS); allDeserializers.put(Integer.TYPE.getName(), intS); allDeserializers.put(Long.class.getName(), LongSerializer.instance); allDeserializers.put(Long.TYPE.getName(), LongSerializer.instance); allDeserializers.put(Byte.class.getName(), IntLikeSerializer.instance);"
+      },
+      {
+        "txt": "allDeserializers.put(Byte.TYPE.getName(), IntLikeSerializer.instance); allDeserializers.put(Short.class.getName(), ShortSerializer.instance); allDeserializers.put(Short.TYPE.getName(), ShortSerializer.instance); allDeserializers.put(Float.class.getName(), FloatSerializer.instance); allDeserializers.put(Float.TYPE.getName(), FloatSerializer.instance); allDeserializers.put(Double.class.getName(), DoubleSerializer.instance); allDeserializers.put(Double.TYPE.getName(), DoubleSerializer.instance); } protected abstract static class Base<T> extends StdScalarSerializer<T> implements ContextualSerializer"
+      },
+      {
+        "txt": "{ protected final JsonParser.NumberType _numberType; protected final String _schemaType; protected final boolean _isInt; protected Base(Class<?> cls, JsonParser.NumberType numberType, String schemaType) { super(cls, false); _numberType = numberType; _schemaType = schemaType; _isInt = (numberType == JsonParser.NumberType.INT) || (numberType == JsonParser.NumberType.LONG)"
+      },
+      {
+        "txt": "|| (numberType == JsonParser.NumberType.BIG_INTEGER) ; } @Override public JsonNode getSchema(SerializerProvider provider, Type typeHint) { return createSchemaNode(_schemaType, true); } @Override public void acceptJsonFormatVisitor(JsonFormatVisitorWrapper visitor, JavaType typeHint) throws JsonMappingException {"
+      },
+      {
+        "txt": "if (_isInt) { JsonIntegerFormatVisitor v2 = visitor.expectIntegerFormat(typeHint); if (v2 != null) { v2.numberType(_numberType); } } else { JsonNumberFormatVisitor v2 = visitor.expectNumberFormat(typeHint); if (v2 != null) { v2.numberType(_numberType); }"
+      },
+      {
+        "txt": "} } @Override public JsonSerializer<?> createContextual(SerializerProvider prov, BeanProperty property) throws JsonMappingException { if (property != null) { AnnotatedMember m = property.getMember(); if (m != null) { JsonFormat.Value format = prov.getAnnotationIntrospector().findFormat(m);"
+      },
+      {
+        "txt": "if (format != null) { switch (format.getShape()) { case STRING: return ToStringSerializer.instance; default: } } } } return this;"
+      },
+      {
+        "txt": "} @JacksonStdImpl public final static class ShortSerializer extends Base<Short> { final static ShortSerializer instance = new ShortSerializer(); public ShortSerializer() { super(Short.class, JsonParser.NumberType.INT, \"number\"); } <extra_id_0> @Override public void serialize(Short value, JsonGenerator gen, SerializerProvider provider) throws IOException { gen.writeNumber(value.shortValue()); } } @JacksonStdImpl"
+      },
+      {
+        "txt": "} @JacksonStdImpl public final static class IntegerSerializer extends Base<Object> { public IntegerSerializer() { super(Integer.class, JsonParser.NumberType.INT ,\"integer\"); } @Override public void serialize(Object value, JsonGenerator gen, SerializerProvider provider) throws IOException { gen.writeNumber(((Integer) value).intValue()); } @Override"
+      },
+      {
+        "txt": "public void serializeWithType(Object value, JsonGenerator gen, SerializerProvider provider, TypeSerializer typeSer) throws IOException { serialize(value, gen, provider); } } @JacksonStdImpl public final static class IntLikeSerializer extends Base<Number> { final static IntLikeSerializer instance = new IntLikeSerializer(); public IntLikeSerializer() {"
+      },
+      {
+        "txt": "super(Number.class, JsonParser.NumberType.INT, \"integer\"); } @Override public void serialize(Number value, JsonGenerator gen, SerializerProvider provider) throws IOException { gen.writeNumber(value.intValue()); } } @JacksonStdImpl public final static class LongSerializer extends Base<Object> {"
+      },
+      {
+        "txt": "final static LongSerializer instance = new LongSerializer(); public LongSerializer() { super(Long.class, JsonParser.NumberType.LONG, \"number\"); } @Override public void serialize(Object value, JsonGenerator gen, SerializerProvider provider) throws IOException { gen.writeNumber(((Long) value).longValue()); } } @JacksonStdImpl public final static class FloatSerializer extends Base<Object> {"
+      },
+      {
+        "txt": "final static FloatSerializer instance = new FloatSerializer(); public FloatSerializer() { super(Float.class, JsonParser.NumberType.FLOAT, \"number\"); } @Override public void serialize(Object value, JsonGenerator gen, SerializerProvider provider) throws IOException { gen.writeNumber(((Float) value).floatValue()); } } @JacksonStdImpl public final static class DoubleSerializer extends Base<Object> {"
+      },
+      {
+        "txt": "final static DoubleSerializer instance = new DoubleSerializer(); public DoubleSerializer() { super(Double.class, JsonParser.NumberType.DOUBLE, \"number\"); } @Override public void serialize(Object value, JsonGenerator gen, SerializerProvider provider) throws IOException { gen.writeNumber(((Double) value).doubleValue()); } @Override public void serializeWithType(Object value, JsonGenerator gen, SerializerProvider provider, TypeSerializer typeSer) throws IOException { serialize(value, gen, provider);"
+      },
+      {
+        "txt": "} }"
+      }
+    ]
+  },
+  {
+    "id": 1435,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/ser/std/NumberSerializers.java",
+    "start-bug-line": 159,
+    "end-bug-line": 159,
+    "bug": "",
+    "fix": "@Override public boolean isEmpty(SerializerProvider prov, Object value) { return EMPTY_INTEGER.equals(value); }",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind.ser.std; import java.io.IOException; import java.lang.reflect.Type; import java.util.Map;"
+      },
+      {
+        "txt": "import com.fasterxml.jackson.annotation.JsonFormat; import com.fasterxml.jackson.core.*; import com.fasterxml.jackson.databind.*; import com.fasterxml.jackson.databind.annotation.JacksonStdImpl; import com.fasterxml.jackson.databind.introspect.AnnotatedMember; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonFormatVisitorWrapper; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonIntegerFormatVisitor; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonNumberFormatVisitor; import com.fasterxml.jackson.databind.jsontype.TypeSerializer; import com.fasterxml.jackson.databind.ser.ContextualSerializer;"
+      },
+      {
+        "txt": "@SuppressWarnings(\"serial\") public class NumberSerializers { protected NumberSerializers() { } public static void addAll(Map<String, JsonSerializer<?>> allDeserializers) { final JsonSerializer<?> intS = new IntegerSerializer(); allDeserializers.put(Integer.class.getName(), intS); allDeserializers.put(Integer.TYPE.getName(), intS); allDeserializers.put(Long.class.getName(), LongSerializer.instance);"
+      },
+      {
+        "txt": "allDeserializers.put(Long.TYPE.getName(), LongSerializer.instance); allDeserializers.put(Byte.class.getName(), IntLikeSerializer.instance); allDeserializers.put(Byte.TYPE.getName(), IntLikeSerializer.instance); allDeserializers.put(Short.class.getName(), ShortSerializer.instance); allDeserializers.put(Short.TYPE.getName(), ShortSerializer.instance); allDeserializers.put(Float.class.getName(), FloatSerializer.instance); allDeserializers.put(Float.TYPE.getName(), FloatSerializer.instance); allDeserializers.put(Double.class.getName(), DoubleSerializer.instance); allDeserializers.put(Double.TYPE.getName(), DoubleSerializer.instance); }"
+      },
+      {
+        "txt": "protected abstract static class Base<T> extends StdScalarSerializer<T> implements ContextualSerializer { protected final JsonParser.NumberType _numberType; protected final String _schemaType; protected final boolean _isInt; protected Base(Class<?> cls, JsonParser.NumberType numberType, String schemaType) { super(cls, false); _numberType = numberType; _schemaType = schemaType;"
+      },
+      {
+        "txt": "_isInt = (numberType == JsonParser.NumberType.INT) || (numberType == JsonParser.NumberType.LONG) || (numberType == JsonParser.NumberType.BIG_INTEGER) ; } @Override public JsonNode getSchema(SerializerProvider provider, Type typeHint) { return createSchemaNode(_schemaType, true); } @Override"
+      },
+      {
+        "txt": "public void acceptJsonFormatVisitor(JsonFormatVisitorWrapper visitor, JavaType typeHint) throws JsonMappingException { if (_isInt) { JsonIntegerFormatVisitor v2 = visitor.expectIntegerFormat(typeHint); if (v2 != null) { v2.numberType(_numberType); } } else { JsonNumberFormatVisitor v2 = visitor.expectNumberFormat(typeHint); if (v2 != null) {"
+      },
+      {
+        "txt": "v2.numberType(_numberType); } } } @Override public JsonSerializer<?> createContextual(SerializerProvider prov, BeanProperty property) throws JsonMappingException { if (property != null) { AnnotatedMember m = property.getMember();"
+      },
+      {
+        "txt": "if (m != null) { JsonFormat.Value format = prov.getAnnotationIntrospector().findFormat(m); if (format != null) { switch (format.getShape()) { case STRING: return ToStringSerializer.instance; default: } } }"
+      },
+      {
+        "txt": "} return this; } } @JacksonStdImpl public final static class ShortSerializer extends Base<Short> { final static ShortSerializer instance = new ShortSerializer(); public ShortSerializer() { super(Short.class, JsonParser.NumberType.INT, \"number\"); } @Override"
+      },
+      {
+        "txt": "public void serialize(Short value, JsonGenerator gen, SerializerProvider provider) throws IOException { gen.writeNumber(value.shortValue()); } } @JacksonStdImpl public final static class IntegerSerializer extends Base<Object> { public IntegerSerializer() { super(Integer.class, JsonParser.NumberType.INT ,\"integer\"); } @Override public void serialize(Object value, JsonGenerator gen, SerializerProvider provider) throws IOException {"
+      },
+      {
+        "txt": "} @Override public void serializeWithType(Object value, JsonGenerator gen, SerializerProvider provider, TypeSerializer typeSer) throws IOException { serialize(value, gen, provider); } <extra_id_0> @JacksonStdImpl public final static class IntLikeSerializer extends Base<Number> { final static IntLikeSerializer instance = new IntLikeSerializer(); public IntLikeSerializer() { super(Number.class, JsonParser.NumberType.INT, \"integer\");"
+      },
+      {
+        "txt": "public IntLikeSerializer() { super(Number.class, JsonParser.NumberType.INT, \"integer\"); } @Override public void serialize(Number value, JsonGenerator gen, SerializerProvider provider) throws IOException { gen.writeNumber(value.intValue()); } } @JacksonStdImpl public final static class LongSerializer extends Base<Object>"
+      },
+      {
+        "txt": "{ final static LongSerializer instance = new LongSerializer(); public LongSerializer() { super(Long.class, JsonParser.NumberType.LONG, \"number\"); } @Override public void serialize(Object value, JsonGenerator gen, SerializerProvider provider) throws IOException { gen.writeNumber(((Long) value).longValue()); } } @JacksonStdImpl public final static class FloatSerializer extends Base<Object>"
+      },
+      {
+        "txt": "{ final static FloatSerializer instance = new FloatSerializer(); public FloatSerializer() { super(Float.class, JsonParser.NumberType.FLOAT, \"number\"); } @Override public void serialize(Object value, JsonGenerator gen, SerializerProvider provider) throws IOException { gen.writeNumber(((Float) value).floatValue()); } } @JacksonStdImpl public final static class DoubleSerializer extends Base<Object>"
+      },
+      {
+        "txt": "{ final static DoubleSerializer instance = new DoubleSerializer(); public DoubleSerializer() { super(Double.class, JsonParser.NumberType.DOUBLE, \"number\"); } @Override public void serialize(Object value, JsonGenerator gen, SerializerProvider provider) throws IOException { gen.writeNumber(((Double) value).doubleValue()); } @Override public void serializeWithType(Object value, JsonGenerator gen, SerializerProvider provider, TypeSerializer typeSer) throws IOException {"
+      },
+      {
+        "txt": "serialize(value, gen, provider); } }"
+      }
+    ]
+  },
+  {
+    "id": 1436,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/ser/std/NumberSerializers.java",
+    "start-bug-line": 175,
+    "end-bug-line": 175,
+    "bug": "",
+    "fix": "@Override public boolean isEmpty(SerializerProvider prov, Number value) { return value.intValue() == 0; }",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind.ser.std; import java.io.IOException;"
+      },
+      {
+        "txt": "import java.lang.reflect.Type; import java.util.Map; import com.fasterxml.jackson.annotation.JsonFormat; import com.fasterxml.jackson.core.*; import com.fasterxml.jackson.databind.*; import com.fasterxml.jackson.databind.annotation.JacksonStdImpl; import com.fasterxml.jackson.databind.introspect.AnnotatedMember; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonFormatVisitorWrapper; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonIntegerFormatVisitor; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonNumberFormatVisitor;"
+      },
+      {
+        "txt": "import com.fasterxml.jackson.databind.jsontype.TypeSerializer; import com.fasterxml.jackson.databind.ser.ContextualSerializer; @SuppressWarnings(\"serial\") public class NumberSerializers { protected NumberSerializers() { } public static void addAll(Map<String, JsonSerializer<?>> allDeserializers) { final JsonSerializer<?> intS = new IntegerSerializer(); allDeserializers.put(Integer.class.getName(), intS);"
+      },
+      {
+        "txt": "allDeserializers.put(Integer.TYPE.getName(), intS); allDeserializers.put(Long.class.getName(), LongSerializer.instance); allDeserializers.put(Long.TYPE.getName(), LongSerializer.instance); allDeserializers.put(Byte.class.getName(), IntLikeSerializer.instance); allDeserializers.put(Byte.TYPE.getName(), IntLikeSerializer.instance); allDeserializers.put(Short.class.getName(), ShortSerializer.instance); allDeserializers.put(Short.TYPE.getName(), ShortSerializer.instance); allDeserializers.put(Float.class.getName(), FloatSerializer.instance); allDeserializers.put(Float.TYPE.getName(), FloatSerializer.instance); allDeserializers.put(Double.class.getName(), DoubleSerializer.instance);"
+      },
+      {
+        "txt": "allDeserializers.put(Double.TYPE.getName(), DoubleSerializer.instance); } protected abstract static class Base<T> extends StdScalarSerializer<T> implements ContextualSerializer { protected final JsonParser.NumberType _numberType; protected final String _schemaType; protected final boolean _isInt; protected Base(Class<?> cls, JsonParser.NumberType numberType, String schemaType) { super(cls, false);"
+      },
+      {
+        "txt": "_numberType = numberType; _schemaType = schemaType; _isInt = (numberType == JsonParser.NumberType.INT) || (numberType == JsonParser.NumberType.LONG) || (numberType == JsonParser.NumberType.BIG_INTEGER) ; } @Override public JsonNode getSchema(SerializerProvider provider, Type typeHint) { return createSchemaNode(_schemaType, true);"
+      },
+      {
+        "txt": "} @Override public void acceptJsonFormatVisitor(JsonFormatVisitorWrapper visitor, JavaType typeHint) throws JsonMappingException { if (_isInt) { JsonIntegerFormatVisitor v2 = visitor.expectIntegerFormat(typeHint); if (v2 != null) { v2.numberType(_numberType); } } else {"
+      },
+      {
+        "txt": "JsonNumberFormatVisitor v2 = visitor.expectNumberFormat(typeHint); if (v2 != null) { v2.numberType(_numberType); } } } @Override public JsonSerializer<?> createContextual(SerializerProvider prov, BeanProperty property) throws JsonMappingException {"
+      },
+      {
+        "txt": "if (property != null) { AnnotatedMember m = property.getMember(); if (m != null) { JsonFormat.Value format = prov.getAnnotationIntrospector().findFormat(m); if (format != null) { switch (format.getShape()) { case STRING: return ToStringSerializer.instance; default: }"
+      },
+      {
+        "txt": "} } } return this; } } @JacksonStdImpl public final static class ShortSerializer extends Base<Short> { final static ShortSerializer instance = new ShortSerializer();"
+      },
+      {
+        "txt": "public ShortSerializer() { super(Short.class, JsonParser.NumberType.INT, \"number\"); } @Override public void serialize(Short value, JsonGenerator gen, SerializerProvider provider) throws IOException { gen.writeNumber(value.shortValue()); } } @JacksonStdImpl public final static class IntegerSerializer extends Base<Object> { public IntegerSerializer() { super(Integer.class, JsonParser.NumberType.INT ,\"integer\"); }"
+      },
+      {
+        "txt": "@Override public void serialize(Object value, JsonGenerator gen, SerializerProvider provider) throws IOException { gen.writeNumber(((Integer) value).intValue()); } @Override public void serializeWithType(Object value, JsonGenerator gen, SerializerProvider provider, TypeSerializer typeSer) throws IOException { serialize(value, gen, provider); } }"
+      },
+      {
+        "txt": "public final static class IntLikeSerializer extends Base<Number> { final static IntLikeSerializer instance = new IntLikeSerializer(); public IntLikeSerializer() { super(Number.class, JsonParser.NumberType.INT, \"integer\"); } <extra_id_0> @Override public void serialize(Number value, JsonGenerator gen, SerializerProvider provider) throws IOException { gen.writeNumber(value.intValue()); } } @JacksonStdImpl"
+      },
+      {
+        "txt": "} @JacksonStdImpl public final static class LongSerializer extends Base<Object> { final static LongSerializer instance = new LongSerializer(); public LongSerializer() { super(Long.class, JsonParser.NumberType.LONG, \"number\"); } @Override public void serialize(Object value, JsonGenerator gen, SerializerProvider provider) throws IOException { gen.writeNumber(((Long) value).longValue()); }"
+      },
+      {
+        "txt": "} @JacksonStdImpl public final static class FloatSerializer extends Base<Object> { final static FloatSerializer instance = new FloatSerializer(); public FloatSerializer() { super(Float.class, JsonParser.NumberType.FLOAT, \"number\"); } @Override public void serialize(Object value, JsonGenerator gen, SerializerProvider provider) throws IOException { gen.writeNumber(((Float) value).floatValue()); }"
+      },
+      {
+        "txt": "} @JacksonStdImpl public final static class DoubleSerializer extends Base<Object> { final static DoubleSerializer instance = new DoubleSerializer(); public DoubleSerializer() { super(Double.class, JsonParser.NumberType.DOUBLE, \"number\"); } @Override public void serialize(Object value, JsonGenerator gen, SerializerProvider provider) throws IOException { gen.writeNumber(((Double) value).doubleValue()); }"
+      },
+      {
+        "txt": "@Override public void serializeWithType(Object value, JsonGenerator gen, SerializerProvider provider, TypeSerializer typeSer) throws IOException { serialize(value, gen, provider); } }"
+      }
+    ]
+  },
+  {
+    "id": 1437,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/ser/std/NumberSerializers.java",
+    "start-bug-line": 185,
+    "end-bug-line": 185,
+    "bug": "",
+    "fix": "private final static Long EMPTY = 0L;",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind.ser.std; import java.io.IOException; import java.lang.reflect.Type; import java.util.Map; import com.fasterxml.jackson.annotation.JsonFormat; import com.fasterxml.jackson.core.*; import com.fasterxml.jackson.databind.*; import com.fasterxml.jackson.databind.annotation.JacksonStdImpl; import com.fasterxml.jackson.databind.introspect.AnnotatedMember; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonFormatVisitorWrapper;"
+      },
+      {
+        "txt": "import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonIntegerFormatVisitor; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonNumberFormatVisitor; import com.fasterxml.jackson.databind.jsontype.TypeSerializer; import com.fasterxml.jackson.databind.ser.ContextualSerializer; @SuppressWarnings(\"serial\") public class NumberSerializers { protected NumberSerializers() { } public static void addAll(Map<String, JsonSerializer<?>> allDeserializers) {"
+      },
+      {
+        "txt": "final JsonSerializer<?> intS = new IntegerSerializer(); allDeserializers.put(Integer.class.getName(), intS); allDeserializers.put(Integer.TYPE.getName(), intS); allDeserializers.put(Long.class.getName(), LongSerializer.instance); allDeserializers.put(Long.TYPE.getName(), LongSerializer.instance); allDeserializers.put(Byte.class.getName(), IntLikeSerializer.instance); allDeserializers.put(Byte.TYPE.getName(), IntLikeSerializer.instance); allDeserializers.put(Short.class.getName(), ShortSerializer.instance); allDeserializers.put(Short.TYPE.getName(), ShortSerializer.instance); allDeserializers.put(Float.class.getName(), FloatSerializer.instance);"
+      },
+      {
+        "txt": "allDeserializers.put(Float.TYPE.getName(), FloatSerializer.instance); allDeserializers.put(Double.class.getName(), DoubleSerializer.instance); allDeserializers.put(Double.TYPE.getName(), DoubleSerializer.instance); } protected abstract static class Base<T> extends StdScalarSerializer<T> implements ContextualSerializer { protected final JsonParser.NumberType _numberType; protected final String _schemaType; protected final boolean _isInt;"
+      },
+      {
+        "txt": "protected Base(Class<?> cls, JsonParser.NumberType numberType, String schemaType) { super(cls, false); _numberType = numberType; _schemaType = schemaType; _isInt = (numberType == JsonParser.NumberType.INT) || (numberType == JsonParser.NumberType.LONG) || (numberType == JsonParser.NumberType.BIG_INTEGER) ; } @Override"
+      },
+      {
+        "txt": "public JsonNode getSchema(SerializerProvider provider, Type typeHint) { return createSchemaNode(_schemaType, true); } @Override public void acceptJsonFormatVisitor(JsonFormatVisitorWrapper visitor, JavaType typeHint) throws JsonMappingException { if (_isInt) { JsonIntegerFormatVisitor v2 = visitor.expectIntegerFormat(typeHint); if (v2 != null) { v2.numberType(_numberType);"
+      },
+      {
+        "txt": "} } else { JsonNumberFormatVisitor v2 = visitor.expectNumberFormat(typeHint); if (v2 != null) { v2.numberType(_numberType); } } } @Override public JsonSerializer<?> createContextual(SerializerProvider prov,"
+      },
+      {
+        "txt": "BeanProperty property) throws JsonMappingException { if (property != null) { AnnotatedMember m = property.getMember(); if (m != null) { JsonFormat.Value format = prov.getAnnotationIntrospector().findFormat(m); if (format != null) { switch (format.getShape()) { case STRING: return ToStringSerializer.instance;"
+      },
+      {
+        "txt": "default: } } } } return this; } } @JacksonStdImpl public final static class ShortSerializer extends Base<Short>"
+      },
+      {
+        "txt": "{ final static ShortSerializer instance = new ShortSerializer(); public ShortSerializer() { super(Short.class, JsonParser.NumberType.INT, \"number\"); } @Override public void serialize(Short value, JsonGenerator gen, SerializerProvider provider) throws IOException { gen.writeNumber(value.shortValue()); } } @JacksonStdImpl public final static class IntegerSerializer extends Base<Object>"
+      },
+      {
+        "txt": "{ public IntegerSerializer() { super(Integer.class, JsonParser.NumberType.INT ,\"integer\"); } @Override public void serialize(Object value, JsonGenerator gen, SerializerProvider provider) throws IOException { gen.writeNumber(((Integer) value).intValue()); } @Override public void serializeWithType(Object value, JsonGenerator gen, SerializerProvider provider, TypeSerializer typeSer) throws IOException { serialize(value, gen, provider);"
+      },
+      {
+        "txt": "} } @JacksonStdImpl public final static class IntLikeSerializer extends Base<Number> { final static IntLikeSerializer instance = new IntLikeSerializer(); public IntLikeSerializer() { super(Number.class, JsonParser.NumberType.INT, \"integer\"); } @Override"
+      },
+      {
+        "txt": "gen.writeNumber(value.intValue()); } } @JacksonStdImpl public final static class LongSerializer extends Base<Object> { <extra_id_0> final static LongSerializer instance = new LongSerializer(); public LongSerializer() { super(Long.class, JsonParser.NumberType.LONG, \"number\"); } @Override public void serialize(Object value, JsonGenerator gen, SerializerProvider provider) throws IOException { gen.writeNumber(((Long) value).longValue()); }"
+      },
+      {
+        "txt": "gen.writeNumber(((Long) value).longValue()); } } @JacksonStdImpl public final static class FloatSerializer extends Base<Object> { final static FloatSerializer instance = new FloatSerializer(); public FloatSerializer() { super(Float.class, JsonParser.NumberType.FLOAT, \"number\"); } @Override public void serialize(Object value, JsonGenerator gen, SerializerProvider provider) throws IOException {"
+      },
+      {
+        "txt": "gen.writeNumber(((Float) value).floatValue()); } } @JacksonStdImpl public final static class DoubleSerializer extends Base<Object> { final static DoubleSerializer instance = new DoubleSerializer(); public DoubleSerializer() { super(Double.class, JsonParser.NumberType.DOUBLE, \"number\"); } @Override public void serialize(Object value, JsonGenerator gen, SerializerProvider provider) throws IOException {"
+      },
+      {
+        "txt": "gen.writeNumber(((Double) value).doubleValue()); } @Override public void serializeWithType(Object value, JsonGenerator gen, SerializerProvider provider, TypeSerializer typeSer) throws IOException { serialize(value, gen, provider); } }"
+      }
+    ]
+  },
+  {
+    "id": 1438,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/ser/std/NumberSerializers.java",
+    "start-bug-line": 190,
+    "end-bug-line": 190,
+    "bug": "",
+    "fix": "@Override public boolean isEmpty(SerializerProvider prov, Object value) { return EMPTY.equals(value); }",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind.ser.std; import java.io.IOException;"
+      },
+      {
+        "txt": "import java.lang.reflect.Type; import java.util.Map; import com.fasterxml.jackson.annotation.JsonFormat; import com.fasterxml.jackson.core.*; import com.fasterxml.jackson.databind.*; import com.fasterxml.jackson.databind.annotation.JacksonStdImpl; import com.fasterxml.jackson.databind.introspect.AnnotatedMember; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonFormatVisitorWrapper; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonIntegerFormatVisitor; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonNumberFormatVisitor;"
+      },
+      {
+        "txt": "import com.fasterxml.jackson.databind.jsontype.TypeSerializer; import com.fasterxml.jackson.databind.ser.ContextualSerializer; @SuppressWarnings(\"serial\") public class NumberSerializers { protected NumberSerializers() { } public static void addAll(Map<String, JsonSerializer<?>> allDeserializers) { final JsonSerializer<?> intS = new IntegerSerializer(); allDeserializers.put(Integer.class.getName(), intS);"
+      },
+      {
+        "txt": "allDeserializers.put(Integer.TYPE.getName(), intS); allDeserializers.put(Long.class.getName(), LongSerializer.instance); allDeserializers.put(Long.TYPE.getName(), LongSerializer.instance); allDeserializers.put(Byte.class.getName(), IntLikeSerializer.instance); allDeserializers.put(Byte.TYPE.getName(), IntLikeSerializer.instance); allDeserializers.put(Short.class.getName(), ShortSerializer.instance); allDeserializers.put(Short.TYPE.getName(), ShortSerializer.instance); allDeserializers.put(Float.class.getName(), FloatSerializer.instance); allDeserializers.put(Float.TYPE.getName(), FloatSerializer.instance); allDeserializers.put(Double.class.getName(), DoubleSerializer.instance);"
+      },
+      {
+        "txt": "allDeserializers.put(Double.TYPE.getName(), DoubleSerializer.instance); } protected abstract static class Base<T> extends StdScalarSerializer<T> implements ContextualSerializer { protected final JsonParser.NumberType _numberType; protected final String _schemaType; protected final boolean _isInt; protected Base(Class<?> cls, JsonParser.NumberType numberType, String schemaType) { super(cls, false);"
+      },
+      {
+        "txt": "_numberType = numberType; _schemaType = schemaType; _isInt = (numberType == JsonParser.NumberType.INT) || (numberType == JsonParser.NumberType.LONG) || (numberType == JsonParser.NumberType.BIG_INTEGER) ; } @Override public JsonNode getSchema(SerializerProvider provider, Type typeHint) { return createSchemaNode(_schemaType, true);"
+      },
+      {
+        "txt": "} @Override public void acceptJsonFormatVisitor(JsonFormatVisitorWrapper visitor, JavaType typeHint) throws JsonMappingException { if (_isInt) { JsonIntegerFormatVisitor v2 = visitor.expectIntegerFormat(typeHint); if (v2 != null) { v2.numberType(_numberType); } } else {"
+      },
+      {
+        "txt": "JsonNumberFormatVisitor v2 = visitor.expectNumberFormat(typeHint); if (v2 != null) { v2.numberType(_numberType); } } } @Override public JsonSerializer<?> createContextual(SerializerProvider prov, BeanProperty property) throws JsonMappingException {"
+      },
+      {
+        "txt": "if (property != null) { AnnotatedMember m = property.getMember(); if (m != null) { JsonFormat.Value format = prov.getAnnotationIntrospector().findFormat(m); if (format != null) { switch (format.getShape()) { case STRING: return ToStringSerializer.instance; default: }"
+      },
+      {
+        "txt": "} } } return this; } } @JacksonStdImpl public final static class ShortSerializer extends Base<Short> { final static ShortSerializer instance = new ShortSerializer();"
+      },
+      {
+        "txt": "public ShortSerializer() { super(Short.class, JsonParser.NumberType.INT, \"number\"); } @Override public void serialize(Short value, JsonGenerator gen, SerializerProvider provider) throws IOException { gen.writeNumber(value.shortValue()); } } @JacksonStdImpl public final static class IntegerSerializer extends Base<Object> { public IntegerSerializer() { super(Integer.class, JsonParser.NumberType.INT ,\"integer\"); }"
+      },
+      {
+        "txt": "@Override public void serialize(Object value, JsonGenerator gen, SerializerProvider provider) throws IOException { gen.writeNumber(((Integer) value).intValue()); } @Override public void serializeWithType(Object value, JsonGenerator gen, SerializerProvider provider, TypeSerializer typeSer) throws IOException { serialize(value, gen, provider); } }"
+      },
+      {
+        "txt": "@JacksonStdImpl public final static class IntLikeSerializer extends Base<Number> { final static IntLikeSerializer instance = new IntLikeSerializer(); public IntLikeSerializer() { super(Number.class, JsonParser.NumberType.INT, \"integer\"); } @Override public void serialize(Number value, JsonGenerator gen, SerializerProvider provider) throws IOException { gen.writeNumber(value.intValue());"
+      },
+      {
+        "txt": "} @JacksonStdImpl public final static class LongSerializer extends Base<Object> { final static LongSerializer instance = new LongSerializer(); public LongSerializer() { super(Long.class, JsonParser.NumberType.LONG, \"number\"); } <extra_id_0> @Override public void serialize(Object value, JsonGenerator gen, SerializerProvider provider) throws IOException { gen.writeNumber(((Long) value).longValue()); } } @JacksonStdImpl"
+      },
+      {
+        "txt": "} @JacksonStdImpl public final static class FloatSerializer extends Base<Object> { final static FloatSerializer instance = new FloatSerializer(); public FloatSerializer() { super(Float.class, JsonParser.NumberType.FLOAT, \"number\"); } @Override public void serialize(Object value, JsonGenerator gen, SerializerProvider provider) throws IOException { gen.writeNumber(((Float) value).floatValue()); }"
+      },
+      {
+        "txt": "} @JacksonStdImpl public final static class DoubleSerializer extends Base<Object> { final static DoubleSerializer instance = new DoubleSerializer(); public DoubleSerializer() { super(Double.class, JsonParser.NumberType.DOUBLE, \"number\"); } @Override public void serialize(Object value, JsonGenerator gen, SerializerProvider provider) throws IOException { gen.writeNumber(((Double) value).doubleValue()); }"
+      },
+      {
+        "txt": "@Override public void serializeWithType(Object value, JsonGenerator gen, SerializerProvider provider, TypeSerializer typeSer) throws IOException { serialize(value, gen, provider); } }"
+      }
+    ]
+  },
+  {
+    "id": 1439,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/ser/std/NumberSerializers.java",
+    "start-bug-line": 200,
+    "end-bug-line": 200,
+    "bug": "",
+    "fix": "private final static Float EMPTY = 0f;",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind.ser.std; import java.io.IOException; import java.lang.reflect.Type; import java.util.Map; import com.fasterxml.jackson.annotation.JsonFormat; import com.fasterxml.jackson.core.*; import com.fasterxml.jackson.databind.*; import com.fasterxml.jackson.databind.annotation.JacksonStdImpl; import com.fasterxml.jackson.databind.introspect.AnnotatedMember; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonFormatVisitorWrapper;"
+      },
+      {
+        "txt": "import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonIntegerFormatVisitor; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonNumberFormatVisitor; import com.fasterxml.jackson.databind.jsontype.TypeSerializer; import com.fasterxml.jackson.databind.ser.ContextualSerializer; @SuppressWarnings(\"serial\") public class NumberSerializers { protected NumberSerializers() { } public static void addAll(Map<String, JsonSerializer<?>> allDeserializers) {"
+      },
+      {
+        "txt": "final JsonSerializer<?> intS = new IntegerSerializer(); allDeserializers.put(Integer.class.getName(), intS); allDeserializers.put(Integer.TYPE.getName(), intS); allDeserializers.put(Long.class.getName(), LongSerializer.instance); allDeserializers.put(Long.TYPE.getName(), LongSerializer.instance); allDeserializers.put(Byte.class.getName(), IntLikeSerializer.instance); allDeserializers.put(Byte.TYPE.getName(), IntLikeSerializer.instance); allDeserializers.put(Short.class.getName(), ShortSerializer.instance); allDeserializers.put(Short.TYPE.getName(), ShortSerializer.instance); allDeserializers.put(Float.class.getName(), FloatSerializer.instance);"
+      },
+      {
+        "txt": "allDeserializers.put(Float.TYPE.getName(), FloatSerializer.instance); allDeserializers.put(Double.class.getName(), DoubleSerializer.instance); allDeserializers.put(Double.TYPE.getName(), DoubleSerializer.instance); } protected abstract static class Base<T> extends StdScalarSerializer<T> implements ContextualSerializer { protected final JsonParser.NumberType _numberType; protected final String _schemaType; protected final boolean _isInt;"
+      },
+      {
+        "txt": "protected Base(Class<?> cls, JsonParser.NumberType numberType, String schemaType) { super(cls, false); _numberType = numberType; _schemaType = schemaType; _isInt = (numberType == JsonParser.NumberType.INT) || (numberType == JsonParser.NumberType.LONG) || (numberType == JsonParser.NumberType.BIG_INTEGER) ; } @Override"
+      },
+      {
+        "txt": "public JsonNode getSchema(SerializerProvider provider, Type typeHint) { return createSchemaNode(_schemaType, true); } @Override public void acceptJsonFormatVisitor(JsonFormatVisitorWrapper visitor, JavaType typeHint) throws JsonMappingException { if (_isInt) { JsonIntegerFormatVisitor v2 = visitor.expectIntegerFormat(typeHint); if (v2 != null) { v2.numberType(_numberType);"
+      },
+      {
+        "txt": "} } else { JsonNumberFormatVisitor v2 = visitor.expectNumberFormat(typeHint); if (v2 != null) { v2.numberType(_numberType); } } } @Override public JsonSerializer<?> createContextual(SerializerProvider prov,"
+      },
+      {
+        "txt": "BeanProperty property) throws JsonMappingException { if (property != null) { AnnotatedMember m = property.getMember(); if (m != null) { JsonFormat.Value format = prov.getAnnotationIntrospector().findFormat(m); if (format != null) { switch (format.getShape()) { case STRING: return ToStringSerializer.instance;"
+      },
+      {
+        "txt": "default: } } } } return this; } } @JacksonStdImpl public final static class ShortSerializer extends Base<Short>"
+      },
+      {
+        "txt": "{ final static ShortSerializer instance = new ShortSerializer(); public ShortSerializer() { super(Short.class, JsonParser.NumberType.INT, \"number\"); } @Override public void serialize(Short value, JsonGenerator gen, SerializerProvider provider) throws IOException { gen.writeNumber(value.shortValue()); } } @JacksonStdImpl public final static class IntegerSerializer extends Base<Object>"
+      },
+      {
+        "txt": "{ public IntegerSerializer() { super(Integer.class, JsonParser.NumberType.INT ,\"integer\"); } @Override public void serialize(Object value, JsonGenerator gen, SerializerProvider provider) throws IOException { gen.writeNumber(((Integer) value).intValue()); } @Override public void serializeWithType(Object value, JsonGenerator gen, SerializerProvider provider, TypeSerializer typeSer) throws IOException { serialize(value, gen, provider);"
+      },
+      {
+        "txt": "} } @JacksonStdImpl public final static class IntLikeSerializer extends Base<Number> { final static IntLikeSerializer instance = new IntLikeSerializer(); public IntLikeSerializer() { super(Number.class, JsonParser.NumberType.INT, \"integer\"); } @Override"
+      },
+      {
+        "txt": "public void serialize(Number value, JsonGenerator gen, SerializerProvider provider) throws IOException { gen.writeNumber(value.intValue()); } } @JacksonStdImpl public final static class LongSerializer extends Base<Object> { final static LongSerializer instance = new LongSerializer(); public LongSerializer() { super(Long.class, JsonParser.NumberType.LONG, \"number\"); } @Override"
+      },
+      {
+        "txt": "gen.writeNumber(((Long) value).longValue()); } } @JacksonStdImpl public final static class FloatSerializer extends Base<Object> { <extra_id_0> final static FloatSerializer instance = new FloatSerializer(); public FloatSerializer() { super(Float.class, JsonParser.NumberType.FLOAT, \"number\"); } @Override public void serialize(Object value, JsonGenerator gen, SerializerProvider provider) throws IOException { gen.writeNumber(((Float) value).floatValue()); }"
+      },
+      {
+        "txt": "gen.writeNumber(((Float) value).floatValue()); } } @JacksonStdImpl public final static class DoubleSerializer extends Base<Object> { final static DoubleSerializer instance = new DoubleSerializer(); public DoubleSerializer() { super(Double.class, JsonParser.NumberType.DOUBLE, \"number\"); } @Override public void serialize(Object value, JsonGenerator gen, SerializerProvider provider) throws IOException {"
+      },
+      {
+        "txt": "gen.writeNumber(((Double) value).doubleValue()); } @Override public void serializeWithType(Object value, JsonGenerator gen, SerializerProvider provider, TypeSerializer typeSer) throws IOException { serialize(value, gen, provider); } }"
+      }
+    ]
+  },
+  {
+    "id": 1440,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/ser/std/NumberSerializers.java",
+    "start-bug-line": 205,
+    "end-bug-line": 205,
+    "bug": "",
+    "fix": "@Override public boolean isEmpty(SerializerProvider prov, Object value) { return EMPTY.equals(value); }",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind.ser.std; import java.io.IOException;"
+      },
+      {
+        "txt": "import java.lang.reflect.Type; import java.util.Map; import com.fasterxml.jackson.annotation.JsonFormat; import com.fasterxml.jackson.core.*; import com.fasterxml.jackson.databind.*; import com.fasterxml.jackson.databind.annotation.JacksonStdImpl; import com.fasterxml.jackson.databind.introspect.AnnotatedMember; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonFormatVisitorWrapper; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonIntegerFormatVisitor; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonNumberFormatVisitor;"
+      },
+      {
+        "txt": "import com.fasterxml.jackson.databind.jsontype.TypeSerializer; import com.fasterxml.jackson.databind.ser.ContextualSerializer; @SuppressWarnings(\"serial\") public class NumberSerializers { protected NumberSerializers() { } public static void addAll(Map<String, JsonSerializer<?>> allDeserializers) { final JsonSerializer<?> intS = new IntegerSerializer(); allDeserializers.put(Integer.class.getName(), intS);"
+      },
+      {
+        "txt": "allDeserializers.put(Integer.TYPE.getName(), intS); allDeserializers.put(Long.class.getName(), LongSerializer.instance); allDeserializers.put(Long.TYPE.getName(), LongSerializer.instance); allDeserializers.put(Byte.class.getName(), IntLikeSerializer.instance); allDeserializers.put(Byte.TYPE.getName(), IntLikeSerializer.instance); allDeserializers.put(Short.class.getName(), ShortSerializer.instance); allDeserializers.put(Short.TYPE.getName(), ShortSerializer.instance); allDeserializers.put(Float.class.getName(), FloatSerializer.instance); allDeserializers.put(Float.TYPE.getName(), FloatSerializer.instance); allDeserializers.put(Double.class.getName(), DoubleSerializer.instance);"
+      },
+      {
+        "txt": "allDeserializers.put(Double.TYPE.getName(), DoubleSerializer.instance); } protected abstract static class Base<T> extends StdScalarSerializer<T> implements ContextualSerializer { protected final JsonParser.NumberType _numberType; protected final String _schemaType; protected final boolean _isInt; protected Base(Class<?> cls, JsonParser.NumberType numberType, String schemaType) { super(cls, false);"
+      },
+      {
+        "txt": "_numberType = numberType; _schemaType = schemaType; _isInt = (numberType == JsonParser.NumberType.INT) || (numberType == JsonParser.NumberType.LONG) || (numberType == JsonParser.NumberType.BIG_INTEGER) ; } @Override public JsonNode getSchema(SerializerProvider provider, Type typeHint) { return createSchemaNode(_schemaType, true);"
+      },
+      {
+        "txt": "} @Override public void acceptJsonFormatVisitor(JsonFormatVisitorWrapper visitor, JavaType typeHint) throws JsonMappingException { if (_isInt) { JsonIntegerFormatVisitor v2 = visitor.expectIntegerFormat(typeHint); if (v2 != null) { v2.numberType(_numberType); } } else {"
+      },
+      {
+        "txt": "JsonNumberFormatVisitor v2 = visitor.expectNumberFormat(typeHint); if (v2 != null) { v2.numberType(_numberType); } } } @Override public JsonSerializer<?> createContextual(SerializerProvider prov, BeanProperty property) throws JsonMappingException {"
+      },
+      {
+        "txt": "if (property != null) { AnnotatedMember m = property.getMember(); if (m != null) { JsonFormat.Value format = prov.getAnnotationIntrospector().findFormat(m); if (format != null) { switch (format.getShape()) { case STRING: return ToStringSerializer.instance; default: }"
+      },
+      {
+        "txt": "} } } return this; } } @JacksonStdImpl public final static class ShortSerializer extends Base<Short> { final static ShortSerializer instance = new ShortSerializer();"
+      },
+      {
+        "txt": "public ShortSerializer() { super(Short.class, JsonParser.NumberType.INT, \"number\"); } @Override public void serialize(Short value, JsonGenerator gen, SerializerProvider provider) throws IOException { gen.writeNumber(value.shortValue()); } } @JacksonStdImpl public final static class IntegerSerializer extends Base<Object> { public IntegerSerializer() { super(Integer.class, JsonParser.NumberType.INT ,\"integer\"); }"
+      },
+      {
+        "txt": "@Override public void serialize(Object value, JsonGenerator gen, SerializerProvider provider) throws IOException { gen.writeNumber(((Integer) value).intValue()); } @Override public void serializeWithType(Object value, JsonGenerator gen, SerializerProvider provider, TypeSerializer typeSer) throws IOException { serialize(value, gen, provider); } }"
+      },
+      {
+        "txt": "@JacksonStdImpl public final static class IntLikeSerializer extends Base<Number> { final static IntLikeSerializer instance = new IntLikeSerializer(); public IntLikeSerializer() { super(Number.class, JsonParser.NumberType.INT, \"integer\"); } @Override public void serialize(Number value, JsonGenerator gen, SerializerProvider provider) throws IOException { gen.writeNumber(value.intValue());"
+      },
+      {
+        "txt": "} } @JacksonStdImpl public final static class LongSerializer extends Base<Object> { final static LongSerializer instance = new LongSerializer(); public LongSerializer() { super(Long.class, JsonParser.NumberType.LONG, \"number\"); } @Override public void serialize(Object value, JsonGenerator gen, SerializerProvider provider) throws IOException { gen.writeNumber(((Long) value).longValue());"
+      },
+      {
+        "txt": "} @JacksonStdImpl public final static class FloatSerializer extends Base<Object> { final static FloatSerializer instance = new FloatSerializer(); public FloatSerializer() { super(Float.class, JsonParser.NumberType.FLOAT, \"number\"); } <extra_id_0> @Override public void serialize(Object value, JsonGenerator gen, SerializerProvider provider) throws IOException { gen.writeNumber(((Float) value).floatValue()); } } @JacksonStdImpl"
+      },
+      {
+        "txt": "} @JacksonStdImpl public final static class DoubleSerializer extends Base<Object> { final static DoubleSerializer instance = new DoubleSerializer(); public DoubleSerializer() { super(Double.class, JsonParser.NumberType.DOUBLE, \"number\"); } @Override public void serialize(Object value, JsonGenerator gen, SerializerProvider provider) throws IOException { gen.writeNumber(((Double) value).doubleValue()); }"
+      },
+      {
+        "txt": "@Override public void serializeWithType(Object value, JsonGenerator gen, SerializerProvider provider, TypeSerializer typeSer) throws IOException { serialize(value, gen, provider); } }"
+      }
+    ]
+  },
+  {
+    "id": 1441,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/ser/std/NumberSerializers.java",
+    "start-bug-line": 222,
+    "end-bug-line": 222,
+    "bug": "",
+    "fix": "private final static Double EMPTY = 0d;",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind.ser.std; import java.io.IOException; import java.lang.reflect.Type; import java.util.Map; import com.fasterxml.jackson.annotation.JsonFormat; import com.fasterxml.jackson.core.*; import com.fasterxml.jackson.databind.*; import com.fasterxml.jackson.databind.annotation.JacksonStdImpl; import com.fasterxml.jackson.databind.introspect.AnnotatedMember; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonFormatVisitorWrapper;"
+      },
+      {
+        "txt": "import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonIntegerFormatVisitor; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonNumberFormatVisitor; import com.fasterxml.jackson.databind.jsontype.TypeSerializer; import com.fasterxml.jackson.databind.ser.ContextualSerializer; @SuppressWarnings(\"serial\") public class NumberSerializers { protected NumberSerializers() { } public static void addAll(Map<String, JsonSerializer<?>> allDeserializers) {"
+      },
+      {
+        "txt": "final JsonSerializer<?> intS = new IntegerSerializer(); allDeserializers.put(Integer.class.getName(), intS); allDeserializers.put(Integer.TYPE.getName(), intS); allDeserializers.put(Long.class.getName(), LongSerializer.instance); allDeserializers.put(Long.TYPE.getName(), LongSerializer.instance); allDeserializers.put(Byte.class.getName(), IntLikeSerializer.instance); allDeserializers.put(Byte.TYPE.getName(), IntLikeSerializer.instance); allDeserializers.put(Short.class.getName(), ShortSerializer.instance); allDeserializers.put(Short.TYPE.getName(), ShortSerializer.instance); allDeserializers.put(Float.class.getName(), FloatSerializer.instance);"
+      },
+      {
+        "txt": "allDeserializers.put(Float.TYPE.getName(), FloatSerializer.instance); allDeserializers.put(Double.class.getName(), DoubleSerializer.instance); allDeserializers.put(Double.TYPE.getName(), DoubleSerializer.instance); } protected abstract static class Base<T> extends StdScalarSerializer<T> implements ContextualSerializer { protected final JsonParser.NumberType _numberType; protected final String _schemaType; protected final boolean _isInt;"
+      },
+      {
+        "txt": "protected Base(Class<?> cls, JsonParser.NumberType numberType, String schemaType) { super(cls, false); _numberType = numberType; _schemaType = schemaType; _isInt = (numberType == JsonParser.NumberType.INT) || (numberType == JsonParser.NumberType.LONG) || (numberType == JsonParser.NumberType.BIG_INTEGER) ; } @Override"
+      },
+      {
+        "txt": "public JsonNode getSchema(SerializerProvider provider, Type typeHint) { return createSchemaNode(_schemaType, true); } @Override public void acceptJsonFormatVisitor(JsonFormatVisitorWrapper visitor, JavaType typeHint) throws JsonMappingException { if (_isInt) { JsonIntegerFormatVisitor v2 = visitor.expectIntegerFormat(typeHint); if (v2 != null) { v2.numberType(_numberType);"
+      },
+      {
+        "txt": "} } else { JsonNumberFormatVisitor v2 = visitor.expectNumberFormat(typeHint); if (v2 != null) { v2.numberType(_numberType); } } } @Override public JsonSerializer<?> createContextual(SerializerProvider prov,"
+      },
+      {
+        "txt": "BeanProperty property) throws JsonMappingException { if (property != null) { AnnotatedMember m = property.getMember(); if (m != null) { JsonFormat.Value format = prov.getAnnotationIntrospector().findFormat(m); if (format != null) { switch (format.getShape()) { case STRING: return ToStringSerializer.instance;"
+      },
+      {
+        "txt": "default: } } } } return this; } } @JacksonStdImpl public final static class ShortSerializer extends Base<Short>"
+      },
+      {
+        "txt": "{ final static ShortSerializer instance = new ShortSerializer(); public ShortSerializer() { super(Short.class, JsonParser.NumberType.INT, \"number\"); } @Override public void serialize(Short value, JsonGenerator gen, SerializerProvider provider) throws IOException { gen.writeNumber(value.shortValue()); } } @JacksonStdImpl public final static class IntegerSerializer extends Base<Object>"
+      },
+      {
+        "txt": "{ public IntegerSerializer() { super(Integer.class, JsonParser.NumberType.INT ,\"integer\"); } @Override public void serialize(Object value, JsonGenerator gen, SerializerProvider provider) throws IOException { gen.writeNumber(((Integer) value).intValue()); } @Override public void serializeWithType(Object value, JsonGenerator gen, SerializerProvider provider, TypeSerializer typeSer) throws IOException { serialize(value, gen, provider);"
+      },
+      {
+        "txt": "} } @JacksonStdImpl public final static class IntLikeSerializer extends Base<Number> { final static IntLikeSerializer instance = new IntLikeSerializer(); public IntLikeSerializer() { super(Number.class, JsonParser.NumberType.INT, \"integer\"); } @Override"
+      },
+      {
+        "txt": "public void serialize(Number value, JsonGenerator gen, SerializerProvider provider) throws IOException { gen.writeNumber(value.intValue()); } } @JacksonStdImpl public final static class LongSerializer extends Base<Object> { final static LongSerializer instance = new LongSerializer(); public LongSerializer() { super(Long.class, JsonParser.NumberType.LONG, \"number\"); } @Override"
+      },
+      {
+        "txt": "public void serialize(Object value, JsonGenerator gen, SerializerProvider provider) throws IOException { gen.writeNumber(((Long) value).longValue()); } } @JacksonStdImpl public final static class FloatSerializer extends Base<Object> { final static FloatSerializer instance = new FloatSerializer(); public FloatSerializer() { super(Float.class, JsonParser.NumberType.FLOAT, \"number\"); } @Override"
+      },
+      {
+        "txt": "gen.writeNumber(((Float) value).floatValue()); } } @JacksonStdImpl public final static class DoubleSerializer extends Base<Object> { <extra_id_0> final static DoubleSerializer instance = new DoubleSerializer(); public DoubleSerializer() { super(Double.class, JsonParser.NumberType.DOUBLE, \"number\"); } @Override public void serialize(Object value, JsonGenerator gen, SerializerProvider provider) throws IOException { gen.writeNumber(((Double) value).doubleValue()); }"
+      },
+      {
+        "txt": "gen.writeNumber(((Double) value).doubleValue()); } @Override public void serializeWithType(Object value, JsonGenerator gen, SerializerProvider provider, TypeSerializer typeSer) throws IOException { serialize(value, gen, provider); } }"
+      }
+    ]
+  },
+  {
+    "id": 1442,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/ser/std/NumberSerializers.java",
+    "start-bug-line": 227,
+    "end-bug-line": 227,
+    "bug": "",
+    "fix": "@Override public boolean isEmpty(SerializerProvider prov, Object value) { return EMPTY.equals(value); }",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind.ser.std; import java.io.IOException;"
+      },
+      {
+        "txt": "import java.lang.reflect.Type; import java.util.Map; import com.fasterxml.jackson.annotation.JsonFormat; import com.fasterxml.jackson.core.*; import com.fasterxml.jackson.databind.*; import com.fasterxml.jackson.databind.annotation.JacksonStdImpl; import com.fasterxml.jackson.databind.introspect.AnnotatedMember; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonFormatVisitorWrapper; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonIntegerFormatVisitor; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonNumberFormatVisitor;"
+      },
+      {
+        "txt": "import com.fasterxml.jackson.databind.jsontype.TypeSerializer; import com.fasterxml.jackson.databind.ser.ContextualSerializer; @SuppressWarnings(\"serial\") public class NumberSerializers { protected NumberSerializers() { } public static void addAll(Map<String, JsonSerializer<?>> allDeserializers) { final JsonSerializer<?> intS = new IntegerSerializer(); allDeserializers.put(Integer.class.getName(), intS);"
+      },
+      {
+        "txt": "allDeserializers.put(Integer.TYPE.getName(), intS); allDeserializers.put(Long.class.getName(), LongSerializer.instance); allDeserializers.put(Long.TYPE.getName(), LongSerializer.instance); allDeserializers.put(Byte.class.getName(), IntLikeSerializer.instance); allDeserializers.put(Byte.TYPE.getName(), IntLikeSerializer.instance); allDeserializers.put(Short.class.getName(), ShortSerializer.instance); allDeserializers.put(Short.TYPE.getName(), ShortSerializer.instance); allDeserializers.put(Float.class.getName(), FloatSerializer.instance); allDeserializers.put(Float.TYPE.getName(), FloatSerializer.instance); allDeserializers.put(Double.class.getName(), DoubleSerializer.instance);"
+      },
+      {
+        "txt": "allDeserializers.put(Double.TYPE.getName(), DoubleSerializer.instance); } protected abstract static class Base<T> extends StdScalarSerializer<T> implements ContextualSerializer { protected final JsonParser.NumberType _numberType; protected final String _schemaType; protected final boolean _isInt; protected Base(Class<?> cls, JsonParser.NumberType numberType, String schemaType) { super(cls, false);"
+      },
+      {
+        "txt": "_numberType = numberType; _schemaType = schemaType; _isInt = (numberType == JsonParser.NumberType.INT) || (numberType == JsonParser.NumberType.LONG) || (numberType == JsonParser.NumberType.BIG_INTEGER) ; } @Override public JsonNode getSchema(SerializerProvider provider, Type typeHint) { return createSchemaNode(_schemaType, true);"
+      },
+      {
+        "txt": "} @Override public void acceptJsonFormatVisitor(JsonFormatVisitorWrapper visitor, JavaType typeHint) throws JsonMappingException { if (_isInt) { JsonIntegerFormatVisitor v2 = visitor.expectIntegerFormat(typeHint); if (v2 != null) { v2.numberType(_numberType); } } else {"
+      },
+      {
+        "txt": "JsonNumberFormatVisitor v2 = visitor.expectNumberFormat(typeHint); if (v2 != null) { v2.numberType(_numberType); } } } @Override public JsonSerializer<?> createContextual(SerializerProvider prov, BeanProperty property) throws JsonMappingException {"
+      },
+      {
+        "txt": "if (property != null) { AnnotatedMember m = property.getMember(); if (m != null) { JsonFormat.Value format = prov.getAnnotationIntrospector().findFormat(m); if (format != null) { switch (format.getShape()) { case STRING: return ToStringSerializer.instance; default: }"
+      },
+      {
+        "txt": "} } } return this; } } @JacksonStdImpl public final static class ShortSerializer extends Base<Short> { final static ShortSerializer instance = new ShortSerializer();"
+      },
+      {
+        "txt": "public ShortSerializer() { super(Short.class, JsonParser.NumberType.INT, \"number\"); } @Override public void serialize(Short value, JsonGenerator gen, SerializerProvider provider) throws IOException { gen.writeNumber(value.shortValue()); } } @JacksonStdImpl public final static class IntegerSerializer extends Base<Object> { public IntegerSerializer() { super(Integer.class, JsonParser.NumberType.INT ,\"integer\"); }"
+      },
+      {
+        "txt": "@Override public void serialize(Object value, JsonGenerator gen, SerializerProvider provider) throws IOException { gen.writeNumber(((Integer) value).intValue()); } @Override public void serializeWithType(Object value, JsonGenerator gen, SerializerProvider provider, TypeSerializer typeSer) throws IOException { serialize(value, gen, provider); } }"
+      },
+      {
+        "txt": "@JacksonStdImpl public final static class IntLikeSerializer extends Base<Number> { final static IntLikeSerializer instance = new IntLikeSerializer(); public IntLikeSerializer() { super(Number.class, JsonParser.NumberType.INT, \"integer\"); } @Override public void serialize(Number value, JsonGenerator gen, SerializerProvider provider) throws IOException { gen.writeNumber(value.intValue());"
+      },
+      {
+        "txt": "} } @JacksonStdImpl public final static class LongSerializer extends Base<Object> { final static LongSerializer instance = new LongSerializer(); public LongSerializer() { super(Long.class, JsonParser.NumberType.LONG, \"number\"); } @Override public void serialize(Object value, JsonGenerator gen, SerializerProvider provider) throws IOException { gen.writeNumber(((Long) value).longValue());"
+      },
+      {
+        "txt": "} } @JacksonStdImpl public final static class FloatSerializer extends Base<Object> { final static FloatSerializer instance = new FloatSerializer(); public FloatSerializer() { super(Float.class, JsonParser.NumberType.FLOAT, \"number\"); } @Override public void serialize(Object value, JsonGenerator gen, SerializerProvider provider) throws IOException { gen.writeNumber(((Float) value).floatValue());"
+      },
+      {
+        "txt": "} @JacksonStdImpl public final static class DoubleSerializer extends Base<Object> { final static DoubleSerializer instance = new DoubleSerializer(); public DoubleSerializer() { super(Double.class, JsonParser.NumberType.DOUBLE, \"number\"); } <extra_id_0> @Override public void serialize(Object value, JsonGenerator gen, SerializerProvider provider) throws IOException { gen.writeNumber(((Double) value).doubleValue()); } @Override public void serializeWithType(Object value, JsonGenerator gen,"
+      },
+      {
+        "txt": "@Override public void serializeWithType(Object value, JsonGenerator gen, SerializerProvider provider, TypeSerializer typeSer) throws IOException { serialize(value, gen, provider); } }"
+      }
+    ]
+  }
+]

@@ -1,0 +1,980 @@
+[
+  {
+    "id": 2267,
+    "file_path": "src/java/org/apache/commons/jxpath/ri/model/dom/DOMNodePointer.java",
+    "start-bug-line": 560,
+    "end-bug-line": 562,
+    "bug": "if (n.getNodeType() == Node.ELEMENT_NODE) { String nm = n.getNodeName(); if (nm.equals(node.getNodeName())) {",
+    "fix": "if (n.getNodeType() == Node.ELEMENT_NODE && matchesQName(n)) {",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.jxpath.ri.model.dom; import java.util.HashMap; import java.util.Locale; import java.util.Map; import org.apache.commons.jxpath.JXPathAbstractFactoryException; import org.apache.commons.jxpath.JXPathContext;"
+      },
+      {
+        "txt": "import org.apache.commons.jxpath.JXPathException; import org.apache.commons.jxpath.Pointer; import org.apache.commons.jxpath.ri.Compiler; import org.apache.commons.jxpath.ri.NamespaceResolver; import org.apache.commons.jxpath.ri.QName; import org.apache.commons.jxpath.ri.compiler.NodeNameTest; import org.apache.commons.jxpath.ri.compiler.NodeTest; import org.apache.commons.jxpath.ri.compiler.NodeTypeTest; import org.apache.commons.jxpath.ri.compiler.ProcessingInstructionTest; import org.apache.commons.jxpath.ri.model.NodeIterator;"
+      },
+      {
+        "txt": "import org.apache.commons.jxpath.ri.model.NodePointer; import org.apache.commons.jxpath.ri.model.beans.NullPointer; import org.apache.commons.jxpath.util.TypeUtils; import org.w3c.dom.Attr; import org.w3c.dom.Comment; import org.w3c.dom.Document; import org.w3c.dom.Element; import org.w3c.dom.NamedNodeMap; import org.w3c.dom.Node; import org.w3c.dom.NodeList;"
+      },
+      {
+        "txt": "import org.w3c.dom.ProcessingInstruction; public class DOMNodePointer extends NodePointer { private static final long serialVersionUID = -8751046933894857319L; private Node node; private Map namespaces; private String defaultNamespace; private String id; private NamespaceResolver localNamespaceResolver; public static final String XML_NAMESPACE_URI = \"http://www.w3.org/XML/1998/namespace\";"
+      },
+      {
+        "txt": "public static final String XMLNS_NAMESPACE_URI = \"http://www.w3.org/2000/xmlns/\"; public DOMNodePointer(Node node, Locale locale) { super(null, locale); this.node = node; } public DOMNodePointer(Node node, Locale locale, String id) { super(null, locale); this.node = node; this.id = id;"
+      },
+      {
+        "txt": "} public DOMNodePointer(NodePointer parent, Node node) { super(parent); this.node = node; } public boolean testNode(NodeTest test) { return testNode(node, test); } public static boolean testNode(Node node, NodeTest test) { if (test == null) {"
+      },
+      {
+        "txt": "return true; } if (test instanceof NodeNameTest) { if (node.getNodeType() != Node.ELEMENT_NODE) { return false; } NodeNameTest nodeNameTest = (NodeNameTest) test; QName testName = nodeNameTest.getNodeName(); String namespaceURI = nodeNameTest.getNamespaceURI(); boolean wildcard = nodeNameTest.isWildcard();"
+      },
+      {
+        "txt": "String testPrefix = testName.getPrefix(); if (wildcard && testPrefix == null) { return true; } if (wildcard || testName.getName() .equals(DOMNodePointer.getLocalName(node))) { String nodeNS = DOMNodePointer.getNamespaceURI(node); return equalStrings(namespaceURI, nodeNS) || nodeNS == null && equalStrings(testPrefix, getPrefix(node));"
+      },
+      {
+        "txt": "} return false; } if (test instanceof NodeTypeTest) { int nodeType = node.getNodeType(); switch (((NodeTypeTest) test).getNodeType()) { case Compiler.NODE_TYPE_NODE : return true; case Compiler.NODE_TYPE_TEXT : return nodeType == Node.CDATA_SECTION_NODE"
+      },
+      {
+        "txt": "|| nodeType == Node.TEXT_NODE; case Compiler.NODE_TYPE_COMMENT : return nodeType == Node.COMMENT_NODE; case Compiler.NODE_TYPE_PI : return nodeType == Node.PROCESSING_INSTRUCTION_NODE; default: return false; } } if (test instanceof ProcessingInstructionTest"
+      },
+      {
+        "txt": "&& node.getNodeType() == Node.PROCESSING_INSTRUCTION_NODE) { String testPI = ((ProcessingInstructionTest) test).getTarget(); String nodePI = ((ProcessingInstruction) node).getTarget(); return testPI.equals(nodePI); } return false; } private static boolean equalStrings(String s1, String s2) { if (s1 == s2) { return true;"
+      },
+      {
+        "txt": "} s1 = s1 == null ? \"\" : s1.trim(); s2 = s2 == null ? \"\" : s2.trim(); return s1.equals(s2); } public QName getName() { String ln = null; String ns = null; int type = node.getNodeType(); if (type == Node.ELEMENT_NODE) {"
+      },
+      {
+        "txt": "ns = DOMNodePointer.getPrefix(node); ln = DOMNodePointer.getLocalName(node); } else if (type == Node.PROCESSING_INSTRUCTION_NODE) { ln = ((ProcessingInstruction) node).getTarget(); } return new QName(ns, ln); } public String getNamespaceURI() { return getNamespaceURI(node);"
+      },
+      {
+        "txt": "} public NodeIterator childIterator(NodeTest test, boolean reverse, NodePointer startWith) { return new DOMNodeIterator(this, test, reverse, startWith); } public NodeIterator attributeIterator(QName name) { return new DOMAttributeIterator(this, name); } public NodePointer namespacePointer(String prefix) { return new NamespacePointer(this, prefix);"
+      },
+      {
+        "txt": "} public NodeIterator namespaceIterator() { return new DOMNamespaceIterator(this); } public synchronized NamespaceResolver getNamespaceResolver() { if (localNamespaceResolver == null) { localNamespaceResolver = new NamespaceResolver(super.getNamespaceResolver()); localNamespaceResolver.setNamespaceContextPointer(this); } return localNamespaceResolver;"
+      },
+      {
+        "txt": "} public String getNamespaceURI(String prefix) { if (prefix == null || prefix.equals(\"\")) { return getDefaultNamespaceURI(); } if (prefix.equals(\"xml\")) { return XML_NAMESPACE_URI; } if (prefix.equals(\"xmlns\")) { return XMLNS_NAMESPACE_URI;"
+      },
+      {
+        "txt": "} String namespace = null; if (namespaces == null) { namespaces = new HashMap(); } else { namespace = (String) namespaces.get(prefix); } if (namespace == null) { String qname = \"xmlns:\" + prefix;"
+      },
+      {
+        "txt": "Node aNode = node; if (aNode instanceof Document) { aNode = ((Document) aNode).getDocumentElement(); } while (aNode != null) { if (aNode.getNodeType() == Node.ELEMENT_NODE) { Attr attr = ((Element) aNode).getAttributeNode(qname); if (attr != null) { namespace = attr.getValue(); break;"
+      },
+      {
+        "txt": "} } aNode = aNode.getParentNode(); } if (namespace == null || namespace.equals(\"\")) { namespace = NodePointer.UNKNOWN_NAMESPACE; } } namespaces.put(prefix, namespace); if (namespace == UNKNOWN_NAMESPACE) {"
+      },
+      {
+        "txt": "return null; } return namespace; } public String getDefaultNamespaceURI() { if (defaultNamespace == null) { Node aNode = node; if (aNode instanceof Document) { aNode = ((Document) aNode).getDocumentElement(); }"
+      },
+      {
+        "txt": "while (aNode != null) { if (aNode.getNodeType() == Node.ELEMENT_NODE) { Attr attr = ((Element) aNode).getAttributeNode(\"xmlns\"); if (attr != null) { defaultNamespace = attr.getValue(); break; } } aNode = aNode.getParentNode(); }"
+      },
+      {
+        "txt": "} if (defaultNamespace == null) { defaultNamespace = \"\"; } return defaultNamespace.equals(\"\") ? null : defaultNamespace; } public Object getBaseValue() { return node; } public Object getImmediateNode() {"
+      },
+      {
+        "txt": "return node; } public boolean isActual() { return true; } public boolean isCollection() { return false; } public int getLength() { return 1;"
+      },
+      {
+        "txt": "} public boolean isLeaf() { return !node.hasChildNodes(); } public boolean isLanguage(String lang) { String current = getLanguage(); return current == null ? super.isLanguage(lang) : current.toUpperCase(Locale.ENGLISH).startsWith(lang.toUpperCase(Locale.ENGLISH)); } protected static String findEnclosingAttribute(Node n, String attrName) {"
+      },
+      {
+        "txt": "while (n != null) { if (n.getNodeType() == Node.ELEMENT_NODE) { Element e = (Element) n; String attr = e.getAttribute(attrName); if (attr != null && !attr.equals(\"\")) { return attr; } } n = n.getParentNode(); }"
+      },
+      {
+        "txt": "return null; } protected String getLanguage() { return findEnclosingAttribute(node, \"xml:lang\"); } public void setValue(Object value) { if (node.getNodeType() == Node.TEXT_NODE || node.getNodeType() == Node.CDATA_SECTION_NODE) { String string = (String) TypeUtils.convert(value, String.class); if (string != null && !string.equals(\"\")) {"
+      },
+      {
+        "txt": "node.setNodeValue(string); } else { node.getParentNode().removeChild(node); } } else { NodeList children = node.getChildNodes(); int count = children.getLength(); for (int i = count; --i >= 0;) {"
+      },
+      {
+        "txt": "Node child = children.item(i); node.removeChild(child); } if (value instanceof Node) { Node valueNode = (Node) value; if (valueNode instanceof Element || valueNode instanceof Document) { children = valueNode.getChildNodes(); for (int i = 0; i < children.getLength(); i++) { Node child = children.item(i);"
+      },
+      {
+        "txt": "node.appendChild(child.cloneNode(true)); } } else { node.appendChild(valueNode.cloneNode(true)); } } else { String string = (String) TypeUtils.convert(value, String.class); if (string != null && !string.equals(\"\")) {"
+      },
+      {
+        "txt": "Node textNode = node.getOwnerDocument().createTextNode(string); node.appendChild(textNode); } } } } public NodePointer createChild(JXPathContext context, QName name, int index) { if (index == WHOLE_COLLECTION) { index = 0;"
+      },
+      {
+        "txt": "} boolean success = getAbstractFactory(context).createObject( context, this, node, name.toString(), index); if (success) { NodeTest nodeTest;"
+      },
+      {
+        "txt": "String prefix = name.getPrefix(); String namespaceURI = prefix == null ? null : context .getNamespaceURI(prefix); nodeTest = new NodeNameTest(name, namespaceURI); NodeIterator it = childIterator(nodeTest, false, null); if (it != null && it.setPosition(index + 1)) { return it.getNodePointer(); } } throw new JXPathAbstractFactoryException("
+      },
+      {
+        "txt": "\"Factory could not create a child node for path: \" + asPath() + \"/\" + name + \"[\" + (index + 1) + \"]\"); } public NodePointer createChild(JXPathContext context, QName name, int index, Object value) { NodePointer ptr = createChild(context, name, index); ptr.setValue(value); return ptr; } public NodePointer createAttribute(JXPathContext context, QName name) {"
+      },
+      {
+        "txt": "if (!(node instanceof Element)) { return super.createAttribute(context, name); } Element element = (Element) node; String prefix = name.getPrefix(); if (prefix != null) { String ns = null; NamespaceResolver nsr = getNamespaceResolver(); if (nsr != null) { ns = nsr.getNamespaceURI(prefix);"
+      },
+      {
+        "txt": "} if (ns == null) { throw new JXPathException( \"Unknown namespace prefix: \" + prefix); } element.setAttributeNS(ns, name.toString(), \"\"); } else { if (!element.hasAttribute(name.getName())) { element.setAttribute(name.getName(), \"\");"
+      },
+      {
+        "txt": "} } NodeIterator it = attributeIterator(name); it.setPosition(1); return it.getNodePointer(); } public void remove() { Node parent = node.getParentNode(); if (parent == null) { throw new JXPathException(\"Cannot remove root DOM node\");"
+      },
+      {
+        "txt": "} parent.removeChild(node); } public String asPath() { if (id != null) { return \"id('\" + escape(id) + \"')\"; } StringBuffer buffer = new StringBuffer(); if (parent != null) { buffer.append(parent.asPath());"
+      },
+      {
+        "txt": "} switch (node.getNodeType()) { case Node.ELEMENT_NODE : if (parent instanceof DOMNodePointer) { if (buffer.length() == 0 || buffer.charAt(buffer.length() - 1) != '/') { buffer.append('/'); } String ln = DOMNodePointer.getLocalName(node); String nsURI = getNamespaceURI();"
+      },
+      {
+        "txt": "if (nsURI == null) { buffer.append(ln); buffer.append('['); buffer.append(getRelativePositionByQName()).append(']'); } else { String prefix = getNamespaceResolver().getPrefix(nsURI); if (prefix != null) { buffer.append(prefix); buffer.append(':');"
+      },
+      {
+        "txt": "buffer.append(ln); buffer.append('['); buffer.append(getRelativePositionByQName()); buffer.append(']'); } else { buffer.append(\"node()\"); buffer.append('['); buffer.append(getRelativePositionOfElement()); buffer.append(']');"
+      },
+      {
+        "txt": "} } } break; case Node.TEXT_NODE : case Node.CDATA_SECTION_NODE : buffer.append(\"/text()\"); buffer.append('['); buffer.append(getRelativePositionOfTextNode()).append(']'); break;"
+      },
+      {
+        "txt": "case Node.PROCESSING_INSTRUCTION_NODE : buffer.append(\"/processing-instruction(\\'\"); buffer.append(((ProcessingInstruction) node).getTarget()).append(\"')\"); buffer.append('['); buffer.append(getRelativePositionOfPI()).append(']'); break; case Node.DOCUMENT_NODE : break; default: break;"
+      },
+      {
+        "txt": "return buffer.toString(); } private int getRelativePositionByQName() { int count = 1; Node n = node.getPreviousSibling(); while (n != null) { <extra_id_0> count++; } } n = n.getPreviousSibling(); } return count;"
+      },
+      {
+        "txt": "} return count; } private int getRelativePositionOfElement() { int count = 1; Node n = node.getPreviousSibling(); while (n != null) { if (n.getNodeType() == Node.ELEMENT_NODE) { count++; }"
+      },
+      {
+        "txt": "n = n.getPreviousSibling(); } return count; } private int getRelativePositionOfTextNode() { int count = 1; Node n = node.getPreviousSibling(); while (n != null) { if (n.getNodeType() == Node.TEXT_NODE || n.getNodeType() == Node.CDATA_SECTION_NODE) {"
+      },
+      {
+        "txt": "count++; } n = n.getPreviousSibling(); } return count; } private int getRelativePositionOfPI() { int count = 1; String target = ((ProcessingInstruction) node).getTarget(); Node n = node.getPreviousSibling();"
+      },
+      {
+        "txt": "while (n != null) { if (n.getNodeType() == Node.PROCESSING_INSTRUCTION_NODE && ((ProcessingInstruction) n).getTarget().equals(target)) { count++; } n = n.getPreviousSibling(); } return count; } public int hashCode() {"
+      },
+      {
+        "txt": "return node.hashCode(); } public boolean equals(Object object) { return object == this || object instanceof DOMNodePointer && node == ((DOMNodePointer) object).node; } public static String getPrefix(Node node) { String prefix = node.getPrefix(); if (prefix != null) { return prefix; }"
+      },
+      {
+        "txt": "String name = node.getNodeName(); int index = name.lastIndexOf(':'); return index < 0 ? null : name.substring(0, index); } public static String getLocalName(Node node) { String localName = node.getLocalName(); if (localName != null) { return localName; } String name = node.getNodeName();"
+      },
+      {
+        "txt": "int index = name.lastIndexOf(':'); return index < 0 ? name : name.substring(index + 1); } public static String getNamespaceURI(Node node) { if (node instanceof Document) { node = ((Document) node).getDocumentElement(); } Element element = (Element) node; String uri = element.getNamespaceURI(); if (uri != null) {"
+      },
+      {
+        "txt": "return uri; } String prefix = getPrefix(node); String qname = prefix == null ? \"xmlns\" : \"xmlns:\" + prefix; Node aNode = node; while (aNode != null) { if (aNode.getNodeType() == Node.ELEMENT_NODE) { Attr attr = ((Element) aNode).getAttributeNode(qname); if (attr != null) { return attr.getValue();"
+      },
+      {
+        "txt": "} } aNode = aNode.getParentNode(); } return null; } public Object getValue() { if (node.getNodeType() == Node.COMMENT_NODE) { String text = ((Comment) node).getData(); return text == null ? \"\" : text.trim();"
+      },
+      {
+        "txt": "} return stringValue(node); } private String stringValue(Node node) { int nodeType = node.getNodeType(); if (nodeType == Node.COMMENT_NODE) { return \"\"; } boolean trim = !\"preserve\".equals(findEnclosingAttribute(node, \"xml:space\")); if (nodeType == Node.TEXT_NODE || nodeType == Node.CDATA_SECTION_NODE) {"
+      },
+      {
+        "txt": "String text = node.getNodeValue(); return text == null ? \"\" : trim ? text.trim() : text; } if (nodeType == Node.PROCESSING_INSTRUCTION_NODE) { String text = ((ProcessingInstruction) node).getData(); return text == null ? \"\" : trim ? text.trim() : text; } NodeList list = node.getChildNodes(); StringBuffer buf = new StringBuffer(); for (int i = 0; i < list.getLength(); i++) {"
+      },
+      {
+        "txt": "Node child = list.item(i); buf.append(stringValue(child)); } return buf.toString(); } public Pointer getPointerByID(JXPathContext context, String id) { Document document = node.getNodeType() == Node.DOCUMENT_NODE ? (Document) node : node.getOwnerDocument(); Element element = document.getElementById(id); return element == null ? (Pointer) new NullPointer(getLocale(), id)"
+      },
+      {
+        "txt": ": new DOMNodePointer(element, getLocale(), id); } public int compareChildNodePointers(NodePointer pointer1, NodePointer pointer2) { Node node1 = (Node) pointer1.getBaseValue(); Node node2 = (Node) pointer2.getBaseValue(); if (node1 == node2) { return 0; } int t1 = node1.getNodeType();"
+      },
+      {
+        "txt": "int t2 = node2.getNodeType(); if (t1 == Node.ATTRIBUTE_NODE && t2 != Node.ATTRIBUTE_NODE) { return -1; } if (t1 != Node.ATTRIBUTE_NODE && t2 == Node.ATTRIBUTE_NODE) { return 1; } if (t1 == Node.ATTRIBUTE_NODE && t2 == Node.ATTRIBUTE_NODE) { NamedNodeMap map = ((Node) getNode()).getAttributes(); int length = map.getLength();"
+      },
+      {
+        "txt": "for (int i = 0; i < length; i++) { Node n = map.item(i); if (n == node1) { return -1; } if (n == node2) { return 1; } } return 0; // Should not happen"
+      },
+      {
+        "txt": "} Node current = node.getFirstChild(); while (current != null) { if (current == node1) { return -1; } if (current == node2) { return 1; } current = current.getNextSibling();"
+      },
+      {
+        "txt": "} return 0; }"
+      }
+    ]
+  },
+  {
+    "id": 2268,
+    "file_path": "src/java/org/apache/commons/jxpath/ri/model/dom/DOMNodePointer.java",
+    "start-bug-line": 564,
+    "end-bug-line": 564,
+    "bug": "}",
+    "fix": "[Delete]",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.jxpath.ri.model.dom; import java.util.HashMap; import java.util.Locale; import java.util.Map; import org.apache.commons.jxpath.JXPathAbstractFactoryException; import org.apache.commons.jxpath.JXPathContext; import org.apache.commons.jxpath.JXPathException; import org.apache.commons.jxpath.Pointer; import org.apache.commons.jxpath.ri.Compiler; import org.apache.commons.jxpath.ri.NamespaceResolver;"
+      },
+      {
+        "txt": "import org.apache.commons.jxpath.ri.QName; import org.apache.commons.jxpath.ri.compiler.NodeNameTest; import org.apache.commons.jxpath.ri.compiler.NodeTest; import org.apache.commons.jxpath.ri.compiler.NodeTypeTest; import org.apache.commons.jxpath.ri.compiler.ProcessingInstructionTest; import org.apache.commons.jxpath.ri.model.NodeIterator; import org.apache.commons.jxpath.ri.model.NodePointer; import org.apache.commons.jxpath.ri.model.beans.NullPointer; import org.apache.commons.jxpath.util.TypeUtils; import org.w3c.dom.Attr;"
+      },
+      {
+        "txt": "import org.w3c.dom.Comment; import org.w3c.dom.Document; import org.w3c.dom.Element; import org.w3c.dom.NamedNodeMap; import org.w3c.dom.Node; import org.w3c.dom.NodeList; import org.w3c.dom.ProcessingInstruction; public class DOMNodePointer extends NodePointer { private static final long serialVersionUID = -8751046933894857319L; private Node node;"
+      },
+      {
+        "txt": "private Map namespaces; private String defaultNamespace; private String id; private NamespaceResolver localNamespaceResolver; public static final String XML_NAMESPACE_URI = \"http://www.w3.org/XML/1998/namespace\"; public static final String XMLNS_NAMESPACE_URI = \"http://www.w3.org/2000/xmlns/\"; public DOMNodePointer(Node node, Locale locale) { super(null, locale);"
+      },
+      {
+        "txt": "this.node = node; } public DOMNodePointer(Node node, Locale locale, String id) { super(null, locale); this.node = node; this.id = id; } public DOMNodePointer(NodePointer parent, Node node) { super(parent); this.node = node;"
+      },
+      {
+        "txt": "} public boolean testNode(NodeTest test) { return testNode(node, test); } public static boolean testNode(Node node, NodeTest test) { if (test == null) { return true; } if (test instanceof NodeNameTest) { if (node.getNodeType() != Node.ELEMENT_NODE) {"
+      },
+      {
+        "txt": "return false; } NodeNameTest nodeNameTest = (NodeNameTest) test; QName testName = nodeNameTest.getNodeName(); String namespaceURI = nodeNameTest.getNamespaceURI(); boolean wildcard = nodeNameTest.isWildcard(); String testPrefix = testName.getPrefix(); if (wildcard && testPrefix == null) { return true; }"
+      },
+      {
+        "txt": "if (wildcard || testName.getName() .equals(DOMNodePointer.getLocalName(node))) { String nodeNS = DOMNodePointer.getNamespaceURI(node); return equalStrings(namespaceURI, nodeNS) || nodeNS == null && equalStrings(testPrefix, getPrefix(node)); } return false; } if (test instanceof NodeTypeTest) {"
+      },
+      {
+        "txt": "int nodeType = node.getNodeType(); switch (((NodeTypeTest) test).getNodeType()) { case Compiler.NODE_TYPE_NODE : return true; case Compiler.NODE_TYPE_TEXT : return nodeType == Node.CDATA_SECTION_NODE || nodeType == Node.TEXT_NODE; case Compiler.NODE_TYPE_COMMENT : return nodeType == Node.COMMENT_NODE; case Compiler.NODE_TYPE_PI :"
+      },
+      {
+        "txt": "return nodeType == Node.PROCESSING_INSTRUCTION_NODE; default: return false; } } if (test instanceof ProcessingInstructionTest && node.getNodeType() == Node.PROCESSING_INSTRUCTION_NODE) { String testPI = ((ProcessingInstructionTest) test).getTarget(); String nodePI = ((ProcessingInstruction) node).getTarget(); return testPI.equals(nodePI);"
+      },
+      {
+        "txt": "} return false; } private static boolean equalStrings(String s1, String s2) { if (s1 == s2) { return true; } s1 = s1 == null ? \"\" : s1.trim(); s2 = s2 == null ? \"\" : s2.trim(); return s1.equals(s2);"
+      },
+      {
+        "txt": "} public QName getName() { String ln = null; String ns = null; int type = node.getNodeType(); if (type == Node.ELEMENT_NODE) { ns = DOMNodePointer.getPrefix(node); ln = DOMNodePointer.getLocalName(node); } else if (type == Node.PROCESSING_INSTRUCTION_NODE) {"
+      },
+      {
+        "txt": "ln = ((ProcessingInstruction) node).getTarget(); } return new QName(ns, ln); } public String getNamespaceURI() { return getNamespaceURI(node); } public NodeIterator childIterator(NodeTest test, boolean reverse, NodePointer startWith) { return new DOMNodeIterator(this, test, reverse, startWith);"
+      },
+      {
+        "txt": "} public NodeIterator attributeIterator(QName name) { return new DOMAttributeIterator(this, name); } public NodePointer namespacePointer(String prefix) { return new NamespacePointer(this, prefix); } public NodeIterator namespaceIterator() { return new DOMNamespaceIterator(this); }"
+      },
+      {
+        "txt": "public synchronized NamespaceResolver getNamespaceResolver() { if (localNamespaceResolver == null) { localNamespaceResolver = new NamespaceResolver(super.getNamespaceResolver()); localNamespaceResolver.setNamespaceContextPointer(this); } return localNamespaceResolver; } public String getNamespaceURI(String prefix) { if (prefix == null || prefix.equals(\"\")) { return getDefaultNamespaceURI();"
+      },
+      {
+        "txt": "} if (prefix.equals(\"xml\")) { return XML_NAMESPACE_URI; } if (prefix.equals(\"xmlns\")) { return XMLNS_NAMESPACE_URI; } String namespace = null; if (namespaces == null) { namespaces = new HashMap();"
+      },
+      {
+        "txt": "} else { namespace = (String) namespaces.get(prefix); } if (namespace == null) { String qname = \"xmlns:\" + prefix; Node aNode = node; if (aNode instanceof Document) { aNode = ((Document) aNode).getDocumentElement(); }"
+      },
+      {
+        "txt": "while (aNode != null) { if (aNode.getNodeType() == Node.ELEMENT_NODE) { Attr attr = ((Element) aNode).getAttributeNode(qname); if (attr != null) { namespace = attr.getValue(); break; } } aNode = aNode.getParentNode(); }"
+      },
+      {
+        "txt": "if (namespace == null || namespace.equals(\"\")) { namespace = NodePointer.UNKNOWN_NAMESPACE; } } namespaces.put(prefix, namespace); if (namespace == UNKNOWN_NAMESPACE) { return null; } return namespace; }"
+      },
+      {
+        "txt": "public String getDefaultNamespaceURI() { if (defaultNamespace == null) { Node aNode = node; if (aNode instanceof Document) { aNode = ((Document) aNode).getDocumentElement(); } while (aNode != null) { if (aNode.getNodeType() == Node.ELEMENT_NODE) { Attr attr = ((Element) aNode).getAttributeNode(\"xmlns\"); if (attr != null) {"
+      },
+      {
+        "txt": "defaultNamespace = attr.getValue(); break; } } aNode = aNode.getParentNode(); } } if (defaultNamespace == null) { defaultNamespace = \"\"; }"
+      },
+      {
+        "txt": "return defaultNamespace.equals(\"\") ? null : defaultNamespace; } public Object getBaseValue() { return node; } public Object getImmediateNode() { return node; } public boolean isActual() { return true;"
+      },
+      {
+        "txt": "} public boolean isCollection() { return false; } public int getLength() { return 1; } public boolean isLeaf() { return !node.hasChildNodes(); }"
+      },
+      {
+        "txt": "public boolean isLanguage(String lang) { String current = getLanguage(); return current == null ? super.isLanguage(lang) : current.toUpperCase(Locale.ENGLISH).startsWith(lang.toUpperCase(Locale.ENGLISH)); } protected static String findEnclosingAttribute(Node n, String attrName) { while (n != null) { if (n.getNodeType() == Node.ELEMENT_NODE) { Element e = (Element) n; String attr = e.getAttribute(attrName);"
+      },
+      {
+        "txt": "if (attr != null && !attr.equals(\"\")) { return attr; } } n = n.getParentNode(); } return null; } protected String getLanguage() { return findEnclosingAttribute(node, \"xml:lang\");"
+      },
+      {
+        "txt": "} public void setValue(Object value) { if (node.getNodeType() == Node.TEXT_NODE || node.getNodeType() == Node.CDATA_SECTION_NODE) { String string = (String) TypeUtils.convert(value, String.class); if (string != null && !string.equals(\"\")) { node.setNodeValue(string); } else { node.getParentNode().removeChild(node);"
+      },
+      {
+        "txt": "} } else { NodeList children = node.getChildNodes(); int count = children.getLength(); for (int i = count; --i >= 0;) { Node child = children.item(i); node.removeChild(child); } if (value instanceof Node) {"
+      },
+      {
+        "txt": "Node valueNode = (Node) value; if (valueNode instanceof Element || valueNode instanceof Document) { children = valueNode.getChildNodes(); for (int i = 0; i < children.getLength(); i++) { Node child = children.item(i); node.appendChild(child.cloneNode(true)); } } else {"
+      },
+      {
+        "txt": "node.appendChild(valueNode.cloneNode(true)); } } else { String string = (String) TypeUtils.convert(value, String.class); if (string != null && !string.equals(\"\")) { Node textNode = node.getOwnerDocument().createTextNode(string); node.appendChild(textNode); }"
+      },
+      {
+        "txt": "} } } public NodePointer createChild(JXPathContext context, QName name, int index) { if (index == WHOLE_COLLECTION) { index = 0; } boolean success = getAbstractFactory(context).createObject( context,"
+      },
+      {
+        "txt": "this, node, name.toString(), index); if (success) { NodeTest nodeTest; String prefix = name.getPrefix(); String namespaceURI = prefix == null ? null : context .getNamespaceURI(prefix); nodeTest = new NodeNameTest(name, namespaceURI);"
+      },
+      {
+        "txt": "NodeIterator it = childIterator(nodeTest, false, null); if (it != null && it.setPosition(index + 1)) { return it.getNodePointer(); } } throw new JXPathAbstractFactoryException( \"Factory could not create a child node for path: \" + asPath() + \"/\" + name + \"[\" + (index + 1) + \"]\"); } public NodePointer createChild(JXPathContext context, QName name,"
+      },
+      {
+        "txt": "int index, Object value) { NodePointer ptr = createChild(context, name, index); ptr.setValue(value); return ptr; } public NodePointer createAttribute(JXPathContext context, QName name) { if (!(node instanceof Element)) { return super.createAttribute(context, name); } Element element = (Element) node;"
+      },
+      {
+        "txt": "String prefix = name.getPrefix(); if (prefix != null) { String ns = null; NamespaceResolver nsr = getNamespaceResolver(); if (nsr != null) { ns = nsr.getNamespaceURI(prefix); } if (ns == null) { throw new JXPathException( \"Unknown namespace prefix: \" + prefix);"
+      },
+      {
+        "txt": "} element.setAttributeNS(ns, name.toString(), \"\"); } else { if (!element.hasAttribute(name.getName())) { element.setAttribute(name.getName(), \"\"); } } NodeIterator it = attributeIterator(name); it.setPosition(1);"
+      },
+      {
+        "txt": "return it.getNodePointer(); } public void remove() { Node parent = node.getParentNode(); if (parent == null) { throw new JXPathException(\"Cannot remove root DOM node\"); } parent.removeChild(node); } public String asPath() {"
+      },
+      {
+        "txt": "if (id != null) { return \"id('\" + escape(id) + \"')\"; } StringBuffer buffer = new StringBuffer(); if (parent != null) { buffer.append(parent.asPath()); } switch (node.getNodeType()) { case Node.ELEMENT_NODE : if (parent instanceof DOMNodePointer) {"
+      },
+      {
+        "txt": "if (buffer.length() == 0 || buffer.charAt(buffer.length() - 1) != '/') { buffer.append('/'); } String ln = DOMNodePointer.getLocalName(node); String nsURI = getNamespaceURI(); if (nsURI == null) { buffer.append(ln); buffer.append('['); buffer.append(getRelativePositionByQName()).append(']');"
+      },
+      {
+        "txt": "} else { String prefix = getNamespaceResolver().getPrefix(nsURI); if (prefix != null) { buffer.append(prefix); buffer.append(':'); buffer.append(ln); buffer.append('['); buffer.append(getRelativePositionByQName()); buffer.append(']');"
+      },
+      {
+        "txt": "} else { buffer.append(\"node()\"); buffer.append('['); buffer.append(getRelativePositionOfElement()); buffer.append(']'); } } } break;"
+      },
+      {
+        "txt": "case Node.TEXT_NODE : case Node.CDATA_SECTION_NODE : buffer.append(\"/text()\"); buffer.append('['); buffer.append(getRelativePositionOfTextNode()).append(']'); break; case Node.PROCESSING_INSTRUCTION_NODE : buffer.append(\"/processing-instruction(\\'\"); buffer.append(((ProcessingInstruction) node).getTarget()).append(\"')\"); buffer.append('[');"
+      },
+      {
+        "txt": "buffer.append(getRelativePositionOfPI()).append(']'); break; case Node.DOCUMENT_NODE : break; default: break; } return buffer.toString(); } private int getRelativePositionByQName() {"
+      },
+      {
+        "txt": "Node n = node.getPreviousSibling(); while (n != null) { if (n.getNodeType() == Node.ELEMENT_NODE) { String nm = n.getNodeName(); if (nm.equals(node.getNodeName())) { count++; <extra_id_0> } n = n.getPreviousSibling(); } return count; } private int getRelativePositionOfElement() {"
+      },
+      {
+        "txt": "} private int getRelativePositionOfElement() { int count = 1; Node n = node.getPreviousSibling(); while (n != null) { if (n.getNodeType() == Node.ELEMENT_NODE) { count++; } n = n.getPreviousSibling(); }"
+      },
+      {
+        "txt": "return count; } private int getRelativePositionOfTextNode() { int count = 1; Node n = node.getPreviousSibling(); while (n != null) { if (n.getNodeType() == Node.TEXT_NODE || n.getNodeType() == Node.CDATA_SECTION_NODE) { count++; }"
+      },
+      {
+        "txt": "n = n.getPreviousSibling(); } return count; } private int getRelativePositionOfPI() { int count = 1; String target = ((ProcessingInstruction) node).getTarget(); Node n = node.getPreviousSibling(); while (n != null) { if (n.getNodeType() == Node.PROCESSING_INSTRUCTION_NODE"
+      },
+      {
+        "txt": "&& ((ProcessingInstruction) n).getTarget().equals(target)) { count++; } n = n.getPreviousSibling(); } return count; } public int hashCode() { return node.hashCode(); }"
+      },
+      {
+        "txt": "public boolean equals(Object object) { return object == this || object instanceof DOMNodePointer && node == ((DOMNodePointer) object).node; } public static String getPrefix(Node node) { String prefix = node.getPrefix(); if (prefix != null) { return prefix; } String name = node.getNodeName(); int index = name.lastIndexOf(':');"
+      },
+      {
+        "txt": "return index < 0 ? null : name.substring(0, index); } public static String getLocalName(Node node) { String localName = node.getLocalName(); if (localName != null) { return localName; } String name = node.getNodeName(); int index = name.lastIndexOf(':'); return index < 0 ? name : name.substring(index + 1);"
+      },
+      {
+        "txt": "} public static String getNamespaceURI(Node node) { if (node instanceof Document) { node = ((Document) node).getDocumentElement(); } Element element = (Element) node; String uri = element.getNamespaceURI(); if (uri != null) { return uri; }"
+      },
+      {
+        "txt": "String prefix = getPrefix(node); String qname = prefix == null ? \"xmlns\" : \"xmlns:\" + prefix; Node aNode = node; while (aNode != null) { if (aNode.getNodeType() == Node.ELEMENT_NODE) { Attr attr = ((Element) aNode).getAttributeNode(qname); if (attr != null) { return attr.getValue(); } }"
+      },
+      {
+        "txt": "aNode = aNode.getParentNode(); } return null; } public Object getValue() { if (node.getNodeType() == Node.COMMENT_NODE) { String text = ((Comment) node).getData(); return text == null ? \"\" : text.trim(); } return stringValue(node);"
+      },
+      {
+        "txt": "} private String stringValue(Node node) { int nodeType = node.getNodeType(); if (nodeType == Node.COMMENT_NODE) { return \"\"; } boolean trim = !\"preserve\".equals(findEnclosingAttribute(node, \"xml:space\")); if (nodeType == Node.TEXT_NODE || nodeType == Node.CDATA_SECTION_NODE) { String text = node.getNodeValue(); return text == null ? \"\" : trim ? text.trim() : text;"
+      },
+      {
+        "txt": "} if (nodeType == Node.PROCESSING_INSTRUCTION_NODE) { String text = ((ProcessingInstruction) node).getData(); return text == null ? \"\" : trim ? text.trim() : text; } NodeList list = node.getChildNodes(); StringBuffer buf = new StringBuffer(); for (int i = 0; i < list.getLength(); i++) { Node child = list.item(i); buf.append(stringValue(child));"
+      },
+      {
+        "txt": "} return buf.toString(); } public Pointer getPointerByID(JXPathContext context, String id) { Document document = node.getNodeType() == Node.DOCUMENT_NODE ? (Document) node : node.getOwnerDocument(); Element element = document.getElementById(id); return element == null ? (Pointer) new NullPointer(getLocale(), id) : new DOMNodePointer(element, getLocale(), id); }"
+      },
+      {
+        "txt": "public int compareChildNodePointers(NodePointer pointer1, NodePointer pointer2) { Node node1 = (Node) pointer1.getBaseValue(); Node node2 = (Node) pointer2.getBaseValue(); if (node1 == node2) { return 0; } int t1 = node1.getNodeType(); int t2 = node2.getNodeType(); if (t1 == Node.ATTRIBUTE_NODE && t2 != Node.ATTRIBUTE_NODE) {"
+      },
+      {
+        "txt": "return -1; } if (t1 != Node.ATTRIBUTE_NODE && t2 == Node.ATTRIBUTE_NODE) { return 1; } if (t1 == Node.ATTRIBUTE_NODE && t2 == Node.ATTRIBUTE_NODE) { NamedNodeMap map = ((Node) getNode()).getAttributes(); int length = map.getLength(); for (int i = 0; i < length; i++) { Node n = map.item(i);"
+      },
+      {
+        "txt": "if (n == node1) { return -1; } if (n == node2) { return 1; } } return 0; // Should not happen } Node current = node.getFirstChild();"
+      },
+      {
+        "txt": "while (current != null) { if (current == node1) { return -1; } if (current == node2) { return 1; } current = current.getNextSibling(); } return 0;"
+      }
+    ]
+  },
+  {
+    "id": 2269,
+    "file_path": "src/java/org/apache/commons/jxpath/ri/model/dom/DOMNodePointer.java",
+    "start-bug-line": 571,
+    "end-bug-line": 571,
+    "bug": "",
+    "fix": "private boolean matchesQName(Node n) { if (getNamespaceURI() != null) { return equalStrings(getNamespaceURI(n), getNamespaceURI()) && equalStrings(node.getLocalName(), n.getLocalName()); } return equalStrings(node.getNodeName(), n.getNodeName()); }",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.jxpath.ri.model.dom; import java.util.HashMap; import java.util.Locale; import java.util.Map; import org.apache.commons.jxpath.JXPathAbstractFactoryException; import org.apache.commons.jxpath.JXPathContext;"
+      },
+      {
+        "txt": "import org.apache.commons.jxpath.JXPathException; import org.apache.commons.jxpath.Pointer; import org.apache.commons.jxpath.ri.Compiler; import org.apache.commons.jxpath.ri.NamespaceResolver; import org.apache.commons.jxpath.ri.QName; import org.apache.commons.jxpath.ri.compiler.NodeNameTest; import org.apache.commons.jxpath.ri.compiler.NodeTest; import org.apache.commons.jxpath.ri.compiler.NodeTypeTest; import org.apache.commons.jxpath.ri.compiler.ProcessingInstructionTest; import org.apache.commons.jxpath.ri.model.NodeIterator;"
+      },
+      {
+        "txt": "import org.apache.commons.jxpath.ri.model.NodePointer; import org.apache.commons.jxpath.ri.model.beans.NullPointer; import org.apache.commons.jxpath.util.TypeUtils; import org.w3c.dom.Attr; import org.w3c.dom.Comment; import org.w3c.dom.Document; import org.w3c.dom.Element; import org.w3c.dom.NamedNodeMap; import org.w3c.dom.Node; import org.w3c.dom.NodeList;"
+      },
+      {
+        "txt": "import org.w3c.dom.ProcessingInstruction; public class DOMNodePointer extends NodePointer { private static final long serialVersionUID = -8751046933894857319L; private Node node; private Map namespaces; private String defaultNamespace; private String id; private NamespaceResolver localNamespaceResolver; public static final String XML_NAMESPACE_URI = \"http://www.w3.org/XML/1998/namespace\";"
+      },
+      {
+        "txt": "public static final String XMLNS_NAMESPACE_URI = \"http://www.w3.org/2000/xmlns/\"; public DOMNodePointer(Node node, Locale locale) { super(null, locale); this.node = node; } public DOMNodePointer(Node node, Locale locale, String id) { super(null, locale); this.node = node; this.id = id;"
+      },
+      {
+        "txt": "} public DOMNodePointer(NodePointer parent, Node node) { super(parent); this.node = node; } public boolean testNode(NodeTest test) { return testNode(node, test); } public static boolean testNode(Node node, NodeTest test) { if (test == null) {"
+      },
+      {
+        "txt": "return true; } if (test instanceof NodeNameTest) { if (node.getNodeType() != Node.ELEMENT_NODE) { return false; } NodeNameTest nodeNameTest = (NodeNameTest) test; QName testName = nodeNameTest.getNodeName(); String namespaceURI = nodeNameTest.getNamespaceURI(); boolean wildcard = nodeNameTest.isWildcard();"
+      },
+      {
+        "txt": "String testPrefix = testName.getPrefix(); if (wildcard && testPrefix == null) { return true; } if (wildcard || testName.getName() .equals(DOMNodePointer.getLocalName(node))) { String nodeNS = DOMNodePointer.getNamespaceURI(node); return equalStrings(namespaceURI, nodeNS) || nodeNS == null && equalStrings(testPrefix, getPrefix(node));"
+      },
+      {
+        "txt": "} return false; } if (test instanceof NodeTypeTest) { int nodeType = node.getNodeType(); switch (((NodeTypeTest) test).getNodeType()) { case Compiler.NODE_TYPE_NODE : return true; case Compiler.NODE_TYPE_TEXT : return nodeType == Node.CDATA_SECTION_NODE"
+      },
+      {
+        "txt": "|| nodeType == Node.TEXT_NODE; case Compiler.NODE_TYPE_COMMENT : return nodeType == Node.COMMENT_NODE; case Compiler.NODE_TYPE_PI : return nodeType == Node.PROCESSING_INSTRUCTION_NODE; default: return false; } } if (test instanceof ProcessingInstructionTest"
+      },
+      {
+        "txt": "&& node.getNodeType() == Node.PROCESSING_INSTRUCTION_NODE) { String testPI = ((ProcessingInstructionTest) test).getTarget(); String nodePI = ((ProcessingInstruction) node).getTarget(); return testPI.equals(nodePI); } return false; } private static boolean equalStrings(String s1, String s2) { if (s1 == s2) { return true;"
+      },
+      {
+        "txt": "} s1 = s1 == null ? \"\" : s1.trim(); s2 = s2 == null ? \"\" : s2.trim(); return s1.equals(s2); } public QName getName() { String ln = null; String ns = null; int type = node.getNodeType(); if (type == Node.ELEMENT_NODE) {"
+      },
+      {
+        "txt": "ns = DOMNodePointer.getPrefix(node); ln = DOMNodePointer.getLocalName(node); } else if (type == Node.PROCESSING_INSTRUCTION_NODE) { ln = ((ProcessingInstruction) node).getTarget(); } return new QName(ns, ln); } public String getNamespaceURI() { return getNamespaceURI(node);"
+      },
+      {
+        "txt": "} public NodeIterator childIterator(NodeTest test, boolean reverse, NodePointer startWith) { return new DOMNodeIterator(this, test, reverse, startWith); } public NodeIterator attributeIterator(QName name) { return new DOMAttributeIterator(this, name); } public NodePointer namespacePointer(String prefix) { return new NamespacePointer(this, prefix);"
+      },
+      {
+        "txt": "} public NodeIterator namespaceIterator() { return new DOMNamespaceIterator(this); } public synchronized NamespaceResolver getNamespaceResolver() { if (localNamespaceResolver == null) { localNamespaceResolver = new NamespaceResolver(super.getNamespaceResolver()); localNamespaceResolver.setNamespaceContextPointer(this); } return localNamespaceResolver;"
+      },
+      {
+        "txt": "} public String getNamespaceURI(String prefix) { if (prefix == null || prefix.equals(\"\")) { return getDefaultNamespaceURI(); } if (prefix.equals(\"xml\")) { return XML_NAMESPACE_URI; } if (prefix.equals(\"xmlns\")) { return XMLNS_NAMESPACE_URI;"
+      },
+      {
+        "txt": "} String namespace = null; if (namespaces == null) { namespaces = new HashMap(); } else { namespace = (String) namespaces.get(prefix); } if (namespace == null) { String qname = \"xmlns:\" + prefix;"
+      },
+      {
+        "txt": "Node aNode = node; if (aNode instanceof Document) { aNode = ((Document) aNode).getDocumentElement(); } while (aNode != null) { if (aNode.getNodeType() == Node.ELEMENT_NODE) { Attr attr = ((Element) aNode).getAttributeNode(qname); if (attr != null) { namespace = attr.getValue(); break;"
+      },
+      {
+        "txt": "} } aNode = aNode.getParentNode(); } if (namespace == null || namespace.equals(\"\")) { namespace = NodePointer.UNKNOWN_NAMESPACE; } } namespaces.put(prefix, namespace); if (namespace == UNKNOWN_NAMESPACE) {"
+      },
+      {
+        "txt": "return null; } return namespace; } public String getDefaultNamespaceURI() { if (defaultNamespace == null) { Node aNode = node; if (aNode instanceof Document) { aNode = ((Document) aNode).getDocumentElement(); }"
+      },
+      {
+        "txt": "while (aNode != null) { if (aNode.getNodeType() == Node.ELEMENT_NODE) { Attr attr = ((Element) aNode).getAttributeNode(\"xmlns\"); if (attr != null) { defaultNamespace = attr.getValue(); break; } } aNode = aNode.getParentNode(); }"
+      },
+      {
+        "txt": "} if (defaultNamespace == null) { defaultNamespace = \"\"; } return defaultNamespace.equals(\"\") ? null : defaultNamespace; } public Object getBaseValue() { return node; } public Object getImmediateNode() {"
+      },
+      {
+        "txt": "return node; } public boolean isActual() { return true; } public boolean isCollection() { return false; } public int getLength() { return 1;"
+      },
+      {
+        "txt": "} public boolean isLeaf() { return !node.hasChildNodes(); } public boolean isLanguage(String lang) { String current = getLanguage(); return current == null ? super.isLanguage(lang) : current.toUpperCase(Locale.ENGLISH).startsWith(lang.toUpperCase(Locale.ENGLISH)); } protected static String findEnclosingAttribute(Node n, String attrName) {"
+      },
+      {
+        "txt": "while (n != null) { if (n.getNodeType() == Node.ELEMENT_NODE) { Element e = (Element) n; String attr = e.getAttribute(attrName); if (attr != null && !attr.equals(\"\")) { return attr; } } n = n.getParentNode(); }"
+      },
+      {
+        "txt": "return null; } protected String getLanguage() { return findEnclosingAttribute(node, \"xml:lang\"); } public void setValue(Object value) { if (node.getNodeType() == Node.TEXT_NODE || node.getNodeType() == Node.CDATA_SECTION_NODE) { String string = (String) TypeUtils.convert(value, String.class); if (string != null && !string.equals(\"\")) {"
+      },
+      {
+        "txt": "node.setNodeValue(string); } else { node.getParentNode().removeChild(node); } } else { NodeList children = node.getChildNodes(); int count = children.getLength(); for (int i = count; --i >= 0;) {"
+      },
+      {
+        "txt": "Node child = children.item(i); node.removeChild(child); } if (value instanceof Node) { Node valueNode = (Node) value; if (valueNode instanceof Element || valueNode instanceof Document) { children = valueNode.getChildNodes(); for (int i = 0; i < children.getLength(); i++) { Node child = children.item(i);"
+      },
+      {
+        "txt": "node.appendChild(child.cloneNode(true)); } } else { node.appendChild(valueNode.cloneNode(true)); } } else { String string = (String) TypeUtils.convert(value, String.class); if (string != null && !string.equals(\"\")) {"
+      },
+      {
+        "txt": "Node textNode = node.getOwnerDocument().createTextNode(string); node.appendChild(textNode); } } } } public NodePointer createChild(JXPathContext context, QName name, int index) { if (index == WHOLE_COLLECTION) { index = 0;"
+      },
+      {
+        "txt": "} boolean success = getAbstractFactory(context).createObject( context, this, node, name.toString(), index); if (success) { NodeTest nodeTest;"
+      },
+      {
+        "txt": "String prefix = name.getPrefix(); String namespaceURI = prefix == null ? null : context .getNamespaceURI(prefix); nodeTest = new NodeNameTest(name, namespaceURI); NodeIterator it = childIterator(nodeTest, false, null); if (it != null && it.setPosition(index + 1)) { return it.getNodePointer(); } } throw new JXPathAbstractFactoryException("
+      },
+      {
+        "txt": "\"Factory could not create a child node for path: \" + asPath() + \"/\" + name + \"[\" + (index + 1) + \"]\"); } public NodePointer createChild(JXPathContext context, QName name, int index, Object value) { NodePointer ptr = createChild(context, name, index); ptr.setValue(value); return ptr; } public NodePointer createAttribute(JXPathContext context, QName name) {"
+      },
+      {
+        "txt": "if (!(node instanceof Element)) { return super.createAttribute(context, name); } Element element = (Element) node; String prefix = name.getPrefix(); if (prefix != null) { String ns = null; NamespaceResolver nsr = getNamespaceResolver(); if (nsr != null) { ns = nsr.getNamespaceURI(prefix);"
+      },
+      {
+        "txt": "} if (ns == null) { throw new JXPathException( \"Unknown namespace prefix: \" + prefix); } element.setAttributeNS(ns, name.toString(), \"\"); } else { if (!element.hasAttribute(name.getName())) { element.setAttribute(name.getName(), \"\");"
+      },
+      {
+        "txt": "} } NodeIterator it = attributeIterator(name); it.setPosition(1); return it.getNodePointer(); } public void remove() { Node parent = node.getParentNode(); if (parent == null) { throw new JXPathException(\"Cannot remove root DOM node\");"
+      },
+      {
+        "txt": "} parent.removeChild(node); } public String asPath() { if (id != null) { return \"id('\" + escape(id) + \"')\"; } StringBuffer buffer = new StringBuffer(); if (parent != null) { buffer.append(parent.asPath());"
+      },
+      {
+        "txt": "} switch (node.getNodeType()) { case Node.ELEMENT_NODE : if (parent instanceof DOMNodePointer) { if (buffer.length() == 0 || buffer.charAt(buffer.length() - 1) != '/') { buffer.append('/'); } String ln = DOMNodePointer.getLocalName(node); String nsURI = getNamespaceURI();"
+      },
+      {
+        "txt": "if (nsURI == null) { buffer.append(ln); buffer.append('['); buffer.append(getRelativePositionByQName()).append(']'); } else { String prefix = getNamespaceResolver().getPrefix(nsURI); if (prefix != null) { buffer.append(prefix); buffer.append(':');"
+      },
+      {
+        "txt": "buffer.append(ln); buffer.append('['); buffer.append(getRelativePositionByQName()); buffer.append(']'); } else { buffer.append(\"node()\"); buffer.append('['); buffer.append(getRelativePositionOfElement()); buffer.append(']');"
+      },
+      {
+        "txt": "} } } break; case Node.TEXT_NODE : case Node.CDATA_SECTION_NODE : buffer.append(\"/text()\"); buffer.append('['); buffer.append(getRelativePositionOfTextNode()).append(']'); break;"
+      },
+      {
+        "txt": "case Node.PROCESSING_INSTRUCTION_NODE : buffer.append(\"/processing-instruction(\\'\"); buffer.append(((ProcessingInstruction) node).getTarget()).append(\"')\"); buffer.append('['); buffer.append(getRelativePositionOfPI()).append(']'); break; case Node.DOCUMENT_NODE : break; default: break;"
+      },
+      {
+        "txt": "} return buffer.toString(); } private int getRelativePositionByQName() { int count = 1; Node n = node.getPreviousSibling(); while (n != null) { if (n.getNodeType() == Node.ELEMENT_NODE) { String nm = n.getNodeName(); if (nm.equals(node.getNodeName())) {"
+      },
+      {
+        "txt": "} } n = n.getPreviousSibling(); } return count; } <extra_id_0> private int getRelativePositionOfElement() { int count = 1; Node n = node.getPreviousSibling(); while (n != null) { if (n.getNodeType() == Node.ELEMENT_NODE) { count++;"
+      },
+      {
+        "txt": "if (n.getNodeType() == Node.ELEMENT_NODE) { count++; } n = n.getPreviousSibling(); } return count; } private int getRelativePositionOfTextNode() { int count = 1; Node n = node.getPreviousSibling();"
+      },
+      {
+        "txt": "while (n != null) { if (n.getNodeType() == Node.TEXT_NODE || n.getNodeType() == Node.CDATA_SECTION_NODE) { count++; } n = n.getPreviousSibling(); } return count; } private int getRelativePositionOfPI() {"
+      },
+      {
+        "txt": "int count = 1; String target = ((ProcessingInstruction) node).getTarget(); Node n = node.getPreviousSibling(); while (n != null) { if (n.getNodeType() == Node.PROCESSING_INSTRUCTION_NODE && ((ProcessingInstruction) n).getTarget().equals(target)) { count++; } n = n.getPreviousSibling(); }"
+      },
+      {
+        "txt": "return count; } public int hashCode() { return node.hashCode(); } public boolean equals(Object object) { return object == this || object instanceof DOMNodePointer && node == ((DOMNodePointer) object).node; } public static String getPrefix(Node node) { String prefix = node.getPrefix();"
+      },
+      {
+        "txt": "if (prefix != null) { return prefix; } String name = node.getNodeName(); int index = name.lastIndexOf(':'); return index < 0 ? null : name.substring(0, index); } public static String getLocalName(Node node) { String localName = node.getLocalName(); if (localName != null) {"
+      },
+      {
+        "txt": "return localName; } String name = node.getNodeName(); int index = name.lastIndexOf(':'); return index < 0 ? name : name.substring(index + 1); } public static String getNamespaceURI(Node node) { if (node instanceof Document) { node = ((Document) node).getDocumentElement(); }"
+      },
+      {
+        "txt": "Element element = (Element) node; String uri = element.getNamespaceURI(); if (uri != null) { return uri; } String prefix = getPrefix(node); String qname = prefix == null ? \"xmlns\" : \"xmlns:\" + prefix; Node aNode = node; while (aNode != null) { if (aNode.getNodeType() == Node.ELEMENT_NODE) {"
+      },
+      {
+        "txt": "Attr attr = ((Element) aNode).getAttributeNode(qname); if (attr != null) { return attr.getValue(); } } aNode = aNode.getParentNode(); } return null; } public Object getValue() {"
+      },
+      {
+        "txt": "if (node.getNodeType() == Node.COMMENT_NODE) { String text = ((Comment) node).getData(); return text == null ? \"\" : text.trim(); } return stringValue(node); } private String stringValue(Node node) { int nodeType = node.getNodeType(); if (nodeType == Node.COMMENT_NODE) { return \"\";"
+      },
+      {
+        "txt": "} boolean trim = !\"preserve\".equals(findEnclosingAttribute(node, \"xml:space\")); if (nodeType == Node.TEXT_NODE || nodeType == Node.CDATA_SECTION_NODE) { String text = node.getNodeValue(); return text == null ? \"\" : trim ? text.trim() : text; } if (nodeType == Node.PROCESSING_INSTRUCTION_NODE) { String text = ((ProcessingInstruction) node).getData(); return text == null ? \"\" : trim ? text.trim() : text; }"
+      },
+      {
+        "txt": "NodeList list = node.getChildNodes(); StringBuffer buf = new StringBuffer(); for (int i = 0; i < list.getLength(); i++) { Node child = list.item(i); buf.append(stringValue(child)); } return buf.toString(); } public Pointer getPointerByID(JXPathContext context, String id) { Document document = node.getNodeType() == Node.DOCUMENT_NODE ? (Document) node"
+      },
+      {
+        "txt": ": node.getOwnerDocument(); Element element = document.getElementById(id); return element == null ? (Pointer) new NullPointer(getLocale(), id) : new DOMNodePointer(element, getLocale(), id); } public int compareChildNodePointers(NodePointer pointer1, NodePointer pointer2) { Node node1 = (Node) pointer1.getBaseValue(); Node node2 = (Node) pointer2.getBaseValue(); if (node1 == node2) {"
+      },
+      {
+        "txt": "return 0; } int t1 = node1.getNodeType(); int t2 = node2.getNodeType(); if (t1 == Node.ATTRIBUTE_NODE && t2 != Node.ATTRIBUTE_NODE) { return -1; } if (t1 != Node.ATTRIBUTE_NODE && t2 == Node.ATTRIBUTE_NODE) { return 1; }"
+      },
+      {
+        "txt": "if (t1 == Node.ATTRIBUTE_NODE && t2 == Node.ATTRIBUTE_NODE) { NamedNodeMap map = ((Node) getNode()).getAttributes(); int length = map.getLength(); for (int i = 0; i < length; i++) { Node n = map.item(i); if (n == node1) { return -1; } if (n == node2) { return 1;"
+      },
+      {
+        "txt": "} } return 0; // Should not happen } Node current = node.getFirstChild(); while (current != null) { if (current == node1) { return -1; } if (current == node2) {"
+      },
+      {
+        "txt": "return 1; } current = current.getNextSibling(); } return 0; }"
+      }
+    ]
+  },
+  {
+    "id": 2270,
+    "file_path": "src/java/org/apache/commons/jxpath/ri/model/jdom/JDOMNodePointer.java",
+    "start-bug-line": 696,
+    "end-bug-line": 697,
+    "bug": "if ((child instanceof Element) && ((Element) child).getQualifiedName().equals(name)) {",
+    "fix": "if (child instanceof Element && matchesQName(((Element) child))) {",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.jxpath.ri.model.jdom; import java.util.List; import java.util.Locale; import org.apache.commons.jxpath.JXPathAbstractFactoryException; import org.apache.commons.jxpath.JXPathContext; import org.apache.commons.jxpath.JXPathException; import org.apache.commons.jxpath.ri.Compiler; import org.apache.commons.jxpath.ri.NamespaceResolver; import org.apache.commons.jxpath.ri.QName; import org.apache.commons.jxpath.ri.compiler.NodeNameTest;"
+      },
+      {
+        "txt": "import org.apache.commons.jxpath.ri.compiler.NodeTest; import org.apache.commons.jxpath.ri.compiler.NodeTypeTest; import org.apache.commons.jxpath.ri.compiler.ProcessingInstructionTest; import org.apache.commons.jxpath.ri.model.NodeIterator; import org.apache.commons.jxpath.ri.model.NodePointer; import org.apache.commons.jxpath.util.TypeUtils; import org.jdom.Attribute; import org.jdom.CDATA; import org.jdom.Comment; import org.jdom.Document;"
+      },
+      {
+        "txt": "import org.jdom.Element; import org.jdom.Namespace; import org.jdom.ProcessingInstruction; import org.jdom.Text; public class JDOMNodePointer extends NodePointer { private static final long serialVersionUID = -6346532297491082651L; private Object node; private String id; private NamespaceResolver localNamespaceResolver; public static final String XML_NAMESPACE_URI ="
+      },
+      {
+        "txt": "\"http://www.w3.org/XML/1998/namespace\"; public static final String XMLNS_NAMESPACE_URI = \"http://www.w3.org/2000/xmlns/\"; public JDOMNodePointer(Object node, Locale locale) { super(null, locale); this.node = node; } public JDOMNodePointer(Object node, Locale locale, String id) { super(null, locale); this.node = node;"
+      },
+      {
+        "txt": "this.id = id; } public JDOMNodePointer(NodePointer parent, Object node) { super(parent); this.node = node; } public NodeIterator childIterator( NodeTest test, boolean reverse, NodePointer startWith) {"
+      },
+      {
+        "txt": "return new JDOMNodeIterator(this, test, reverse, startWith); } public NodeIterator attributeIterator(QName name) { return new JDOMAttributeIterator(this, name); } public NodeIterator namespaceIterator() { return new JDOMNamespaceIterator(this); } public NodePointer namespacePointer(String prefix) { return new JDOMNamespacePointer(this, prefix);"
+      },
+      {
+        "txt": "} public String getNamespaceURI() { return getNamespaceURI(node); } private static String getNamespaceURI(Object node) { if (node instanceof Element) { Element element = (Element) node; String ns = element.getNamespaceURI(); if (ns != null && ns.equals(\"\")) { ns = null;"
+      },
+      {
+        "txt": "} return ns; } return null; } public synchronized NamespaceResolver getNamespaceResolver() { if (localNamespaceResolver == null) { localNamespaceResolver = new NamespaceResolver(super.getNamespaceResolver()); localNamespaceResolver.setNamespaceContextPointer(this); }"
+      },
+      {
+        "txt": "return localNamespaceResolver; } public String getNamespaceURI(String prefix) { if (prefix.equals(\"xml\")) { return Namespace.XML_NAMESPACE.getURI(); } Element element = null; if (node instanceof Document) { element = ((Document) node).getRootElement(); }"
+      },
+      {
+        "txt": "if (node instanceof Element) { element = (Element) node; } if (element == null) { return null; } Namespace ns = element.getNamespace(prefix); return ns == null ? null : ns.getURI(); } public int compareChildNodePointers("
+      },
+      {
+        "txt": "NodePointer pointer1, NodePointer pointer2) { Object node1 = pointer1.getBaseValue(); Object node2 = pointer2.getBaseValue(); if (node1 == node2) { return 0; } if ((node1 instanceof Attribute) && !(node2 instanceof Attribute)) { return -1; }"
+      },
+      {
+        "txt": "if ( !(node1 instanceof Attribute) && (node2 instanceof Attribute)) { return 1; } if ( (node1 instanceof Attribute) && (node2 instanceof Attribute)) { List list = ((Element) getNode()).getAttributes(); int length = list.size(); for (int i = 0; i < length; i++) { Object n = list.get(i);"
+      },
+      {
+        "txt": "if (n == node1) { return -1; } else if (n == node2) { return 1; } } return 0; // Should not happen } if (!(node instanceof Element)) {"
+      },
+      {
+        "txt": "throw new RuntimeException( \"JXPath internal error: \" + \"compareChildNodes called for \" + node); } List children = ((Element) node).getContent(); int length = children.size(); for (int i = 0; i < length; i++) { Object n = children.get(i); if (n == node1) {"
+      },
+      {
+        "txt": "return -1; } if (n == node2) { return 1; } } return 0; } public Object getBaseValue() { return node;"
+      },
+      {
+        "txt": "} public boolean isCollection() { return false; } public int getLength() { return 1; } public boolean isLeaf() { if (node instanceof Element) { return ((Element) node).getContent().size() == 0;"
+      },
+      {
+        "txt": "} if (node instanceof Document) { return ((Document) node).getContent().size() == 0; } return true; } public QName getName() { String ns = null; String ln = null; if (node instanceof Element) {"
+      },
+      {
+        "txt": "ns = ((Element) node).getNamespacePrefix(); if (ns != null && ns.equals(\"\")) { ns = null; } ln = ((Element) node).getName(); } else if (node instanceof ProcessingInstruction) { ln = ((ProcessingInstruction) node).getTarget(); } return new QName(ns, ln);"
+      },
+      {
+        "txt": "} public Object getImmediateNode() { return node; } public Object getValue() { if (node instanceof Element) { StringBuffer buf = new StringBuffer(); for (NodeIterator children = childIterator(null, false, null); children.setPosition(children.getPosition() + 1);) { NodePointer ptr = children.getNodePointer(); if (ptr.getImmediateNode() instanceof Element || ptr.getImmediateNode() instanceof Text) {"
+      },
+      {
+        "txt": "buf.append(ptr.getValue()); } } return buf.toString(); } if (node instanceof Comment) { String text = ((Comment) node).getText(); if (text != null) { text = text.trim(); }"
+      },
+      {
+        "txt": "return text; } String result = null; if (node instanceof Text) { result = ((Text) node).getText(); } if (node instanceof ProcessingInstruction) { result = ((ProcessingInstruction) node).getData(); } boolean trim = !\"preserve\".equals(findEnclosingAttribute(node, \"space\", Namespace.XML_NAMESPACE));"
+      },
+      {
+        "txt": "return result != null && trim ? result.trim() : result; } public void setValue(Object value) { if (node instanceof Text) { String string = (String) TypeUtils.convert(value, String.class); if (string != null && !string.equals(\"\")) { ((Text) node).setText(string); } else { nodeParent(node).removeContent((Text) node);"
+      },
+      {
+        "txt": "} } else { Element element = (Element) node; element.getContent().clear(); if (value instanceof Element) { Element valueElement = (Element) value; addContent(valueElement.getContent()); } else if (value instanceof Document) {"
+      },
+      {
+        "txt": "Document valueDocument = (Document) value; addContent(valueDocument.getContent()); } else if (value instanceof Text || value instanceof CDATA) { String string = ((Text) value).getText(); element.addContent(new Text(string)); } else if (value instanceof ProcessingInstruction) { ProcessingInstruction pi = (ProcessingInstruction) ((ProcessingInstruction) value)"
+      },
+      {
+        "txt": ".clone(); element.addContent(pi); } else if (value instanceof Comment) { Comment comment = (Comment) ((Comment) value).clone(); element.addContent(comment); } else { String string = (String) TypeUtils.convert(value, String.class); if (string != null && !string.equals(\"\")) {"
+      },
+      {
+        "txt": "element.addContent(new Text(string)); } } } } private void addContent(List content) { Element element = (Element) node; int count = content.size(); for (int i = 0; i < count; i++) { Object child = content.get(i);"
+      },
+      {
+        "txt": "if (child instanceof Element) { child = ((Element) child).clone(); element.addContent((Element) child); } else if (child instanceof Text) { child = ((Text) child).clone(); element.addContent((Text) child); } else if (node instanceof CDATA) { child = ((CDATA) child).clone();"
+      },
+      {
+        "txt": "element.addContent((CDATA) child); } else if (node instanceof ProcessingInstruction) { child = ((ProcessingInstruction) child).clone(); element.addContent((ProcessingInstruction) child); } else if (node instanceof Comment) { child = ((Comment) child).clone(); element.addContent((Comment) child); }"
+      },
+      {
+        "txt": "} } public boolean testNode(NodeTest test) { return testNode(this, node, test); } public static boolean testNode( NodePointer pointer, Object node, NodeTest test) { if (test == null) {"
+      },
+      {
+        "txt": "return true; } if (test instanceof NodeNameTest) { if (!(node instanceof Element)) { return false; } NodeNameTest nodeNameTest = (NodeNameTest) test; QName testName = nodeNameTest.getNodeName(); String namespaceURI = nodeNameTest.getNamespaceURI(); boolean wildcard = nodeNameTest.isWildcard();"
+      },
+      {
+        "txt": "String testPrefix = testName.getPrefix(); if (wildcard && testPrefix == null) { return true; } if (wildcard || testName.getName() .equals(JDOMNodePointer.getLocalName(node))) { String nodeNS = JDOMNodePointer.getNamespaceURI(node); return equalStrings(namespaceURI, nodeNS) || nodeNS == null && equalStrings(testPrefix, getPrefix(node));"
+      },
+      {
+        "txt": "} return false; } if (test instanceof NodeTypeTest) { switch (((NodeTypeTest) test).getNodeType()) { case Compiler.NODE_TYPE_NODE : return true; case Compiler.NODE_TYPE_TEXT : return (node instanceof Text) || (node instanceof CDATA); case Compiler.NODE_TYPE_COMMENT :"
+      },
+      {
+        "txt": "return node instanceof Comment; case Compiler.NODE_TYPE_PI : return node instanceof ProcessingInstruction; default: return false; } } if (test instanceof ProcessingInstructionTest && node instanceof ProcessingInstruction) { String testPI = ((ProcessingInstructionTest) test).getTarget(); String nodePI = ((ProcessingInstruction) node).getTarget();"
+      },
+      {
+        "txt": "return testPI.equals(nodePI); } return false; } private static boolean equalStrings(String s1, String s2) { if (s1 == s2) { return true; } s1 = s1 == null ? \"\" : s1.trim(); s2 = s2 == null ? \"\" : s2.trim();"
+      },
+      {
+        "txt": "return s1.equals(s2); } public static String getPrefix(Object node) { if (node instanceof Element) { String prefix = ((Element) node).getNamespacePrefix(); return (prefix == null || prefix.equals(\"\")) ? null : prefix; } if (node instanceof Attribute) { String prefix = ((Attribute) node).getNamespacePrefix(); return (prefix == null || prefix.equals(\"\")) ? null : prefix;"
+      },
+      {
+        "txt": "} return null; } public static String getLocalName(Object node) { if (node instanceof Element) { return ((Element) node).getName(); } if (node instanceof Attribute) { return ((Attribute) node).getName(); }"
+      },
+      {
+        "txt": "return null; } public boolean isLanguage(String lang) { String current = getLanguage(); return current == null ? super.isLanguage(lang) : current.toUpperCase( Locale.ENGLISH).startsWith(lang.toUpperCase(Locale.ENGLISH)); } protected String getLanguage() { return findEnclosingAttribute(node, \"lang\", Namespace.XML_NAMESPACE); }"
+      },
+      {
+        "txt": "protected static String findEnclosingAttribute(Object n, String attrName, Namespace ns) { while (n != null) { if (n instanceof Element) { Element e = (Element) n; String attr = e.getAttributeValue(attrName, ns); if (attr != null && !attr.equals(\"\")) { return attr; } } n = nodeParent(n);"
+      },
+      {
+        "txt": "} return null; } private static Element nodeParent(Object node) { if (node instanceof Element) { Object parent = ((Element) node).getParent(); return parent instanceof Element ? (Element) parent : null; } if (node instanceof Text) { return (Element) ((Text) node).getParent();"
+      },
+      {
+        "txt": "} if (node instanceof CDATA) { return (Element) ((CDATA) node).getParent(); } if (node instanceof ProcessingInstruction) { return (Element) ((ProcessingInstruction) node).getParent(); } if (node instanceof Comment) { return (Element) ((Comment) node).getParent(); }"
+      },
+      {
+        "txt": "return null; } public NodePointer createChild( JXPathContext context, QName name, int index) { if (index == WHOLE_COLLECTION) { index = 0; } boolean success ="
+      },
+      {
+        "txt": "getAbstractFactory(context).createObject( context, this, node, name.toString(), index); if (success) { NodeTest nodeTest; String prefix = name.getPrefix(); String namespaceURI = prefix == null ? null : context"
+      },
+      {
+        "txt": ".getNamespaceURI(prefix); nodeTest = new NodeNameTest(name, namespaceURI); NodeIterator it = childIterator(nodeTest, false, null); if (it != null && it.setPosition(index + 1)) { return it.getNodePointer(); } } throw new JXPathAbstractFactoryException(\"Factory could not create \" + \"a child node for path: \" + asPath() + \"/\" + name + \"[\""
+      },
+      {
+        "txt": "+ (index + 1) + \"]\"); } public NodePointer createChild( JXPathContext context, QName name, int index, Object value) { NodePointer ptr = createChild(context, name, index); ptr.setValue(value); return ptr; } public NodePointer createAttribute(JXPathContext context, QName name) { if (!(node instanceof Element)) {"
+      },
+      {
+        "txt": "return super.createAttribute(context, name); } Element element = (Element) node; String prefix = name.getPrefix(); if (prefix != null) { String namespaceUri = getNamespaceResolver().getNamespaceURI(prefix); if (namespaceUri == null) { throw new JXPathException( \"Unknown namespace prefix: \" + prefix); }"
+      },
+      {
+        "txt": "Namespace ns = Namespace.getNamespace(prefix, namespaceUri); Attribute attr = element.getAttribute(name.getName(), ns); if (attr == null) { element.setAttribute(name.getName(), \"\", ns); } } else { Attribute attr = element.getAttribute(name.getName()); if (attr == null) { element.setAttribute(name.getName(), \"\");"
+      },
+      {
+        "txt": "} } NodeIterator it = attributeIterator(name); it.setPosition(1); return it.getNodePointer(); } public void remove() { Element parent = nodeParent(node); if (parent == null) { throw new JXPathException(\"Cannot remove root JDOM node\");"
+      },
+      {
+        "txt": "} parent.getContent().remove(node); } public String asPath() { if (id != null) { return \"id('\" + escape(id) + \"')\"; } StringBuffer buffer = new StringBuffer(); if (parent != null) { buffer.append(parent.asPath());"
+      },
+      {
+        "txt": "} if (node instanceof Element) { if (parent instanceof JDOMNodePointer) { if (buffer.length() == 0 || buffer.charAt(buffer.length() - 1) != '/') { buffer.append('/'); } String nsURI = getNamespaceURI(); String ln = JDOMNodePointer.getLocalName(node); if (nsURI == null) {"
+      },
+      {
+        "txt": "buffer.append(ln); buffer.append('['); buffer.append(getRelativePositionByQName()).append(']'); } else { String prefix = getNamespaceResolver().getPrefix(nsURI); if (prefix != null) { buffer.append(prefix); buffer.append(':'); buffer.append(ln);"
+      },
+      {
+        "txt": "buffer.append('['); buffer.append(getRelativePositionByQName()); buffer.append(']'); } else { buffer.append(\"node()\"); buffer.append('['); buffer.append(getRelativePositionOfElement()); buffer.append(']'); }"
+      },
+      {
+        "txt": "} } } else if (node instanceof Text || node instanceof CDATA) { buffer.append(\"/text()\"); buffer.append('[').append(getRelativePositionOfTextNode()).append( ']'); } else if (node instanceof ProcessingInstruction) { buffer.append(\"/processing-instruction(\\'\").append(((ProcessingInstruction) node).getTarget()).append("
+      },
+      {
+        "txt": "\"')\"); buffer.append('[').append(getRelativePositionOfPI()).append( ']'); } return buffer.toString(); } private int getRelativePositionByQName() { if (node instanceof Element) { Object parent = ((Element) node).getParent(); if (!(parent instanceof Element)) {"
+      },
+      {
+        "txt": "} List children = ((Element) parent).getContent(); int count = 0; String name = ((Element) node).getQualifiedName(); for (int i = 0; i < children.size(); i++) { Object child = children.get(i); <extra_id_0> count++; } if (child == node) { break; } }"
+      },
+      {
+        "txt": "} } return count; } return 1; } private int getRelativePositionOfElement() { Object parent = ((Element) node).getParent(); if (parent == null) { return 1;"
+      },
+      {
+        "txt": "} List children; if (parent instanceof Element) { children = ((Element) parent).getContent(); } else { children = ((Document) parent).getContent(); } int count = 0; for (int i = 0; i < children.size(); i++) {"
+      },
+      {
+        "txt": "Object child = children.get(i); if (child instanceof Element) { count++; } if (child == node) { break; } } return count; }"
+      },
+      {
+        "txt": "private int getRelativePositionOfTextNode() { Element parent; if (node instanceof Text) { parent = (Element) ((Text) node).getParent(); } else { parent = (Element) ((CDATA) node).getParent(); } if (parent == null) { return 1;"
+      },
+      {
+        "txt": "} List children = parent.getContent(); int count = 0; for (int i = 0; i < children.size(); i++) { Object child = children.get(i); if (child instanceof Text || child instanceof CDATA) { count++; } if (child == node) { break;"
+      },
+      {
+        "txt": "} } return count; } private int getRelativePositionOfPI() { String target = ((ProcessingInstruction) node).getTarget(); Element parent = (Element) ((ProcessingInstruction) node).getParent(); if (parent == null) { return 1; }"
+      },
+      {
+        "txt": "List children = parent.getContent(); int count = 0; for (int i = 0; i < children.size(); i++) { Object child = children.get(i); if (child instanceof ProcessingInstruction && (target == null || target.equals( ((ProcessingInstruction) child).getTarget()))) { count++; }"
+      },
+      {
+        "txt": "if (child == node) { break; } } return count; } public int hashCode() { return node.hashCode(); } public boolean equals(Object object) {"
+      },
+      {
+        "txt": "if (object == this) { return true; } if (!(object instanceof JDOMNodePointer)) { return false; } JDOMNodePointer other = (JDOMNodePointer) object; return node == other.node; }"
+      }
+    ]
+  },
+  {
+    "id": 2271,
+    "file_path": "src/java/org/apache/commons/jxpath/ri/model/jdom/JDOMNodePointer.java",
+    "start-bug-line": 709,
+    "end-bug-line": 709,
+    "bug": "",
+    "fix": "private boolean matchesQName(Element element) { if (getNamespaceURI() != null) { String ns = getNamespaceURI(element); if (ns == null || !ns.equals(getNamespaceURI())) { return false; } } return element.getName().equals(((Element) node).getName()); }",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.jxpath.ri.model.jdom; import java.util.List;"
+      },
+      {
+        "txt": "import java.util.Locale; import org.apache.commons.jxpath.JXPathAbstractFactoryException; import org.apache.commons.jxpath.JXPathContext; import org.apache.commons.jxpath.JXPathException; import org.apache.commons.jxpath.ri.Compiler; import org.apache.commons.jxpath.ri.NamespaceResolver; import org.apache.commons.jxpath.ri.QName; import org.apache.commons.jxpath.ri.compiler.NodeNameTest; import org.apache.commons.jxpath.ri.compiler.NodeTest; import org.apache.commons.jxpath.ri.compiler.NodeTypeTest;"
+      },
+      {
+        "txt": "import org.apache.commons.jxpath.ri.compiler.ProcessingInstructionTest; import org.apache.commons.jxpath.ri.model.NodeIterator; import org.apache.commons.jxpath.ri.model.NodePointer; import org.apache.commons.jxpath.util.TypeUtils; import org.jdom.Attribute; import org.jdom.CDATA; import org.jdom.Comment; import org.jdom.Document; import org.jdom.Element; import org.jdom.Namespace;"
+      },
+      {
+        "txt": "import org.jdom.ProcessingInstruction; import org.jdom.Text; public class JDOMNodePointer extends NodePointer { private static final long serialVersionUID = -6346532297491082651L; private Object node; private String id; private NamespaceResolver localNamespaceResolver; public static final String XML_NAMESPACE_URI = \"http://www.w3.org/XML/1998/namespace\"; public static final String XMLNS_NAMESPACE_URI ="
+      },
+      {
+        "txt": "\"http://www.w3.org/2000/xmlns/\"; public JDOMNodePointer(Object node, Locale locale) { super(null, locale); this.node = node; } public JDOMNodePointer(Object node, Locale locale, String id) { super(null, locale); this.node = node; this.id = id; }"
+      },
+      {
+        "txt": "public JDOMNodePointer(NodePointer parent, Object node) { super(parent); this.node = node; } public NodeIterator childIterator( NodeTest test, boolean reverse, NodePointer startWith) { return new JDOMNodeIterator(this, test, reverse, startWith); }"
+      },
+      {
+        "txt": "public NodeIterator attributeIterator(QName name) { return new JDOMAttributeIterator(this, name); } public NodeIterator namespaceIterator() { return new JDOMNamespaceIterator(this); } public NodePointer namespacePointer(String prefix) { return new JDOMNamespacePointer(this, prefix); } public String getNamespaceURI() {"
+      },
+      {
+        "txt": "return getNamespaceURI(node); } private static String getNamespaceURI(Object node) { if (node instanceof Element) { Element element = (Element) node; String ns = element.getNamespaceURI(); if (ns != null && ns.equals(\"\")) { ns = null; } return ns;"
+      },
+      {
+        "txt": "} return null; } public synchronized NamespaceResolver getNamespaceResolver() { if (localNamespaceResolver == null) { localNamespaceResolver = new NamespaceResolver(super.getNamespaceResolver()); localNamespaceResolver.setNamespaceContextPointer(this); } return localNamespaceResolver; }"
+      },
+      {
+        "txt": "public String getNamespaceURI(String prefix) { if (prefix.equals(\"xml\")) { return Namespace.XML_NAMESPACE.getURI(); } Element element = null; if (node instanceof Document) { element = ((Document) node).getRootElement(); } if (node instanceof Element) { element = (Element) node;"
+      },
+      {
+        "txt": "} if (element == null) { return null; } Namespace ns = element.getNamespace(prefix); return ns == null ? null : ns.getURI(); } public int compareChildNodePointers( NodePointer pointer1, NodePointer pointer2) {"
+      },
+      {
+        "txt": "Object node1 = pointer1.getBaseValue(); Object node2 = pointer2.getBaseValue(); if (node1 == node2) { return 0; } if ((node1 instanceof Attribute) && !(node2 instanceof Attribute)) { return -1; } if ( !(node1 instanceof Attribute) && (node2 instanceof Attribute)) {"
+      },
+      {
+        "txt": "return 1; } if ( (node1 instanceof Attribute) && (node2 instanceof Attribute)) { List list = ((Element) getNode()).getAttributes(); int length = list.size(); for (int i = 0; i < length; i++) { Object n = list.get(i); if (n == node1) { return -1;"
+      },
+      {
+        "txt": "} else if (n == node2) { return 1; } } return 0; // Should not happen } if (!(node instanceof Element)) { throw new RuntimeException( \"JXPath internal error: \""
+      },
+      {
+        "txt": "+ \"compareChildNodes called for \" + node); } List children = ((Element) node).getContent(); int length = children.size(); for (int i = 0; i < length; i++) { Object n = children.get(i); if (n == node1) { return -1; }"
+      },
+      {
+        "txt": "if (n == node2) { return 1; } } return 0; } public Object getBaseValue() { return node; } public boolean isCollection() {"
+      },
+      {
+        "txt": "return false; } public int getLength() { return 1; } public boolean isLeaf() { if (node instanceof Element) { return ((Element) node).getContent().size() == 0; } if (node instanceof Document) {"
+      },
+      {
+        "txt": "return ((Document) node).getContent().size() == 0; } return true; } public QName getName() { String ns = null; String ln = null; if (node instanceof Element) { ns = ((Element) node).getNamespacePrefix(); if (ns != null && ns.equals(\"\")) {"
+      },
+      {
+        "txt": "ns = null; } ln = ((Element) node).getName(); } else if (node instanceof ProcessingInstruction) { ln = ((ProcessingInstruction) node).getTarget(); } return new QName(ns, ln); } public Object getImmediateNode() {"
+      },
+      {
+        "txt": "return node; } public Object getValue() { if (node instanceof Element) { StringBuffer buf = new StringBuffer(); for (NodeIterator children = childIterator(null, false, null); children.setPosition(children.getPosition() + 1);) { NodePointer ptr = children.getNodePointer(); if (ptr.getImmediateNode() instanceof Element || ptr.getImmediateNode() instanceof Text) { buf.append(ptr.getValue()); }"
+      },
+      {
+        "txt": "} return buf.toString(); } if (node instanceof Comment) { String text = ((Comment) node).getText(); if (text != null) { text = text.trim(); } return text; }"
+      },
+      {
+        "txt": "String result = null; if (node instanceof Text) { result = ((Text) node).getText(); } if (node instanceof ProcessingInstruction) { result = ((ProcessingInstruction) node).getData(); } boolean trim = !\"preserve\".equals(findEnclosingAttribute(node, \"space\", Namespace.XML_NAMESPACE)); return result != null && trim ? result.trim() : result; }"
+      },
+      {
+        "txt": "public void setValue(Object value) { if (node instanceof Text) { String string = (String) TypeUtils.convert(value, String.class); if (string != null && !string.equals(\"\")) { ((Text) node).setText(string); } else { nodeParent(node).removeContent((Text) node); } }"
+      },
+      {
+        "txt": "else { Element element = (Element) node; element.getContent().clear(); if (value instanceof Element) { Element valueElement = (Element) value; addContent(valueElement.getContent()); } else if (value instanceof Document) { Document valueDocument = (Document) value; addContent(valueDocument.getContent());"
+      },
+      {
+        "txt": "} else if (value instanceof Text || value instanceof CDATA) { String string = ((Text) value).getText(); element.addContent(new Text(string)); } else if (value instanceof ProcessingInstruction) { ProcessingInstruction pi = (ProcessingInstruction) ((ProcessingInstruction) value) .clone(); element.addContent(pi);"
+      },
+      {
+        "txt": "} else if (value instanceof Comment) { Comment comment = (Comment) ((Comment) value).clone(); element.addContent(comment); } else { String string = (String) TypeUtils.convert(value, String.class); if (string != null && !string.equals(\"\")) { element.addContent(new Text(string)); }"
+      },
+      {
+        "txt": "} } } private void addContent(List content) { Element element = (Element) node; int count = content.size(); for (int i = 0; i < count; i++) { Object child = content.get(i); if (child instanceof Element) { child = ((Element) child).clone();"
+      },
+      {
+        "txt": "element.addContent((Element) child); } else if (child instanceof Text) { child = ((Text) child).clone(); element.addContent((Text) child); } else if (node instanceof CDATA) { child = ((CDATA) child).clone(); element.addContent((CDATA) child); }"
+      },
+      {
+        "txt": "else if (node instanceof ProcessingInstruction) { child = ((ProcessingInstruction) child).clone(); element.addContent((ProcessingInstruction) child); } else if (node instanceof Comment) { child = ((Comment) child).clone(); element.addContent((Comment) child); } } }"
+      },
+      {
+        "txt": "public boolean testNode(NodeTest test) { return testNode(this, node, test); } public static boolean testNode( NodePointer pointer, Object node, NodeTest test) { if (test == null) { return true; }"
+      },
+      {
+        "txt": "if (test instanceof NodeNameTest) { if (!(node instanceof Element)) { return false; } NodeNameTest nodeNameTest = (NodeNameTest) test; QName testName = nodeNameTest.getNodeName(); String namespaceURI = nodeNameTest.getNamespaceURI(); boolean wildcard = nodeNameTest.isWildcard(); String testPrefix = testName.getPrefix(); if (wildcard && testPrefix == null) {"
+      },
+      {
+        "txt": "return true; } if (wildcard || testName.getName() .equals(JDOMNodePointer.getLocalName(node))) { String nodeNS = JDOMNodePointer.getNamespaceURI(node); return equalStrings(namespaceURI, nodeNS) || nodeNS == null && equalStrings(testPrefix, getPrefix(node)); } return false;"
+      },
+      {
+        "txt": "} if (test instanceof NodeTypeTest) { switch (((NodeTypeTest) test).getNodeType()) { case Compiler.NODE_TYPE_NODE : return true; case Compiler.NODE_TYPE_TEXT : return (node instanceof Text) || (node instanceof CDATA); case Compiler.NODE_TYPE_COMMENT : return node instanceof Comment; case Compiler.NODE_TYPE_PI :"
+      },
+      {
+        "txt": "return node instanceof ProcessingInstruction; default: return false; } } if (test instanceof ProcessingInstructionTest && node instanceof ProcessingInstruction) { String testPI = ((ProcessingInstructionTest) test).getTarget(); String nodePI = ((ProcessingInstruction) node).getTarget(); return testPI.equals(nodePI); }"
+      },
+      {
+        "txt": "return false; } private static boolean equalStrings(String s1, String s2) { if (s1 == s2) { return true; } s1 = s1 == null ? \"\" : s1.trim(); s2 = s2 == null ? \"\" : s2.trim(); return s1.equals(s2); }"
+      },
+      {
+        "txt": "public static String getPrefix(Object node) { if (node instanceof Element) { String prefix = ((Element) node).getNamespacePrefix(); return (prefix == null || prefix.equals(\"\")) ? null : prefix; } if (node instanceof Attribute) { String prefix = ((Attribute) node).getNamespacePrefix(); return (prefix == null || prefix.equals(\"\")) ? null : prefix; } return null;"
+      },
+      {
+        "txt": "} public static String getLocalName(Object node) { if (node instanceof Element) { return ((Element) node).getName(); } if (node instanceof Attribute) { return ((Attribute) node).getName(); } return null; }"
+      },
+      {
+        "txt": "public boolean isLanguage(String lang) { String current = getLanguage(); return current == null ? super.isLanguage(lang) : current.toUpperCase( Locale.ENGLISH).startsWith(lang.toUpperCase(Locale.ENGLISH)); } protected String getLanguage() { return findEnclosingAttribute(node, \"lang\", Namespace.XML_NAMESPACE); } protected static String findEnclosingAttribute(Object n, String attrName, Namespace ns) { while (n != null) {"
+      },
+      {
+        "txt": "if (n instanceof Element) { Element e = (Element) n; String attr = e.getAttributeValue(attrName, ns); if (attr != null && !attr.equals(\"\")) { return attr; } } n = nodeParent(n); } return null;"
+      },
+      {
+        "txt": "} private static Element nodeParent(Object node) { if (node instanceof Element) { Object parent = ((Element) node).getParent(); return parent instanceof Element ? (Element) parent : null; } if (node instanceof Text) { return (Element) ((Text) node).getParent(); } if (node instanceof CDATA) {"
+      },
+      {
+        "txt": "return (Element) ((CDATA) node).getParent(); } if (node instanceof ProcessingInstruction) { return (Element) ((ProcessingInstruction) node).getParent(); } if (node instanceof Comment) { return (Element) ((Comment) node).getParent(); } return null; }"
+      },
+      {
+        "txt": "public NodePointer createChild( JXPathContext context, QName name, int index) { if (index == WHOLE_COLLECTION) { index = 0; } boolean success = getAbstractFactory(context).createObject( context,"
+      },
+      {
+        "txt": "this, node, name.toString(), index); if (success) { NodeTest nodeTest; String prefix = name.getPrefix(); String namespaceURI = prefix == null ? null : context .getNamespaceURI(prefix); nodeTest = new NodeNameTest(name, namespaceURI);"
+      },
+      {
+        "txt": "NodeIterator it = childIterator(nodeTest, false, null); if (it != null && it.setPosition(index + 1)) { return it.getNodePointer(); } } throw new JXPathAbstractFactoryException(\"Factory could not create \" + \"a child node for path: \" + asPath() + \"/\" + name + \"[\" + (index + 1) + \"]\"); }"
+      },
+      {
+        "txt": "public NodePointer createChild( JXPathContext context, QName name, int index, Object value) { NodePointer ptr = createChild(context, name, index); ptr.setValue(value); return ptr; } public NodePointer createAttribute(JXPathContext context, QName name) { if (!(node instanceof Element)) { return super.createAttribute(context, name); }"
+      },
+      {
+        "txt": "Element element = (Element) node; String prefix = name.getPrefix(); if (prefix != null) { String namespaceUri = getNamespaceResolver().getNamespaceURI(prefix); if (namespaceUri == null) { throw new JXPathException( \"Unknown namespace prefix: \" + prefix); } Namespace ns = Namespace.getNamespace(prefix, namespaceUri); Attribute attr = element.getAttribute(name.getName(), ns);"
+      },
+      {
+        "txt": "if (attr == null) { element.setAttribute(name.getName(), \"\", ns); } } else { Attribute attr = element.getAttribute(name.getName()); if (attr == null) { element.setAttribute(name.getName(), \"\"); } }"
+      },
+      {
+        "txt": "NodeIterator it = attributeIterator(name); it.setPosition(1); return it.getNodePointer(); } public void remove() { Element parent = nodeParent(node); if (parent == null) { throw new JXPathException(\"Cannot remove root JDOM node\"); } parent.getContent().remove(node);"
+      },
+      {
+        "txt": "} public String asPath() { if (id != null) { return \"id('\" + escape(id) + \"')\"; } StringBuffer buffer = new StringBuffer(); if (parent != null) { buffer.append(parent.asPath()); } if (node instanceof Element) {"
+      },
+      {
+        "txt": "if (parent instanceof JDOMNodePointer) { if (buffer.length() == 0 || buffer.charAt(buffer.length() - 1) != '/') { buffer.append('/'); } String nsURI = getNamespaceURI(); String ln = JDOMNodePointer.getLocalName(node); if (nsURI == null) { buffer.append(ln); buffer.append('[');"
+      },
+      {
+        "txt": "buffer.append(getRelativePositionByQName()).append(']'); } else { String prefix = getNamespaceResolver().getPrefix(nsURI); if (prefix != null) { buffer.append(prefix); buffer.append(':'); buffer.append(ln); buffer.append('['); buffer.append(getRelativePositionByQName());"
+      },
+      {
+        "txt": "buffer.append(']'); } else { buffer.append(\"node()\"); buffer.append('['); buffer.append(getRelativePositionOfElement()); buffer.append(']'); } } }"
+      },
+      {
+        "txt": "} else if (node instanceof Text || node instanceof CDATA) { buffer.append(\"/text()\"); buffer.append('[').append(getRelativePositionOfTextNode()).append( ']'); } else if (node instanceof ProcessingInstruction) { buffer.append(\"/processing-instruction(\\'\").append(((ProcessingInstruction) node).getTarget()).append( \"')\"); buffer.append('[').append(getRelativePositionOfPI()).append("
+      },
+      {
+        "txt": "']'); } return buffer.toString(); } private int getRelativePositionByQName() { if (node instanceof Element) { Object parent = ((Element) node).getParent(); if (!(parent instanceof Element)) { return 1; }"
+      },
+      {
+        "txt": "List children = ((Element) parent).getContent(); int count = 0; String name = ((Element) node).getQualifiedName(); for (int i = 0; i < children.size(); i++) { Object child = children.get(i); if ((child instanceof Element) && ((Element) child).getQualifiedName().equals(name)) { count++; } if (child == node) {"
+      },
+      {
+        "txt": "} } return count; } return 1; } <extra_id_0> private int getRelativePositionOfElement() { Object parent = ((Element) node).getParent(); if (parent == null) { return 1; } List children;"
+      },
+      {
+        "txt": "} List children; if (parent instanceof Element) { children = ((Element) parent).getContent(); } else { children = ((Document) parent).getContent(); } int count = 0; for (int i = 0; i < children.size(); i++) {"
+      },
+      {
+        "txt": "Object child = children.get(i); if (child instanceof Element) { count++; } if (child == node) { break; } } return count; }"
+      },
+      {
+        "txt": "private int getRelativePositionOfTextNode() { Element parent; if (node instanceof Text) { parent = (Element) ((Text) node).getParent(); } else { parent = (Element) ((CDATA) node).getParent(); } if (parent == null) { return 1;"
+      },
+      {
+        "txt": "} List children = parent.getContent(); int count = 0; for (int i = 0; i < children.size(); i++) { Object child = children.get(i); if (child instanceof Text || child instanceof CDATA) { count++; } if (child == node) { break;"
+      },
+      {
+        "txt": "} } return count; } private int getRelativePositionOfPI() { String target = ((ProcessingInstruction) node).getTarget(); Element parent = (Element) ((ProcessingInstruction) node).getParent(); if (parent == null) { return 1; }"
+      },
+      {
+        "txt": "List children = parent.getContent(); int count = 0; for (int i = 0; i < children.size(); i++) { Object child = children.get(i); if (child instanceof ProcessingInstruction && (target == null || target.equals( ((ProcessingInstruction) child).getTarget()))) { count++; }"
+      },
+      {
+        "txt": "if (child == node) { break; } } return count; } public int hashCode() { return node.hashCode(); } public boolean equals(Object object) {"
+      },
+      {
+        "txt": "if (object == this) { return true; } if (!(object instanceof JDOMNodePointer)) { return false; } JDOMNodePointer other = (JDOMNodePointer) object; return node == other.node; }"
+      }
+    ]
+  }
+]

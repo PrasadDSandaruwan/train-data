@@ -1,0 +1,842 @@
+[
+  {
+    "id": 165,
+    "file_path": "src/main/java/org/apache/commons/cli/DefaultParser.java",
+    "start-bug-line": 150,
+    "end-bug-line": 150,
+    "bug": "if (!cmd.hasOption(option))",
+    "fix": "Option opt = options.getOption(option); if (opt == null)",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.cli; import java.util.ArrayList; import java.util.Enumeration; import java.util.Iterator;"
+      },
+      {
+        "txt": "import java.util.List; import java.util.Properties; public class DefaultParser implements CommandLineParser { protected CommandLine cmd; protected Options options; protected boolean stopAtNonOption; protected String currentToken; protected Option currentOption; protected boolean skipParsing;"
+      },
+      {
+        "txt": "protected List expectedOpts; public CommandLine parse(Options options, String[] arguments) throws ParseException { return parse(options, arguments, null); } public CommandLine parse(Options options, String[] arguments, Properties properties) throws ParseException { return parse(options, arguments, properties, false); } public CommandLine parse(Options options, String[] arguments, boolean stopAtNonOption) throws ParseException"
+      },
+      {
+        "txt": "{ return parse(options, arguments, null, stopAtNonOption); } public CommandLine parse(Options options, String[] arguments, Properties properties, boolean stopAtNonOption) throws ParseException { this.options = options; this.stopAtNonOption = stopAtNonOption; skipParsing = false; currentOption = null; expectedOpts = new ArrayList(options.getRequiredOptions());"
+      },
+      {
+        "txt": "for (Iterator it = options.getOptionGroups().iterator(); it.hasNext();) { OptionGroup group = (OptionGroup) it.next(); group.setSelected(null); } cmd = new CommandLine(); if (arguments != null) { for (int i = 0; i < arguments.length; i++) {"
+      },
+      {
+        "txt": "handleToken(arguments[i]); } } checkRequiredArgs(); handleProperties(properties); checkRequiredOptions(); return cmd; } private void handleProperties(Properties properties) throws ParseException {"
+      },
+      {
+        "txt": "{ return; } for (Enumeration e = properties.propertyNames(); e.hasMoreElements();) { String option = e.nextElement().toString(); <extra_id_0> { Option opt = options.getOption(option); String value = properties.getProperty(option); if (opt.hasArg()) { if (opt.getValues() == null || opt.getValues().length == 0)"
+      },
+      {
+        "txt": "{ if (opt.getValues() == null || opt.getValues().length == 0) { opt.addValueForProcessing(value); } } else if (!(\"yes\".equalsIgnoreCase(value) || \"true\".equalsIgnoreCase(value) || \"1\".equalsIgnoreCase(value))) {"
+      },
+      {
+        "txt": "continue; } handleOption(opt); currentOption = null; } } } private void checkRequiredOptions() throws MissingOptionException { if (!expectedOpts.isEmpty())"
+      },
+      {
+        "txt": "{ throw new MissingOptionException(expectedOpts); } } private void checkRequiredArgs() throws ParseException { if (currentOption != null && currentOption.requiresArg()) { throw new MissingArgumentException(currentOption); }"
+      },
+      {
+        "txt": "} private void handleToken(String token) throws ParseException { currentToken = token; if (skipParsing) { cmd.addArg(token); } else if (\"--\".equals(token)) {"
+      },
+      {
+        "txt": "skipParsing = true; } else if (currentOption != null && currentOption.acceptsArg() && isArgument(token)) { currentOption.addValueForProcessing(Util.stripLeadingAndTrailingQuotes(token)); } else if (token.startsWith(\"--\")) { handleLongOption(token); }"
+      },
+      {
+        "txt": "else if (token.startsWith(\"-\") && !\"-\".equals(token)) { handleShortAndLongOption(token); } else { handleUnknownToken(token); } if (currentOption != null && !currentOption.acceptsArg()) {"
+      },
+      {
+        "txt": "currentOption = null; } } private boolean isArgument(String token) { return !isOption(token) || isNegativeNumber(token); } private boolean isNegativeNumber(String token) { try"
+      },
+      {
+        "txt": "{ Double.parseDouble(token); return true; } catch (NumberFormatException e) { return false; } } private boolean isOption(String token)"
+      },
+      {
+        "txt": "{ return isLongOption(token) || isShortOption(token); } private boolean isShortOption(String token) { return token.startsWith(\"-\") && token.length() >= 2 && options.hasShortOption(token.substring(1, 2)); } private boolean isLongOption(String token) { if (!token.startsWith(\"-\") || token.length() == 1)"
+      },
+      {
+        "txt": "{ return false; } int pos = token.indexOf(\"=\"); String t = pos == -1 ? token : token.substring(0, pos); if (!options.getMatchingOptions(t).isEmpty()) { return true; } else if (getLongPrefix(token) != null && !token.startsWith(\"--\"))"
+      },
+      {
+        "txt": "{ return true; } return false; } private void handleUnknownToken(String token) throws ParseException { if (token.startsWith(\"-\") && token.length() > 1 && !stopAtNonOption) { throw new UnrecognizedOptionException(\"Unrecognized option: \" + token, token);"
+      },
+      {
+        "txt": "} cmd.addArg(token); if (stopAtNonOption) { skipParsing = true; } } private void handleLongOption(String token) throws ParseException { if (token.indexOf('=') == -1)"
+      },
+      {
+        "txt": "{ handleLongOptionWithoutEqual(token); } else { handleLongOptionWithEqual(token); } } private void handleLongOptionWithoutEqual(String token) throws ParseException {"
+      },
+      {
+        "txt": "List matchingOpts = options.getMatchingOptions(token); if (matchingOpts.isEmpty()) { handleUnknownToken(currentToken); } else if (matchingOpts.size() > 1) { throw new AmbiguousOptionException(token, matchingOpts); } else"
+      },
+      {
+        "txt": "{ handleOption(options.getOption((String) matchingOpts.get(0))); } } private void handleLongOptionWithEqual(String token) throws ParseException { int pos = token.indexOf('='); String value = token.substring(pos + 1); String opt = token.substring(0, pos); List matchingOpts = options.getMatchingOptions(opt);"
+      },
+      {
+        "txt": "if (matchingOpts.isEmpty()) { handleUnknownToken(currentToken); } else if (matchingOpts.size() > 1) { throw new AmbiguousOptionException(opt, matchingOpts); } else {"
+      },
+      {
+        "txt": "Option option = options.getOption((String) matchingOpts.get(0)); if (option.acceptsArg()) { handleOption(option); currentOption.addValueForProcessing(value); currentOption = null; } else { handleUnknownToken(currentToken);"
+      },
+      {
+        "txt": "} } } private void handleShortAndLongOption(String token) throws ParseException { String t = Util.stripLeadingHyphens(token); int pos = t.indexOf('='); if (t.length() == 1) { if (options.hasShortOption(t))"
+      },
+      {
+        "txt": "{ handleOption(options.getOption(t)); } else { handleUnknownToken(token); } } else if (pos == -1) {"
+      },
+      {
+        "txt": "if (options.hasShortOption(t)) { handleOption(options.getOption(t)); } else if (!options.getMatchingOptions(t).isEmpty()) { handleLongOptionWithoutEqual(token); } else {"
+      },
+      {
+        "txt": "String opt = getLongPrefix(t); if (opt != null && options.getOption(opt).acceptsArg()) { handleOption(options.getOption(opt)); currentOption.addValueForProcessing(t.substring(opt.length())); currentOption = null; } else if (isJavaProperty(t)) { handleOption(options.getOption(t.substring(0, 1)));"
+      },
+      {
+        "txt": "currentOption.addValueForProcessing(t.substring(1)); currentOption = null; } else { handleConcatenatedOptions(token); } } } else"
+      },
+      {
+        "txt": "{ String opt = t.substring(0, pos); String value = t.substring(pos + 1); if (opt.length() == 1) { Option option = options.getOption(opt); if (option != null && option.acceptsArg()) { handleOption(option); currentOption.addValueForProcessing(value);"
+      },
+      {
+        "txt": "currentOption = null; } else { handleUnknownToken(token); } } else if (isJavaProperty(opt)) { handleOption(options.getOption(opt.substring(0, 1)));"
+      },
+      {
+        "txt": "currentOption.addValueForProcessing(opt.substring(1)); currentOption.addValueForProcessing(value); currentOption = null; } else { handleLongOptionWithEqual(token); } } }"
+      },
+      {
+        "txt": "private String getLongPrefix(String token) { String t = Util.stripLeadingHyphens(token); int i; String opt = null; for (i = t.length() - 2; i > 1; i--) { String prefix = t.substring(0, i); if (options.hasLongOption(prefix)) {"
+      },
+      {
+        "txt": "opt = prefix; break; } } return opt; } private boolean isJavaProperty(String token) { String opt = token.substring(0, 1); Option option = options.getOption(opt);"
+      },
+      {
+        "txt": "return option != null && (option.getArgs() >= 2 || option.getArgs() == Option.UNLIMITED_VALUES); } private void handleOption(Option option) throws ParseException { checkRequiredArgs(); option = (Option) option.clone(); updateRequiredOptions(option); cmd.addOption(option); if (option.hasArg()) {"
+      },
+      {
+        "txt": "currentOption = option; } else { currentOption = null; } } private void updateRequiredOptions(Option option) throws AlreadySelectedException { if (option.isRequired())"
+      },
+      {
+        "txt": "{ expectedOpts.remove(option.getKey()); } if (options.getOptionGroup(option) != null) { OptionGroup group = options.getOptionGroup(option); if (group.isRequired()) { expectedOpts.remove(group); }"
+      },
+      {
+        "txt": "group.setSelected(option); } } protected void handleConcatenatedOptions(String token) throws ParseException { for (int i = 1; i < token.length(); i++) { String ch = String.valueOf(token.charAt(i)); if (options.hasOption(ch)) {"
+      },
+      {
+        "txt": "handleOption(options.getOption(ch)); if (currentOption != null && (token.length() != (i + 1))) { currentOption.addValueForProcessing(token.substring(i + 1)); break; } } else { handleUnknownToken(stopAtNonOption && i > 1 ? token.substring(i) : token);"
+      },
+      {
+        "txt": "break; } } }"
+      }
+    ]
+  },
+  {
+    "id": 166,
+    "file_path": "src/main/java/org/apache/commons/cli/DefaultParser.java",
+    "start-bug-line": 152,
+    "end-bug-line": 152,
+    "bug": "Option opt = options.getOption(option);",
+    "fix": "throw new UnrecognizedOptionException(\"Default option wasn't defined\", option); }",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.cli; import java.util.ArrayList; import java.util.Enumeration; import java.util.Iterator; import java.util.List; import java.util.Properties;"
+      },
+      {
+        "txt": "public class DefaultParser implements CommandLineParser { protected CommandLine cmd; protected Options options; protected boolean stopAtNonOption; protected String currentToken; protected Option currentOption; protected boolean skipParsing; protected List expectedOpts; public CommandLine parse(Options options, String[] arguments) throws ParseException"
+      },
+      {
+        "txt": "{ return parse(options, arguments, null); } public CommandLine parse(Options options, String[] arguments, Properties properties) throws ParseException { return parse(options, arguments, properties, false); } public CommandLine parse(Options options, String[] arguments, boolean stopAtNonOption) throws ParseException { return parse(options, arguments, null, stopAtNonOption);"
+      },
+      {
+        "txt": "} public CommandLine parse(Options options, String[] arguments, Properties properties, boolean stopAtNonOption) throws ParseException { this.options = options; this.stopAtNonOption = stopAtNonOption; skipParsing = false; currentOption = null; expectedOpts = new ArrayList(options.getRequiredOptions()); for (Iterator it = options.getOptionGroups().iterator(); it.hasNext();) {"
+      },
+      {
+        "txt": "OptionGroup group = (OptionGroup) it.next(); group.setSelected(null); } cmd = new CommandLine(); if (arguments != null) { for (int i = 0; i < arguments.length; i++) { handleToken(arguments[i]); }"
+      },
+      {
+        "txt": "} checkRequiredArgs(); handleProperties(properties); checkRequiredOptions(); return cmd; } private void handleProperties(Properties properties) throws ParseException { if (properties == null) {"
+      },
+      {
+        "txt": "} for (Enumeration e = properties.propertyNames(); e.hasMoreElements();) { String option = e.nextElement().toString(); if (!cmd.hasOption(option)) { <extra_id_0> String value = properties.getProperty(option); if (opt.hasArg()) { if (opt.getValues() == null || opt.getValues().length == 0) { opt.addValueForProcessing(value);"
+      },
+      {
+        "txt": "{ opt.addValueForProcessing(value); } } else if (!(\"yes\".equalsIgnoreCase(value) || \"true\".equalsIgnoreCase(value) || \"1\".equalsIgnoreCase(value))) { continue; }"
+      },
+      {
+        "txt": "handleOption(opt); currentOption = null; } } } private void checkRequiredOptions() throws MissingOptionException { if (!expectedOpts.isEmpty()) { throw new MissingOptionException(expectedOpts);"
+      },
+      {
+        "txt": "} } private void checkRequiredArgs() throws ParseException { if (currentOption != null && currentOption.requiresArg()) { throw new MissingArgumentException(currentOption); } } private void handleToken(String token) throws ParseException"
+      },
+      {
+        "txt": "{ currentToken = token; if (skipParsing) { cmd.addArg(token); } else if (\"--\".equals(token)) { skipParsing = true; }"
+      },
+      {
+        "txt": "else if (currentOption != null && currentOption.acceptsArg() && isArgument(token)) { currentOption.addValueForProcessing(Util.stripLeadingAndTrailingQuotes(token)); } else if (token.startsWith(\"--\")) { handleLongOption(token); } else if (token.startsWith(\"-\") && !\"-\".equals(token)) {"
+      },
+      {
+        "txt": "handleShortAndLongOption(token); } else { handleUnknownToken(token); } if (currentOption != null && !currentOption.acceptsArg()) { currentOption = null; }"
+      },
+      {
+        "txt": "} private boolean isArgument(String token) { return !isOption(token) || isNegativeNumber(token); } private boolean isNegativeNumber(String token) { try { Double.parseDouble(token);"
+      },
+      {
+        "txt": "return true; } catch (NumberFormatException e) { return false; } } private boolean isOption(String token) { return isLongOption(token) || isShortOption(token);"
+      },
+      {
+        "txt": "} private boolean isShortOption(String token) { return token.startsWith(\"-\") && token.length() >= 2 && options.hasShortOption(token.substring(1, 2)); } private boolean isLongOption(String token) { if (!token.startsWith(\"-\") || token.length() == 1) { return false;"
+      },
+      {
+        "txt": "} int pos = token.indexOf(\"=\"); String t = pos == -1 ? token : token.substring(0, pos); if (!options.getMatchingOptions(t).isEmpty()) { return true; } else if (getLongPrefix(token) != null && !token.startsWith(\"--\")) { return true;"
+      },
+      {
+        "txt": "} return false; } private void handleUnknownToken(String token) throws ParseException { if (token.startsWith(\"-\") && token.length() > 1 && !stopAtNonOption) { throw new UnrecognizedOptionException(\"Unrecognized option: \" + token, token); } cmd.addArg(token);"
+      },
+      {
+        "txt": "if (stopAtNonOption) { skipParsing = true; } } private void handleLongOption(String token) throws ParseException { if (token.indexOf('=') == -1) { handleLongOptionWithoutEqual(token);"
+      },
+      {
+        "txt": "} else { handleLongOptionWithEqual(token); } } private void handleLongOptionWithoutEqual(String token) throws ParseException { List matchingOpts = options.getMatchingOptions(token); if (matchingOpts.isEmpty())"
+      },
+      {
+        "txt": "{ handleUnknownToken(currentToken); } else if (matchingOpts.size() > 1) { throw new AmbiguousOptionException(token, matchingOpts); } else { handleOption(options.getOption((String) matchingOpts.get(0)));"
+      },
+      {
+        "txt": "} } private void handleLongOptionWithEqual(String token) throws ParseException { int pos = token.indexOf('='); String value = token.substring(pos + 1); String opt = token.substring(0, pos); List matchingOpts = options.getMatchingOptions(opt); if (matchingOpts.isEmpty()) {"
+      },
+      {
+        "txt": "handleUnknownToken(currentToken); } else if (matchingOpts.size() > 1) { throw new AmbiguousOptionException(opt, matchingOpts); } else { Option option = options.getOption((String) matchingOpts.get(0)); if (option.acceptsArg())"
+      },
+      {
+        "txt": "{ handleOption(option); currentOption.addValueForProcessing(value); currentOption = null; } else { handleUnknownToken(currentToken); } }"
+      },
+      {
+        "txt": "} private void handleShortAndLongOption(String token) throws ParseException { String t = Util.stripLeadingHyphens(token); int pos = t.indexOf('='); if (t.length() == 1) { if (options.hasShortOption(t)) { handleOption(options.getOption(t));"
+      },
+      {
+        "txt": "} else { handleUnknownToken(token); } } else if (pos == -1) { if (options.hasShortOption(t)) {"
+      },
+      {
+        "txt": "handleOption(options.getOption(t)); } else if (!options.getMatchingOptions(t).isEmpty()) { handleLongOptionWithoutEqual(token); } else { String opt = getLongPrefix(t); if (opt != null && options.getOption(opt).acceptsArg())"
+      },
+      {
+        "txt": "{ handleOption(options.getOption(opt)); currentOption.addValueForProcessing(t.substring(opt.length())); currentOption = null; } else if (isJavaProperty(t)) { handleOption(options.getOption(t.substring(0, 1))); currentOption.addValueForProcessing(t.substring(1)); currentOption = null;"
+      },
+      {
+        "txt": "} else { handleConcatenatedOptions(token); } } } else { String opt = t.substring(0, pos);"
+      },
+      {
+        "txt": "String value = t.substring(pos + 1); if (opt.length() == 1) { Option option = options.getOption(opt); if (option != null && option.acceptsArg()) { handleOption(option); currentOption.addValueForProcessing(value); currentOption = null; }"
+      },
+      {
+        "txt": "else { handleUnknownToken(token); } } else if (isJavaProperty(opt)) { handleOption(options.getOption(opt.substring(0, 1))); currentOption.addValueForProcessing(opt.substring(1)); currentOption.addValueForProcessing(value);"
+      },
+      {
+        "txt": "currentOption = null; } else { handleLongOptionWithEqual(token); } } } private String getLongPrefix(String token) {"
+      },
+      {
+        "txt": "String t = Util.stripLeadingHyphens(token); int i; String opt = null; for (i = t.length() - 2; i > 1; i--) { String prefix = t.substring(0, i); if (options.hasLongOption(prefix)) { opt = prefix; break;"
+      },
+      {
+        "txt": "} } return opt; } private boolean isJavaProperty(String token) { String opt = token.substring(0, 1); Option option = options.getOption(opt); return option != null && (option.getArgs() >= 2 || option.getArgs() == Option.UNLIMITED_VALUES); }"
+      },
+      {
+        "txt": "private void handleOption(Option option) throws ParseException { checkRequiredArgs(); option = (Option) option.clone(); updateRequiredOptions(option); cmd.addOption(option); if (option.hasArg()) { currentOption = option; }"
+      },
+      {
+        "txt": "else { currentOption = null; } } private void updateRequiredOptions(Option option) throws AlreadySelectedException { if (option.isRequired()) { expectedOpts.remove(option.getKey());"
+      },
+      {
+        "txt": "} if (options.getOptionGroup(option) != null) { OptionGroup group = options.getOptionGroup(option); if (group.isRequired()) { expectedOpts.remove(group); } group.setSelected(option); }"
+      },
+      {
+        "txt": "} protected void handleConcatenatedOptions(String token) throws ParseException { for (int i = 1; i < token.length(); i++) { String ch = String.valueOf(token.charAt(i)); if (options.hasOption(ch)) { handleOption(options.getOption(ch)); if (currentOption != null && (token.length() != (i + 1)))"
+      },
+      {
+        "txt": "{ currentOption.addValueForProcessing(token.substring(i + 1)); break; } } else { handleUnknownToken(stopAtNonOption && i > 1 ? token.substring(i) : token); break; }"
+      },
+      {
+        "txt": "} }"
+      }
+    ]
+  },
+  {
+    "id": 167,
+    "file_path": "src/main/java/org/apache/commons/cli/DefaultParser.java",
+    "start-bug-line": 155,
+    "end-bug-line": 155,
+    "bug": "",
+    "fix": "OptionGroup group = options.getOptionGroup(opt); boolean selected = group != null && group.getSelected() != null;",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.cli; import java.util.ArrayList; import java.util.Enumeration; import java.util.Iterator; import java.util.List; import java.util.Properties; public class DefaultParser implements CommandLineParser"
+      },
+      {
+        "txt": "{ protected CommandLine cmd; protected Options options; protected boolean stopAtNonOption; protected String currentToken; protected Option currentOption; protected boolean skipParsing; protected List expectedOpts; public CommandLine parse(Options options, String[] arguments) throws ParseException {"
+      },
+      {
+        "txt": "return parse(options, arguments, null); } public CommandLine parse(Options options, String[] arguments, Properties properties) throws ParseException { return parse(options, arguments, properties, false); } public CommandLine parse(Options options, String[] arguments, boolean stopAtNonOption) throws ParseException { return parse(options, arguments, null, stopAtNonOption); }"
+      },
+      {
+        "txt": "public CommandLine parse(Options options, String[] arguments, Properties properties, boolean stopAtNonOption) throws ParseException { this.options = options; this.stopAtNonOption = stopAtNonOption; skipParsing = false; currentOption = null; expectedOpts = new ArrayList(options.getRequiredOptions()); for (Iterator it = options.getOptionGroups().iterator(); it.hasNext();) { OptionGroup group = (OptionGroup) it.next();"
+      },
+      {
+        "txt": "group.setSelected(null); } cmd = new CommandLine(); if (arguments != null) { for (int i = 0; i < arguments.length; i++) { handleToken(arguments[i]); } }"
+      },
+      {
+        "txt": "checkRequiredArgs(); handleProperties(properties); checkRequiredOptions(); return cmd; } private void handleProperties(Properties properties) throws ParseException { if (properties == null) { return;"
+      },
+      {
+        "txt": "for (Enumeration e = properties.propertyNames(); e.hasMoreElements();) { String option = e.nextElement().toString(); if (!cmd.hasOption(option)) { Option opt = options.getOption(option); <extra_id_0> String value = properties.getProperty(option); if (opt.hasArg()) { if (opt.getValues() == null || opt.getValues().length == 0) { opt.addValueForProcessing(value);"
+      },
+      {
+        "txt": "{ opt.addValueForProcessing(value); } } else if (!(\"yes\".equalsIgnoreCase(value) || \"true\".equalsIgnoreCase(value) || \"1\".equalsIgnoreCase(value))) { continue; }"
+      },
+      {
+        "txt": "handleOption(opt); currentOption = null; } } } private void checkRequiredOptions() throws MissingOptionException { if (!expectedOpts.isEmpty()) { throw new MissingOptionException(expectedOpts);"
+      },
+      {
+        "txt": "} } private void checkRequiredArgs() throws ParseException { if (currentOption != null && currentOption.requiresArg()) { throw new MissingArgumentException(currentOption); } } private void handleToken(String token) throws ParseException"
+      },
+      {
+        "txt": "{ currentToken = token; if (skipParsing) { cmd.addArg(token); } else if (\"--\".equals(token)) { skipParsing = true; }"
+      },
+      {
+        "txt": "else if (currentOption != null && currentOption.acceptsArg() && isArgument(token)) { currentOption.addValueForProcessing(Util.stripLeadingAndTrailingQuotes(token)); } else if (token.startsWith(\"--\")) { handleLongOption(token); } else if (token.startsWith(\"-\") && !\"-\".equals(token)) {"
+      },
+      {
+        "txt": "handleShortAndLongOption(token); } else { handleUnknownToken(token); } if (currentOption != null && !currentOption.acceptsArg()) { currentOption = null; }"
+      },
+      {
+        "txt": "} private boolean isArgument(String token) { return !isOption(token) || isNegativeNumber(token); } private boolean isNegativeNumber(String token) { try { Double.parseDouble(token);"
+      },
+      {
+        "txt": "return true; } catch (NumberFormatException e) { return false; } } private boolean isOption(String token) { return isLongOption(token) || isShortOption(token);"
+      },
+      {
+        "txt": "} private boolean isShortOption(String token) { return token.startsWith(\"-\") && token.length() >= 2 && options.hasShortOption(token.substring(1, 2)); } private boolean isLongOption(String token) { if (!token.startsWith(\"-\") || token.length() == 1) { return false;"
+      },
+      {
+        "txt": "} int pos = token.indexOf(\"=\"); String t = pos == -1 ? token : token.substring(0, pos); if (!options.getMatchingOptions(t).isEmpty()) { return true; } else if (getLongPrefix(token) != null && !token.startsWith(\"--\")) { return true;"
+      },
+      {
+        "txt": "} return false; } private void handleUnknownToken(String token) throws ParseException { if (token.startsWith(\"-\") && token.length() > 1 && !stopAtNonOption) { throw new UnrecognizedOptionException(\"Unrecognized option: \" + token, token); } cmd.addArg(token);"
+      },
+      {
+        "txt": "if (stopAtNonOption) { skipParsing = true; } } private void handleLongOption(String token) throws ParseException { if (token.indexOf('=') == -1) { handleLongOptionWithoutEqual(token);"
+      },
+      {
+        "txt": "} else { handleLongOptionWithEqual(token); } } private void handleLongOptionWithoutEqual(String token) throws ParseException { List matchingOpts = options.getMatchingOptions(token); if (matchingOpts.isEmpty())"
+      },
+      {
+        "txt": "{ handleUnknownToken(currentToken); } else if (matchingOpts.size() > 1) { throw new AmbiguousOptionException(token, matchingOpts); } else { handleOption(options.getOption((String) matchingOpts.get(0)));"
+      },
+      {
+        "txt": "} } private void handleLongOptionWithEqual(String token) throws ParseException { int pos = token.indexOf('='); String value = token.substring(pos + 1); String opt = token.substring(0, pos); List matchingOpts = options.getMatchingOptions(opt); if (matchingOpts.isEmpty()) {"
+      },
+      {
+        "txt": "handleUnknownToken(currentToken); } else if (matchingOpts.size() > 1) { throw new AmbiguousOptionException(opt, matchingOpts); } else { Option option = options.getOption((String) matchingOpts.get(0)); if (option.acceptsArg())"
+      },
+      {
+        "txt": "{ handleOption(option); currentOption.addValueForProcessing(value); currentOption = null; } else { handleUnknownToken(currentToken); } }"
+      },
+      {
+        "txt": "} private void handleShortAndLongOption(String token) throws ParseException { String t = Util.stripLeadingHyphens(token); int pos = t.indexOf('='); if (t.length() == 1) { if (options.hasShortOption(t)) { handleOption(options.getOption(t));"
+      },
+      {
+        "txt": "} else { handleUnknownToken(token); } } else if (pos == -1) { if (options.hasShortOption(t)) {"
+      },
+      {
+        "txt": "handleOption(options.getOption(t)); } else if (!options.getMatchingOptions(t).isEmpty()) { handleLongOptionWithoutEqual(token); } else { String opt = getLongPrefix(t); if (opt != null && options.getOption(opt).acceptsArg())"
+      },
+      {
+        "txt": "{ handleOption(options.getOption(opt)); currentOption.addValueForProcessing(t.substring(opt.length())); currentOption = null; } else if (isJavaProperty(t)) { handleOption(options.getOption(t.substring(0, 1))); currentOption.addValueForProcessing(t.substring(1)); currentOption = null;"
+      },
+      {
+        "txt": "} else { handleConcatenatedOptions(token); } } } else { String opt = t.substring(0, pos);"
+      },
+      {
+        "txt": "String value = t.substring(pos + 1); if (opt.length() == 1) { Option option = options.getOption(opt); if (option != null && option.acceptsArg()) { handleOption(option); currentOption.addValueForProcessing(value); currentOption = null; }"
+      },
+      {
+        "txt": "else { handleUnknownToken(token); } } else if (isJavaProperty(opt)) { handleOption(options.getOption(opt.substring(0, 1))); currentOption.addValueForProcessing(opt.substring(1)); currentOption.addValueForProcessing(value);"
+      },
+      {
+        "txt": "currentOption = null; } else { handleLongOptionWithEqual(token); } } } private String getLongPrefix(String token) {"
+      },
+      {
+        "txt": "String t = Util.stripLeadingHyphens(token); int i; String opt = null; for (i = t.length() - 2; i > 1; i--) { String prefix = t.substring(0, i); if (options.hasLongOption(prefix)) { opt = prefix; break;"
+      },
+      {
+        "txt": "} } return opt; } private boolean isJavaProperty(String token) { String opt = token.substring(0, 1); Option option = options.getOption(opt); return option != null && (option.getArgs() >= 2 || option.getArgs() == Option.UNLIMITED_VALUES); }"
+      },
+      {
+        "txt": "private void handleOption(Option option) throws ParseException { checkRequiredArgs(); option = (Option) option.clone(); updateRequiredOptions(option); cmd.addOption(option); if (option.hasArg()) { currentOption = option; }"
+      },
+      {
+        "txt": "else { currentOption = null; } } private void updateRequiredOptions(Option option) throws AlreadySelectedException { if (option.isRequired()) { expectedOpts.remove(option.getKey());"
+      },
+      {
+        "txt": "} if (options.getOptionGroup(option) != null) { OptionGroup group = options.getOptionGroup(option); if (group.isRequired()) { expectedOpts.remove(group); } group.setSelected(option); }"
+      },
+      {
+        "txt": "} protected void handleConcatenatedOptions(String token) throws ParseException { for (int i = 1; i < token.length(); i++) { String ch = String.valueOf(token.charAt(i)); if (options.hasOption(ch)) { handleOption(options.getOption(ch)); if (currentOption != null && (token.length() != (i + 1)))"
+      },
+      {
+        "txt": "{ currentOption.addValueForProcessing(token.substring(i + 1)); break; } } else { handleUnknownToken(stopAtNonOption && i > 1 ? token.substring(i) : token); break; }"
+      },
+      {
+        "txt": "} }"
+      }
+    ]
+  },
+  {
+    "id": 168,
+    "file_path": "src/main/java/org/apache/commons/cli/DefaultParser.java",
+    "start-bug-line": 156,
+    "end-bug-line": 156,
+    "bug": "",
+    "fix": "if (!cmd.hasOption(option) && !selected) {",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.cli; import java.util.ArrayList; import java.util.Enumeration; import java.util.Iterator; import java.util.List; import java.util.Properties; public class DefaultParser implements CommandLineParser"
+      },
+      {
+        "txt": "{ protected CommandLine cmd; protected Options options; protected boolean stopAtNonOption; protected String currentToken; protected Option currentOption; protected boolean skipParsing; protected List expectedOpts; public CommandLine parse(Options options, String[] arguments) throws ParseException {"
+      },
+      {
+        "txt": "return parse(options, arguments, null); } public CommandLine parse(Options options, String[] arguments, Properties properties) throws ParseException { return parse(options, arguments, properties, false); } public CommandLine parse(Options options, String[] arguments, boolean stopAtNonOption) throws ParseException { return parse(options, arguments, null, stopAtNonOption); }"
+      },
+      {
+        "txt": "public CommandLine parse(Options options, String[] arguments, Properties properties, boolean stopAtNonOption) throws ParseException { this.options = options; this.stopAtNonOption = stopAtNonOption; skipParsing = false; currentOption = null; expectedOpts = new ArrayList(options.getRequiredOptions()); for (Iterator it = options.getOptionGroups().iterator(); it.hasNext();) { OptionGroup group = (OptionGroup) it.next();"
+      },
+      {
+        "txt": "group.setSelected(null); } cmd = new CommandLine(); if (arguments != null) { for (int i = 0; i < arguments.length; i++) { handleToken(arguments[i]); } }"
+      },
+      {
+        "txt": "checkRequiredArgs(); handleProperties(properties); checkRequiredOptions(); return cmd; } private void handleProperties(Properties properties) throws ParseException { if (properties == null) { return;"
+      },
+      {
+        "txt": "for (Enumeration e = properties.propertyNames(); e.hasMoreElements();) { String option = e.nextElement().toString(); if (!cmd.hasOption(option)) { Option opt = options.getOption(option); <extra_id_0> String value = properties.getProperty(option); if (opt.hasArg()) { if (opt.getValues() == null || opt.getValues().length == 0) { opt.addValueForProcessing(value);"
+      },
+      {
+        "txt": "{ opt.addValueForProcessing(value); } } else if (!(\"yes\".equalsIgnoreCase(value) || \"true\".equalsIgnoreCase(value) || \"1\".equalsIgnoreCase(value))) { continue; }"
+      },
+      {
+        "txt": "handleOption(opt); currentOption = null; } } } private void checkRequiredOptions() throws MissingOptionException { if (!expectedOpts.isEmpty()) { throw new MissingOptionException(expectedOpts);"
+      },
+      {
+        "txt": "} } private void checkRequiredArgs() throws ParseException { if (currentOption != null && currentOption.requiresArg()) { throw new MissingArgumentException(currentOption); } } private void handleToken(String token) throws ParseException"
+      },
+      {
+        "txt": "{ currentToken = token; if (skipParsing) { cmd.addArg(token); } else if (\"--\".equals(token)) { skipParsing = true; }"
+      },
+      {
+        "txt": "else if (currentOption != null && currentOption.acceptsArg() && isArgument(token)) { currentOption.addValueForProcessing(Util.stripLeadingAndTrailingQuotes(token)); } else if (token.startsWith(\"--\")) { handleLongOption(token); } else if (token.startsWith(\"-\") && !\"-\".equals(token)) {"
+      },
+      {
+        "txt": "handleShortAndLongOption(token); } else { handleUnknownToken(token); } if (currentOption != null && !currentOption.acceptsArg()) { currentOption = null; }"
+      },
+      {
+        "txt": "} private boolean isArgument(String token) { return !isOption(token) || isNegativeNumber(token); } private boolean isNegativeNumber(String token) { try { Double.parseDouble(token);"
+      },
+      {
+        "txt": "return true; } catch (NumberFormatException e) { return false; } } private boolean isOption(String token) { return isLongOption(token) || isShortOption(token);"
+      },
+      {
+        "txt": "} private boolean isShortOption(String token) { return token.startsWith(\"-\") && token.length() >= 2 && options.hasShortOption(token.substring(1, 2)); } private boolean isLongOption(String token) { if (!token.startsWith(\"-\") || token.length() == 1) { return false;"
+      },
+      {
+        "txt": "} int pos = token.indexOf(\"=\"); String t = pos == -1 ? token : token.substring(0, pos); if (!options.getMatchingOptions(t).isEmpty()) { return true; } else if (getLongPrefix(token) != null && !token.startsWith(\"--\")) { return true;"
+      },
+      {
+        "txt": "} return false; } private void handleUnknownToken(String token) throws ParseException { if (token.startsWith(\"-\") && token.length() > 1 && !stopAtNonOption) { throw new UnrecognizedOptionException(\"Unrecognized option: \" + token, token); } cmd.addArg(token);"
+      },
+      {
+        "txt": "if (stopAtNonOption) { skipParsing = true; } } private void handleLongOption(String token) throws ParseException { if (token.indexOf('=') == -1) { handleLongOptionWithoutEqual(token);"
+      },
+      {
+        "txt": "} else { handleLongOptionWithEqual(token); } } private void handleLongOptionWithoutEqual(String token) throws ParseException { List matchingOpts = options.getMatchingOptions(token); if (matchingOpts.isEmpty())"
+      },
+      {
+        "txt": "{ handleUnknownToken(currentToken); } else if (matchingOpts.size() > 1) { throw new AmbiguousOptionException(token, matchingOpts); } else { handleOption(options.getOption((String) matchingOpts.get(0)));"
+      },
+      {
+        "txt": "} } private void handleLongOptionWithEqual(String token) throws ParseException { int pos = token.indexOf('='); String value = token.substring(pos + 1); String opt = token.substring(0, pos); List matchingOpts = options.getMatchingOptions(opt); if (matchingOpts.isEmpty()) {"
+      },
+      {
+        "txt": "handleUnknownToken(currentToken); } else if (matchingOpts.size() > 1) { throw new AmbiguousOptionException(opt, matchingOpts); } else { Option option = options.getOption((String) matchingOpts.get(0)); if (option.acceptsArg())"
+      },
+      {
+        "txt": "{ handleOption(option); currentOption.addValueForProcessing(value); currentOption = null; } else { handleUnknownToken(currentToken); } }"
+      },
+      {
+        "txt": "} private void handleShortAndLongOption(String token) throws ParseException { String t = Util.stripLeadingHyphens(token); int pos = t.indexOf('='); if (t.length() == 1) { if (options.hasShortOption(t)) { handleOption(options.getOption(t));"
+      },
+      {
+        "txt": "} else { handleUnknownToken(token); } } else if (pos == -1) { if (options.hasShortOption(t)) {"
+      },
+      {
+        "txt": "handleOption(options.getOption(t)); } else if (!options.getMatchingOptions(t).isEmpty()) { handleLongOptionWithoutEqual(token); } else { String opt = getLongPrefix(t); if (opt != null && options.getOption(opt).acceptsArg())"
+      },
+      {
+        "txt": "{ handleOption(options.getOption(opt)); currentOption.addValueForProcessing(t.substring(opt.length())); currentOption = null; } else if (isJavaProperty(t)) { handleOption(options.getOption(t.substring(0, 1))); currentOption.addValueForProcessing(t.substring(1)); currentOption = null;"
+      },
+      {
+        "txt": "} else { handleConcatenatedOptions(token); } } } else { String opt = t.substring(0, pos);"
+      },
+      {
+        "txt": "String value = t.substring(pos + 1); if (opt.length() == 1) { Option option = options.getOption(opt); if (option != null && option.acceptsArg()) { handleOption(option); currentOption.addValueForProcessing(value); currentOption = null; }"
+      },
+      {
+        "txt": "else { handleUnknownToken(token); } } else if (isJavaProperty(opt)) { handleOption(options.getOption(opt.substring(0, 1))); currentOption.addValueForProcessing(opt.substring(1)); currentOption.addValueForProcessing(value);"
+      },
+      {
+        "txt": "currentOption = null; } else { handleLongOptionWithEqual(token); } } } private String getLongPrefix(String token) {"
+      },
+      {
+        "txt": "String t = Util.stripLeadingHyphens(token); int i; String opt = null; for (i = t.length() - 2; i > 1; i--) { String prefix = t.substring(0, i); if (options.hasLongOption(prefix)) { opt = prefix; break;"
+      },
+      {
+        "txt": "} } return opt; } private boolean isJavaProperty(String token) { String opt = token.substring(0, 1); Option option = options.getOption(opt); return option != null && (option.getArgs() >= 2 || option.getArgs() == Option.UNLIMITED_VALUES); }"
+      },
+      {
+        "txt": "private void handleOption(Option option) throws ParseException { checkRequiredArgs(); option = (Option) option.clone(); updateRequiredOptions(option); cmd.addOption(option); if (option.hasArg()) { currentOption = option; }"
+      },
+      {
+        "txt": "else { currentOption = null; } } private void updateRequiredOptions(Option option) throws AlreadySelectedException { if (option.isRequired()) { expectedOpts.remove(option.getKey());"
+      },
+      {
+        "txt": "} if (options.getOptionGroup(option) != null) { OptionGroup group = options.getOptionGroup(option); if (group.isRequired()) { expectedOpts.remove(group); } group.setSelected(option); }"
+      },
+      {
+        "txt": "} protected void handleConcatenatedOptions(String token) throws ParseException { for (int i = 1; i < token.length(); i++) { String ch = String.valueOf(token.charAt(i)); if (options.hasOption(ch)) { handleOption(options.getOption(ch)); if (currentOption != null && (token.length() != (i + 1)))"
+      },
+      {
+        "txt": "{ currentOption.addValueForProcessing(token.substring(i + 1)); break; } } else { handleUnknownToken(stopAtNonOption && i > 1 ? token.substring(i) : token); break; }"
+      },
+      {
+        "txt": "} }"
+      }
+    ]
+  },
+  {
+    "id": 169,
+    "file_path": "src/main/java/org/apache/commons/cli/Parser.java",
+    "start-bug-line": 263,
+    "end-bug-line": 263,
+    "bug": "if (!cmd.hasOption(option))",
+    "fix": "Option opt = options.getOption(option); if (opt == null)",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.cli; import java.util.ArrayList; import java.util.Arrays; import java.util.Enumeration; import java.util.Iterator; import java.util.List; import java.util.ListIterator;"
+      },
+      {
+        "txt": "import java.util.Properties; public abstract class Parser implements CommandLineParser { protected CommandLine cmd; private Options options; private List requiredOptions; protected void setOptions(final Options options) { this.options = options; this.requiredOptions = new ArrayList(options.getRequiredOptions());"
+      },
+      {
+        "txt": "} protected Options getOptions() { return options; } protected List getRequiredOptions() { return requiredOptions; } protected abstract String[] flatten(Options opts, String[] arguments, boolean stopAtNonOption) throws ParseException;"
+      },
+      {
+        "txt": "public CommandLine parse(Options options, String[] arguments) throws ParseException { return parse(options, arguments, null, false); } public CommandLine parse(Options options, String[] arguments, Properties properties) throws ParseException { return parse(options, arguments, properties, false); } public CommandLine parse(Options options, String[] arguments, boolean stopAtNonOption) throws ParseException {"
+      },
+      {
+        "txt": "return parse(options, arguments, null, stopAtNonOption); } public CommandLine parse(Options options, String[] arguments, Properties properties, boolean stopAtNonOption) throws ParseException { for (Iterator it = options.helpOptions().iterator(); it.hasNext();) { Option opt = (Option) it.next(); opt.clearValues(); }"
+      },
+      {
+        "txt": "for (Iterator it = options.getOptionGroups().iterator(); it.hasNext();) { OptionGroup group = (OptionGroup) it.next(); group.setSelected(null); } setOptions(options); cmd = new CommandLine(); boolean eatTheRest = false; if (arguments == null) {"
+      },
+      {
+        "txt": "arguments = new String[0]; } List tokenList = Arrays.asList(flatten(getOptions(), arguments, stopAtNonOption)); ListIterator iterator = tokenList.listIterator(); while (iterator.hasNext()) { String t = (String) iterator.next(); if (\"--\".equals(t)) { eatTheRest = true;"
+      },
+      {
+        "txt": "} else if (\"-\".equals(t)) { if (stopAtNonOption) { eatTheRest = true; } else { cmd.addArg(t);"
+      },
+      {
+        "txt": "} } else if (t.startsWith(\"-\")) { if (stopAtNonOption && !getOptions().hasOption(t)) { eatTheRest = true; cmd.addArg(t); } else"
+      },
+      {
+        "txt": "{ processOption(t, iterator); } } else { cmd.addArg(t); if (stopAtNonOption) { eatTheRest = true;"
+      },
+      {
+        "txt": "} } if (eatTheRest) { while (iterator.hasNext()) { String str = (String) iterator.next(); if (!\"--\".equals(str)) { cmd.addArg(str);"
+      },
+      {
+        "txt": "} } } } processProperties(properties); checkRequiredOptions(); return cmd; } protected void processProperties(Properties properties) throws ParseException {"
+      },
+      {
+        "txt": "{ return; } for (Enumeration e = properties.propertyNames(); e.hasMoreElements();) { String option = e.nextElement().toString(); <extra_id_0> { Option opt = getOptions().getOption(option); String value = properties.getProperty(option); if (opt.hasArg()) { if (opt.getValues() == null || opt.getValues().length == 0)"
+      },
+      {
+        "txt": "{ if (opt.getValues() == null || opt.getValues().length == 0) { try { opt.addValueForProcessing(value); } catch (RuntimeException exp) { }"
+      },
+      {
+        "txt": "} } else if (!(\"yes\".equalsIgnoreCase(value) || \"true\".equalsIgnoreCase(value) || \"1\".equalsIgnoreCase(value))) { continue; } cmd.addOption(opt); updateRequiredOptions(opt);"
+      },
+      {
+        "txt": "} } } protected void checkRequiredOptions() throws MissingOptionException { if (!getRequiredOptions().isEmpty()) { throw new MissingOptionException(getRequiredOptions()); } }"
+      },
+      {
+        "txt": "public void processArgs(Option opt, ListIterator iter) throws ParseException { while (iter.hasNext()) { String str = (String) iter.next(); if (getOptions().hasOption(str) && str.startsWith(\"-\")) { iter.previous(); break; }"
+      },
+      {
+        "txt": "try { opt.addValueForProcessing(Util.stripLeadingAndTrailingQuotes(str)); } catch (RuntimeException exp) { iter.previous(); break; } }"
+      },
+      {
+        "txt": "if (opt.getValues() == null && !opt.hasOptionalArg()) { throw new MissingArgumentException(opt); } } protected void processOption(String arg, ListIterator iter) throws ParseException { boolean hasOption = getOptions().hasOption(arg); if (!hasOption) {"
+      },
+      {
+        "txt": "throw new UnrecognizedOptionException(\"Unrecognized option: \" + arg, arg); } Option opt = (Option) getOptions().getOption(arg).clone(); updateRequiredOptions(opt); if (opt.hasArg()) { processArgs(opt, iter); } cmd.addOption(opt); }"
+      },
+      {
+        "txt": "private void updateRequiredOptions(Option opt) throws ParseException { if (opt.isRequired()) { getRequiredOptions().remove(opt.getKey()); } if (getOptions().getOptionGroup(opt) != null) { OptionGroup group = getOptions().getOptionGroup(opt); if (group.isRequired())"
+      },
+      {
+        "txt": "{ getRequiredOptions().remove(group); } group.setSelected(opt); } }"
+      }
+    ]
+  },
+  {
+    "id": 170,
+    "file_path": "src/main/java/org/apache/commons/cli/Parser.java",
+    "start-bug-line": 265,
+    "end-bug-line": 265,
+    "bug": "Option opt = getOptions().getOption(option);",
+    "fix": "throw new UnrecognizedOptionException(\"Default option wasn't defined\", option); }",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.cli; import java.util.ArrayList; import java.util.Arrays; import java.util.Enumeration; import java.util.Iterator; import java.util.List; import java.util.ListIterator; import java.util.Properties; public abstract class Parser implements CommandLineParser"
+      },
+      {
+        "txt": "{ protected CommandLine cmd; private Options options; private List requiredOptions; protected void setOptions(final Options options) { this.options = options; this.requiredOptions = new ArrayList(options.getRequiredOptions()); } protected Options getOptions()"
+      },
+      {
+        "txt": "{ return options; } protected List getRequiredOptions() { return requiredOptions; } protected abstract String[] flatten(Options opts, String[] arguments, boolean stopAtNonOption) throws ParseException; public CommandLine parse(Options options, String[] arguments) throws ParseException {"
+      },
+      {
+        "txt": "return parse(options, arguments, null, false); } public CommandLine parse(Options options, String[] arguments, Properties properties) throws ParseException { return parse(options, arguments, properties, false); } public CommandLine parse(Options options, String[] arguments, boolean stopAtNonOption) throws ParseException { return parse(options, arguments, null, stopAtNonOption); }"
+      },
+      {
+        "txt": "public CommandLine parse(Options options, String[] arguments, Properties properties, boolean stopAtNonOption) throws ParseException { for (Iterator it = options.helpOptions().iterator(); it.hasNext();) { Option opt = (Option) it.next(); opt.clearValues(); } for (Iterator it = options.getOptionGroups().iterator(); it.hasNext();) {"
+      },
+      {
+        "txt": "OptionGroup group = (OptionGroup) it.next(); group.setSelected(null); } setOptions(options); cmd = new CommandLine(); boolean eatTheRest = false; if (arguments == null) { arguments = new String[0]; }"
+      },
+      {
+        "txt": "List tokenList = Arrays.asList(flatten(getOptions(), arguments, stopAtNonOption)); ListIterator iterator = tokenList.listIterator(); while (iterator.hasNext()) { String t = (String) iterator.next(); if (\"--\".equals(t)) { eatTheRest = true; } else if (\"-\".equals(t))"
+      },
+      {
+        "txt": "{ if (stopAtNonOption) { eatTheRest = true; } else { cmd.addArg(t); } }"
+      },
+      {
+        "txt": "else if (t.startsWith(\"-\")) { if (stopAtNonOption && !getOptions().hasOption(t)) { eatTheRest = true; cmd.addArg(t); } else { processOption(t, iterator);"
+      },
+      {
+        "txt": "} } else { cmd.addArg(t); if (stopAtNonOption) { eatTheRest = true; } }"
+      },
+      {
+        "txt": "if (eatTheRest) { while (iterator.hasNext()) { String str = (String) iterator.next(); if (!\"--\".equals(str)) { cmd.addArg(str); } }"
+      },
+      {
+        "txt": "} } processProperties(properties); checkRequiredOptions(); return cmd; } protected void processProperties(Properties properties) throws ParseException { if (properties == null) {"
+      },
+      {
+        "txt": "} for (Enumeration e = properties.propertyNames(); e.hasMoreElements();) { String option = e.nextElement().toString(); if (!cmd.hasOption(option)) { <extra_id_0> String value = properties.getProperty(option); if (opt.hasArg()) { if (opt.getValues() == null || opt.getValues().length == 0) { try"
+      },
+      {
+        "txt": "{ try { opt.addValueForProcessing(value); } catch (RuntimeException exp) { } } }"
+      },
+      {
+        "txt": "else if (!(\"yes\".equalsIgnoreCase(value) || \"true\".equalsIgnoreCase(value) || \"1\".equalsIgnoreCase(value))) { continue; } cmd.addOption(opt); updateRequiredOptions(opt); } }"
+      },
+      {
+        "txt": "} protected void checkRequiredOptions() throws MissingOptionException { if (!getRequiredOptions().isEmpty()) { throw new MissingOptionException(getRequiredOptions()); } } public void processArgs(Option opt, ListIterator iter) throws ParseException {"
+      },
+      {
+        "txt": "while (iter.hasNext()) { String str = (String) iter.next(); if (getOptions().hasOption(str) && str.startsWith(\"-\")) { iter.previous(); break; } try {"
+      },
+      {
+        "txt": "opt.addValueForProcessing(Util.stripLeadingAndTrailingQuotes(str)); } catch (RuntimeException exp) { iter.previous(); break; } } if (opt.getValues() == null && !opt.hasOptionalArg()) {"
+      },
+      {
+        "txt": "throw new MissingArgumentException(opt); } } protected void processOption(String arg, ListIterator iter) throws ParseException { boolean hasOption = getOptions().hasOption(arg); if (!hasOption) { throw new UnrecognizedOptionException(\"Unrecognized option: \" + arg, arg); }"
+      },
+      {
+        "txt": "Option opt = (Option) getOptions().getOption(arg).clone(); updateRequiredOptions(opt); if (opt.hasArg()) { processArgs(opt, iter); } cmd.addOption(opt); } private void updateRequiredOptions(Option opt) throws ParseException {"
+      },
+      {
+        "txt": "if (opt.isRequired()) { getRequiredOptions().remove(opt.getKey()); } if (getOptions().getOptionGroup(opt) != null) { OptionGroup group = getOptions().getOptionGroup(opt); if (group.isRequired()) { getRequiredOptions().remove(group);"
+      },
+      {
+        "txt": "} group.setSelected(opt); } }"
+      }
+    ]
+  },
+  {
+    "id": 171,
+    "file_path": "src/main/java/org/apache/commons/cli/Parser.java",
+    "start-bug-line": 268,
+    "end-bug-line": 268,
+    "bug": "",
+    "fix": "OptionGroup group = options.getOptionGroup(opt); boolean selected = group != null && group.getSelected() != null;",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.cli; import java.util.ArrayList; import java.util.Arrays; import java.util.Enumeration; import java.util.Iterator; import java.util.List; import java.util.ListIterator; import java.util.Properties; public abstract class Parser implements CommandLineParser {"
+      },
+      {
+        "txt": "protected CommandLine cmd; private Options options; private List requiredOptions; protected void setOptions(final Options options) { this.options = options; this.requiredOptions = new ArrayList(options.getRequiredOptions()); } protected Options getOptions() {"
+      },
+      {
+        "txt": "return options; } protected List getRequiredOptions() { return requiredOptions; } protected abstract String[] flatten(Options opts, String[] arguments, boolean stopAtNonOption) throws ParseException; public CommandLine parse(Options options, String[] arguments) throws ParseException { return parse(options, arguments, null, false);"
+      },
+      {
+        "txt": "} public CommandLine parse(Options options, String[] arguments, Properties properties) throws ParseException { return parse(options, arguments, properties, false); } public CommandLine parse(Options options, String[] arguments, boolean stopAtNonOption) throws ParseException { return parse(options, arguments, null, stopAtNonOption); } public CommandLine parse(Options options, String[] arguments, Properties properties, boolean stopAtNonOption)"
+      },
+      {
+        "txt": "throws ParseException { for (Iterator it = options.helpOptions().iterator(); it.hasNext();) { Option opt = (Option) it.next(); opt.clearValues(); } for (Iterator it = options.getOptionGroups().iterator(); it.hasNext();) { OptionGroup group = (OptionGroup) it.next();"
+      },
+      {
+        "txt": "group.setSelected(null); } setOptions(options); cmd = new CommandLine(); boolean eatTheRest = false; if (arguments == null) { arguments = new String[0]; } List tokenList = Arrays.asList(flatten(getOptions(), arguments, stopAtNonOption));"
+      },
+      {
+        "txt": "ListIterator iterator = tokenList.listIterator(); while (iterator.hasNext()) { String t = (String) iterator.next(); if (\"--\".equals(t)) { eatTheRest = true; } else if (\"-\".equals(t)) {"
+      },
+      {
+        "txt": "if (stopAtNonOption) { eatTheRest = true; } else { cmd.addArg(t); } } else if (t.startsWith(\"-\"))"
+      },
+      {
+        "txt": "{ if (stopAtNonOption && !getOptions().hasOption(t)) { eatTheRest = true; cmd.addArg(t); } else { processOption(t, iterator); }"
+      },
+      {
+        "txt": "} else { cmd.addArg(t); if (stopAtNonOption) { eatTheRest = true; } } if (eatTheRest)"
+      },
+      {
+        "txt": "{ while (iterator.hasNext()) { String str = (String) iterator.next(); if (!\"--\".equals(str)) { cmd.addArg(str); } } }"
+      },
+      {
+        "txt": "} processProperties(properties); checkRequiredOptions(); return cmd; } protected void processProperties(Properties properties) throws ParseException { if (properties == null) { return;"
+      },
+      {
+        "txt": "for (Enumeration e = properties.propertyNames(); e.hasMoreElements();) { String option = e.nextElement().toString(); if (!cmd.hasOption(option)) { Option opt = getOptions().getOption(option); <extra_id_0> String value = properties.getProperty(option); if (opt.hasArg()) { if (opt.getValues() == null || opt.getValues().length == 0) { try"
+      },
+      {
+        "txt": "{ try { opt.addValueForProcessing(value); } catch (RuntimeException exp) { } } }"
+      },
+      {
+        "txt": "else if (!(\"yes\".equalsIgnoreCase(value) || \"true\".equalsIgnoreCase(value) || \"1\".equalsIgnoreCase(value))) { continue; } cmd.addOption(opt); updateRequiredOptions(opt); } }"
+      },
+      {
+        "txt": "} protected void checkRequiredOptions() throws MissingOptionException { if (!getRequiredOptions().isEmpty()) { throw new MissingOptionException(getRequiredOptions()); } } public void processArgs(Option opt, ListIterator iter) throws ParseException {"
+      },
+      {
+        "txt": "while (iter.hasNext()) { String str = (String) iter.next(); if (getOptions().hasOption(str) && str.startsWith(\"-\")) { iter.previous(); break; } try {"
+      },
+      {
+        "txt": "opt.addValueForProcessing(Util.stripLeadingAndTrailingQuotes(str)); } catch (RuntimeException exp) { iter.previous(); break; } } if (opt.getValues() == null && !opt.hasOptionalArg()) {"
+      },
+      {
+        "txt": "throw new MissingArgumentException(opt); } } protected void processOption(String arg, ListIterator iter) throws ParseException { boolean hasOption = getOptions().hasOption(arg); if (!hasOption) { throw new UnrecognizedOptionException(\"Unrecognized option: \" + arg, arg); }"
+      },
+      {
+        "txt": "Option opt = (Option) getOptions().getOption(arg).clone(); updateRequiredOptions(opt); if (opt.hasArg()) { processArgs(opt, iter); } cmd.addOption(opt); } private void updateRequiredOptions(Option opt) throws ParseException {"
+      },
+      {
+        "txt": "if (opt.isRequired()) { getRequiredOptions().remove(opt.getKey()); } if (getOptions().getOptionGroup(opt) != null) { OptionGroup group = getOptions().getOptionGroup(opt); if (group.isRequired()) { getRequiredOptions().remove(group);"
+      },
+      {
+        "txt": "} group.setSelected(opt); } }"
+      }
+    ]
+  },
+  {
+    "id": 172,
+    "file_path": "src/main/java/org/apache/commons/cli/Parser.java",
+    "start-bug-line": 269,
+    "end-bug-line": 269,
+    "bug": "",
+    "fix": "if (!cmd.hasOption(option) && !selected) {",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.cli; import java.util.ArrayList; import java.util.Arrays; import java.util.Enumeration; import java.util.Iterator; import java.util.List; import java.util.ListIterator; import java.util.Properties; public abstract class Parser implements CommandLineParser {"
+      },
+      {
+        "txt": "protected CommandLine cmd; private Options options; private List requiredOptions; protected void setOptions(final Options options) { this.options = options; this.requiredOptions = new ArrayList(options.getRequiredOptions()); } protected Options getOptions() {"
+      },
+      {
+        "txt": "return options; } protected List getRequiredOptions() { return requiredOptions; } protected abstract String[] flatten(Options opts, String[] arguments, boolean stopAtNonOption) throws ParseException; public CommandLine parse(Options options, String[] arguments) throws ParseException { return parse(options, arguments, null, false);"
+      },
+      {
+        "txt": "} public CommandLine parse(Options options, String[] arguments, Properties properties) throws ParseException { return parse(options, arguments, properties, false); } public CommandLine parse(Options options, String[] arguments, boolean stopAtNonOption) throws ParseException { return parse(options, arguments, null, stopAtNonOption); } public CommandLine parse(Options options, String[] arguments, Properties properties, boolean stopAtNonOption)"
+      },
+      {
+        "txt": "throws ParseException { for (Iterator it = options.helpOptions().iterator(); it.hasNext();) { Option opt = (Option) it.next(); opt.clearValues(); } for (Iterator it = options.getOptionGroups().iterator(); it.hasNext();) { OptionGroup group = (OptionGroup) it.next();"
+      },
+      {
+        "txt": "group.setSelected(null); } setOptions(options); cmd = new CommandLine(); boolean eatTheRest = false; if (arguments == null) { arguments = new String[0]; } List tokenList = Arrays.asList(flatten(getOptions(), arguments, stopAtNonOption));"
+      },
+      {
+        "txt": "ListIterator iterator = tokenList.listIterator(); while (iterator.hasNext()) { String t = (String) iterator.next(); if (\"--\".equals(t)) { eatTheRest = true; } else if (\"-\".equals(t)) {"
+      },
+      {
+        "txt": "if (stopAtNonOption) { eatTheRest = true; } else { cmd.addArg(t); } } else if (t.startsWith(\"-\"))"
+      },
+      {
+        "txt": "{ if (stopAtNonOption && !getOptions().hasOption(t)) { eatTheRest = true; cmd.addArg(t); } else { processOption(t, iterator); }"
+      },
+      {
+        "txt": "} else { cmd.addArg(t); if (stopAtNonOption) { eatTheRest = true; } } if (eatTheRest)"
+      },
+      {
+        "txt": "{ while (iterator.hasNext()) { String str = (String) iterator.next(); if (!\"--\".equals(str)) { cmd.addArg(str); } } }"
+      },
+      {
+        "txt": "} processProperties(properties); checkRequiredOptions(); return cmd; } protected void processProperties(Properties properties) throws ParseException { if (properties == null) { return;"
+      },
+      {
+        "txt": "for (Enumeration e = properties.propertyNames(); e.hasMoreElements();) { String option = e.nextElement().toString(); if (!cmd.hasOption(option)) { Option opt = getOptions().getOption(option); <extra_id_0> String value = properties.getProperty(option); if (opt.hasArg()) { if (opt.getValues() == null || opt.getValues().length == 0) { try"
+      },
+      {
+        "txt": "{ try { opt.addValueForProcessing(value); } catch (RuntimeException exp) { } } }"
+      },
+      {
+        "txt": "else if (!(\"yes\".equalsIgnoreCase(value) || \"true\".equalsIgnoreCase(value) || \"1\".equalsIgnoreCase(value))) { continue; } cmd.addOption(opt); updateRequiredOptions(opt); } }"
+      },
+      {
+        "txt": "} protected void checkRequiredOptions() throws MissingOptionException { if (!getRequiredOptions().isEmpty()) { throw new MissingOptionException(getRequiredOptions()); } } public void processArgs(Option opt, ListIterator iter) throws ParseException {"
+      },
+      {
+        "txt": "while (iter.hasNext()) { String str = (String) iter.next(); if (getOptions().hasOption(str) && str.startsWith(\"-\")) { iter.previous(); break; } try {"
+      },
+      {
+        "txt": "opt.addValueForProcessing(Util.stripLeadingAndTrailingQuotes(str)); } catch (RuntimeException exp) { iter.previous(); break; } } if (opt.getValues() == null && !opt.hasOptionalArg()) {"
+      },
+      {
+        "txt": "throw new MissingArgumentException(opt); } } protected void processOption(String arg, ListIterator iter) throws ParseException { boolean hasOption = getOptions().hasOption(arg); if (!hasOption) { throw new UnrecognizedOptionException(\"Unrecognized option: \" + arg, arg); }"
+      },
+      {
+        "txt": "Option opt = (Option) getOptions().getOption(arg).clone(); updateRequiredOptions(opt); if (opt.hasArg()) { processArgs(opt, iter); } cmd.addOption(opt); } private void updateRequiredOptions(Option opt) throws ParseException {"
+      },
+      {
+        "txt": "if (opt.isRequired()) { getRequiredOptions().remove(opt.getKey()); } if (getOptions().getOptionGroup(opt) != null) { OptionGroup group = getOptions().getOptionGroup(opt); if (group.isRequired()) { getRequiredOptions().remove(group);"
+      },
+      {
+        "txt": "} group.setSelected(opt); } }"
+      }
+    ]
+  }
+]

@@ -1,0 +1,233 @@
+[
+  {
+    "id": 2820,
+    "file_path": "src/org/mockito/internal/configuration/injection/PropertyAndSetterInjection.java",
+    "start-bug-line": 114,
+    "end-bug-line": 114,
+    "bug": "Object injected = mockCandidateFilter.filterCandidate(mocks, field, instance).thenInject();",
+    "fix": "Object injected = mockCandidateFilter.filterCandidate(mocks, field, orderedInstanceFields, instance).thenInject();",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.mockito.internal.configuration.injection; import org.mockito.exceptions.Reporter; import org.mockito.exceptions.base.MockitoException; import org.mockito.internal.configuration.injection.filter.FinalMockCandidateFilter; import org.mockito.internal.configuration.injection.filter.MockCandidateFilter; import org.mockito.internal.configuration.injection.filter.NameBasedCandidateFilter; import org.mockito.internal.configuration.injection.filter.TypeBasedCandidateFilter; import org.mockito.internal.util.collections.ListUtil; import org.mockito.internal.util.reflection.FieldInitializationReport; import org.mockito.internal.util.reflection.FieldInitializer;"
+      },
+      {
+        "txt": "import org.mockito.internal.util.reflection.SuperTypesLastSorter; import java.lang.reflect.Field; import java.lang.reflect.InvocationTargetException; import java.lang.reflect.Modifier; import java.util.*; import static org.mockito.internal.util.collections.Sets.newMockSafeHashSet; public class PropertyAndSetterInjection extends MockInjectionStrategy { private final MockCandidateFilter mockCandidateFilter = new TypeBasedCandidateFilter(new NameBasedCandidateFilter(new FinalMockCandidateFilter())); private final ListUtil.Filter<Field> notFinalOrStatic = new ListUtil.Filter<Field>() { public boolean isOut(Field object) {"
+      },
+      {
+        "txt": "return Modifier.isFinal(object.getModifiers()) || Modifier.isStatic(object.getModifiers()); } }; public boolean processInjection(Field injectMocksField, Object injectMocksFieldOwner, Set<Object> mockCandidates) { FieldInitializationReport report = initializeInjectMocksField(injectMocksField, injectMocksFieldOwner); boolean injectionOccurred = false; Class<?> fieldClass = report.fieldClass(); Object fieldInstanceNeedingInjection = report.fieldInstance(); while (fieldClass != Object.class) { injectionOccurred |= injectMockCandidates(fieldClass, newMockSafeHashSet(mockCandidates), fieldInstanceNeedingInjection);"
+      },
+      {
+        "txt": "fieldClass = fieldClass.getSuperclass(); } return injectionOccurred; } private FieldInitializationReport initializeInjectMocksField(Field field, Object fieldOwner) { FieldInitializationReport report = null; try { report = new FieldInitializer(fieldOwner, field).initialize(); } catch (MockitoException e) { if(e.getCause() instanceof InvocationTargetException) {"
+      },
+      {
+        "txt": "Throwable realCause = e.getCause().getCause(); new Reporter().fieldInitialisationThrewException(field, realCause); } new Reporter().cannotInitializeForInjectMocksAnnotation(field.getName(), e); } return report; // never null } private boolean injectMockCandidates(Class<?> awaitingInjectionClazz, Set<Object> mocks, Object instance) { boolean injectionOccurred = false; List<Field> orderedInstanceFields = orderedInstanceFieldsFrom(awaitingInjectionClazz);"
+      },
+      {
+        "txt": "injectionOccurred |= injectMockCandidatesOnFields(mocks, instance, injectionOccurred, orderedInstanceFields); return injectionOccurred; } private boolean injectMockCandidatesOnFields(Set<Object> mocks, Object instance, boolean injectionOccurred, List<Field> orderedInstanceFields) { for (Iterator<Field> it = orderedInstanceFields.iterator(); it.hasNext(); ) { Field field = it.next(); <extra_id_0> if (injected != null) { injectionOccurred |= true; mocks.remove(injected); it.remove(); } }"
+      },
+      {
+        "txt": "} } return injectionOccurred; } private List<Field> orderedInstanceFieldsFrom(Class<?> awaitingInjectionClazz) { List<Field> declaredFields = Arrays.asList(awaitingInjectionClazz.getDeclaredFields()); declaredFields = ListUtil.filter(declaredFields, notFinalOrStatic); return new SuperTypesLastSorter().sort(declaredFields); }"
+      }
+    ]
+  },
+  {
+    "id": 2821,
+    "file_path": "src/org/mockito/internal/configuration/injection/filter/FinalMockCandidateFilter.java",
+    "start-bug-line": 13,
+    "end-bug-line": 13,
+    "bug": "",
+    "fix": "import java.util.List;",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.mockito.internal.configuration.injection.filter; import org.mockito.exceptions.Reporter; import org.mockito.internal.util.reflection.BeanPropertySetter; import org.mockito.internal.util.reflection.FieldSetter; import java.lang.reflect.Field; import java.util.Collection; <extra_id_0> public class FinalMockCandidateFilter implements MockCandidateFilter { public OngoingInjecter filterCandidate(final Collection<Object> mocks, final Field field, final Object fieldInstance) { if(mocks.size() == 1) { final Object matchingMock = mocks.iterator().next(); return new OngoingInjecter() { public Object thenInject() {"
+      },
+      {
+        "txt": "return new OngoingInjecter() { public Object thenInject() { try { if (!new BeanPropertySetter(fieldInstance, field).set(matchingMock)) { new FieldSetter(fieldInstance, field).set(matchingMock); } } catch (RuntimeException e) { new Reporter().cannotInjectDependency(field, matchingMock, e); } return matchingMock;"
+      },
+      {
+        "txt": "} }; } return new OngoingInjecter() { public Object thenInject() { return null; } }; }"
+      }
+    ]
+  },
+  {
+    "id": 2822,
+    "file_path": "src/org/mockito/internal/configuration/injection/filter/FinalMockCandidateFilter.java",
+    "start-bug-line": 23,
+    "end-bug-line": 23,
+    "bug": "public OngoingInjecter filterCandidate(final Collection<Object> mocks, final Field field, final Object fieldInstance) {",
+    "fix": "public OngoingInjecter filterCandidate(final Collection<Object> mocks, final Field field, List<Field> fields, final Object fieldInstance) {",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "import org.mockito.exceptions.Reporter; import org.mockito.internal.util.reflection.BeanPropertySetter; import org.mockito.internal.util.reflection.FieldSetter; import java.lang.reflect.Field; import java.util.Collection; public class FinalMockCandidateFilter implements MockCandidateFilter { <extra_id_0> if(mocks.size() == 1) { final Object matchingMock = mocks.iterator().next(); return new OngoingInjecter() { public Object thenInject() { try { if (!new BeanPropertySetter(fieldInstance, field).set(matchingMock)) {"
+      },
+      {
+        "txt": "try { if (!new BeanPropertySetter(fieldInstance, field).set(matchingMock)) { new FieldSetter(fieldInstance, field).set(matchingMock); } } catch (RuntimeException e) { new Reporter().cannotInjectDependency(field, matchingMock, e); } return matchingMock; } };"
+      },
+      {
+        "txt": "} return new OngoingInjecter() { public Object thenInject() { return null; } }; }"
+      }
+    ]
+  },
+  {
+    "id": 2823,
+    "file_path": "src/org/mockito/internal/configuration/injection/filter/MockCandidateFilter.java",
+    "start-bug-line": 9,
+    "end-bug-line": 9,
+    "bug": "",
+    "fix": "import java.util.List;",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.mockito.internal.configuration.injection.filter; import java.lang.reflect.Field; import java.util.Collection; <extra_id_0> public interface MockCandidateFilter { OngoingInjecter filterCandidate( Collection<Object> mocks, Field fieldToBeInjected, Object fieldInstance );"
+      },
+      {
+        "txt": "Object fieldInstance );"
+      }
+    ]
+  },
+  {
+    "id": 2824,
+    "file_path": "src/org/mockito/internal/configuration/injection/filter/MockCandidateFilter.java",
+    "start-bug-line": 15,
+    "end-bug-line": 15,
+    "bug": "Object fieldInstance",
+    "fix": "List<Field> fields, Object instance",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "import java.lang.reflect.Field; import java.util.Collection; public interface MockCandidateFilter { OngoingInjecter filterCandidate( Collection<Object> mocks, Field fieldToBeInjected, <extra_id_0> ); }"
+      }
+    ]
+  },
+  {
+    "id": 2825,
+    "file_path": "src/org/mockito/internal/configuration/injection/filter/NameBasedCandidateFilter.java",
+    "start-bug-line": 23,
+    "end-bug-line": 23,
+    "bug": "Field field, Object fieldInstance) {",
+    "fix": "Field field, List<Field> fields, Object fieldInstance) {",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.mockito.internal.configuration.injection.filter; import org.mockito.internal.util.MockUtil; import java.lang.reflect.Field; import java.util.ArrayList; import java.util.Collection; import java.util.List;"
+      },
+      {
+        "txt": "private final MockCandidateFilter next; private final MockUtil mockUtil = new MockUtil(); public NameBasedCandidateFilter(MockCandidateFilter next) { this.next = next; } public OngoingInjecter filterCandidate(Collection<Object> mocks, <extra_id_0> List<Object> mockNameMatches = new ArrayList<Object>(); if (mocks.size() > 1) { for (Object mock : mocks) { if (field.getName().equals(mockUtil.getMockName(mock).toString())) { mockNameMatches.add(mock); }"
+      },
+      {
+        "txt": "mockNameMatches.add(mock); } } return next.filterCandidate(mockNameMatches, field, fieldInstance); } return next.filterCandidate(mocks, field, fieldInstance); }"
+      }
+    ]
+  },
+  {
+    "id": 2826,
+    "file_path": "src/org/mockito/internal/configuration/injection/filter/NameBasedCandidateFilter.java",
+    "start-bug-line": 31,
+    "end-bug-line": 31,
+    "bug": "return next.filterCandidate(mockNameMatches, field,",
+    "fix": "return next.filterCandidate(mockNameMatches, field, fields,",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.mockito.internal.configuration.injection.filter; import org.mockito.internal.util.MockUtil; import java.lang.reflect.Field; import java.util.ArrayList;"
+      },
+      {
+        "txt": "import java.util.Collection; import java.util.List; public class NameBasedCandidateFilter implements MockCandidateFilter { private final MockCandidateFilter next; private final MockUtil mockUtil = new MockUtil(); public NameBasedCandidateFilter(MockCandidateFilter next) { this.next = next; } public OngoingInjecter filterCandidate(Collection<Object> mocks, Field field, Object fieldInstance) {"
+      },
+      {
+        "txt": "if (mocks.size() > 1) { for (Object mock : mocks) { if (field.getName().equals(mockUtil.getMockName(mock).toString())) { mockNameMatches.add(mock); } } <extra_id_0> fieldInstance); } return next.filterCandidate(mocks, field, fieldInstance); } }"
+      }
+    ]
+  },
+  {
+    "id": 2827,
+    "file_path": "src/org/mockito/internal/configuration/injection/filter/NameBasedCandidateFilter.java",
+    "start-bug-line": 42,
+    "end-bug-line": 42,
+    "bug": "",
+    "fix": "} else if (mocks.size() == 1) { String mockName = mockUtil.getMockName(mocks.iterator().next()) .toString();  for (Field otherField : fields) { if (!otherField.equals(field) && otherField.getType().equals(field.getType()) && otherField.getName().equals(mockName)) {  return new OngoingInjecter() { public Object thenInject() { return null; } }; } }",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.mockito.internal.configuration.injection.filter; import org.mockito.internal.util.MockUtil; import java.lang.reflect.Field; import java.util.ArrayList; import java.util.Collection; import java.util.List;"
+      },
+      {
+        "txt": "public class NameBasedCandidateFilter implements MockCandidateFilter { private final MockCandidateFilter next; private final MockUtil mockUtil = new MockUtil(); public NameBasedCandidateFilter(MockCandidateFilter next) { this.next = next; } public OngoingInjecter filterCandidate(Collection<Object> mocks, Field field, Object fieldInstance) { List<Object> mockNameMatches = new ArrayList<Object>(); if (mocks.size() > 1) {"
+      },
+      {
+        "txt": "if (field.getName().equals(mockUtil.getMockName(mock).toString())) { mockNameMatches.add(mock); } } return next.filterCandidate(mockNameMatches, field, fieldInstance); <extra_id_0> return next.filterCandidate(mocks, field, fieldInstance); } }"
+      }
+    ]
+  },
+  {
+    "id": 2828,
+    "file_path": "src/org/mockito/internal/configuration/injection/filter/NameBasedCandidateFilter.java",
+    "start-bug-line": 43,
+    "end-bug-line": 43,
+    "bug": "return next.filterCandidate(mocks, field, fieldInstance);",
+    "fix": "return next.filterCandidate(mocks, field, fields, fieldInstance);",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.mockito.internal.configuration.injection.filter; import org.mockito.internal.util.MockUtil; import java.lang.reflect.Field; import java.util.ArrayList; import java.util.Collection; import java.util.List; public class NameBasedCandidateFilter implements MockCandidateFilter {"
+      },
+      {
+        "txt": "private final MockCandidateFilter next; private final MockUtil mockUtil = new MockUtil(); public NameBasedCandidateFilter(MockCandidateFilter next) { this.next = next; } public OngoingInjecter filterCandidate(Collection<Object> mocks, Field field, Object fieldInstance) { List<Object> mockNameMatches = new ArrayList<Object>(); if (mocks.size() > 1) { for (Object mock : mocks) {"
+      },
+      {
+        "txt": "mockNameMatches.add(mock); } } return next.filterCandidate(mockNameMatches, field, fieldInstance); } <extra_id_0> } }"
+      }
+    ]
+  },
+  {
+    "id": 2829,
+    "file_path": "src/org/mockito/internal/configuration/injection/filter/TypeBasedCandidateFilter.java",
+    "start-bug-line": 20,
+    "end-bug-line": 20,
+    "bug": "public OngoingInjecter filterCandidate(Collection<Object> mocks, Field field, Object fieldInstance) {",
+    "fix": "public OngoingInjecter filterCandidate(Collection<Object> mocks, Field field, List<Field> fields, Object fieldInstance) {",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.mockito.internal.configuration.injection.filter; import java.lang.reflect.Field; import java.util.ArrayList;"
+      },
+      {
+        "txt": "import java.util.List; public class TypeBasedCandidateFilter implements MockCandidateFilter { MockCandidateFilter next; public TypeBasedCandidateFilter(MockCandidateFilter next) { this.next = next; } <extra_id_0> List<Object> mockTypeMatches = new ArrayList<Object>(); for (Object mock : mocks) { if (field.getType().isAssignableFrom(mock.getClass())) { mockTypeMatches.add(mock); } }"
+      },
+      {
+        "txt": "} } return next.filterCandidate(mockTypeMatches, field, fieldInstance); }"
+      }
+    ]
+  },
+  {
+    "id": 2830,
+    "file_path": "src/org/mockito/internal/configuration/injection/filter/TypeBasedCandidateFilter.java",
+    "start-bug-line": 28,
+    "end-bug-line": 28,
+    "bug": "return next.filterCandidate(mockTypeMatches, field, fieldInstance);",
+    "fix": "return next.filterCandidate(mockTypeMatches, field, fields, fieldInstance);",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.mockito.internal.configuration.injection.filter; import java.lang.reflect.Field; import java.util.ArrayList; import java.util.Collection; import java.util.List; public class TypeBasedCandidateFilter implements MockCandidateFilter { MockCandidateFilter next; public TypeBasedCandidateFilter(MockCandidateFilter next) { this.next = next; }"
+      },
+      {
+        "txt": "List<Object> mockTypeMatches = new ArrayList<Object>(); for (Object mock : mocks) { if (field.getType().isAssignableFrom(mock.getClass())) { mockTypeMatches.add(mock); } } <extra_id_0> } }"
+      }
+    ]
+  }
+]

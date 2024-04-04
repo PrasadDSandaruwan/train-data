@@ -1,0 +1,1499 @@
+[
+  {
+    "id": 2457,
+    "file_path": "src/main/java/org/apache/commons/math3/optim/BaseOptimizer.java",
+    "start-bug-line": 51,
+    "end-bug-line": 51,
+    "bug": "iterations = new Incrementor(0, new MaxIterCallback());",
+    "fix": "iterations = new Incrementor(Integer.MAX_VALUE, new MaxIterCallback());",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.math3.optim; import org.apache.commons.math3.util.Incrementor; import org.apache.commons.math3.exception.TooManyEvaluationsException; import org.apache.commons.math3.exception.TooManyIterationsException;"
+      },
+      {
+        "txt": "protected final Incrementor evaluations; protected final Incrementor iterations; private ConvergenceChecker<PAIR> checker; protected BaseOptimizer(ConvergenceChecker<PAIR> checker) { this.checker = checker; evaluations = new Incrementor(0, new MaxEvalCallback()); <extra_id_0> } public int getMaxEvaluations() { return evaluations.getMaximalCount(); } public int getEvaluations() { return evaluations.getCount();"
+      },
+      {
+        "txt": "public int getEvaluations() { return evaluations.getCount(); } public int getMaxIterations() { return iterations.getMaximalCount(); } public int getIterations() { return iterations.getCount(); } public ConvergenceChecker<PAIR> getConvergenceChecker() {"
+      },
+      {
+        "txt": "return checker; } public PAIR optimize(OptimizationData... optData) throws TooManyEvaluationsException, TooManyIterationsException { parseOptimizationData(optData); evaluations.resetCount(); iterations.resetCount(); return doOptimize(); }"
+      },
+      {
+        "txt": "protected abstract PAIR doOptimize(); protected void incrementEvaluationCount() throws TooManyEvaluationsException { evaluations.incrementCount(); } protected void incrementIterationCount() throws TooManyIterationsException { iterations.incrementCount(); } protected void parseOptimizationData(OptimizationData... optData) {"
+      },
+      {
+        "txt": "for (OptimizationData data : optData) { if (data instanceof MaxEval) { evaluations.setMaximalCount(((MaxEval) data).getMaxEval()); continue; } if (data instanceof MaxIter) { iterations.setMaximalCount(((MaxIter) data).getMaxIter()); continue; } }"
+      },
+      {
+        "txt": "} private static class MaxEvalCallback implements Incrementor.MaxCountExceededCallback { public void trigger(int max) { throw new TooManyEvaluationsException(max); } } private static class MaxIterCallback implements Incrementor.MaxCountExceededCallback { public void trigger(int max) {"
+      },
+      {
+        "txt": "throw new TooManyIterationsException(max); } }"
+      }
+    ]
+  },
+  {
+    "id": 2458,
+    "file_path": "src/main/java/org/apache/commons/math3/optim/nonlinear/scalar/gradient/NonLinearConjugateGradientOptimizer.java",
+    "start-bug-line": 214,
+    "end-bug-line": 214,
+    "bug": "int iter = 0;",
+    "fix": "[Delete]",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.math3.optim.nonlinear.scalar.gradient; import org.apache.commons.math3.analysis.UnivariateFunction; import org.apache.commons.math3.analysis.solvers.BrentSolver; import org.apache.commons.math3.analysis.solvers.UnivariateSolver; import org.apache.commons.math3.exception.MathInternalError; import org.apache.commons.math3.exception.MathIllegalStateException;"
+      },
+      {
+        "txt": "import org.apache.commons.math3.exception.TooManyEvaluationsException; import org.apache.commons.math3.exception.MathUnsupportedOperationException; import org.apache.commons.math3.exception.util.LocalizedFormats; import org.apache.commons.math3.optim.OptimizationData; import org.apache.commons.math3.optim.PointValuePair; import org.apache.commons.math3.optim.ConvergenceChecker; import org.apache.commons.math3.optim.nonlinear.scalar.GoalType; import org.apache.commons.math3.optim.nonlinear.scalar.GradientMultivariateOptimizer; import org.apache.commons.math3.util.FastMath; public class NonLinearConjugateGradientOptimizer"
+      },
+      {
+        "txt": "extends GradientMultivariateOptimizer { private final Formula updateFormula; private final Preconditioner preconditioner; private final UnivariateSolver solver; private double initialStep = 1; public NonLinearConjugateGradientOptimizer(final Formula updateFormula, ConvergenceChecker<PointValuePair> checker) { this(updateFormula, checker, new BrentSolver(),"
+      },
+      {
+        "txt": "new IdentityPreconditioner()); } public static enum Formula { FLETCHER_REEVES, POLAK_RIBIERE } public static class BracketingStep implements OptimizationData { private final double initialStep; public BracketingStep(double step) { initialStep = step;"
+      },
+      {
+        "txt": "} public double getBracketingStep() { return initialStep; } } public NonLinearConjugateGradientOptimizer(final Formula updateFormula, ConvergenceChecker<PointValuePair> checker, final UnivariateSolver lineSearchSolver) { this(updateFormula, checker,"
+      },
+      {
+        "txt": "lineSearchSolver, new IdentityPreconditioner()); } public NonLinearConjugateGradientOptimizer(final Formula updateFormula, ConvergenceChecker<PointValuePair> checker, final UnivariateSolver lineSearchSolver, final Preconditioner preconditioner) { super(checker); this.updateFormula = updateFormula; solver = lineSearchSolver;"
+      },
+      {
+        "txt": "this.preconditioner = preconditioner; initialStep = 1; } @Override public PointValuePair optimize(OptimizationData... optData) throws TooManyEvaluationsException { return super.optimize(optData); } @Override protected PointValuePair doOptimize() {"
+      },
+      {
+        "txt": "final ConvergenceChecker<PointValuePair> checker = getConvergenceChecker(); final double[] point = getStartPoint(); final GoalType goal = getGoalType(); final int n = point.length; double[] r = computeObjectiveGradient(point); if (goal == GoalType.MINIMIZE) { for (int i = 0; i < n; i++) { r[i] = -r[i]; } }"
+      },
+      {
+        "txt": "double[] searchDirection = steepestDescent.clone(); double delta = 0; for (int i = 0; i < n; ++i) { delta += r[i] * searchDirection[i]; } PointValuePair current = null; <extra_id_0> int maxEval = getMaxEvaluations(); while (true) { ++iter; final double objective = computeObjectiveValue(point); PointValuePair previous = current; current = new PointValuePair(point, objective);"
+      },
+      {
+        "txt": "PointValuePair previous = current; current = new PointValuePair(point, objective); if (previous != null) { if (checker.converged(iter, previous, current)) { return current; } } final UnivariateFunction lsf = new LineSearchFunction(point, searchDirection); final double uB = findUpperBound(lsf, 0, initialStep); final double step = solver.solve(maxEval, lsf, 0, uB, 1e-15);"
+      },
+      {
+        "txt": "maxEval -= solver.getEvaluations(); // Subtract used up evaluations. for (int i = 0; i < point.length; ++i) { point[i] += step * searchDirection[i]; } r = computeObjectiveGradient(point); if (goal == GoalType.MINIMIZE) { for (int i = 0; i < n; ++i) { r[i] = -r[i]; } }"
+      },
+      {
+        "txt": "final double deltaOld = delta; final double[] newSteepestDescent = preconditioner.precondition(point, r); delta = 0; for (int i = 0; i < n; ++i) { delta += r[i] * newSteepestDescent[i]; } final double beta; switch (updateFormula) { case FLETCHER_REEVES: beta = delta / deltaOld;"
+      },
+      {
+        "txt": "break; case POLAK_RIBIERE: double deltaMid = 0; for (int i = 0; i < r.length; ++i) { deltaMid += r[i] * steepestDescent[i]; } beta = (delta - deltaMid) / deltaOld; break; default: throw new MathInternalError();"
+      },
+      {
+        "txt": "} steepestDescent = newSteepestDescent; if (iter % n == 0 || beta < 0) { searchDirection = steepestDescent.clone(); } else { for (int i = 0; i < n; ++i) { searchDirection[i] = steepestDescent[i] + beta * searchDirection[i]; } }"
+      },
+      {
+        "txt": "} } @Override protected void parseOptimizationData(OptimizationData... optData) { super.parseOptimizationData(optData); for (OptimizationData data : optData) { if (data instanceof BracketingStep) { initialStep = ((BracketingStep) data).getBracketingStep(); break; }"
+      },
+      {
+        "txt": "} checkParameters(); } private double findUpperBound(final UnivariateFunction f, final double a, final double h) { final double yA = f.value(a); double yB = yA; for (double step = h; step < Double.MAX_VALUE; step *= FastMath.max(2, yA / yB)) { final double b = a + step; yB = f.value(b);"
+      },
+      {
+        "txt": "if (yA * yB <= 0) { return b; } } throw new MathIllegalStateException(LocalizedFormats.UNABLE_TO_BRACKET_OPTIMUM_IN_LINE_SEARCH); } public static class IdentityPreconditioner implements Preconditioner { public double[] precondition(double[] variables, double[] r) { return r.clone(); }"
+      },
+      {
+        "txt": "} private class LineSearchFunction implements UnivariateFunction { private final double[] currentPoint; private final double[] searchDirection; public LineSearchFunction(double[] point, double[] direction) { currentPoint = point.clone(); searchDirection = direction.clone(); } public double value(double x) {"
+      },
+      {
+        "txt": "final double[] shiftedPoint = currentPoint.clone(); for (int i = 0; i < shiftedPoint.length; ++i) { shiftedPoint[i] += x * searchDirection[i]; } final double[] gradient = computeObjectiveGradient(shiftedPoint); double dotProduct = 0; for (int i = 0; i < gradient.length; ++i) { dotProduct += gradient[i] * searchDirection[i]; } return dotProduct;"
+      },
+      {
+        "txt": "} } private void checkParameters() { if (getLowerBound() != null || getUpperBound() != null) { throw new MathUnsupportedOperationException(LocalizedFormats.CONSTRAINT); } }"
+      }
+    ]
+  },
+  {
+    "id": 2459,
+    "file_path": "src/main/java/org/apache/commons/math3/optim/nonlinear/scalar/gradient/NonLinearConjugateGradientOptimizer.java",
+    "start-bug-line": 217,
+    "end-bug-line": 217,
+    "bug": "++iter;",
+    "fix": "incrementIterationCount();",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.math3.optim.nonlinear.scalar.gradient; import org.apache.commons.math3.analysis.UnivariateFunction; import org.apache.commons.math3.analysis.solvers.BrentSolver; import org.apache.commons.math3.analysis.solvers.UnivariateSolver; import org.apache.commons.math3.exception.MathInternalError; import org.apache.commons.math3.exception.MathIllegalStateException; import org.apache.commons.math3.exception.TooManyEvaluationsException; import org.apache.commons.math3.exception.MathUnsupportedOperationException; import org.apache.commons.math3.exception.util.LocalizedFormats;"
+      },
+      {
+        "txt": "import org.apache.commons.math3.optim.OptimizationData; import org.apache.commons.math3.optim.PointValuePair; import org.apache.commons.math3.optim.ConvergenceChecker; import org.apache.commons.math3.optim.nonlinear.scalar.GoalType; import org.apache.commons.math3.optim.nonlinear.scalar.GradientMultivariateOptimizer; import org.apache.commons.math3.util.FastMath; public class NonLinearConjugateGradientOptimizer extends GradientMultivariateOptimizer { private final Formula updateFormula; private final Preconditioner preconditioner;"
+      },
+      {
+        "txt": "private final UnivariateSolver solver; private double initialStep = 1; public NonLinearConjugateGradientOptimizer(final Formula updateFormula, ConvergenceChecker<PointValuePair> checker) { this(updateFormula, checker, new BrentSolver(), new IdentityPreconditioner()); } public static enum Formula {"
+      },
+      {
+        "txt": "FLETCHER_REEVES, POLAK_RIBIERE } public static class BracketingStep implements OptimizationData { private final double initialStep; public BracketingStep(double step) { initialStep = step; } public double getBracketingStep() { return initialStep;"
+      },
+      {
+        "txt": "} } public NonLinearConjugateGradientOptimizer(final Formula updateFormula, ConvergenceChecker<PointValuePair> checker, final UnivariateSolver lineSearchSolver) { this(updateFormula, checker, lineSearchSolver, new IdentityPreconditioner()); }"
+      },
+      {
+        "txt": "public NonLinearConjugateGradientOptimizer(final Formula updateFormula, ConvergenceChecker<PointValuePair> checker, final UnivariateSolver lineSearchSolver, final Preconditioner preconditioner) { super(checker); this.updateFormula = updateFormula; solver = lineSearchSolver; this.preconditioner = preconditioner; initialStep = 1; }"
+      },
+      {
+        "txt": "@Override public PointValuePair optimize(OptimizationData... optData) throws TooManyEvaluationsException { return super.optimize(optData); } @Override protected PointValuePair doOptimize() { final ConvergenceChecker<PointValuePair> checker = getConvergenceChecker(); final double[] point = getStartPoint(); final GoalType goal = getGoalType();"
+      },
+      {
+        "txt": "final int n = point.length; double[] r = computeObjectiveGradient(point); if (goal == GoalType.MINIMIZE) { for (int i = 0; i < n; i++) { r[i] = -r[i]; } } double[] steepestDescent = preconditioner.precondition(point, r); double[] searchDirection = steepestDescent.clone(); double delta = 0;"
+      },
+      {
+        "txt": "delta += r[i] * searchDirection[i]; } PointValuePair current = null; int iter = 0; int maxEval = getMaxEvaluations(); while (true) { <extra_id_0> final double objective = computeObjectiveValue(point); PointValuePair previous = current; current = new PointValuePair(point, objective); if (previous != null) { if (checker.converged(iter, previous, current)) { return current;"
+      },
+      {
+        "txt": "if (checker.converged(iter, previous, current)) { return current; } } final UnivariateFunction lsf = new LineSearchFunction(point, searchDirection); final double uB = findUpperBound(lsf, 0, initialStep); final double step = solver.solve(maxEval, lsf, 0, uB, 1e-15); maxEval -= solver.getEvaluations(); // Subtract used up evaluations. for (int i = 0; i < point.length; ++i) { point[i] += step * searchDirection[i];"
+      },
+      {
+        "txt": "} r = computeObjectiveGradient(point); if (goal == GoalType.MINIMIZE) { for (int i = 0; i < n; ++i) { r[i] = -r[i]; } } final double deltaOld = delta; final double[] newSteepestDescent = preconditioner.precondition(point, r); delta = 0;"
+      },
+      {
+        "txt": "for (int i = 0; i < n; ++i) { delta += r[i] * newSteepestDescent[i]; } final double beta; switch (updateFormula) { case FLETCHER_REEVES: beta = delta / deltaOld; break; case POLAK_RIBIERE: double deltaMid = 0;"
+      },
+      {
+        "txt": "for (int i = 0; i < r.length; ++i) { deltaMid += r[i] * steepestDescent[i]; } beta = (delta - deltaMid) / deltaOld; break; default: throw new MathInternalError(); } steepestDescent = newSteepestDescent; if (iter % n == 0 ||"
+      },
+      {
+        "txt": "beta < 0) { searchDirection = steepestDescent.clone(); } else { for (int i = 0; i < n; ++i) { searchDirection[i] = steepestDescent[i] + beta * searchDirection[i]; } } } } @Override"
+      },
+      {
+        "txt": "protected void parseOptimizationData(OptimizationData... optData) { super.parseOptimizationData(optData); for (OptimizationData data : optData) { if (data instanceof BracketingStep) { initialStep = ((BracketingStep) data).getBracketingStep(); break; } } checkParameters(); }"
+      },
+      {
+        "txt": "private double findUpperBound(final UnivariateFunction f, final double a, final double h) { final double yA = f.value(a); double yB = yA; for (double step = h; step < Double.MAX_VALUE; step *= FastMath.max(2, yA / yB)) { final double b = a + step; yB = f.value(b); if (yA * yB <= 0) { return b; }"
+      },
+      {
+        "txt": "} throw new MathIllegalStateException(LocalizedFormats.UNABLE_TO_BRACKET_OPTIMUM_IN_LINE_SEARCH); } public static class IdentityPreconditioner implements Preconditioner { public double[] precondition(double[] variables, double[] r) { return r.clone(); } } private class LineSearchFunction implements UnivariateFunction { private final double[] currentPoint;"
+      },
+      {
+        "txt": "private final double[] searchDirection; public LineSearchFunction(double[] point, double[] direction) { currentPoint = point.clone(); searchDirection = direction.clone(); } public double value(double x) { final double[] shiftedPoint = currentPoint.clone(); for (int i = 0; i < shiftedPoint.length; ++i) { shiftedPoint[i] += x * searchDirection[i];"
+      },
+      {
+        "txt": "} final double[] gradient = computeObjectiveGradient(shiftedPoint); double dotProduct = 0; for (int i = 0; i < gradient.length; ++i) { dotProduct += gradient[i] * searchDirection[i]; } return dotProduct; } } private void checkParameters() {"
+      },
+      {
+        "txt": "if (getLowerBound() != null || getUpperBound() != null) { throw new MathUnsupportedOperationException(LocalizedFormats.CONSTRAINT); } }"
+      }
+    ]
+  },
+  {
+    "id": 2460,
+    "file_path": "src/main/java/org/apache/commons/math3/optim/nonlinear/scalar/gradient/NonLinearConjugateGradientOptimizer.java",
+    "start-bug-line": 223,
+    "end-bug-line": 223,
+    "bug": "if (checker.converged(iter, previous, current)) {",
+    "fix": "if (checker.converged(getIterations(), previous, current)) {",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.math3.optim.nonlinear.scalar.gradient; import org.apache.commons.math3.analysis.UnivariateFunction; import org.apache.commons.math3.analysis.solvers.BrentSolver; import org.apache.commons.math3.analysis.solvers.UnivariateSolver;"
+      },
+      {
+        "txt": "import org.apache.commons.math3.exception.MathInternalError; import org.apache.commons.math3.exception.MathIllegalStateException; import org.apache.commons.math3.exception.TooManyEvaluationsException; import org.apache.commons.math3.exception.MathUnsupportedOperationException; import org.apache.commons.math3.exception.util.LocalizedFormats; import org.apache.commons.math3.optim.OptimizationData; import org.apache.commons.math3.optim.PointValuePair; import org.apache.commons.math3.optim.ConvergenceChecker; import org.apache.commons.math3.optim.nonlinear.scalar.GoalType; import org.apache.commons.math3.optim.nonlinear.scalar.GradientMultivariateOptimizer;"
+      },
+      {
+        "txt": "import org.apache.commons.math3.util.FastMath; public class NonLinearConjugateGradientOptimizer extends GradientMultivariateOptimizer { private final Formula updateFormula; private final Preconditioner preconditioner; private final UnivariateSolver solver; private double initialStep = 1; public NonLinearConjugateGradientOptimizer(final Formula updateFormula, ConvergenceChecker<PointValuePair> checker) { this(updateFormula,"
+      },
+      {
+        "txt": "checker, new BrentSolver(), new IdentityPreconditioner()); } public static enum Formula { FLETCHER_REEVES, POLAK_RIBIERE } public static class BracketingStep implements OptimizationData { private final double initialStep;"
+      },
+      {
+        "txt": "public BracketingStep(double step) { initialStep = step; } public double getBracketingStep() { return initialStep; } } public NonLinearConjugateGradientOptimizer(final Formula updateFormula, ConvergenceChecker<PointValuePair> checker, final UnivariateSolver lineSearchSolver) {"
+      },
+      {
+        "txt": "this(updateFormula, checker, lineSearchSolver, new IdentityPreconditioner()); } public NonLinearConjugateGradientOptimizer(final Formula updateFormula, ConvergenceChecker<PointValuePair> checker, final UnivariateSolver lineSearchSolver, final Preconditioner preconditioner) { super(checker);"
+      },
+      {
+        "txt": "this.updateFormula = updateFormula; solver = lineSearchSolver; this.preconditioner = preconditioner; initialStep = 1; } @Override public PointValuePair optimize(OptimizationData... optData) throws TooManyEvaluationsException { return super.optimize(optData); }"
+      },
+      {
+        "txt": "@Override protected PointValuePair doOptimize() { final ConvergenceChecker<PointValuePair> checker = getConvergenceChecker(); final double[] point = getStartPoint(); final GoalType goal = getGoalType(); final int n = point.length; double[] r = computeObjectiveGradient(point); if (goal == GoalType.MINIMIZE) { for (int i = 0; i < n; i++) { r[i] = -r[i];"
+      },
+      {
+        "txt": "} } double[] steepestDescent = preconditioner.precondition(point, r); double[] searchDirection = steepestDescent.clone(); double delta = 0; for (int i = 0; i < n; ++i) { delta += r[i] * searchDirection[i]; } PointValuePair current = null; int iter = 0;"
+      },
+      {
+        "txt": "while (true) { ++iter; final double objective = computeObjectiveValue(point); PointValuePair previous = current; current = new PointValuePair(point, objective); if (previous != null) { <extra_id_0> return current; } } final UnivariateFunction lsf = new LineSearchFunction(point, searchDirection); final double uB = findUpperBound(lsf, 0, initialStep); final double step = solver.solve(maxEval, lsf, 0, uB, 1e-15);"
+      },
+      {
+        "txt": "final double uB = findUpperBound(lsf, 0, initialStep); final double step = solver.solve(maxEval, lsf, 0, uB, 1e-15); maxEval -= solver.getEvaluations(); // Subtract used up evaluations. for (int i = 0; i < point.length; ++i) { point[i] += step * searchDirection[i]; } r = computeObjectiveGradient(point); if (goal == GoalType.MINIMIZE) { for (int i = 0; i < n; ++i) { r[i] = -r[i];"
+      },
+      {
+        "txt": "} } final double deltaOld = delta; final double[] newSteepestDescent = preconditioner.precondition(point, r); delta = 0; for (int i = 0; i < n; ++i) { delta += r[i] * newSteepestDescent[i]; } final double beta; switch (updateFormula) {"
+      },
+      {
+        "txt": "case FLETCHER_REEVES: beta = delta / deltaOld; break; case POLAK_RIBIERE: double deltaMid = 0; for (int i = 0; i < r.length; ++i) { deltaMid += r[i] * steepestDescent[i]; } beta = (delta - deltaMid) / deltaOld; break;"
+      },
+      {
+        "txt": "default: throw new MathInternalError(); } steepestDescent = newSteepestDescent; if (iter % n == 0 || beta < 0) { searchDirection = steepestDescent.clone(); } else { for (int i = 0; i < n; ++i) { searchDirection[i] = steepestDescent[i] + beta * searchDirection[i];"
+      },
+      {
+        "txt": "} } } } @Override protected void parseOptimizationData(OptimizationData... optData) { super.parseOptimizationData(optData); for (OptimizationData data : optData) { if (data instanceof BracketingStep) { initialStep = ((BracketingStep) data).getBracketingStep();"
+      },
+      {
+        "txt": "break; } } checkParameters(); } private double findUpperBound(final UnivariateFunction f, final double a, final double h) { final double yA = f.value(a); double yB = yA; for (double step = h; step < Double.MAX_VALUE; step *= FastMath.max(2, yA / yB)) {"
+      },
+      {
+        "txt": "final double b = a + step; yB = f.value(b); if (yA * yB <= 0) { return b; } } throw new MathIllegalStateException(LocalizedFormats.UNABLE_TO_BRACKET_OPTIMUM_IN_LINE_SEARCH); } public static class IdentityPreconditioner implements Preconditioner { public double[] precondition(double[] variables, double[] r) {"
+      },
+      {
+        "txt": "return r.clone(); } } private class LineSearchFunction implements UnivariateFunction { private final double[] currentPoint; private final double[] searchDirection; public LineSearchFunction(double[] point, double[] direction) { currentPoint = point.clone(); searchDirection = direction.clone();"
+      },
+      {
+        "txt": "} public double value(double x) { final double[] shiftedPoint = currentPoint.clone(); for (int i = 0; i < shiftedPoint.length; ++i) { shiftedPoint[i] += x * searchDirection[i]; } final double[] gradient = computeObjectiveGradient(shiftedPoint); double dotProduct = 0; for (int i = 0; i < gradient.length; ++i) { dotProduct += gradient[i] * searchDirection[i];"
+      },
+      {
+        "txt": "} return dotProduct; } } private void checkParameters() { if (getLowerBound() != null || getUpperBound() != null) { throw new MathUnsupportedOperationException(LocalizedFormats.CONSTRAINT); } }"
+      }
+    ]
+  },
+  {
+    "id": 2461,
+    "file_path": "src/main/java/org/apache/commons/math3/optim/nonlinear/scalar/gradient/NonLinearConjugateGradientOptimizer.java",
+    "start-bug-line": 277,
+    "end-bug-line": 277,
+    "bug": "if (iter % n == 0 ||",
+    "fix": "if (getIterations() % n == 0 ||",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.math3.optim.nonlinear.scalar.gradient; import org.apache.commons.math3.analysis.UnivariateFunction; import org.apache.commons.math3.analysis.solvers.BrentSolver;"
+      },
+      {
+        "txt": "import org.apache.commons.math3.analysis.solvers.UnivariateSolver; import org.apache.commons.math3.exception.MathInternalError; import org.apache.commons.math3.exception.MathIllegalStateException; import org.apache.commons.math3.exception.TooManyEvaluationsException; import org.apache.commons.math3.exception.MathUnsupportedOperationException; import org.apache.commons.math3.exception.util.LocalizedFormats; import org.apache.commons.math3.optim.OptimizationData; import org.apache.commons.math3.optim.PointValuePair; import org.apache.commons.math3.optim.ConvergenceChecker; import org.apache.commons.math3.optim.nonlinear.scalar.GoalType;"
+      },
+      {
+        "txt": "import org.apache.commons.math3.optim.nonlinear.scalar.GradientMultivariateOptimizer; import org.apache.commons.math3.util.FastMath; public class NonLinearConjugateGradientOptimizer extends GradientMultivariateOptimizer { private final Formula updateFormula; private final Preconditioner preconditioner; private final UnivariateSolver solver; private double initialStep = 1; public NonLinearConjugateGradientOptimizer(final Formula updateFormula, ConvergenceChecker<PointValuePair> checker) {"
+      },
+      {
+        "txt": "this(updateFormula, checker, new BrentSolver(), new IdentityPreconditioner()); } public static enum Formula { FLETCHER_REEVES, POLAK_RIBIERE } public static class BracketingStep implements OptimizationData {"
+      },
+      {
+        "txt": "private final double initialStep; public BracketingStep(double step) { initialStep = step; } public double getBracketingStep() { return initialStep; } } public NonLinearConjugateGradientOptimizer(final Formula updateFormula, ConvergenceChecker<PointValuePair> checker,"
+      },
+      {
+        "txt": "final UnivariateSolver lineSearchSolver) { this(updateFormula, checker, lineSearchSolver, new IdentityPreconditioner()); } public NonLinearConjugateGradientOptimizer(final Formula updateFormula, ConvergenceChecker<PointValuePair> checker, final UnivariateSolver lineSearchSolver, final Preconditioner preconditioner) {"
+      },
+      {
+        "txt": "super(checker); this.updateFormula = updateFormula; solver = lineSearchSolver; this.preconditioner = preconditioner; initialStep = 1; } @Override public PointValuePair optimize(OptimizationData... optData) throws TooManyEvaluationsException { return super.optimize(optData);"
+      },
+      {
+        "txt": "} @Override protected PointValuePair doOptimize() { final ConvergenceChecker<PointValuePair> checker = getConvergenceChecker(); final double[] point = getStartPoint(); final GoalType goal = getGoalType(); final int n = point.length; double[] r = computeObjectiveGradient(point); if (goal == GoalType.MINIMIZE) { for (int i = 0; i < n; i++) {"
+      },
+      {
+        "txt": "r[i] = -r[i]; } } double[] steepestDescent = preconditioner.precondition(point, r); double[] searchDirection = steepestDescent.clone(); double delta = 0; for (int i = 0; i < n; ++i) { delta += r[i] * searchDirection[i]; } PointValuePair current = null;"
+      },
+      {
+        "txt": "int iter = 0; int maxEval = getMaxEvaluations(); while (true) { ++iter; final double objective = computeObjectiveValue(point); PointValuePair previous = current; current = new PointValuePair(point, objective); if (previous != null) { if (checker.converged(iter, previous, current)) { return current;"
+      },
+      {
+        "txt": "} } final UnivariateFunction lsf = new LineSearchFunction(point, searchDirection); final double uB = findUpperBound(lsf, 0, initialStep); final double step = solver.solve(maxEval, lsf, 0, uB, 1e-15); maxEval -= solver.getEvaluations(); // Subtract used up evaluations. for (int i = 0; i < point.length; ++i) { point[i] += step * searchDirection[i]; } r = computeObjectiveGradient(point);"
+      },
+      {
+        "txt": "if (goal == GoalType.MINIMIZE) { for (int i = 0; i < n; ++i) { r[i] = -r[i]; } } final double deltaOld = delta; final double[] newSteepestDescent = preconditioner.precondition(point, r); delta = 0; for (int i = 0; i < n; ++i) { delta += r[i] * newSteepestDescent[i];"
+      },
+      {
+        "txt": "} final double beta; switch (updateFormula) { case FLETCHER_REEVES: beta = delta / deltaOld; break; case POLAK_RIBIERE: double deltaMid = 0; for (int i = 0; i < r.length; ++i) { deltaMid += r[i] * steepestDescent[i];"
+      },
+      {
+        "txt": "beta = (delta - deltaMid) / deltaOld; break; default: throw new MathInternalError(); } steepestDescent = newSteepestDescent; <extra_id_0> beta < 0) { searchDirection = steepestDescent.clone(); } else { for (int i = 0; i < n; ++i) { searchDirection[i] = steepestDescent[i] + beta * searchDirection[i]; }"
+      },
+      {
+        "txt": "searchDirection[i] = steepestDescent[i] + beta * searchDirection[i]; } } } } @Override protected void parseOptimizationData(OptimizationData... optData) { super.parseOptimizationData(optData); for (OptimizationData data : optData) { if (data instanceof BracketingStep) {"
+      },
+      {
+        "txt": "initialStep = ((BracketingStep) data).getBracketingStep(); break; } } checkParameters(); } private double findUpperBound(final UnivariateFunction f, final double a, final double h) { final double yA = f.value(a); double yB = yA;"
+      },
+      {
+        "txt": "for (double step = h; step < Double.MAX_VALUE; step *= FastMath.max(2, yA / yB)) { final double b = a + step; yB = f.value(b); if (yA * yB <= 0) { return b; } } throw new MathIllegalStateException(LocalizedFormats.UNABLE_TO_BRACKET_OPTIMUM_IN_LINE_SEARCH); } public static class IdentityPreconditioner implements Preconditioner {"
+      },
+      {
+        "txt": "public double[] precondition(double[] variables, double[] r) { return r.clone(); } } private class LineSearchFunction implements UnivariateFunction { private final double[] currentPoint; private final double[] searchDirection; public LineSearchFunction(double[] point, double[] direction) { currentPoint = point.clone();"
+      },
+      {
+        "txt": "searchDirection = direction.clone(); } public double value(double x) { final double[] shiftedPoint = currentPoint.clone(); for (int i = 0; i < shiftedPoint.length; ++i) { shiftedPoint[i] += x * searchDirection[i]; } final double[] gradient = computeObjectiveGradient(shiftedPoint); double dotProduct = 0; for (int i = 0; i < gradient.length; ++i) {"
+      },
+      {
+        "txt": "dotProduct += gradient[i] * searchDirection[i]; } return dotProduct; } } private void checkParameters() { if (getLowerBound() != null || getUpperBound() != null) { throw new MathUnsupportedOperationException(LocalizedFormats.CONSTRAINT); }"
+      }
+    ]
+  },
+  {
+    "id": 2462,
+    "file_path": "src/main/java/org/apache/commons/math3/optim/nonlinear/scalar/noderiv/CMAESOptimizer.java",
+    "start-bug-line": 388,
+    "end-bug-line": 388,
+    "bug": "",
+    "fix": "incrementIterationCount();",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.math3.optim.nonlinear.scalar.noderiv; import java.util.ArrayList; import java.util.Arrays; import java.util.List; import org.apache.commons.math3.exception.DimensionMismatchException; import org.apache.commons.math3.exception.NotPositiveException; import org.apache.commons.math3.exception.NotStrictlyPositiveException; import org.apache.commons.math3.exception.OutOfRangeException; import org.apache.commons.math3.exception.TooManyEvaluationsException;"
+      },
+      {
+        "txt": "import org.apache.commons.math3.linear.Array2DRowRealMatrix; import org.apache.commons.math3.linear.EigenDecomposition; import org.apache.commons.math3.linear.MatrixUtils; import org.apache.commons.math3.linear.RealMatrix; import org.apache.commons.math3.optim.ConvergenceChecker; import org.apache.commons.math3.optim.OptimizationData; import org.apache.commons.math3.optim.nonlinear.scalar.GoalType; import org.apache.commons.math3.optim.PointValuePair; import org.apache.commons.math3.optim.nonlinear.scalar.MultivariateOptimizer; import org.apache.commons.math3.random.RandomGenerator;"
+      },
+      {
+        "txt": "import org.apache.commons.math3.util.MathArrays; public class CMAESOptimizer extends MultivariateOptimizer { private int lambda; // population size private final boolean isActiveCMA; private final int checkFeasableCount; private double[] inputSigma; private int dimension; private int diagonalOnly; private boolean isMinimize = true;"
+      },
+      {
+        "txt": "private final boolean generateStatistics; private final int maxIterations; private final double stopFitness; private double stopTolUpX; private double stopTolX; private double stopTolFun; private double stopTolHistFun; private int mu; // private double logMu2; private RealMatrix weights;"
+      },
+      {
+        "txt": "private double mueff; // private double sigma; private double cc; private double cs; private double damps; private double ccov1; private double ccovmu; private double chiN; private double ccov1Sep; private double ccovmuSep;"
+      },
+      {
+        "txt": "private RealMatrix xmean; private RealMatrix pc; private RealMatrix ps; private double normps; private RealMatrix B; private RealMatrix D; private RealMatrix BD; private RealMatrix diagD; private RealMatrix C; private RealMatrix diagC;"
+      },
+      {
+        "txt": "private int iterations; private double[] fitnessHistory; private int historySize; private final RandomGenerator random; private final List<Double> statisticsSigmaHistory = new ArrayList<Double>(); private final List<RealMatrix> statisticsMeanHistory = new ArrayList<RealMatrix>(); private final List<Double> statisticsFitnessHistory = new ArrayList<Double>(); private final List<RealMatrix> statisticsDHistory = new ArrayList<RealMatrix>(); public CMAESOptimizer(int maxIterations, double stopFitness,"
+      },
+      {
+        "txt": "boolean isActiveCMA, int diagonalOnly, int checkFeasableCount, RandomGenerator random, boolean generateStatistics, ConvergenceChecker<PointValuePair> checker) { super(checker); this.maxIterations = maxIterations; this.stopFitness = stopFitness; this.isActiveCMA = isActiveCMA;"
+      },
+      {
+        "txt": "this.diagonalOnly = diagonalOnly; this.checkFeasableCount = checkFeasableCount; this.random = random; this.generateStatistics = generateStatistics; } public List<Double> getStatisticsSigmaHistory() { return statisticsSigmaHistory; } public List<RealMatrix> getStatisticsMeanHistory() { return statisticsMeanHistory;"
+      },
+      {
+        "txt": "} public List<Double> getStatisticsFitnessHistory() { return statisticsFitnessHistory; } public List<RealMatrix> getStatisticsDHistory() { return statisticsDHistory; } public static class Sigma implements OptimizationData { private final double[] sigma; public Sigma(double[] s)"
+      },
+      {
+        "txt": "throws NotPositiveException { for (int i = 0; i < s.length; i++) { if (s[i] < 0) { throw new NotPositiveException(s[i]); } } sigma = s.clone(); } public double[] getSigma() { return sigma.clone();"
+      },
+      {
+        "txt": "} } public static class PopulationSize implements OptimizationData { private final int lambda; public PopulationSize(int size) throws NotStrictlyPositiveException { if (size <= 0) { throw new NotStrictlyPositiveException(size); } lambda = size;"
+      },
+      {
+        "txt": "} public int getPopulationSize() { return lambda; } } @Override public PointValuePair optimize(OptimizationData... optData) throws TooManyEvaluationsException, DimensionMismatchException { return super.optimize(optData);"
+      },
+      {
+        "txt": "} @Override protected PointValuePair doOptimize() { isMinimize = getGoalType().equals(GoalType.MINIMIZE); final FitnessFunction fitfun = new FitnessFunction(); final double[] guess = getStartPoint(); dimension = guess.length; initializeCMA(guess); iterations = 0; double bestValue = fitfun.value(guess);"
+      },
+      {
+        "txt": "PointValuePair optimum = new PointValuePair(getStartPoint(), isMinimize ? bestValue : -bestValue); PointValuePair lastResult = null; generationLoop: for (iterations = 1; iterations <= maxIterations; iterations++) { <extra_id_0> final RealMatrix arz = randn1(dimension, lambda); final RealMatrix arx = zeros(dimension, lambda); final double[] fitness = new double[lambda]; for (int k = 0; k < lambda; k++) { RealMatrix arxk = null; for (int i = 0; i < checkFeasableCount + 1; i++) {"
+      },
+      {
+        "txt": "RealMatrix arxk = null; for (int i = 0; i < checkFeasableCount + 1; i++) { if (diagonalOnly <= 0) { arxk = xmean.add(BD.multiply(arz.getColumnMatrix(k)) .scalarMultiply(sigma)); // m + sig * Normal(0,C) } else { arxk = xmean.add(times(diagD,arz.getColumnMatrix(k)) .scalarMultiply(sigma)); } if (i >= checkFeasableCount ||"
+      },
+      {
+        "txt": "fitfun.isFeasible(arxk.getColumn(0))) { break; } arz.setColumn(k, randn(dimension)); } copyColumn(arxk, 0, arx, k); try { fitness[k] = fitfun.value(arx.getColumn(k)); // compute fitness } catch (TooManyEvaluationsException e) { break generationLoop;"
+      },
+      {
+        "txt": "} } final int[] arindex = sortedIndices(fitness); final RealMatrix xold = xmean; // for speed up of Eq. (2) and (3) final RealMatrix bestArx = selectColumns(arx, MathArrays.copyOf(arindex, mu)); xmean = bestArx.multiply(weights); final RealMatrix bestArz = selectColumns(arz, MathArrays.copyOf(arindex, mu)); final RealMatrix zmean = bestArz.multiply(weights); final boolean hsig = updateEvolutionPaths(zmean, xold); if (diagonalOnly <= 0) {"
+      },
+      {
+        "txt": "updateCovariance(hsig, bestArx, arz, arindex, xold); } else { updateCovarianceDiagonalOnly(hsig, bestArz); } sigma *= Math.exp(Math.min(1, (normps/chiN - 1) * cs / damps)); final double bestFitness = fitness[arindex[0]]; final double worstFitness = fitness[arindex[arindex.length - 1]]; if (bestValue > bestFitness) { bestValue = bestFitness; lastResult = optimum;"
+      },
+      {
+        "txt": "optimum = new PointValuePair(fitfun.repair(bestArx.getColumn(0)), isMinimize ? bestFitness : -bestFitness); if (getConvergenceChecker() != null && lastResult != null) { if (getConvergenceChecker().converged(iterations, optimum, lastResult)) { break generationLoop; } } } if (stopFitness != 0) { // only if stopFitness is defined"
+      },
+      {
+        "txt": "if (bestFitness < (isMinimize ? stopFitness : -stopFitness)) { break generationLoop; } } final double[] sqrtDiagC = sqrt(diagC).getColumn(0); final double[] pcCol = pc.getColumn(0); for (int i = 0; i < dimension; i++) { if (sigma * Math.max(Math.abs(pcCol[i]), sqrtDiagC[i]) > stopTolX) { break; }"
+      },
+      {
+        "txt": "if (i >= dimension - 1) { break generationLoop; } } for (int i = 0; i < dimension; i++) { if (sigma * sqrtDiagC[i] > stopTolUpX) { break generationLoop; } } final double historyBest = min(fitnessHistory);"
+      },
+      {
+        "txt": "final double historyWorst = max(fitnessHistory); if (iterations > 2 && Math.max(historyWorst, worstFitness) - Math.min(historyBest, bestFitness) < stopTolFun) { break generationLoop; } if (iterations > fitnessHistory.length && historyWorst - historyBest < stopTolHistFun) { break generationLoop; }"
+      },
+      {
+        "txt": "if (max(diagD) / min(diagD) > 1e7) { break generationLoop; } if (getConvergenceChecker() != null) { final PointValuePair current = new PointValuePair(bestArx.getColumn(0), isMinimize ? bestFitness : -bestFitness); if (lastResult != null && getConvergenceChecker().converged(iterations, current, lastResult)) { break generationLoop;"
+      },
+      {
+        "txt": "} lastResult = current; } if (bestValue == fitness[arindex[(int)(0.1+lambda/4.)]]) { sigma = sigma * Math.exp(0.2 + cs / damps); } if (iterations > 2 && Math.max(historyWorst, bestFitness) - Math.min(historyBest, bestFitness) == 0) { sigma = sigma * Math.exp(0.2 + cs / damps); }"
+      },
+      {
+        "txt": "push(fitnessHistory,bestFitness); fitfun.setValueRange(worstFitness-bestFitness); if (generateStatistics) { statisticsSigmaHistory.add(sigma); statisticsFitnessHistory.add(bestFitness); statisticsMeanHistory.add(xmean.transpose()); statisticsDHistory.add(diagD.transpose().scalarMultiply(1E5)); } } return optimum;"
+      },
+      {
+        "txt": "} @Override protected void parseOptimizationData(OptimizationData... optData) { super.parseOptimizationData(optData); for (OptimizationData data : optData) { if (data instanceof Sigma) { inputSigma = ((Sigma) data).getSigma(); continue; } if (data instanceof PopulationSize) {"
+      },
+      {
+        "txt": "lambda = ((PopulationSize) data).getPopulationSize(); continue; } } checkParameters(); } private void checkParameters() { final double[] init = getStartPoint(); final double[] lB = getLowerBound(); final double[] uB = getUpperBound();"
+      },
+      {
+        "txt": "if (inputSigma != null) { if (inputSigma.length != init.length) { throw new DimensionMismatchException(inputSigma.length, init.length); } for (int i = 0; i < init.length; i++) { if (inputSigma[i] > uB[i] - lB[i]) { throw new OutOfRangeException(inputSigma[i], 0, uB[i] - lB[i]); } } }"
+      },
+      {
+        "txt": "} private void initializeCMA(double[] guess) { if (lambda <= 0) { throw new NotStrictlyPositiveException(lambda); } final double[][] sigmaArray = new double[guess.length][1]; for (int i = 0; i < guess.length; i++) { sigmaArray[i][0] = inputSigma[i]; } final RealMatrix insigma = new Array2DRowRealMatrix(sigmaArray, false);"
+      },
+      {
+        "txt": "sigma = max(insigma); // overall standard deviation stopTolUpX = 1e3 * max(insigma); stopTolX = 1e-11 * max(insigma); stopTolFun = 1e-12; stopTolHistFun = 1e-13; mu = lambda / 2; // number of parents/points for recombination logMu2 = Math.log(mu + 0.5); weights = log(sequence(1, mu, 1)).scalarMultiply(-1).scalarAdd(logMu2); double sumw = 0; double sumwq = 0;"
+      },
+      {
+        "txt": "for (int i = 0; i < mu; i++) { double w = weights.getEntry(i, 0); sumw += w; sumwq += w * w; } weights = weights.scalarMultiply(1 / sumw); mueff = sumw * sumw / sumwq; // variance-effectiveness of sum w_i x_i cc = (4 + mueff / dimension) / (dimension + 4 + 2 * mueff / dimension); cs = (mueff + 2) / (dimension + mueff + 3.);"
+      },
+      {
+        "txt": "damps = (1 + 2 * Math.max(0, Math.sqrt((mueff - 1) / (dimension + 1)) - 1)) * Math.max(0.3, 1 - dimension / (1e-6 + maxIterations)) + cs; // minor increment ccov1 = 2 / ((dimension + 1.3) * (dimension + 1.3) + mueff); ccovmu = Math.min(1 - ccov1, 2 * (mueff - 2 + 1 / mueff) / ((dimension + 2) * (dimension + 2) + mueff)); ccov1Sep = Math.min(1, ccov1 * (dimension + 1.5) / 3); ccovmuSep = Math.min(1 - ccov1, ccovmu * (dimension + 1.5) / 3); chiN = Math.sqrt(dimension) *"
+      },
+      {
+        "txt": "(1 - 1 / ((double) 4 * dimension) + 1 / ((double) 21 * dimension * dimension)); xmean = MatrixUtils.createColumnRealMatrix(guess); // objective variables diagD = insigma.scalarMultiply(1 / sigma); diagC = square(diagD); pc = zeros(dimension, 1); // evolution paths for C and sigma ps = zeros(dimension, 1); // B defines the coordinate system normps = ps.getFrobeniusNorm(); B = eye(dimension, dimension); D = ones(dimension, 1); // diagonal D defines the scaling BD = times(B, repmat(diagD.transpose(), dimension, 1));"
+      },
+      {
+        "txt": "C = B.multiply(diag(square(D)).multiply(B.transpose())); // covariance historySize = 10 + (int) (3 * 10 * dimension / (double) lambda); fitnessHistory = new double[historySize]; // history of fitness values for (int i = 0; i < historySize; i++) { fitnessHistory[i] = Double.MAX_VALUE; } } private boolean updateEvolutionPaths(RealMatrix zmean, RealMatrix xold) { ps = ps.scalarMultiply(1 - cs).add( B.multiply(zmean).scalarMultiply("
+      },
+      {
+        "txt": "Math.sqrt(cs * (2 - cs) * mueff))); normps = ps.getFrobeniusNorm(); final boolean hsig = normps / Math.sqrt(1 - Math.pow(1 - cs, 2 * iterations)) / chiN < 1.4 + 2 / ((double) dimension + 1); pc = pc.scalarMultiply(1 - cc); if (hsig) { pc = pc.add(xmean.subtract(xold).scalarMultiply(Math.sqrt(cc * (2 - cc) * mueff) / sigma)); } return hsig;"
+      },
+      {
+        "txt": "} private void updateCovarianceDiagonalOnly(boolean hsig, final RealMatrix bestArz) { double oldFac = hsig ? 0 : ccov1Sep * cc * (2 - cc); oldFac += 1 - ccov1Sep - ccovmuSep; diagC = diagC.scalarMultiply(oldFac) // regard old matrix .add(square(pc).scalarMultiply(ccov1Sep)) // plus rank one update .add((times(diagC, square(bestArz).multiply(weights))) // plus rank mu update .scalarMultiply(ccovmuSep)); diagD = sqrt(diagC); // replaces eig(C)"
+      },
+      {
+        "txt": "if (diagonalOnly > 1 && iterations > diagonalOnly) { diagonalOnly = 0; B = eye(dimension, dimension); BD = diag(diagD); C = diag(diagC); } } private void updateCovariance(boolean hsig, final RealMatrix bestArx, final RealMatrix arz, final int[] arindex,"
+      },
+      {
+        "txt": "final RealMatrix xold) { double negccov = 0; if (ccov1 + ccovmu > 0) { final RealMatrix arpos = bestArx.subtract(repmat(xold, 1, mu)) .scalarMultiply(1 / sigma); // mu difference vectors final RealMatrix roneu = pc.multiply(pc.transpose()) .scalarMultiply(ccov1); // rank one update double oldFac = hsig ? 0 : ccov1 * cc * (2 - cc); oldFac += 1 - ccov1 - ccovmu; if (isActiveCMA) {"
+      },
+      {
+        "txt": "negccov = (1 - ccovmu) * 0.25 * mueff / (Math.pow(dimension + 2, 1.5) + 2 * mueff); final double negminresidualvariance = 0.66; final double negalphaold = 0.5; final int[] arReverseIndex = reverse(arindex); RealMatrix arzneg = selectColumns(arz, MathArrays.copyOf(arReverseIndex, mu)); RealMatrix arnorms = sqrt(sumRows(square(arzneg))); final int[] idxnorms = sortedIndices(arnorms.getRow(0)); final RealMatrix arnormsSorted = selectColumns(arnorms, idxnorms); final int[] idxReverse = reverse(idxnorms);"
+      },
+      {
+        "txt": "final RealMatrix arnormsReverse = selectColumns(arnorms, idxReverse); arnorms = divide(arnormsReverse, arnormsSorted); final int[] idxInv = inverse(idxnorms); final RealMatrix arnormsInv = selectColumns(arnorms, idxInv); final double negcovMax = (1 - negminresidualvariance) / square(arnormsInv).multiply(weights).getEntry(0, 0); if (negccov > negcovMax) { negccov = negcovMax; } arzneg = times(arzneg, repmat(arnormsInv, dimension, 1));"
+      },
+      {
+        "txt": "final RealMatrix artmp = BD.multiply(arzneg); final RealMatrix Cneg = artmp.multiply(diag(weights)).multiply(artmp.transpose()); oldFac += negalphaold * negccov; C = C.scalarMultiply(oldFac) .add(roneu) // regard old matrix .add(arpos.scalarMultiply( // plus rank one update ccovmu + (1 - negalphaold) * negccov) // plus rank mu update .multiply(times(repmat(weights, 1, dimension), arpos.transpose()))) .subtract(Cneg.scalarMultiply(negccov));"
+      },
+      {
+        "txt": "} else { C = C.scalarMultiply(oldFac) // regard old matrix .add(roneu) // plus rank one update .add(arpos.scalarMultiply(ccovmu) // plus rank mu update .multiply(times(repmat(weights, 1, dimension), arpos.transpose()))); } } updateBD(negccov); }"
+      },
+      {
+        "txt": "private void updateBD(double negccov) { if (ccov1 + ccovmu + negccov > 0 && (iterations % 1. / (ccov1 + ccovmu + negccov) / dimension / 10.) < 1) { C = triu(C, 0).add(triu(C, 1).transpose()); final EigenDecomposition eig = new EigenDecomposition(C); B = eig.getV(); // eigen decomposition, B==normalized eigenvectors D = eig.getD(); diagD = diag(D); if (min(diagD) <= 0) { for (int i = 0; i < dimension; i++) {"
+      },
+      {
+        "txt": "if (diagD.getEntry(i, 0) < 0) { diagD.setEntry(i, 0, 0); } } final double tfac = max(diagD) / 1e14; C = C.add(eye(dimension, dimension).scalarMultiply(tfac)); diagD = diagD.add(ones(dimension, 1).scalarMultiply(tfac)); } if (max(diagD) > 1e14 * min(diagD)) { final double tfac = max(diagD) / 1e14 - min(diagD);"
+      },
+      {
+        "txt": "C = C.add(eye(dimension, dimension).scalarMultiply(tfac)); diagD = diagD.add(ones(dimension, 1).scalarMultiply(tfac)); } diagC = diag(C); diagD = sqrt(diagD); // D contains standard deviations now BD = times(B, repmat(diagD.transpose(), dimension, 1)); // O(n^2) } } private static void push(double[] vals, double val) { for (int i = vals.length-1; i > 0; i--) {"
+      },
+      {
+        "txt": "vals[i] = vals[i-1]; } vals[0] = val; } private int[] sortedIndices(final double[] doubles) { final DoubleIndex[] dis = new DoubleIndex[doubles.length]; for (int i = 0; i < doubles.length; i++) { dis[i] = new DoubleIndex(doubles[i], i); } Arrays.sort(dis);"
+      },
+      {
+        "txt": "final int[] indices = new int[doubles.length]; for (int i = 0; i < doubles.length; i++) { indices[i] = dis[i].index; } return indices; } private static class DoubleIndex implements Comparable<DoubleIndex> { private final double value; private final int index; DoubleIndex(double value, int index) {"
+      },
+      {
+        "txt": "this.value = value; this.index = index; } public int compareTo(DoubleIndex o) { return Double.compare(value, o.value); } @Override public boolean equals(Object other) { if (this == other) { return true;"
+      },
+      {
+        "txt": "} if (other instanceof DoubleIndex) { return Double.compare(value, ((DoubleIndex) other).value) == 0; } return false; } @Override public int hashCode() { long bits = Double.doubleToLongBits(value); return (int) ((1438542 ^ (bits >>> 32) ^ bits) & 0xffffffff);"
+      },
+      {
+        "txt": "} } private class FitnessFunction { private double valueRange; private final boolean isRepairMode; public FitnessFunction() { valueRange = 1; isRepairMode = true; } public double value(final double[] point) {"
+      },
+      {
+        "txt": "double value; if (isRepairMode) { double[] repaired = repair(point); value = CMAESOptimizer.this.computeObjectiveValue(repaired) + penalty(point, repaired); } else { value = CMAESOptimizer.this.computeObjectiveValue(point); } return isMinimize ? value : -value; }"
+      },
+      {
+        "txt": "public boolean isFeasible(final double[] x) { final double[] lB = CMAESOptimizer.this.getLowerBound(); final double[] uB = CMAESOptimizer.this.getUpperBound(); for (int i = 0; i < x.length; i++) { if (x[i] < lB[i]) { return false; } if (x[i] > uB[i]) { return false; }"
+      },
+      {
+        "txt": "} return true; } public void setValueRange(double valueRange) { this.valueRange = valueRange; } private double[] repair(final double[] x) { final double[] lB = CMAESOptimizer.this.getLowerBound(); final double[] uB = CMAESOptimizer.this.getUpperBound(); final double[] repaired = new double[x.length];"
+      },
+      {
+        "txt": "for (int i = 0; i < x.length; i++) { if (x[i] < lB[i]) { repaired[i] = lB[i]; } else if (x[i] > uB[i]) { repaired[i] = uB[i]; } else { repaired[i] = x[i]; } } return repaired;"
+      },
+      {
+        "txt": "} private double penalty(final double[] x, final double[] repaired) { double penalty = 0; for (int i = 0; i < x.length; i++) { double diff = Math.abs(x[i] - repaired[i]); penalty += diff * valueRange; } return isMinimize ? penalty : -penalty; } }"
+      },
+      {
+        "txt": "private static RealMatrix log(final RealMatrix m) { final double[][] d = new double[m.getRowDimension()][m.getColumnDimension()]; for (int r = 0; r < m.getRowDimension(); r++) { for (int c = 0; c < m.getColumnDimension(); c++) { d[r][c] = Math.log(m.getEntry(r, c)); } } return new Array2DRowRealMatrix(d, false); } private static RealMatrix sqrt(final RealMatrix m) {"
+      },
+      {
+        "txt": "final double[][] d = new double[m.getRowDimension()][m.getColumnDimension()]; for (int r = 0; r < m.getRowDimension(); r++) { for (int c = 0; c < m.getColumnDimension(); c++) { d[r][c] = Math.sqrt(m.getEntry(r, c)); } } return new Array2DRowRealMatrix(d, false); } private static RealMatrix square(final RealMatrix m) { final double[][] d = new double[m.getRowDimension()][m.getColumnDimension()];"
+      },
+      {
+        "txt": "for (int r = 0; r < m.getRowDimension(); r++) { for (int c = 0; c < m.getColumnDimension(); c++) { double e = m.getEntry(r, c); d[r][c] = e * e; } } return new Array2DRowRealMatrix(d, false); } private static RealMatrix times(final RealMatrix m, final RealMatrix n) { final double[][] d = new double[m.getRowDimension()][m.getColumnDimension()];"
+      },
+      {
+        "txt": "for (int r = 0; r < m.getRowDimension(); r++) { for (int c = 0; c < m.getColumnDimension(); c++) { d[r][c] = m.getEntry(r, c) * n.getEntry(r, c); } } return new Array2DRowRealMatrix(d, false); } private static RealMatrix divide(final RealMatrix m, final RealMatrix n) { final double[][] d = new double[m.getRowDimension()][m.getColumnDimension()]; for (int r = 0; r < m.getRowDimension(); r++) {"
+      },
+      {
+        "txt": "for (int c = 0; c < m.getColumnDimension(); c++) { d[r][c] = m.getEntry(r, c) / n.getEntry(r, c); } } return new Array2DRowRealMatrix(d, false); } private static RealMatrix selectColumns(final RealMatrix m, final int[] cols) { final double[][] d = new double[m.getRowDimension()][cols.length]; for (int r = 0; r < m.getRowDimension(); r++) { for (int c = 0; c < cols.length; c++) {"
+      },
+      {
+        "txt": "d[r][c] = m.getEntry(r, cols[c]); } } return new Array2DRowRealMatrix(d, false); } private static RealMatrix triu(final RealMatrix m, int k) { final double[][] d = new double[m.getRowDimension()][m.getColumnDimension()]; for (int r = 0; r < m.getRowDimension(); r++) { for (int c = 0; c < m.getColumnDimension(); c++) { d[r][c] = r <= c - k ? m.getEntry(r, c) : 0;"
+      },
+      {
+        "txt": "} } return new Array2DRowRealMatrix(d, false); } private static RealMatrix sumRows(final RealMatrix m) { final double[][] d = new double[1][m.getColumnDimension()]; for (int c = 0; c < m.getColumnDimension(); c++) { double sum = 0; for (int r = 0; r < m.getRowDimension(); r++) { sum += m.getEntry(r, c);"
+      },
+      {
+        "txt": "} d[0][c] = sum; } return new Array2DRowRealMatrix(d, false); } private static RealMatrix diag(final RealMatrix m) { if (m.getColumnDimension() == 1) { final double[][] d = new double[m.getRowDimension()][m.getRowDimension()]; for (int i = 0; i < m.getRowDimension(); i++) { d[i][i] = m.getEntry(i, 0);"
+      },
+      {
+        "txt": "} return new Array2DRowRealMatrix(d, false); } else { final double[][] d = new double[m.getRowDimension()][1]; for (int i = 0; i < m.getColumnDimension(); i++) { d[i][0] = m.getEntry(i, i); } return new Array2DRowRealMatrix(d, false); } }"
+      },
+      {
+        "txt": "private static void copyColumn(final RealMatrix m1, int col1, RealMatrix m2, int col2) { for (int i = 0; i < m1.getRowDimension(); i++) { m2.setEntry(i, col2, m1.getEntry(i, col1)); } } private static RealMatrix ones(int n, int m) { final double[][] d = new double[n][m]; for (int r = 0; r < n; r++) { Arrays.fill(d[r], 1);"
+      },
+      {
+        "txt": "} return new Array2DRowRealMatrix(d, false); } private static RealMatrix eye(int n, int m) { final double[][] d = new double[n][m]; for (int r = 0; r < n; r++) { if (r < m) { d[r][r] = 1; } }"
+      },
+      {
+        "txt": "return new Array2DRowRealMatrix(d, false); } private static RealMatrix zeros(int n, int m) { return new Array2DRowRealMatrix(n, m); } private static RealMatrix repmat(final RealMatrix mat, int n, int m) { final int rd = mat.getRowDimension(); final int cd = mat.getColumnDimension(); final double[][] d = new double[n * rd][m * cd]; for (int r = 0; r < n * rd; r++) {"
+      },
+      {
+        "txt": "for (int c = 0; c < m * cd; c++) { d[r][c] = mat.getEntry(r % rd, c % cd); } } return new Array2DRowRealMatrix(d, false); } private static RealMatrix sequence(double start, double end, double step) { final int size = (int) ((end - start) / step + 1); final double[][] d = new double[size][1]; double value = start;"
+      },
+      {
+        "txt": "for (int r = 0; r < size; r++) { d[r][0] = value; value += step; } return new Array2DRowRealMatrix(d, false); } private static double max(final RealMatrix m) { double max = -Double.MAX_VALUE; for (int r = 0; r < m.getRowDimension(); r++) { for (int c = 0; c < m.getColumnDimension(); c++) {"
+      },
+      {
+        "txt": "double e = m.getEntry(r, c); if (max < e) { max = e; } } } return max; } private static double min(final RealMatrix m) { double min = Double.MAX_VALUE;"
+      },
+      {
+        "txt": "for (int r = 0; r < m.getRowDimension(); r++) { for (int c = 0; c < m.getColumnDimension(); c++) { double e = m.getEntry(r, c); if (min > e) { min = e; } } } return min; }"
+      },
+      {
+        "txt": "private static double max(final double[] m) { double max = -Double.MAX_VALUE; for (int r = 0; r < m.length; r++) { if (max < m[r]) { max = m[r]; } } return max; } private static double min(final double[] m) {"
+      },
+      {
+        "txt": "double min = Double.MAX_VALUE; for (int r = 0; r < m.length; r++) { if (min > m[r]) { min = m[r]; } } return min; } private static int[] inverse(final int[] indices) { final int[] inverse = new int[indices.length];"
+      },
+      {
+        "txt": "for (int i = 0; i < indices.length; i++) { inverse[indices[i]] = i; } return inverse; } private static int[] reverse(final int[] indices) { final int[] reverse = new int[indices.length]; for (int i = 0; i < indices.length; i++) { reverse[i] = indices[indices.length - i - 1]; }"
+      },
+      {
+        "txt": "return reverse; } private double[] randn(int size) { final double[] randn = new double[size]; for (int i = 0; i < size; i++) { randn[i] = random.nextGaussian(); } return randn; } private RealMatrix randn1(int size, int popSize) {"
+      },
+      {
+        "txt": "final double[][] d = new double[size][popSize]; for (int r = 0; r < size; r++) { for (int c = 0; c < popSize; c++) { d[r][c] = random.nextGaussian(); } } return new Array2DRowRealMatrix(d, false); }"
+      }
+    ]
+  },
+  {
+    "id": 2463,
+    "file_path": "src/main/java/org/apache/commons/math3/optim/nonlinear/scalar/noderiv/PowellOptimizer.java",
+    "start-bug-line": 191,
+    "end-bug-line": 191,
+    "bug": "int iter = 0;",
+    "fix": "[Delete]",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.math3.optim.nonlinear.scalar.noderiv; import org.apache.commons.math3.util.FastMath; import org.apache.commons.math3.util.MathArrays; import org.apache.commons.math3.analysis.UnivariateFunction; import org.apache.commons.math3.exception.NumberIsTooSmallException;"
+      },
+      {
+        "txt": "import org.apache.commons.math3.exception.NotStrictlyPositiveException; import org.apache.commons.math3.exception.MathUnsupportedOperationException; import org.apache.commons.math3.exception.util.LocalizedFormats; import org.apache.commons.math3.optim.nonlinear.scalar.GoalType; import org.apache.commons.math3.optim.MaxEval; import org.apache.commons.math3.optim.PointValuePair; import org.apache.commons.math3.optim.ConvergenceChecker; import org.apache.commons.math3.optim.nonlinear.scalar.MultivariateOptimizer; import org.apache.commons.math3.optim.univariate.BracketFinder; import org.apache.commons.math3.optim.univariate.BrentOptimizer;"
+      },
+      {
+        "txt": "import org.apache.commons.math3.optim.univariate.UnivariatePointValuePair; import org.apache.commons.math3.optim.univariate.SimpleUnivariateValueChecker; import org.apache.commons.math3.optim.univariate.SearchInterval; import org.apache.commons.math3.optim.univariate.UnivariateObjectiveFunction; public class PowellOptimizer extends MultivariateOptimizer { private static final double MIN_RELATIVE_TOLERANCE = 2 * FastMath.ulp(1d); private final double relativeThreshold; private final double absoluteThreshold; private final LineSearch line;"
+      },
+      {
+        "txt": "public PowellOptimizer(double rel, double abs, ConvergenceChecker<PointValuePair> checker) { this(rel, abs, FastMath.sqrt(rel), FastMath.sqrt(abs), checker); } public PowellOptimizer(double rel, double abs, double lineRel, double lineAbs, ConvergenceChecker<PointValuePair> checker) {"
+      },
+      {
+        "txt": "super(checker); if (rel < MIN_RELATIVE_TOLERANCE) { throw new NumberIsTooSmallException(rel, MIN_RELATIVE_TOLERANCE, true); } if (abs <= 0) { throw new NotStrictlyPositiveException(abs); } relativeThreshold = rel; absoluteThreshold = abs; line = new LineSearch(lineRel,"
+      },
+      {
+        "txt": "lineAbs); } public PowellOptimizer(double rel, double abs) { this(rel, abs, null); } public PowellOptimizer(double rel, double abs, double lineRel, double lineAbs) {"
+      },
+      {
+        "txt": "this(rel, abs, lineRel, lineAbs, null); } @Override protected PointValuePair doOptimize() { checkParameters(); final GoalType goal = getGoalType(); final double[] guess = getStartPoint(); final int n = guess.length; final double[][] direc = new double[n][n]; for (int i = 0; i < n; i++) {"
+      },
+      {
+        "txt": "} final ConvergenceChecker<PointValuePair> checker = getConvergenceChecker(); double[] x = guess; double fVal = computeObjectiveValue(x); double[] x1 = x.clone(); <extra_id_0> while (true) { ++iter; double fX = fVal; double fX2 = 0; double delta = 0; int bigInd = 0;"
+      },
+      {
+        "txt": "double delta = 0; int bigInd = 0; double alphaMin = 0; for (int i = 0; i < n; i++) { final double[] d = MathArrays.copyOf(direc[i]); fX2 = fVal; final UnivariatePointValuePair optimum = line.search(x, d); fVal = optimum.getValue(); alphaMin = optimum.getPoint(); final double[][] result = newPointAndDirection(x, d, alphaMin);"
+      },
+      {
+        "txt": "x = result[0]; if ((fX2 - fVal) > delta) { delta = fX2 - fVal; bigInd = i; } } boolean stop = 2 * (fX - fVal) <= (relativeThreshold * (FastMath.abs(fX) + FastMath.abs(fVal)) + absoluteThreshold); final PointValuePair previous = new PointValuePair(x1, fX);"
+      },
+      {
+        "txt": "final PointValuePair current = new PointValuePair(x, fVal); if (!stop) { // User-defined stopping criteria. if (checker != null) { stop = checker.converged(iter, previous, current); } } if (stop) { if (goal == GoalType.MINIMIZE) { return (fVal < fX) ? current : previous; } else {"
+      },
+      {
+        "txt": "return (fVal > fX) ? current : previous; } } final double[] d = new double[n]; final double[] x2 = new double[n]; for (int i = 0; i < n; i++) { d[i] = x[i] - x1[i]; x2[i] = 2 * x[i] - x1[i]; } x1 = x.clone();"
+      },
+      {
+        "txt": "fX2 = computeObjectiveValue(x2); if (fX > fX2) { double t = 2 * (fX + fX2 - 2 * fVal); double temp = fX - fVal - delta; t *= temp * temp; temp = fX - fX2; t -= delta * temp * temp; if (t < 0.0) { final UnivariatePointValuePair optimum = line.search(x, d); fVal = optimum.getValue();"
+      },
+      {
+        "txt": "alphaMin = optimum.getPoint(); final double[][] result = newPointAndDirection(x, d, alphaMin); x = result[0]; final int lastInd = n - 1; direc[bigInd] = direc[lastInd]; direc[lastInd] = result[1]; } } } }"
+      },
+      {
+        "txt": "private double[][] newPointAndDirection(double[] p, double[] d, double optimum) { final int n = p.length; final double[] nP = new double[n]; final double[] nD = new double[n]; for (int i = 0; i < n; i++) { nD[i] = d[i] * optimum; nP[i] = p[i] + nD[i]; }"
+      },
+      {
+        "txt": "final double[][] result = new double[2][]; result[0] = nP; result[1] = nD; return result; } private class LineSearch extends BrentOptimizer { private static final double REL_TOL_UNUSED = 1e-15; private static final double ABS_TOL_UNUSED = Double.MIN_VALUE; private final BracketFinder bracket = new BracketFinder(); LineSearch(double rel,"
+      },
+      {
+        "txt": "double abs) { super(REL_TOL_UNUSED, ABS_TOL_UNUSED, new SimpleUnivariateValueChecker(rel, abs)); } public UnivariatePointValuePair search(final double[] p, final double[] d) { final int n = p.length; final UnivariateFunction f = new UnivariateFunction() { public double value(double alpha) { final double[] x = new double[n];"
+      },
+      {
+        "txt": "for (int i = 0; i < n; i++) { x[i] = p[i] + alpha * d[i]; } final double obj = PowellOptimizer.this.computeObjectiveValue(x); return obj; } }; final GoalType goal = PowellOptimizer.this.getGoalType(); bracket.search(f, goal, 0, 1); return optimize(new MaxEval(Integer.MAX_VALUE),"
+      },
+      {
+        "txt": "new UnivariateObjectiveFunction(f), goal, new SearchInterval(bracket.getLo(), bracket.getHi(), bracket.getMid())); } } private void checkParameters() { if (getLowerBound() != null || getUpperBound() != null) {"
+      },
+      {
+        "txt": "throw new MathUnsupportedOperationException(LocalizedFormats.CONSTRAINT); } }"
+      }
+    ]
+  },
+  {
+    "id": 2464,
+    "file_path": "src/main/java/org/apache/commons/math3/optim/nonlinear/scalar/noderiv/PowellOptimizer.java",
+    "start-bug-line": 193,
+    "end-bug-line": 193,
+    "bug": "++iter;",
+    "fix": "incrementIterationCount();",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.math3.optim.nonlinear.scalar.noderiv; import org.apache.commons.math3.util.FastMath; import org.apache.commons.math3.util.MathArrays; import org.apache.commons.math3.analysis.UnivariateFunction; import org.apache.commons.math3.exception.NumberIsTooSmallException; import org.apache.commons.math3.exception.NotStrictlyPositiveException; import org.apache.commons.math3.exception.MathUnsupportedOperationException;"
+      },
+      {
+        "txt": "import org.apache.commons.math3.exception.util.LocalizedFormats; import org.apache.commons.math3.optim.nonlinear.scalar.GoalType; import org.apache.commons.math3.optim.MaxEval; import org.apache.commons.math3.optim.PointValuePair; import org.apache.commons.math3.optim.ConvergenceChecker; import org.apache.commons.math3.optim.nonlinear.scalar.MultivariateOptimizer; import org.apache.commons.math3.optim.univariate.BracketFinder; import org.apache.commons.math3.optim.univariate.BrentOptimizer; import org.apache.commons.math3.optim.univariate.UnivariatePointValuePair; import org.apache.commons.math3.optim.univariate.SimpleUnivariateValueChecker;"
+      },
+      {
+        "txt": "import org.apache.commons.math3.optim.univariate.SearchInterval; import org.apache.commons.math3.optim.univariate.UnivariateObjectiveFunction; public class PowellOptimizer extends MultivariateOptimizer { private static final double MIN_RELATIVE_TOLERANCE = 2 * FastMath.ulp(1d); private final double relativeThreshold; private final double absoluteThreshold; private final LineSearch line; public PowellOptimizer(double rel, double abs,"
+      },
+      {
+        "txt": "ConvergenceChecker<PointValuePair> checker) { this(rel, abs, FastMath.sqrt(rel), FastMath.sqrt(abs), checker); } public PowellOptimizer(double rel, double abs, double lineRel, double lineAbs, ConvergenceChecker<PointValuePair> checker) { super(checker); if (rel < MIN_RELATIVE_TOLERANCE) {"
+      },
+      {
+        "txt": "throw new NumberIsTooSmallException(rel, MIN_RELATIVE_TOLERANCE, true); } if (abs <= 0) { throw new NotStrictlyPositiveException(abs); } relativeThreshold = rel; absoluteThreshold = abs; line = new LineSearch(lineRel, lineAbs); }"
+      },
+      {
+        "txt": "public PowellOptimizer(double rel, double abs) { this(rel, abs, null); } public PowellOptimizer(double rel, double abs, double lineRel, double lineAbs) { this(rel, abs, lineRel, lineAbs, null); }"
+      },
+      {
+        "txt": "@Override protected PointValuePair doOptimize() { checkParameters(); final GoalType goal = getGoalType(); final double[] guess = getStartPoint(); final int n = guess.length; final double[][] direc = new double[n][n]; for (int i = 0; i < n; i++) { direc[i][i] = 1; }"
+      },
+      {
+        "txt": "= getConvergenceChecker(); double[] x = guess; double fVal = computeObjectiveValue(x); double[] x1 = x.clone(); int iter = 0; while (true) { <extra_id_0> double fX = fVal; double fX2 = 0; double delta = 0; int bigInd = 0; double alphaMin = 0; for (int i = 0; i < n; i++) {"
+      },
+      {
+        "txt": "double alphaMin = 0; for (int i = 0; i < n; i++) { final double[] d = MathArrays.copyOf(direc[i]); fX2 = fVal; final UnivariatePointValuePair optimum = line.search(x, d); fVal = optimum.getValue(); alphaMin = optimum.getPoint(); final double[][] result = newPointAndDirection(x, d, alphaMin); x = result[0]; if ((fX2 - fVal) > delta) {"
+      },
+      {
+        "txt": "delta = fX2 - fVal; bigInd = i; } } boolean stop = 2 * (fX - fVal) <= (relativeThreshold * (FastMath.abs(fX) + FastMath.abs(fVal)) + absoluteThreshold); final PointValuePair previous = new PointValuePair(x1, fX); final PointValuePair current = new PointValuePair(x, fVal); if (!stop) { // User-defined stopping criteria."
+      },
+      {
+        "txt": "if (checker != null) { stop = checker.converged(iter, previous, current); } } if (stop) { if (goal == GoalType.MINIMIZE) { return (fVal < fX) ? current : previous; } else { return (fVal > fX) ? current : previous; }"
+      },
+      {
+        "txt": "} final double[] d = new double[n]; final double[] x2 = new double[n]; for (int i = 0; i < n; i++) { d[i] = x[i] - x1[i]; x2[i] = 2 * x[i] - x1[i]; } x1 = x.clone(); fX2 = computeObjectiveValue(x2); if (fX > fX2) {"
+      },
+      {
+        "txt": "double t = 2 * (fX + fX2 - 2 * fVal); double temp = fX - fVal - delta; t *= temp * temp; temp = fX - fX2; t -= delta * temp * temp; if (t < 0.0) { final UnivariatePointValuePair optimum = line.search(x, d); fVal = optimum.getValue(); alphaMin = optimum.getPoint(); final double[][] result = newPointAndDirection(x, d, alphaMin);"
+      },
+      {
+        "txt": "x = result[0]; final int lastInd = n - 1; direc[bigInd] = direc[lastInd]; direc[lastInd] = result[1]; } } } } private double[][] newPointAndDirection(double[] p, double[] d,"
+      },
+      {
+        "txt": "double optimum) { final int n = p.length; final double[] nP = new double[n]; final double[] nD = new double[n]; for (int i = 0; i < n; i++) { nD[i] = d[i] * optimum; nP[i] = p[i] + nD[i]; } final double[][] result = new double[2][]; result[0] = nP;"
+      },
+      {
+        "txt": "result[1] = nD; return result; } private class LineSearch extends BrentOptimizer { private static final double REL_TOL_UNUSED = 1e-15; private static final double ABS_TOL_UNUSED = Double.MIN_VALUE; private final BracketFinder bracket = new BracketFinder(); LineSearch(double rel, double abs) { super(REL_TOL_UNUSED,"
+      },
+      {
+        "txt": "ABS_TOL_UNUSED, new SimpleUnivariateValueChecker(rel, abs)); } public UnivariatePointValuePair search(final double[] p, final double[] d) { final int n = p.length; final UnivariateFunction f = new UnivariateFunction() { public double value(double alpha) { final double[] x = new double[n]; for (int i = 0; i < n; i++) { x[i] = p[i] + alpha * d[i];"
+      },
+      {
+        "txt": "} final double obj = PowellOptimizer.this.computeObjectiveValue(x); return obj; } }; final GoalType goal = PowellOptimizer.this.getGoalType(); bracket.search(f, goal, 0, 1); return optimize(new MaxEval(Integer.MAX_VALUE), new UnivariateObjectiveFunction(f), goal,"
+      },
+      {
+        "txt": "new SearchInterval(bracket.getLo(), bracket.getHi(), bracket.getMid())); } } private void checkParameters() { if (getLowerBound() != null || getUpperBound() != null) { throw new MathUnsupportedOperationException(LocalizedFormats.CONSTRAINT); }"
+      }
+    ]
+  },
+  {
+    "id": 2465,
+    "file_path": "src/main/java/org/apache/commons/math3/optim/nonlinear/scalar/noderiv/PowellOptimizer.java",
+    "start-bug-line": 227,
+    "end-bug-line": 227,
+    "bug": "stop = checker.converged(iter, previous, current);",
+    "fix": "stop = checker.converged(getIterations(), previous, current);",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.math3.optim.nonlinear.scalar.noderiv; import org.apache.commons.math3.util.FastMath; import org.apache.commons.math3.util.MathArrays;"
+      },
+      {
+        "txt": "import org.apache.commons.math3.analysis.UnivariateFunction; import org.apache.commons.math3.exception.NumberIsTooSmallException; import org.apache.commons.math3.exception.NotStrictlyPositiveException; import org.apache.commons.math3.exception.MathUnsupportedOperationException; import org.apache.commons.math3.exception.util.LocalizedFormats; import org.apache.commons.math3.optim.nonlinear.scalar.GoalType; import org.apache.commons.math3.optim.MaxEval; import org.apache.commons.math3.optim.PointValuePair; import org.apache.commons.math3.optim.ConvergenceChecker; import org.apache.commons.math3.optim.nonlinear.scalar.MultivariateOptimizer;"
+      },
+      {
+        "txt": "import org.apache.commons.math3.optim.univariate.BracketFinder; import org.apache.commons.math3.optim.univariate.BrentOptimizer; import org.apache.commons.math3.optim.univariate.UnivariatePointValuePair; import org.apache.commons.math3.optim.univariate.SimpleUnivariateValueChecker; import org.apache.commons.math3.optim.univariate.SearchInterval; import org.apache.commons.math3.optim.univariate.UnivariateObjectiveFunction; public class PowellOptimizer extends MultivariateOptimizer { private static final double MIN_RELATIVE_TOLERANCE = 2 * FastMath.ulp(1d); private final double relativeThreshold;"
+      },
+      {
+        "txt": "private final double absoluteThreshold; private final LineSearch line; public PowellOptimizer(double rel, double abs, ConvergenceChecker<PointValuePair> checker) { this(rel, abs, FastMath.sqrt(rel), FastMath.sqrt(abs), checker); } public PowellOptimizer(double rel, double abs, double lineRel,"
+      },
+      {
+        "txt": "double lineAbs, ConvergenceChecker<PointValuePair> checker) { super(checker); if (rel < MIN_RELATIVE_TOLERANCE) { throw new NumberIsTooSmallException(rel, MIN_RELATIVE_TOLERANCE, true); } if (abs <= 0) { throw new NotStrictlyPositiveException(abs); } relativeThreshold = rel;"
+      },
+      {
+        "txt": "absoluteThreshold = abs; line = new LineSearch(lineRel, lineAbs); } public PowellOptimizer(double rel, double abs) { this(rel, abs, null); } public PowellOptimizer(double rel, double abs,"
+      },
+      {
+        "txt": "double lineRel, double lineAbs) { this(rel, abs, lineRel, lineAbs, null); } @Override protected PointValuePair doOptimize() { checkParameters(); final GoalType goal = getGoalType(); final double[] guess = getStartPoint(); final int n = guess.length;"
+      },
+      {
+        "txt": "final double[][] direc = new double[n][n]; for (int i = 0; i < n; i++) { direc[i][i] = 1; } final ConvergenceChecker<PointValuePair> checker = getConvergenceChecker(); double[] x = guess; double fVal = computeObjectiveValue(x); double[] x1 = x.clone(); int iter = 0;"
+      },
+      {
+        "txt": "while (true) { ++iter; double fX = fVal; double fX2 = 0; double delta = 0; int bigInd = 0; double alphaMin = 0; for (int i = 0; i < n; i++) { final double[] d = MathArrays.copyOf(direc[i]); fX2 = fVal;"
+      },
+      {
+        "txt": "final UnivariatePointValuePair optimum = line.search(x, d); fVal = optimum.getValue(); alphaMin = optimum.getPoint(); final double[][] result = newPointAndDirection(x, d, alphaMin); x = result[0]; if ((fX2 - fVal) > delta) { delta = fX2 - fVal; bigInd = i; } }"
+      },
+      {
+        "txt": "(relativeThreshold * (FastMath.abs(fX) + FastMath.abs(fVal)) + absoluteThreshold); final PointValuePair previous = new PointValuePair(x1, fX); final PointValuePair current = new PointValuePair(x, fVal); if (!stop) { // User-defined stopping criteria. if (checker != null) { <extra_id_0> } } if (stop) { if (goal == GoalType.MINIMIZE) { return (fVal < fX) ? current : previous; } else {"
+      },
+      {
+        "txt": "return (fVal < fX) ? current : previous; } else { return (fVal > fX) ? current : previous; } } final double[] d = new double[n]; final double[] x2 = new double[n]; for (int i = 0; i < n; i++) { d[i] = x[i] - x1[i]; x2[i] = 2 * x[i] - x1[i];"
+      },
+      {
+        "txt": "} x1 = x.clone(); fX2 = computeObjectiveValue(x2); if (fX > fX2) { double t = 2 * (fX + fX2 - 2 * fVal); double temp = fX - fVal - delta; t *= temp * temp; temp = fX - fX2; t -= delta * temp * temp; if (t < 0.0) {"
+      },
+      {
+        "txt": "final UnivariatePointValuePair optimum = line.search(x, d); fVal = optimum.getValue(); alphaMin = optimum.getPoint(); final double[][] result = newPointAndDirection(x, d, alphaMin); x = result[0]; final int lastInd = n - 1; direc[bigInd] = direc[lastInd]; direc[lastInd] = result[1]; } }"
+      },
+      {
+        "txt": "} } private double[][] newPointAndDirection(double[] p, double[] d, double optimum) { final int n = p.length; final double[] nP = new double[n]; final double[] nD = new double[n]; for (int i = 0; i < n; i++) { nD[i] = d[i] * optimum;"
+      },
+      {
+        "txt": "nP[i] = p[i] + nD[i]; } final double[][] result = new double[2][]; result[0] = nP; result[1] = nD; return result; } private class LineSearch extends BrentOptimizer { private static final double REL_TOL_UNUSED = 1e-15; private static final double ABS_TOL_UNUSED = Double.MIN_VALUE;"
+      },
+      {
+        "txt": "private final BracketFinder bracket = new BracketFinder(); LineSearch(double rel, double abs) { super(REL_TOL_UNUSED, ABS_TOL_UNUSED, new SimpleUnivariateValueChecker(rel, abs)); } public UnivariatePointValuePair search(final double[] p, final double[] d) { final int n = p.length; final UnivariateFunction f = new UnivariateFunction() {"
+      },
+      {
+        "txt": "public double value(double alpha) { final double[] x = new double[n]; for (int i = 0; i < n; i++) { x[i] = p[i] + alpha * d[i]; } final double obj = PowellOptimizer.this.computeObjectiveValue(x); return obj; } }; final GoalType goal = PowellOptimizer.this.getGoalType();"
+      },
+      {
+        "txt": "bracket.search(f, goal, 0, 1); return optimize(new MaxEval(Integer.MAX_VALUE), new UnivariateObjectiveFunction(f), goal, new SearchInterval(bracket.getLo(), bracket.getHi(), bracket.getMid())); } } private void checkParameters() {"
+      },
+      {
+        "txt": "if (getLowerBound() != null || getUpperBound() != null) { throw new MathUnsupportedOperationException(LocalizedFormats.CONSTRAINT); } }"
+      }
+    ]
+  },
+  {
+    "id": 2466,
+    "file_path": "src/main/java/org/apache/commons/math3/optim/nonlinear/scalar/noderiv/SimplexOptimizer.java",
+    "start-bug-line": 158,
+    "end-bug-line": 158,
+    "bug": "if (iteration > 0) {",
+    "fix": "if (getIterations() > 0) {",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.math3.optim.nonlinear.scalar.noderiv; import java.util.Comparator;"
+      },
+      {
+        "txt": "import org.apache.commons.math3.analysis.MultivariateFunction; import org.apache.commons.math3.exception.NullArgumentException; import org.apache.commons.math3.exception.MathUnsupportedOperationException; import org.apache.commons.math3.exception.util.LocalizedFormats; import org.apache.commons.math3.optim.nonlinear.scalar.GoalType; import org.apache.commons.math3.optim.ConvergenceChecker; import org.apache.commons.math3.optim.PointValuePair; import org.apache.commons.math3.optim.SimpleValueChecker; import org.apache.commons.math3.optim.OptimizationData; import org.apache.commons.math3.optim.nonlinear.scalar.MultivariateOptimizer;"
+      },
+      {
+        "txt": "public class SimplexOptimizer extends MultivariateOptimizer { private AbstractSimplex simplex; public SimplexOptimizer(ConvergenceChecker<PointValuePair> checker) { super(checker); } public SimplexOptimizer(double rel, double abs) { this(new SimpleValueChecker(rel, abs)); } @Override public PointValuePair optimize(OptimizationData... optData) {"
+      },
+      {
+        "txt": "return super.optimize(optData); } @Override protected PointValuePair doOptimize() { checkParameters(); final MultivariateFunction evalFunc = new MultivariateFunction() { public double value(double[] point) { return computeObjectiveValue(point); }"
+      },
+      {
+        "txt": "}; final boolean isMinim = getGoalType() == GoalType.MINIMIZE; final Comparator<PointValuePair> comparator = new Comparator<PointValuePair>() { public int compare(final PointValuePair o1, final PointValuePair o2) { final double v1 = o1.getValue(); final double v2 = o2.getValue(); return isMinim ? Double.compare(v1, v2) : Double.compare(v2, v1); }"
+      },
+      {
+        "txt": "simplex.build(getStartPoint()); simplex.evaluate(evalFunc, comparator); PointValuePair[] previous = null; int iteration = 0; final ConvergenceChecker<PointValuePair> checker = getConvergenceChecker(); while (true) { <extra_id_0> boolean converged = true; for (int i = 0; i < simplex.getSize(); i++) { PointValuePair prev = previous[i]; converged = converged && checker.converged(iteration, prev, simplex.getPoint(i)); }"
+      },
+      {
+        "txt": "checker.converged(iteration, prev, simplex.getPoint(i)); } if (converged) { return simplex.getPoint(0); } } previous = simplex.getPoints(); simplex.iterate(evalFunc, comparator); ++iteration; }"
+      },
+      {
+        "txt": "} @Override protected void parseOptimizationData(OptimizationData... optData) { super.parseOptimizationData(optData); for (OptimizationData data : optData) { if (data instanceof AbstractSimplex) { simplex = (AbstractSimplex) data; break; } }"
+      },
+      {
+        "txt": "} private void checkParameters() { if (simplex == null) { throw new NullArgumentException(); } if (getLowerBound() != null || getUpperBound() != null) { throw new MathUnsupportedOperationException(LocalizedFormats.CONSTRAINT); } }"
+      }
+    ]
+  },
+  {
+    "id": 2467,
+    "file_path": "src/main/java/org/apache/commons/math3/optim/nonlinear/scalar/noderiv/SimplexOptimizer.java",
+    "start-bug-line": 175,
+    "end-bug-line": 175,
+    "bug": "++iteration;",
+    "fix": "incrementIterationCount();",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.math3.optim.nonlinear.scalar.noderiv; import java.util.Comparator; import org.apache.commons.math3.analysis.MultivariateFunction; import org.apache.commons.math3.exception.NullArgumentException; import org.apache.commons.math3.exception.MathUnsupportedOperationException;"
+      },
+      {
+        "txt": "import org.apache.commons.math3.exception.util.LocalizedFormats; import org.apache.commons.math3.optim.nonlinear.scalar.GoalType; import org.apache.commons.math3.optim.ConvergenceChecker; import org.apache.commons.math3.optim.PointValuePair; import org.apache.commons.math3.optim.SimpleValueChecker; import org.apache.commons.math3.optim.OptimizationData; import org.apache.commons.math3.optim.nonlinear.scalar.MultivariateOptimizer; public class SimplexOptimizer extends MultivariateOptimizer { private AbstractSimplex simplex; public SimplexOptimizer(ConvergenceChecker<PointValuePair> checker) {"
+      },
+      {
+        "txt": "super(checker); } public SimplexOptimizer(double rel, double abs) { this(new SimpleValueChecker(rel, abs)); } @Override public PointValuePair optimize(OptimizationData... optData) { return super.optimize(optData); } @Override"
+      },
+      {
+        "txt": "protected PointValuePair doOptimize() { checkParameters(); final MultivariateFunction evalFunc = new MultivariateFunction() { public double value(double[] point) { return computeObjectiveValue(point); } }; final boolean isMinim = getGoalType() == GoalType.MINIMIZE; final Comparator<PointValuePair> comparator"
+      },
+      {
+        "txt": "= new Comparator<PointValuePair>() { public int compare(final PointValuePair o1, final PointValuePair o2) { final double v1 = o1.getValue(); final double v2 = o2.getValue(); return isMinim ? Double.compare(v1, v2) : Double.compare(v2, v1); } }; simplex.build(getStartPoint()); simplex.evaluate(evalFunc, comparator);"
+      },
+      {
+        "txt": "PointValuePair[] previous = null; int iteration = 0; final ConvergenceChecker<PointValuePair> checker = getConvergenceChecker(); while (true) { if (iteration > 0) { boolean converged = true; for (int i = 0; i < simplex.getSize(); i++) { PointValuePair prev = previous[i]; converged = converged && checker.converged(iteration, prev, simplex.getPoint(i));"
+      },
+      {
+        "txt": "if (converged) { return simplex.getPoint(0); } } previous = simplex.getPoints(); simplex.iterate(evalFunc, comparator); <extra_id_0> } } @Override protected void parseOptimizationData(OptimizationData... optData) { super.parseOptimizationData(optData); for (OptimizationData data : optData) {"
+      },
+      {
+        "txt": "super.parseOptimizationData(optData); for (OptimizationData data : optData) { if (data instanceof AbstractSimplex) { simplex = (AbstractSimplex) data; break; } } } private void checkParameters() { if (simplex == null) {"
+      },
+      {
+        "txt": "throw new NullArgumentException(); } if (getLowerBound() != null || getUpperBound() != null) { throw new MathUnsupportedOperationException(LocalizedFormats.CONSTRAINT); } }"
+      }
+    ]
+  },
+  {
+    "id": 2468,
+    "file_path": "src/main/java/org/apache/commons/math3/optim/nonlinear/vector/jacobian/GaussNewtonOptimizer.java",
+    "start-bug-line": 106,
+    "end-bug-line": 106,
+    "bug": "int iter = 0;",
+    "fix": "[Delete]",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.math3.optim.nonlinear.vector.jacobian; import org.apache.commons.math3.exception.ConvergenceException; import org.apache.commons.math3.exception.NullArgumentException; import org.apache.commons.math3.exception.MathInternalError; import org.apache.commons.math3.exception.MathUnsupportedOperationException; import org.apache.commons.math3.exception.util.LocalizedFormats;"
+      },
+      {
+        "txt": "import org.apache.commons.math3.linear.ArrayRealVector; import org.apache.commons.math3.linear.BlockRealMatrix; import org.apache.commons.math3.linear.DecompositionSolver; import org.apache.commons.math3.linear.LUDecomposition; import org.apache.commons.math3.linear.QRDecomposition; import org.apache.commons.math3.linear.RealMatrix; import org.apache.commons.math3.linear.SingularMatrixException; import org.apache.commons.math3.optim.ConvergenceChecker; import org.apache.commons.math3.optim.PointVectorValuePair; public class GaussNewtonOptimizer extends AbstractLeastSquaresOptimizer {"
+      },
+      {
+        "txt": "private final boolean useLU; public GaussNewtonOptimizer(ConvergenceChecker<PointVectorValuePair> checker) { this(true, checker); } public GaussNewtonOptimizer(final boolean useLU, ConvergenceChecker<PointVectorValuePair> checker) { super(checker); this.useLU = useLU; } @Override"
+      },
+      {
+        "txt": "public PointVectorValuePair doOptimize() { checkParameters(); final ConvergenceChecker<PointVectorValuePair> checker = getConvergenceChecker(); if (checker == null) { throw new NullArgumentException(); } final double[] targetValues = getTarget(); final int nR = targetValues.length; // Number of observed data. final RealMatrix weightMatrix = getWeight();"
+      },
+      {
+        "txt": "for (int i = 0; i < nR; i++) { residualsWeights[i] = weightMatrix.getEntry(i, i); } final double[] currentPoint = getStartPoint(); final int nC = currentPoint.length; PointVectorValuePair current = null; <extra_id_0> for (boolean converged = false; !converged;) { ++iter; PointVectorValuePair previous = current; final double[] currentObjective = computeObjectiveValue(currentPoint); final double[] currentResiduals = computeResiduals(currentObjective); final RealMatrix weightedJacobian = computeWeightedJacobian(currentPoint);"
+      },
+      {
+        "txt": "final double[] currentResiduals = computeResiduals(currentObjective); final RealMatrix weightedJacobian = computeWeightedJacobian(currentPoint); current = new PointVectorValuePair(currentPoint, currentObjective); final double[] b = new double[nC]; final double[][] a = new double[nC][nC]; for (int i = 0; i < nR; ++i) { final double[] grad = weightedJacobian.getRow(i); final double weight = residualsWeights[i]; final double residual = currentResiduals[i]; final double wr = weight * residual;"
+      },
+      {
+        "txt": "for (int j = 0; j < nC; ++j) { b[j] += wr * grad[j]; } for (int k = 0; k < nC; ++k) { double[] ak = a[k]; double wgk = weight * grad[k]; for (int l = 0; l < nC; ++l) { ak[l] += wgk * grad[l]; } }"
+      },
+      {
+        "txt": "} try { RealMatrix mA = new BlockRealMatrix(a); DecompositionSolver solver = useLU ? new LUDecomposition(mA).getSolver() : new QRDecomposition(mA).getSolver(); final double[] dX = solver.solve(new ArrayRealVector(b, false)).toArray(); for (int i = 0; i < nC; ++i) { currentPoint[i] += dX[i]; }"
+      },
+      {
+        "txt": "} catch (SingularMatrixException e) { throw new ConvergenceException(LocalizedFormats.UNABLE_TO_SOLVE_SINGULAR_PROBLEM); } if (previous != null) { converged = checker.converged(iter, previous, current); if (converged) { setCost(computeCost(currentResiduals)); return current; } }"
+      },
+      {
+        "txt": "} throw new MathInternalError(); } private void checkParameters() { if (getLowerBound() != null || getUpperBound() != null) { throw new MathUnsupportedOperationException(LocalizedFormats.CONSTRAINT); } }"
+      }
+    ]
+  },
+  {
+    "id": 2469,
+    "file_path": "src/main/java/org/apache/commons/math3/optim/nonlinear/vector/jacobian/GaussNewtonOptimizer.java",
+    "start-bug-line": 108,
+    "end-bug-line": 108,
+    "bug": "++iter;",
+    "fix": "incrementIterationCount();",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.math3.optim.nonlinear.vector.jacobian; import org.apache.commons.math3.exception.ConvergenceException; import org.apache.commons.math3.exception.NullArgumentException; import org.apache.commons.math3.exception.MathInternalError; import org.apache.commons.math3.exception.MathUnsupportedOperationException; import org.apache.commons.math3.exception.util.LocalizedFormats; import org.apache.commons.math3.linear.ArrayRealVector; import org.apache.commons.math3.linear.BlockRealMatrix;"
+      },
+      {
+        "txt": "import org.apache.commons.math3.linear.DecompositionSolver; import org.apache.commons.math3.linear.LUDecomposition; import org.apache.commons.math3.linear.QRDecomposition; import org.apache.commons.math3.linear.RealMatrix; import org.apache.commons.math3.linear.SingularMatrixException; import org.apache.commons.math3.optim.ConvergenceChecker; import org.apache.commons.math3.optim.PointVectorValuePair; public class GaussNewtonOptimizer extends AbstractLeastSquaresOptimizer { private final boolean useLU; public GaussNewtonOptimizer(ConvergenceChecker<PointVectorValuePair> checker) {"
+      },
+      {
+        "txt": "this(true, checker); } public GaussNewtonOptimizer(final boolean useLU, ConvergenceChecker<PointVectorValuePair> checker) { super(checker); this.useLU = useLU; } @Override public PointVectorValuePair doOptimize() { checkParameters();"
+      },
+      {
+        "txt": "final ConvergenceChecker<PointVectorValuePair> checker = getConvergenceChecker(); if (checker == null) { throw new NullArgumentException(); } final double[] targetValues = getTarget(); final int nR = targetValues.length; // Number of observed data. final RealMatrix weightMatrix = getWeight(); final double[] residualsWeights = new double[nR]; for (int i = 0; i < nR; i++) {"
+      },
+      {
+        "txt": "} final double[] currentPoint = getStartPoint(); final int nC = currentPoint.length; PointVectorValuePair current = null; int iter = 0; for (boolean converged = false; !converged;) { <extra_id_0> PointVectorValuePair previous = current; final double[] currentObjective = computeObjectiveValue(currentPoint); final double[] currentResiduals = computeResiduals(currentObjective); final RealMatrix weightedJacobian = computeWeightedJacobian(currentPoint); current = new PointVectorValuePair(currentPoint, currentObjective); final double[] b = new double[nC];"
+      },
+      {
+        "txt": "current = new PointVectorValuePair(currentPoint, currentObjective); final double[] b = new double[nC]; final double[][] a = new double[nC][nC]; for (int i = 0; i < nR; ++i) { final double[] grad = weightedJacobian.getRow(i); final double weight = residualsWeights[i]; final double residual = currentResiduals[i]; final double wr = weight * residual; for (int j = 0; j < nC; ++j) { b[j] += wr * grad[j];"
+      },
+      {
+        "txt": "} for (int k = 0; k < nC; ++k) { double[] ak = a[k]; double wgk = weight * grad[k]; for (int l = 0; l < nC; ++l) { ak[l] += wgk * grad[l]; } } } try {"
+      },
+      {
+        "txt": "RealMatrix mA = new BlockRealMatrix(a); DecompositionSolver solver = useLU ? new LUDecomposition(mA).getSolver() : new QRDecomposition(mA).getSolver(); final double[] dX = solver.solve(new ArrayRealVector(b, false)).toArray(); for (int i = 0; i < nC; ++i) { currentPoint[i] += dX[i]; } } catch (SingularMatrixException e) { throw new ConvergenceException(LocalizedFormats.UNABLE_TO_SOLVE_SINGULAR_PROBLEM);"
+      },
+      {
+        "txt": "} if (previous != null) { converged = checker.converged(iter, previous, current); if (converged) { setCost(computeCost(currentResiduals)); return current; } } } throw new MathInternalError();"
+      },
+      {
+        "txt": "} private void checkParameters() { if (getLowerBound() != null || getUpperBound() != null) { throw new MathUnsupportedOperationException(LocalizedFormats.CONSTRAINT); } }"
+      }
+    ]
+  },
+  {
+    "id": 2470,
+    "file_path": "src/main/java/org/apache/commons/math3/optim/nonlinear/vector/jacobian/GaussNewtonOptimizer.java",
+    "start-bug-line": 160,
+    "end-bug-line": 160,
+    "bug": "converged = checker.converged(iter, previous, current);",
+    "fix": "converged = checker.converged(getIterations(), previous, current);",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.math3.optim.nonlinear.vector.jacobian; import org.apache.commons.math3.exception.ConvergenceException; import org.apache.commons.math3.exception.NullArgumentException; import org.apache.commons.math3.exception.MathInternalError; import org.apache.commons.math3.exception.MathUnsupportedOperationException;"
+      },
+      {
+        "txt": "import org.apache.commons.math3.exception.util.LocalizedFormats; import org.apache.commons.math3.linear.ArrayRealVector; import org.apache.commons.math3.linear.BlockRealMatrix; import org.apache.commons.math3.linear.DecompositionSolver; import org.apache.commons.math3.linear.LUDecomposition; import org.apache.commons.math3.linear.QRDecomposition; import org.apache.commons.math3.linear.RealMatrix; import org.apache.commons.math3.linear.SingularMatrixException; import org.apache.commons.math3.optim.ConvergenceChecker; import org.apache.commons.math3.optim.PointVectorValuePair;"
+      },
+      {
+        "txt": "public class GaussNewtonOptimizer extends AbstractLeastSquaresOptimizer { private final boolean useLU; public GaussNewtonOptimizer(ConvergenceChecker<PointVectorValuePair> checker) { this(true, checker); } public GaussNewtonOptimizer(final boolean useLU, ConvergenceChecker<PointVectorValuePair> checker) { super(checker); this.useLU = useLU; }"
+      },
+      {
+        "txt": "@Override public PointVectorValuePair doOptimize() { checkParameters(); final ConvergenceChecker<PointVectorValuePair> checker = getConvergenceChecker(); if (checker == null) { throw new NullArgumentException(); } final double[] targetValues = getTarget(); final int nR = targetValues.length; // Number of observed data."
+      },
+      {
+        "txt": "final RealMatrix weightMatrix = getWeight(); final double[] residualsWeights = new double[nR]; for (int i = 0; i < nR; i++) { residualsWeights[i] = weightMatrix.getEntry(i, i); } final double[] currentPoint = getStartPoint(); final int nC = currentPoint.length; PointVectorValuePair current = null; int iter = 0; for (boolean converged = false; !converged;) {"
+      },
+      {
+        "txt": "++iter; PointVectorValuePair previous = current; final double[] currentObjective = computeObjectiveValue(currentPoint); final double[] currentResiduals = computeResiduals(currentObjective); final RealMatrix weightedJacobian = computeWeightedJacobian(currentPoint); current = new PointVectorValuePair(currentPoint, currentObjective); final double[] b = new double[nC]; final double[][] a = new double[nC][nC]; for (int i = 0; i < nR; ++i) { final double[] grad = weightedJacobian.getRow(i);"
+      },
+      {
+        "txt": "final double weight = residualsWeights[i]; final double residual = currentResiduals[i]; final double wr = weight * residual; for (int j = 0; j < nC; ++j) { b[j] += wr * grad[j]; } for (int k = 0; k < nC; ++k) { double[] ak = a[k]; double wgk = weight * grad[k]; for (int l = 0; l < nC; ++l) {"
+      },
+      {
+        "txt": "ak[l] += wgk * grad[l]; } } } try { RealMatrix mA = new BlockRealMatrix(a); DecompositionSolver solver = useLU ? new LUDecomposition(mA).getSolver() : new QRDecomposition(mA).getSolver(); final double[] dX = solver.solve(new ArrayRealVector(b, false)).toArray();"
+      },
+      {
+        "txt": "currentPoint[i] += dX[i]; } } catch (SingularMatrixException e) { throw new ConvergenceException(LocalizedFormats.UNABLE_TO_SOLVE_SINGULAR_PROBLEM); } if (previous != null) { <extra_id_0> if (converged) { setCost(computeCost(currentResiduals)); return current; } } }"
+      },
+      {
+        "txt": "} } throw new MathInternalError(); } private void checkParameters() { if (getLowerBound() != null || getUpperBound() != null) { throw new MathUnsupportedOperationException(LocalizedFormats.CONSTRAINT); } }"
+      }
+    ]
+  },
+  {
+    "id": 2471,
+    "file_path": "src/main/java/org/apache/commons/math3/optim/nonlinear/vector/jacobian/LevenbergMarquardtOptimizer.java",
+    "start-bug-line": 322,
+    "end-bug-line": 322,
+    "bug": "int iter = 0;",
+    "fix": "[Delete]",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.math3.optim.nonlinear.vector.jacobian; import java.util.Arrays; import org.apache.commons.math3.exception.ConvergenceException; import org.apache.commons.math3.exception.MathUnsupportedOperationException; import org.apache.commons.math3.exception.util.LocalizedFormats; import org.apache.commons.math3.optim.PointVectorValuePair; import org.apache.commons.math3.optim.ConvergenceChecker;"
+      },
+      {
+        "txt": "import org.apache.commons.math3.linear.RealMatrix; import org.apache.commons.math3.util.Precision; import org.apache.commons.math3.util.FastMath; public class LevenbergMarquardtOptimizer extends AbstractLeastSquaresOptimizer { private int solvedCols; private double[] diagR; private double[] jacNorm; private double[] beta; private int[] permutation;"
+      },
+      {
+        "txt": "private int rank; private double lmPar; private double[] lmDir; private final double initialStepBoundFactor; private final double costRelativeTolerance; private final double parRelativeTolerance; private final double orthoTolerance; private final double qrRankingThreshold; private double[] weightedResidual; private double[][] weightedJacobian;"
+      },
+      {
+        "txt": "public LevenbergMarquardtOptimizer() { this(100, 1e-10, 1e-10, 1e-10, Precision.SAFE_MIN); } public LevenbergMarquardtOptimizer(ConvergenceChecker<PointVectorValuePair> checker) { this(100, checker, 1e-10, 1e-10, 1e-10, Precision.SAFE_MIN); } public LevenbergMarquardtOptimizer(double initialStepBoundFactor, ConvergenceChecker<PointVectorValuePair> checker, double costRelativeTolerance, double parRelativeTolerance,"
+      },
+      {
+        "txt": "double orthoTolerance, double threshold) { super(checker); this.initialStepBoundFactor = initialStepBoundFactor; this.costRelativeTolerance = costRelativeTolerance; this.parRelativeTolerance = parRelativeTolerance; this.orthoTolerance = orthoTolerance; this.qrRankingThreshold = threshold; } public LevenbergMarquardtOptimizer(double costRelativeTolerance,"
+      },
+      {
+        "txt": "double parRelativeTolerance, double orthoTolerance) { this(100, costRelativeTolerance, parRelativeTolerance, orthoTolerance, Precision.SAFE_MIN); } public LevenbergMarquardtOptimizer(double initialStepBoundFactor, double costRelativeTolerance, double parRelativeTolerance, double orthoTolerance,"
+      },
+      {
+        "txt": "double threshold) { super(null); // No custom convergence criterion. this.initialStepBoundFactor = initialStepBoundFactor; this.costRelativeTolerance = costRelativeTolerance; this.parRelativeTolerance = parRelativeTolerance; this.orthoTolerance = orthoTolerance; this.qrRankingThreshold = threshold; } @Override protected PointVectorValuePair doOptimize() {"
+      },
+      {
+        "txt": "checkParameters(); final int nR = getTarget().length; // Number of observed data. final double[] currentPoint = getStartPoint(); final int nC = currentPoint.length; // Number of parameters. solvedCols = FastMath.min(nR, nC); diagR = new double[nC]; jacNorm = new double[nC]; beta = new double[nC]; permutation = new int[nC]; lmDir = new double[nC];"
+      },
+      {
+        "txt": "double delta = 0; double xNorm = 0; double[] diag = new double[nC]; double[] oldX = new double[nC]; double[] oldRes = new double[nR]; double[] oldObj = new double[nR]; double[] qtf = new double[nR]; double[] work1 = new double[nC]; double[] work2 = new double[nC]; double[] work3 = new double[nC];"
+      },
+      {
+        "txt": "double[] currentObjective = computeObjectiveValue(currentPoint); double[] currentResiduals = computeResiduals(currentObjective); PointVectorValuePair current = new PointVectorValuePair(currentPoint, currentObjective); double currentCost = computeCost(currentResiduals); lmPar = 0; boolean firstIteration = true; <extra_id_0> final ConvergenceChecker<PointVectorValuePair> checker = getConvergenceChecker(); while (true) { ++iter; final PointVectorValuePair previous = current; qrDecomposition(computeWeightedJacobian(currentPoint)); weightedResidual = weightMatrixSqrt.operate(currentResiduals);"
+      },
+      {
+        "txt": "qrDecomposition(computeWeightedJacobian(currentPoint)); weightedResidual = weightMatrixSqrt.operate(currentResiduals); for (int i = 0; i < nR; i++) { qtf[i] = weightedResidual[i]; } qTy(qtf); for (int k = 0; k < solvedCols; ++k) { int pk = permutation[k]; weightedJacobian[k][pk] = diagR[pk]; }"
+      },
+      {
+        "txt": "if (firstIteration) { xNorm = 0; for (int k = 0; k < nC; ++k) { double dk = jacNorm[k]; if (dk == 0) { dk = 1.0; } double xk = dk * currentPoint[k]; xNorm += xk * xk; diag[k] = dk;"
+      },
+      {
+        "txt": "} xNorm = FastMath.sqrt(xNorm); delta = (xNorm == 0) ? initialStepBoundFactor : (initialStepBoundFactor * xNorm); } double maxCosine = 0; if (currentCost != 0) { for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; double s = jacNorm[pj]; if (s != 0) {"
+      },
+      {
+        "txt": "double sum = 0; for (int i = 0; i <= j; ++i) { sum += weightedJacobian[i][pj] * qtf[i]; } maxCosine = FastMath.max(maxCosine, FastMath.abs(sum) / (s * currentCost)); } } } if (maxCosine <= orthoTolerance) { setCost(currentCost);"
+      },
+      {
+        "txt": "return current; } for (int j = 0; j < nC; ++j) { diag[j] = FastMath.max(diag[j], jacNorm[j]); } for (double ratio = 0; ratio < 1.0e-4;) { for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; oldX[pj] = currentPoint[pj]; }"
+      },
+      {
+        "txt": "final double previousCost = currentCost; double[] tmpVec = weightedResidual; weightedResidual = oldRes; oldRes = tmpVec; tmpVec = currentObjective; currentObjective = oldObj; oldObj = tmpVec; determineLMParameter(qtf, delta, diag, work1, work2, work3); double lmNorm = 0; for (int j = 0; j < solvedCols; ++j) {"
+      },
+      {
+        "txt": "int pj = permutation[j]; lmDir[pj] = -lmDir[pj]; currentPoint[pj] = oldX[pj] + lmDir[pj]; double s = diag[pj] * lmDir[pj]; lmNorm += s * s; } lmNorm = FastMath.sqrt(lmNorm); if (firstIteration) { delta = FastMath.min(delta, lmNorm); }"
+      },
+      {
+        "txt": "currentObjective = computeObjectiveValue(currentPoint); currentResiduals = computeResiduals(currentObjective); current = new PointVectorValuePair(currentPoint, currentObjective); currentCost = computeCost(currentResiduals); double actRed = -1.0; if (0.1 * currentCost < previousCost) { double r = currentCost / previousCost; actRed = 1.0 - r * r; } for (int j = 0; j < solvedCols; ++j) {"
+      },
+      {
+        "txt": "int pj = permutation[j]; double dirJ = lmDir[pj]; work1[j] = 0; for (int i = 0; i <= j; ++i) { work1[i] += weightedJacobian[i][pj] * dirJ; } } double coeff1 = 0; for (int j = 0; j < solvedCols; ++j) { coeff1 += work1[j] * work1[j];"
+      },
+      {
+        "txt": "} double pc2 = previousCost * previousCost; coeff1 = coeff1 / pc2; double coeff2 = lmPar * lmNorm * lmNorm / pc2; double preRed = coeff1 + 2 * coeff2; double dirDer = -(coeff1 + coeff2); ratio = (preRed == 0) ? 0 : (actRed / preRed); if (ratio <= 0.25) { double tmp = (actRed < 0) ? (0.5 * dirDer / (dirDer + 0.5 * actRed)) : 0.5;"
+      },
+      {
+        "txt": "if ((0.1 * currentCost >= previousCost) || (tmp < 0.1)) { tmp = 0.1; } delta = tmp * FastMath.min(delta, 10.0 * lmNorm); lmPar /= tmp; } else if ((lmPar == 0) || (ratio >= 0.75)) { delta = 2 * lmNorm; lmPar *= 0.5; } if (ratio >= 1.0e-4) {"
+      },
+      {
+        "txt": "firstIteration = false; xNorm = 0; for (int k = 0; k < nC; ++k) { double xK = diag[k] * currentPoint[k]; xNorm += xK * xK; } xNorm = FastMath.sqrt(xNorm); if (checker != null) { if (checker.converged(iter, previous, current)) { setCost(currentCost);"
+      },
+      {
+        "txt": "return current; } } } else { currentCost = previousCost; for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; currentPoint[pj] = oldX[pj]; } tmpVec = weightedResidual;"
+      },
+      {
+        "txt": "weightedResidual = oldRes; oldRes = tmpVec; tmpVec = currentObjective; currentObjective = oldObj; oldObj = tmpVec; current = new PointVectorValuePair(currentPoint, currentObjective); } if ((FastMath.abs(actRed) <= costRelativeTolerance && preRed <= costRelativeTolerance && ratio <= 2.0) ||"
+      },
+      {
+        "txt": "delta <= parRelativeTolerance * xNorm) { setCost(currentCost); return current; } if ((FastMath.abs(actRed) <= 2.2204e-16) && (preRed <= 2.2204e-16) && (ratio <= 2.0)) { throw new ConvergenceException(LocalizedFormats.TOO_SMALL_COST_RELATIVE_TOLERANCE, costRelativeTolerance); } else if (delta <= 2.2204e-16 * xNorm) { throw new ConvergenceException(LocalizedFormats.TOO_SMALL_PARAMETERS_RELATIVE_TOLERANCE, parRelativeTolerance);"
+      },
+      {
+        "txt": "} else if (maxCosine <= 2.2204e-16) { throw new ConvergenceException(LocalizedFormats.TOO_SMALL_ORTHOGONALITY_TOLERANCE, orthoTolerance); } } } } private void determineLMParameter(double[] qy, double delta, double[] diag, double[] work1, double[] work2, double[] work3) { final int nC = weightedJacobian[0].length;"
+      },
+      {
+        "txt": "for (int j = 0; j < rank; ++j) { lmDir[permutation[j]] = qy[j]; } for (int j = rank; j < nC; ++j) { lmDir[permutation[j]] = 0; } for (int k = rank - 1; k >= 0; --k) { int pk = permutation[k]; double ypk = lmDir[pk] / diagR[pk]; for (int i = 0; i < k; ++i) {"
+      },
+      {
+        "txt": "lmDir[permutation[i]] -= ypk * weightedJacobian[i][pk]; } lmDir[pk] = ypk; } double dxNorm = 0; for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; double s = diag[pj] * lmDir[pj]; work1[pj] = s; dxNorm += s * s;"
+      },
+      {
+        "txt": "} dxNorm = FastMath.sqrt(dxNorm); double fp = dxNorm - delta; if (fp <= 0.1 * delta) { lmPar = 0; return; } double sum2; double parl = 0; if (rank == solvedCols) {"
+      },
+      {
+        "txt": "for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; work1[pj] *= diag[pj] / dxNorm; } sum2 = 0; for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; double sum = 0; for (int i = 0; i < j; ++i) { sum += weightedJacobian[i][pj] * work1[permutation[i]];"
+      },
+      {
+        "txt": "} double s = (work1[pj] - sum) / diagR[pj]; work1[pj] = s; sum2 += s * s; } parl = fp / (delta * sum2); } sum2 = 0; for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j];"
+      },
+      {
+        "txt": "double sum = 0; for (int i = 0; i <= j; ++i) { sum += weightedJacobian[i][pj] * qy[i]; } sum /= diag[pj]; sum2 += sum * sum; } double gNorm = FastMath.sqrt(sum2); double paru = gNorm / delta; if (paru == 0) {"
+      },
+      {
+        "txt": "paru = 2.2251e-308 / FastMath.min(delta, 0.1); } lmPar = FastMath.min(paru, FastMath.max(lmPar, parl)); if (lmPar == 0) { lmPar = gNorm / dxNorm; } for (int countdown = 10; countdown >= 0; --countdown) { if (lmPar == 0) { lmPar = FastMath.max(2.2251e-308, 0.001 * paru); }"
+      },
+      {
+        "txt": "double sPar = FastMath.sqrt(lmPar); for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; work1[pj] = sPar * diag[pj]; } determineLMDirection(qy, work1, work2, work3); dxNorm = 0; for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; double s = diag[pj] * lmDir[pj];"
+      },
+      {
+        "txt": "work3[pj] = s; dxNorm += s * s; } dxNorm = FastMath.sqrt(dxNorm); double previousFP = fp; fp = dxNorm - delta; if ((FastMath.abs(fp) <= 0.1 * delta) || ((parl == 0) && (fp <= previousFP) && (previousFP < 0))) { return; }"
+      },
+      {
+        "txt": "for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; work1[pj] = work3[pj] * diag[pj] / dxNorm; } for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; work1[pj] /= work2[j]; double tmp = work1[pj]; for (int i = j + 1; i < solvedCols; ++i) { work1[permutation[i]] -= weightedJacobian[i][pj] * tmp;"
+      },
+      {
+        "txt": "} } sum2 = 0; for (int j = 0; j < solvedCols; ++j) { double s = work1[permutation[j]]; sum2 += s * s; } double correction = fp / (delta * sum2); if (fp > 0) { parl = FastMath.max(parl, lmPar);"
+      },
+      {
+        "txt": "} else if (fp < 0) { paru = FastMath.min(paru, lmPar); } lmPar = FastMath.max(parl, lmPar + correction); } } private void determineLMDirection(double[] qy, double[] diag, double[] lmDiag, double[] work) { for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j];"
+      },
+      {
+        "txt": "for (int i = j + 1; i < solvedCols; ++i) { weightedJacobian[i][pj] = weightedJacobian[j][permutation[i]]; } lmDir[j] = diagR[pj]; work[j] = qy[j]; } for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; double dpj = diag[pj]; if (dpj != 0) {"
+      },
+      {
+        "txt": "Arrays.fill(lmDiag, j + 1, lmDiag.length, 0); } lmDiag[j] = dpj; double qtbpj = 0; for (int k = j; k < solvedCols; ++k) { int pk = permutation[k]; if (lmDiag[k] != 0) { final double sin; final double cos; double rkk = weightedJacobian[k][pk];"
+      },
+      {
+        "txt": "if (FastMath.abs(rkk) < FastMath.abs(lmDiag[k])) { final double cotan = rkk / lmDiag[k]; sin = 1.0 / FastMath.sqrt(1.0 + cotan * cotan); cos = sin * cotan; } else { final double tan = lmDiag[k] / rkk; cos = 1.0 / FastMath.sqrt(1.0 + tan * tan); sin = cos * tan; } weightedJacobian[k][pk] = cos * rkk + sin * lmDiag[k];"
+      },
+      {
+        "txt": "final double temp = cos * work[k] + sin * qtbpj; qtbpj = -sin * work[k] + cos * qtbpj; work[k] = temp; for (int i = k + 1; i < solvedCols; ++i) { double rik = weightedJacobian[i][pk]; final double temp2 = cos * rik + sin * lmDiag[i]; lmDiag[i] = -sin * rik + cos * lmDiag[i]; weightedJacobian[i][pk] = temp2; } }"
+      },
+      {
+        "txt": "} lmDiag[j] = weightedJacobian[j][permutation[j]]; weightedJacobian[j][permutation[j]] = lmDir[j]; } int nSing = solvedCols; for (int j = 0; j < solvedCols; ++j) { if ((lmDiag[j] == 0) && (nSing == solvedCols)) { nSing = j; } if (nSing < solvedCols) {"
+      },
+      {
+        "txt": "work[j] = 0; } } if (nSing > 0) { for (int j = nSing - 1; j >= 0; --j) { int pj = permutation[j]; double sum = 0; for (int i = j + 1; i < nSing; ++i) { sum += weightedJacobian[i][pj] * work[i]; }"
+      },
+      {
+        "txt": "work[j] = (work[j] - sum) / lmDiag[j]; } } for (int j = 0; j < lmDir.length; ++j) { lmDir[permutation[j]] = work[j]; } } private void qrDecomposition(RealMatrix jacobian) throws ConvergenceException { weightedJacobian = jacobian.scalarMultiply(-1).getData(); final int nR = weightedJacobian.length;"
+      },
+      {
+        "txt": "final int nC = weightedJacobian[0].length; for (int k = 0; k < nC; ++k) { permutation[k] = k; double norm2 = 0; for (int i = 0; i < nR; ++i) { double akk = weightedJacobian[i][k]; norm2 += akk * akk; } jacNorm[k] = FastMath.sqrt(norm2); }"
+      },
+      {
+        "txt": "for (int k = 0; k < nC; ++k) { int nextColumn = -1; double ak2 = Double.NEGATIVE_INFINITY; for (int i = k; i < nC; ++i) { double norm2 = 0; for (int j = k; j < nR; ++j) { double aki = weightedJacobian[j][permutation[i]]; norm2 += aki * aki; } if (Double.isInfinite(norm2) || Double.isNaN(norm2)) {"
+      },
+      {
+        "txt": "throw new ConvergenceException(LocalizedFormats.UNABLE_TO_PERFORM_QR_DECOMPOSITION_ON_JACOBIAN, nR, nC); } if (norm2 > ak2) { nextColumn = i; ak2 = norm2; } } if (ak2 <= qrRankingThreshold) { rank = k;"
+      },
+      {
+        "txt": "return; } int pk = permutation[nextColumn]; permutation[nextColumn] = permutation[k]; permutation[k] = pk; double akk = weightedJacobian[k][pk]; double alpha = (akk > 0) ? -FastMath.sqrt(ak2) : FastMath.sqrt(ak2); double betak = 1.0 / (ak2 - akk * alpha); beta[pk] = betak; diagR[pk] = alpha;"
+      },
+      {
+        "txt": "weightedJacobian[k][pk] -= alpha; for (int dk = nC - 1 - k; dk > 0; --dk) { double gamma = 0; for (int j = k; j < nR; ++j) { gamma += weightedJacobian[j][pk] * weightedJacobian[j][permutation[k + dk]]; } gamma *= betak; for (int j = k; j < nR; ++j) { weightedJacobian[j][permutation[k + dk]] -= gamma * weightedJacobian[j][pk]; }"
+      },
+      {
+        "txt": "} } rank = solvedCols; } private void qTy(double[] y) { final int nR = weightedJacobian.length; final int nC = weightedJacobian[0].length; for (int k = 0; k < nC; ++k) { int pk = permutation[k]; double gamma = 0;"
+      },
+      {
+        "txt": "for (int i = k; i < nR; ++i) { gamma += weightedJacobian[i][pk] * y[i]; } gamma *= beta[pk]; for (int i = k; i < nR; ++i) { y[i] -= gamma * weightedJacobian[i][pk]; } } } private void checkParameters() {"
+      },
+      {
+        "txt": "if (getLowerBound() != null || getUpperBound() != null) { throw new MathUnsupportedOperationException(LocalizedFormats.CONSTRAINT); } }"
+      }
+    ]
+  },
+  {
+    "id": 2472,
+    "file_path": "src/main/java/org/apache/commons/math3/optim/nonlinear/vector/jacobian/LevenbergMarquardtOptimizer.java",
+    "start-bug-line": 325,
+    "end-bug-line": 325,
+    "bug": "++iter;",
+    "fix": "incrementIterationCount(); ",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.math3.optim.nonlinear.vector.jacobian; import java.util.Arrays; import org.apache.commons.math3.exception.ConvergenceException; import org.apache.commons.math3.exception.MathUnsupportedOperationException; import org.apache.commons.math3.exception.util.LocalizedFormats; import org.apache.commons.math3.optim.PointVectorValuePair; import org.apache.commons.math3.optim.ConvergenceChecker; import org.apache.commons.math3.linear.RealMatrix; import org.apache.commons.math3.util.Precision; import org.apache.commons.math3.util.FastMath;"
+      },
+      {
+        "txt": "public class LevenbergMarquardtOptimizer extends AbstractLeastSquaresOptimizer { private int solvedCols; private double[] diagR; private double[] jacNorm; private double[] beta; private int[] permutation; private int rank; private double lmPar; private double[] lmDir;"
+      },
+      {
+        "txt": "private final double initialStepBoundFactor; private final double costRelativeTolerance; private final double parRelativeTolerance; private final double orthoTolerance; private final double qrRankingThreshold; private double[] weightedResidual; private double[][] weightedJacobian; public LevenbergMarquardtOptimizer() { this(100, 1e-10, 1e-10, 1e-10, Precision.SAFE_MIN); }"
+      },
+      {
+        "txt": "public LevenbergMarquardtOptimizer(ConvergenceChecker<PointVectorValuePair> checker) { this(100, checker, 1e-10, 1e-10, 1e-10, Precision.SAFE_MIN); } public LevenbergMarquardtOptimizer(double initialStepBoundFactor, ConvergenceChecker<PointVectorValuePair> checker, double costRelativeTolerance, double parRelativeTolerance, double orthoTolerance, double threshold) { super(checker);"
+      },
+      {
+        "txt": "this.initialStepBoundFactor = initialStepBoundFactor; this.costRelativeTolerance = costRelativeTolerance; this.parRelativeTolerance = parRelativeTolerance; this.orthoTolerance = orthoTolerance; this.qrRankingThreshold = threshold; } public LevenbergMarquardtOptimizer(double costRelativeTolerance, double parRelativeTolerance, double orthoTolerance) { this(100,"
+      },
+      {
+        "txt": "costRelativeTolerance, parRelativeTolerance, orthoTolerance, Precision.SAFE_MIN); } public LevenbergMarquardtOptimizer(double initialStepBoundFactor, double costRelativeTolerance, double parRelativeTolerance, double orthoTolerance, double threshold) { super(null); // No custom convergence criterion. this.initialStepBoundFactor = initialStepBoundFactor;"
+      },
+      {
+        "txt": "this.costRelativeTolerance = costRelativeTolerance; this.parRelativeTolerance = parRelativeTolerance; this.orthoTolerance = orthoTolerance; this.qrRankingThreshold = threshold; } @Override protected PointVectorValuePair doOptimize() { checkParameters(); final int nR = getTarget().length; // Number of observed data. final double[] currentPoint = getStartPoint();"
+      },
+      {
+        "txt": "final int nC = currentPoint.length; // Number of parameters. solvedCols = FastMath.min(nR, nC); diagR = new double[nC]; jacNorm = new double[nC]; beta = new double[nC]; permutation = new int[nC]; lmDir = new double[nC]; double delta = 0; double xNorm = 0; double[] diag = new double[nC];"
+      },
+      {
+        "txt": "double[] oldX = new double[nC]; double[] oldRes = new double[nR]; double[] oldObj = new double[nR]; double[] qtf = new double[nR]; double[] work1 = new double[nC]; double[] work2 = new double[nC]; double[] work3 = new double[nC]; final RealMatrix weightMatrixSqrt = getWeightSquareRoot(); double[] currentObjective = computeObjectiveValue(currentPoint); double[] currentResiduals = computeResiduals(currentObjective);"
+      },
+      {
+        "txt": "double currentCost = computeCost(currentResiduals); lmPar = 0; boolean firstIteration = true; int iter = 0; final ConvergenceChecker<PointVectorValuePair> checker = getConvergenceChecker(); while (true) { <extra_id_0> final PointVectorValuePair previous = current; qrDecomposition(computeWeightedJacobian(currentPoint)); weightedResidual = weightMatrixSqrt.operate(currentResiduals); for (int i = 0; i < nR; i++) { qtf[i] = weightedResidual[i]; }"
+      },
+      {
+        "txt": "qtf[i] = weightedResidual[i]; } qTy(qtf); for (int k = 0; k < solvedCols; ++k) { int pk = permutation[k]; weightedJacobian[k][pk] = diagR[pk]; } if (firstIteration) { xNorm = 0; for (int k = 0; k < nC; ++k) {"
+      },
+      {
+        "txt": "double dk = jacNorm[k]; if (dk == 0) { dk = 1.0; } double xk = dk * currentPoint[k]; xNorm += xk * xk; diag[k] = dk; } xNorm = FastMath.sqrt(xNorm); delta = (xNorm == 0) ? initialStepBoundFactor : (initialStepBoundFactor * xNorm);"
+      },
+      {
+        "txt": "} double maxCosine = 0; if (currentCost != 0) { for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; double s = jacNorm[pj]; if (s != 0) { double sum = 0; for (int i = 0; i <= j; ++i) { sum += weightedJacobian[i][pj] * qtf[i];"
+      },
+      {
+        "txt": "} maxCosine = FastMath.max(maxCosine, FastMath.abs(sum) / (s * currentCost)); } } } if (maxCosine <= orthoTolerance) { setCost(currentCost); return current; } for (int j = 0; j < nC; ++j) {"
+      },
+      {
+        "txt": "diag[j] = FastMath.max(diag[j], jacNorm[j]); } for (double ratio = 0; ratio < 1.0e-4;) { for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; oldX[pj] = currentPoint[pj]; } final double previousCost = currentCost; double[] tmpVec = weightedResidual; weightedResidual = oldRes;"
+      },
+      {
+        "txt": "oldRes = tmpVec; tmpVec = currentObjective; currentObjective = oldObj; oldObj = tmpVec; determineLMParameter(qtf, delta, diag, work1, work2, work3); double lmNorm = 0; for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; lmDir[pj] = -lmDir[pj]; currentPoint[pj] = oldX[pj] + lmDir[pj];"
+      },
+      {
+        "txt": "double s = diag[pj] * lmDir[pj]; lmNorm += s * s; } lmNorm = FastMath.sqrt(lmNorm); if (firstIteration) { delta = FastMath.min(delta, lmNorm); } currentObjective = computeObjectiveValue(currentPoint); currentResiduals = computeResiduals(currentObjective); current = new PointVectorValuePair(currentPoint, currentObjective);"
+      },
+      {
+        "txt": "currentCost = computeCost(currentResiduals); double actRed = -1.0; if (0.1 * currentCost < previousCost) { double r = currentCost / previousCost; actRed = 1.0 - r * r; } for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; double dirJ = lmDir[pj]; work1[j] = 0;"
+      },
+      {
+        "txt": "for (int i = 0; i <= j; ++i) { work1[i] += weightedJacobian[i][pj] * dirJ; } } double coeff1 = 0; for (int j = 0; j < solvedCols; ++j) { coeff1 += work1[j] * work1[j]; } double pc2 = previousCost * previousCost; coeff1 = coeff1 / pc2;"
+      },
+      {
+        "txt": "double coeff2 = lmPar * lmNorm * lmNorm / pc2; double preRed = coeff1 + 2 * coeff2; double dirDer = -(coeff1 + coeff2); ratio = (preRed == 0) ? 0 : (actRed / preRed); if (ratio <= 0.25) { double tmp = (actRed < 0) ? (0.5 * dirDer / (dirDer + 0.5 * actRed)) : 0.5; if ((0.1 * currentCost >= previousCost) || (tmp < 0.1)) { tmp = 0.1; }"
+      },
+      {
+        "txt": "delta = tmp * FastMath.min(delta, 10.0 * lmNorm); lmPar /= tmp; } else if ((lmPar == 0) || (ratio >= 0.75)) { delta = 2 * lmNorm; lmPar *= 0.5; } if (ratio >= 1.0e-4) { firstIteration = false; xNorm = 0; for (int k = 0; k < nC; ++k) {"
+      },
+      {
+        "txt": "double xK = diag[k] * currentPoint[k]; xNorm += xK * xK; } xNorm = FastMath.sqrt(xNorm); if (checker != null) { if (checker.converged(iter, previous, current)) { setCost(currentCost); return current; } }"
+      },
+      {
+        "txt": "} else { currentCost = previousCost; for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; currentPoint[pj] = oldX[pj]; } tmpVec = weightedResidual; weightedResidual = oldRes; oldRes = tmpVec; tmpVec = currentObjective;"
+      },
+      {
+        "txt": "currentObjective = oldObj; oldObj = tmpVec; current = new PointVectorValuePair(currentPoint, currentObjective); } if ((FastMath.abs(actRed) <= costRelativeTolerance && preRed <= costRelativeTolerance && ratio <= 2.0) || delta <= parRelativeTolerance * xNorm) { setCost(currentCost); return current;"
+      },
+      {
+        "txt": "} if ((FastMath.abs(actRed) <= 2.2204e-16) && (preRed <= 2.2204e-16) && (ratio <= 2.0)) { throw new ConvergenceException(LocalizedFormats.TOO_SMALL_COST_RELATIVE_TOLERANCE, costRelativeTolerance); } else if (delta <= 2.2204e-16 * xNorm) { throw new ConvergenceException(LocalizedFormats.TOO_SMALL_PARAMETERS_RELATIVE_TOLERANCE, parRelativeTolerance); } else if (maxCosine <= 2.2204e-16) { throw new ConvergenceException(LocalizedFormats.TOO_SMALL_ORTHOGONALITY_TOLERANCE, orthoTolerance);"
+      },
+      {
+        "txt": "} } } } private void determineLMParameter(double[] qy, double delta, double[] diag, double[] work1, double[] work2, double[] work3) { final int nC = weightedJacobian[0].length; for (int j = 0; j < rank; ++j) { lmDir[permutation[j]] = qy[j]; }"
+      },
+      {
+        "txt": "for (int j = rank; j < nC; ++j) { lmDir[permutation[j]] = 0; } for (int k = rank - 1; k >= 0; --k) { int pk = permutation[k]; double ypk = lmDir[pk] / diagR[pk]; for (int i = 0; i < k; ++i) { lmDir[permutation[i]] -= ypk * weightedJacobian[i][pk]; } lmDir[pk] = ypk;"
+      },
+      {
+        "txt": "} double dxNorm = 0; for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; double s = diag[pj] * lmDir[pj]; work1[pj] = s; dxNorm += s * s; } dxNorm = FastMath.sqrt(dxNorm); double fp = dxNorm - delta;"
+      },
+      {
+        "txt": "if (fp <= 0.1 * delta) { lmPar = 0; return; } double sum2; double parl = 0; if (rank == solvedCols) { for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; work1[pj] *= diag[pj] / dxNorm;"
+      },
+      {
+        "txt": "} sum2 = 0; for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; double sum = 0; for (int i = 0; i < j; ++i) { sum += weightedJacobian[i][pj] * work1[permutation[i]]; } double s = (work1[pj] - sum) / diagR[pj]; work1[pj] = s;"
+      },
+      {
+        "txt": "sum2 += s * s; } parl = fp / (delta * sum2); } sum2 = 0; for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; double sum = 0; for (int i = 0; i <= j; ++i) { sum += weightedJacobian[i][pj] * qy[i];"
+      },
+      {
+        "txt": "} sum /= diag[pj]; sum2 += sum * sum; } double gNorm = FastMath.sqrt(sum2); double paru = gNorm / delta; if (paru == 0) { paru = 2.2251e-308 / FastMath.min(delta, 0.1); } lmPar = FastMath.min(paru, FastMath.max(lmPar, parl));"
+      },
+      {
+        "txt": "if (lmPar == 0) { lmPar = gNorm / dxNorm; } for (int countdown = 10; countdown >= 0; --countdown) { if (lmPar == 0) { lmPar = FastMath.max(2.2251e-308, 0.001 * paru); } double sPar = FastMath.sqrt(lmPar); for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j];"
+      },
+      {
+        "txt": "work1[pj] = sPar * diag[pj]; } determineLMDirection(qy, work1, work2, work3); dxNorm = 0; for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; double s = diag[pj] * lmDir[pj]; work3[pj] = s; dxNorm += s * s; }"
+      },
+      {
+        "txt": "dxNorm = FastMath.sqrt(dxNorm); double previousFP = fp; fp = dxNorm - delta; if ((FastMath.abs(fp) <= 0.1 * delta) || ((parl == 0) && (fp <= previousFP) && (previousFP < 0))) { return; } for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; work1[pj] = work3[pj] * diag[pj] / dxNorm;"
+      },
+      {
+        "txt": "} for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; work1[pj] /= work2[j]; double tmp = work1[pj]; for (int i = j + 1; i < solvedCols; ++i) { work1[permutation[i]] -= weightedJacobian[i][pj] * tmp; } } sum2 = 0;"
+      },
+      {
+        "txt": "for (int j = 0; j < solvedCols; ++j) { double s = work1[permutation[j]]; sum2 += s * s; } double correction = fp / (delta * sum2); if (fp > 0) { parl = FastMath.max(parl, lmPar); } else if (fp < 0) { paru = FastMath.min(paru, lmPar); }"
+      },
+      {
+        "txt": "lmPar = FastMath.max(parl, lmPar + correction); } } private void determineLMDirection(double[] qy, double[] diag, double[] lmDiag, double[] work) { for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; for (int i = j + 1; i < solvedCols; ++i) { weightedJacobian[i][pj] = weightedJacobian[j][permutation[i]]; }"
+      },
+      {
+        "txt": "lmDir[j] = diagR[pj]; work[j] = qy[j]; } for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; double dpj = diag[pj]; if (dpj != 0) { Arrays.fill(lmDiag, j + 1, lmDiag.length, 0); } lmDiag[j] = dpj;"
+      },
+      {
+        "txt": "double qtbpj = 0; for (int k = j; k < solvedCols; ++k) { int pk = permutation[k]; if (lmDiag[k] != 0) { final double sin; final double cos; double rkk = weightedJacobian[k][pk]; if (FastMath.abs(rkk) < FastMath.abs(lmDiag[k])) { final double cotan = rkk / lmDiag[k]; sin = 1.0 / FastMath.sqrt(1.0 + cotan * cotan);"
+      },
+      {
+        "txt": "cos = sin * cotan; } else { final double tan = lmDiag[k] / rkk; cos = 1.0 / FastMath.sqrt(1.0 + tan * tan); sin = cos * tan; } weightedJacobian[k][pk] = cos * rkk + sin * lmDiag[k]; final double temp = cos * work[k] + sin * qtbpj; qtbpj = -sin * work[k] + cos * qtbpj; work[k] = temp;"
+      },
+      {
+        "txt": "for (int i = k + 1; i < solvedCols; ++i) { double rik = weightedJacobian[i][pk]; final double temp2 = cos * rik + sin * lmDiag[i]; lmDiag[i] = -sin * rik + cos * lmDiag[i]; weightedJacobian[i][pk] = temp2; } } } lmDiag[j] = weightedJacobian[j][permutation[j]]; weightedJacobian[j][permutation[j]] = lmDir[j];"
+      },
+      {
+        "txt": "} int nSing = solvedCols; for (int j = 0; j < solvedCols; ++j) { if ((lmDiag[j] == 0) && (nSing == solvedCols)) { nSing = j; } if (nSing < solvedCols) { work[j] = 0; } }"
+      },
+      {
+        "txt": "if (nSing > 0) { for (int j = nSing - 1; j >= 0; --j) { int pj = permutation[j]; double sum = 0; for (int i = j + 1; i < nSing; ++i) { sum += weightedJacobian[i][pj] * work[i]; } work[j] = (work[j] - sum) / lmDiag[j]; } }"
+      },
+      {
+        "txt": "for (int j = 0; j < lmDir.length; ++j) { lmDir[permutation[j]] = work[j]; } } private void qrDecomposition(RealMatrix jacobian) throws ConvergenceException { weightedJacobian = jacobian.scalarMultiply(-1).getData(); final int nR = weightedJacobian.length; final int nC = weightedJacobian[0].length; for (int k = 0; k < nC; ++k) { permutation[k] = k;"
+      },
+      {
+        "txt": "double norm2 = 0; for (int i = 0; i < nR; ++i) { double akk = weightedJacobian[i][k]; norm2 += akk * akk; } jacNorm[k] = FastMath.sqrt(norm2); } for (int k = 0; k < nC; ++k) { int nextColumn = -1; double ak2 = Double.NEGATIVE_INFINITY;"
+      },
+      {
+        "txt": "for (int i = k; i < nC; ++i) { double norm2 = 0; for (int j = k; j < nR; ++j) { double aki = weightedJacobian[j][permutation[i]]; norm2 += aki * aki; } if (Double.isInfinite(norm2) || Double.isNaN(norm2)) { throw new ConvergenceException(LocalizedFormats.UNABLE_TO_PERFORM_QR_DECOMPOSITION_ON_JACOBIAN, nR, nC); }"
+      },
+      {
+        "txt": "if (norm2 > ak2) { nextColumn = i; ak2 = norm2; } } if (ak2 <= qrRankingThreshold) { rank = k; return; } int pk = permutation[nextColumn];"
+      },
+      {
+        "txt": "permutation[nextColumn] = permutation[k]; permutation[k] = pk; double akk = weightedJacobian[k][pk]; double alpha = (akk > 0) ? -FastMath.sqrt(ak2) : FastMath.sqrt(ak2); double betak = 1.0 / (ak2 - akk * alpha); beta[pk] = betak; diagR[pk] = alpha; weightedJacobian[k][pk] -= alpha; for (int dk = nC - 1 - k; dk > 0; --dk) { double gamma = 0;"
+      },
+      {
+        "txt": "for (int j = k; j < nR; ++j) { gamma += weightedJacobian[j][pk] * weightedJacobian[j][permutation[k + dk]]; } gamma *= betak; for (int j = k; j < nR; ++j) { weightedJacobian[j][permutation[k + dk]] -= gamma * weightedJacobian[j][pk]; } } } rank = solvedCols;"
+      },
+      {
+        "txt": "} private void qTy(double[] y) { final int nR = weightedJacobian.length; final int nC = weightedJacobian[0].length; for (int k = 0; k < nC; ++k) { int pk = permutation[k]; double gamma = 0; for (int i = k; i < nR; ++i) { gamma += weightedJacobian[i][pk] * y[i]; }"
+      },
+      {
+        "txt": "gamma *= beta[pk]; for (int i = k; i < nR; ++i) { y[i] -= gamma * weightedJacobian[i][pk]; } } } private void checkParameters() { if (getLowerBound() != null || getUpperBound() != null) { throw new MathUnsupportedOperationException(LocalizedFormats.CONSTRAINT);"
+      },
+      {
+        "txt": "} }"
+      }
+    ]
+  },
+  {
+    "id": 2473,
+    "file_path": "src/main/java/org/apache/commons/math3/optim/nonlinear/vector/jacobian/LevenbergMarquardtOptimizer.java",
+    "start-bug-line": 489,
+    "end-bug-line": 489,
+    "bug": "if (checker.converged(iter, previous, current)) {",
+    "fix": "if (checker.converged(getIterations(), previous, current)) {",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.math3.optim.nonlinear.vector.jacobian; import java.util.Arrays; import org.apache.commons.math3.exception.ConvergenceException; import org.apache.commons.math3.exception.MathUnsupportedOperationException; import org.apache.commons.math3.exception.util.LocalizedFormats; import org.apache.commons.math3.optim.PointVectorValuePair; import org.apache.commons.math3.optim.ConvergenceChecker; import org.apache.commons.math3.linear.RealMatrix; import org.apache.commons.math3.util.Precision; import org.apache.commons.math3.util.FastMath;"
+      },
+      {
+        "txt": "public class LevenbergMarquardtOptimizer extends AbstractLeastSquaresOptimizer { private int solvedCols; private double[] diagR; private double[] jacNorm; private double[] beta; private int[] permutation; private int rank; private double lmPar; private double[] lmDir;"
+      },
+      {
+        "txt": "private final double initialStepBoundFactor; private final double costRelativeTolerance; private final double parRelativeTolerance; private final double orthoTolerance; private final double qrRankingThreshold; private double[] weightedResidual; private double[][] weightedJacobian; public LevenbergMarquardtOptimizer() { this(100, 1e-10, 1e-10, 1e-10, Precision.SAFE_MIN); }"
+      },
+      {
+        "txt": "public LevenbergMarquardtOptimizer(ConvergenceChecker<PointVectorValuePair> checker) { this(100, checker, 1e-10, 1e-10, 1e-10, Precision.SAFE_MIN); } public LevenbergMarquardtOptimizer(double initialStepBoundFactor, ConvergenceChecker<PointVectorValuePair> checker, double costRelativeTolerance, double parRelativeTolerance, double orthoTolerance, double threshold) { super(checker);"
+      },
+      {
+        "txt": "this.initialStepBoundFactor = initialStepBoundFactor; this.costRelativeTolerance = costRelativeTolerance; this.parRelativeTolerance = parRelativeTolerance; this.orthoTolerance = orthoTolerance; this.qrRankingThreshold = threshold; } public LevenbergMarquardtOptimizer(double costRelativeTolerance, double parRelativeTolerance, double orthoTolerance) { this(100,"
+      },
+      {
+        "txt": "costRelativeTolerance, parRelativeTolerance, orthoTolerance, Precision.SAFE_MIN); } public LevenbergMarquardtOptimizer(double initialStepBoundFactor, double costRelativeTolerance, double parRelativeTolerance, double orthoTolerance, double threshold) { super(null); // No custom convergence criterion. this.initialStepBoundFactor = initialStepBoundFactor;"
+      },
+      {
+        "txt": "this.costRelativeTolerance = costRelativeTolerance; this.parRelativeTolerance = parRelativeTolerance; this.orthoTolerance = orthoTolerance; this.qrRankingThreshold = threshold; } @Override protected PointVectorValuePair doOptimize() { checkParameters(); final int nR = getTarget().length; // Number of observed data. final double[] currentPoint = getStartPoint();"
+      },
+      {
+        "txt": "final int nC = currentPoint.length; // Number of parameters. solvedCols = FastMath.min(nR, nC); diagR = new double[nC]; jacNorm = new double[nC]; beta = new double[nC]; permutation = new int[nC]; lmDir = new double[nC]; double delta = 0; double xNorm = 0; double[] diag = new double[nC];"
+      },
+      {
+        "txt": "double[] oldX = new double[nC]; double[] oldRes = new double[nR]; double[] oldObj = new double[nR]; double[] qtf = new double[nR]; double[] work1 = new double[nC]; double[] work2 = new double[nC]; double[] work3 = new double[nC]; final RealMatrix weightMatrixSqrt = getWeightSquareRoot(); double[] currentObjective = computeObjectiveValue(currentPoint); double[] currentResiduals = computeResiduals(currentObjective);"
+      },
+      {
+        "txt": "PointVectorValuePair current = new PointVectorValuePair(currentPoint, currentObjective); double currentCost = computeCost(currentResiduals); lmPar = 0; boolean firstIteration = true; int iter = 0; final ConvergenceChecker<PointVectorValuePair> checker = getConvergenceChecker(); while (true) { ++iter; final PointVectorValuePair previous = current; qrDecomposition(computeWeightedJacobian(currentPoint));"
+      },
+      {
+        "txt": "weightedResidual = weightMatrixSqrt.operate(currentResiduals); for (int i = 0; i < nR; i++) { qtf[i] = weightedResidual[i]; } qTy(qtf); for (int k = 0; k < solvedCols; ++k) { int pk = permutation[k]; weightedJacobian[k][pk] = diagR[pk]; } if (firstIteration) {"
+      },
+      {
+        "txt": "xNorm = 0; for (int k = 0; k < nC; ++k) { double dk = jacNorm[k]; if (dk == 0) { dk = 1.0; } double xk = dk * currentPoint[k]; xNorm += xk * xk; diag[k] = dk; }"
+      },
+      {
+        "txt": "xNorm = FastMath.sqrt(xNorm); delta = (xNorm == 0) ? initialStepBoundFactor : (initialStepBoundFactor * xNorm); } double maxCosine = 0; if (currentCost != 0) { for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; double s = jacNorm[pj]; if (s != 0) { double sum = 0;"
+      },
+      {
+        "txt": "for (int i = 0; i <= j; ++i) { sum += weightedJacobian[i][pj] * qtf[i]; } maxCosine = FastMath.max(maxCosine, FastMath.abs(sum) / (s * currentCost)); } } } if (maxCosine <= orthoTolerance) { setCost(currentCost); return current;"
+      },
+      {
+        "txt": "} for (int j = 0; j < nC; ++j) { diag[j] = FastMath.max(diag[j], jacNorm[j]); } for (double ratio = 0; ratio < 1.0e-4;) { for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; oldX[pj] = currentPoint[pj]; } final double previousCost = currentCost;"
+      },
+      {
+        "txt": "double[] tmpVec = weightedResidual; weightedResidual = oldRes; oldRes = tmpVec; tmpVec = currentObjective; currentObjective = oldObj; oldObj = tmpVec; determineLMParameter(qtf, delta, diag, work1, work2, work3); double lmNorm = 0; for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j];"
+      },
+      {
+        "txt": "lmDir[pj] = -lmDir[pj]; currentPoint[pj] = oldX[pj] + lmDir[pj]; double s = diag[pj] * lmDir[pj]; lmNorm += s * s; } lmNorm = FastMath.sqrt(lmNorm); if (firstIteration) { delta = FastMath.min(delta, lmNorm); } currentObjective = computeObjectiveValue(currentPoint);"
+      },
+      {
+        "txt": "currentResiduals = computeResiduals(currentObjective); current = new PointVectorValuePair(currentPoint, currentObjective); currentCost = computeCost(currentResiduals); double actRed = -1.0; if (0.1 * currentCost < previousCost) { double r = currentCost / previousCost; actRed = 1.0 - r * r; } for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j];"
+      },
+      {
+        "txt": "double dirJ = lmDir[pj]; work1[j] = 0; for (int i = 0; i <= j; ++i) { work1[i] += weightedJacobian[i][pj] * dirJ; } } double coeff1 = 0; for (int j = 0; j < solvedCols; ++j) { coeff1 += work1[j] * work1[j]; }"
+      },
+      {
+        "txt": "double pc2 = previousCost * previousCost; coeff1 = coeff1 / pc2; double coeff2 = lmPar * lmNorm * lmNorm / pc2; double preRed = coeff1 + 2 * coeff2; double dirDer = -(coeff1 + coeff2); ratio = (preRed == 0) ? 0 : (actRed / preRed); if (ratio <= 0.25) { double tmp = (actRed < 0) ? (0.5 * dirDer / (dirDer + 0.5 * actRed)) : 0.5; if ((0.1 * currentCost >= previousCost) || (tmp < 0.1)) {"
+      },
+      {
+        "txt": "tmp = 0.1; } delta = tmp * FastMath.min(delta, 10.0 * lmNorm); lmPar /= tmp; } else if ((lmPar == 0) || (ratio >= 0.75)) { delta = 2 * lmNorm; lmPar *= 0.5; } if (ratio >= 1.0e-4) { firstIteration = false;"
+      },
+      {
+        "txt": "for (int k = 0; k < nC; ++k) { double xK = diag[k] * currentPoint[k]; xNorm += xK * xK; } xNorm = FastMath.sqrt(xNorm); if (checker != null) { <extra_id_0> setCost(currentCost); return current; } } } else { currentCost = previousCost;"
+      },
+      {
+        "txt": "} else { currentCost = previousCost; for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; currentPoint[pj] = oldX[pj]; } tmpVec = weightedResidual; weightedResidual = oldRes; oldRes = tmpVec; tmpVec = currentObjective;"
+      },
+      {
+        "txt": "currentObjective = oldObj; oldObj = tmpVec; current = new PointVectorValuePair(currentPoint, currentObjective); } if ((FastMath.abs(actRed) <= costRelativeTolerance && preRed <= costRelativeTolerance && ratio <= 2.0) || delta <= parRelativeTolerance * xNorm) { setCost(currentCost); return current;"
+      },
+      {
+        "txt": "} if ((FastMath.abs(actRed) <= 2.2204e-16) && (preRed <= 2.2204e-16) && (ratio <= 2.0)) { throw new ConvergenceException(LocalizedFormats.TOO_SMALL_COST_RELATIVE_TOLERANCE, costRelativeTolerance); } else if (delta <= 2.2204e-16 * xNorm) { throw new ConvergenceException(LocalizedFormats.TOO_SMALL_PARAMETERS_RELATIVE_TOLERANCE, parRelativeTolerance); } else if (maxCosine <= 2.2204e-16) { throw new ConvergenceException(LocalizedFormats.TOO_SMALL_ORTHOGONALITY_TOLERANCE, orthoTolerance);"
+      },
+      {
+        "txt": "} } } } private void determineLMParameter(double[] qy, double delta, double[] diag, double[] work1, double[] work2, double[] work3) { final int nC = weightedJacobian[0].length; for (int j = 0; j < rank; ++j) { lmDir[permutation[j]] = qy[j]; }"
+      },
+      {
+        "txt": "for (int j = rank; j < nC; ++j) { lmDir[permutation[j]] = 0; } for (int k = rank - 1; k >= 0; --k) { int pk = permutation[k]; double ypk = lmDir[pk] / diagR[pk]; for (int i = 0; i < k; ++i) { lmDir[permutation[i]] -= ypk * weightedJacobian[i][pk]; } lmDir[pk] = ypk;"
+      },
+      {
+        "txt": "} double dxNorm = 0; for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; double s = diag[pj] * lmDir[pj]; work1[pj] = s; dxNorm += s * s; } dxNorm = FastMath.sqrt(dxNorm); double fp = dxNorm - delta;"
+      },
+      {
+        "txt": "if (fp <= 0.1 * delta) { lmPar = 0; return; } double sum2; double parl = 0; if (rank == solvedCols) { for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; work1[pj] *= diag[pj] / dxNorm;"
+      },
+      {
+        "txt": "} sum2 = 0; for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; double sum = 0; for (int i = 0; i < j; ++i) { sum += weightedJacobian[i][pj] * work1[permutation[i]]; } double s = (work1[pj] - sum) / diagR[pj]; work1[pj] = s;"
+      },
+      {
+        "txt": "sum2 += s * s; } parl = fp / (delta * sum2); } sum2 = 0; for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; double sum = 0; for (int i = 0; i <= j; ++i) { sum += weightedJacobian[i][pj] * qy[i];"
+      },
+      {
+        "txt": "} sum /= diag[pj]; sum2 += sum * sum; } double gNorm = FastMath.sqrt(sum2); double paru = gNorm / delta; if (paru == 0) { paru = 2.2251e-308 / FastMath.min(delta, 0.1); } lmPar = FastMath.min(paru, FastMath.max(lmPar, parl));"
+      },
+      {
+        "txt": "if (lmPar == 0) { lmPar = gNorm / dxNorm; } for (int countdown = 10; countdown >= 0; --countdown) { if (lmPar == 0) { lmPar = FastMath.max(2.2251e-308, 0.001 * paru); } double sPar = FastMath.sqrt(lmPar); for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j];"
+      },
+      {
+        "txt": "work1[pj] = sPar * diag[pj]; } determineLMDirection(qy, work1, work2, work3); dxNorm = 0; for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; double s = diag[pj] * lmDir[pj]; work3[pj] = s; dxNorm += s * s; }"
+      },
+      {
+        "txt": "dxNorm = FastMath.sqrt(dxNorm); double previousFP = fp; fp = dxNorm - delta; if ((FastMath.abs(fp) <= 0.1 * delta) || ((parl == 0) && (fp <= previousFP) && (previousFP < 0))) { return; } for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; work1[pj] = work3[pj] * diag[pj] / dxNorm;"
+      },
+      {
+        "txt": "} for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; work1[pj] /= work2[j]; double tmp = work1[pj]; for (int i = j + 1; i < solvedCols; ++i) { work1[permutation[i]] -= weightedJacobian[i][pj] * tmp; } } sum2 = 0;"
+      },
+      {
+        "txt": "for (int j = 0; j < solvedCols; ++j) { double s = work1[permutation[j]]; sum2 += s * s; } double correction = fp / (delta * sum2); if (fp > 0) { parl = FastMath.max(parl, lmPar); } else if (fp < 0) { paru = FastMath.min(paru, lmPar); }"
+      },
+      {
+        "txt": "lmPar = FastMath.max(parl, lmPar + correction); } } private void determineLMDirection(double[] qy, double[] diag, double[] lmDiag, double[] work) { for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; for (int i = j + 1; i < solvedCols; ++i) { weightedJacobian[i][pj] = weightedJacobian[j][permutation[i]]; }"
+      },
+      {
+        "txt": "lmDir[j] = diagR[pj]; work[j] = qy[j]; } for (int j = 0; j < solvedCols; ++j) { int pj = permutation[j]; double dpj = diag[pj]; if (dpj != 0) { Arrays.fill(lmDiag, j + 1, lmDiag.length, 0); } lmDiag[j] = dpj;"
+      },
+      {
+        "txt": "double qtbpj = 0; for (int k = j; k < solvedCols; ++k) { int pk = permutation[k]; if (lmDiag[k] != 0) { final double sin; final double cos; double rkk = weightedJacobian[k][pk]; if (FastMath.abs(rkk) < FastMath.abs(lmDiag[k])) { final double cotan = rkk / lmDiag[k]; sin = 1.0 / FastMath.sqrt(1.0 + cotan * cotan);"
+      },
+      {
+        "txt": "cos = sin * cotan; } else { final double tan = lmDiag[k] / rkk; cos = 1.0 / FastMath.sqrt(1.0 + tan * tan); sin = cos * tan; } weightedJacobian[k][pk] = cos * rkk + sin * lmDiag[k]; final double temp = cos * work[k] + sin * qtbpj; qtbpj = -sin * work[k] + cos * qtbpj; work[k] = temp;"
+      },
+      {
+        "txt": "for (int i = k + 1; i < solvedCols; ++i) { double rik = weightedJacobian[i][pk]; final double temp2 = cos * rik + sin * lmDiag[i]; lmDiag[i] = -sin * rik + cos * lmDiag[i]; weightedJacobian[i][pk] = temp2; } } } lmDiag[j] = weightedJacobian[j][permutation[j]]; weightedJacobian[j][permutation[j]] = lmDir[j];"
+      },
+      {
+        "txt": "} int nSing = solvedCols; for (int j = 0; j < solvedCols; ++j) { if ((lmDiag[j] == 0) && (nSing == solvedCols)) { nSing = j; } if (nSing < solvedCols) { work[j] = 0; } }"
+      },
+      {
+        "txt": "if (nSing > 0) { for (int j = nSing - 1; j >= 0; --j) { int pj = permutation[j]; double sum = 0; for (int i = j + 1; i < nSing; ++i) { sum += weightedJacobian[i][pj] * work[i]; } work[j] = (work[j] - sum) / lmDiag[j]; } }"
+      },
+      {
+        "txt": "for (int j = 0; j < lmDir.length; ++j) { lmDir[permutation[j]] = work[j]; } } private void qrDecomposition(RealMatrix jacobian) throws ConvergenceException { weightedJacobian = jacobian.scalarMultiply(-1).getData(); final int nR = weightedJacobian.length; final int nC = weightedJacobian[0].length; for (int k = 0; k < nC; ++k) { permutation[k] = k;"
+      },
+      {
+        "txt": "double norm2 = 0; for (int i = 0; i < nR; ++i) { double akk = weightedJacobian[i][k]; norm2 += akk * akk; } jacNorm[k] = FastMath.sqrt(norm2); } for (int k = 0; k < nC; ++k) { int nextColumn = -1; double ak2 = Double.NEGATIVE_INFINITY;"
+      },
+      {
+        "txt": "for (int i = k; i < nC; ++i) { double norm2 = 0; for (int j = k; j < nR; ++j) { double aki = weightedJacobian[j][permutation[i]]; norm2 += aki * aki; } if (Double.isInfinite(norm2) || Double.isNaN(norm2)) { throw new ConvergenceException(LocalizedFormats.UNABLE_TO_PERFORM_QR_DECOMPOSITION_ON_JACOBIAN, nR, nC); }"
+      },
+      {
+        "txt": "if (norm2 > ak2) { nextColumn = i; ak2 = norm2; } } if (ak2 <= qrRankingThreshold) { rank = k; return; } int pk = permutation[nextColumn];"
+      },
+      {
+        "txt": "permutation[nextColumn] = permutation[k]; permutation[k] = pk; double akk = weightedJacobian[k][pk]; double alpha = (akk > 0) ? -FastMath.sqrt(ak2) : FastMath.sqrt(ak2); double betak = 1.0 / (ak2 - akk * alpha); beta[pk] = betak; diagR[pk] = alpha; weightedJacobian[k][pk] -= alpha; for (int dk = nC - 1 - k; dk > 0; --dk) { double gamma = 0;"
+      },
+      {
+        "txt": "for (int j = k; j < nR; ++j) { gamma += weightedJacobian[j][pk] * weightedJacobian[j][permutation[k + dk]]; } gamma *= betak; for (int j = k; j < nR; ++j) { weightedJacobian[j][permutation[k + dk]] -= gamma * weightedJacobian[j][pk]; } } } rank = solvedCols;"
+      },
+      {
+        "txt": "} private void qTy(double[] y) { final int nR = weightedJacobian.length; final int nC = weightedJacobian[0].length; for (int k = 0; k < nC; ++k) { int pk = permutation[k]; double gamma = 0; for (int i = k; i < nR; ++i) { gamma += weightedJacobian[i][pk] * y[i]; }"
+      },
+      {
+        "txt": "gamma *= beta[pk]; for (int i = k; i < nR; ++i) { y[i] -= gamma * weightedJacobian[i][pk]; } } } private void checkParameters() { if (getLowerBound() != null || getUpperBound() != null) { throw new MathUnsupportedOperationException(LocalizedFormats.CONSTRAINT);"
+      },
+      {
+        "txt": "} }"
+      }
+    ]
+  }
+]

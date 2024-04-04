@@ -1,0 +1,263 @@
+[
+  {
+    "id": 1875,
+    "file_path": "src/main/java/org/jsoup/nodes/Document.java",
+    "start-bug-line": 5,
+    "end-bug-line": 5,
+    "bug": "",
+    "fix": "import org.jsoup.select.Elements;",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.jsoup.nodes; import org.jsoup.helper.Validate; import org.jsoup.parser.Tag; <extra_id_0> import java.nio.charset.Charset; import java.nio.charset.CharsetEncoder; import java.util.ArrayList; import java.util.List; A HTML Document. @author Jonathan Hedley, jonathan@hedley.net */"
+      },
+      {
+        "txt": "A HTML Document. @author Jonathan Hedley, jonathan@hedley.net */ public class Document extends Element { private OutputSettings outputSettings = new OutputSettings(); Create a new, empty Document. @param baseUri base URI of document @see org.jsoup.Jsoup#parse @see #createShell public Document(String baseUri) { super(Tag.valueOf(\"#root\"), baseUri);"
+      },
+      {
+        "txt": "} Create a valid, empty shell of a document, suitable for adding more elements to. @param baseUri baseUri of document @return document with html, head, and body elements. static public Document createShell(String baseUri) { Validate.notNull(baseUri); Document doc = new Document(baseUri); Element html = doc.appendElement(\"html\"); html.appendElement(\"head\"); html.appendElement(\"body\");"
+      },
+      {
+        "txt": "return doc; } Accessor to the document's {@code head} element. @return {@code head} public Element head() { return findFirstElementByTagName(\"head\", this); } Accessor to the document's {@code body} element. @return {@code body} public Element body() {"
+      },
+      {
+        "txt": "return findFirstElementByTagName(\"body\", this); } Get the string contents of the document's {@code title} element. @return Trimed title, or empty string if none set. public String title() { Element titleEl = getElementsByTag(\"title\").first(); return titleEl != null ? titleEl.text().trim() : \"\"; } Set the document's {@code title} element. Updates the existing element, or adds {@code title} to {@code head} if not present"
+      },
+      {
+        "txt": "@param title string to set as title public void title(String title) { Validate.notNull(title); Element titleEl = getElementsByTag(\"title\").first(); if (titleEl == null) { // add to head head().appendElement(\"title\").text(title); } else { titleEl.text(title); } }"
+      },
+      {
+        "txt": "Create a new Element, with this document's base uri. Does not make the new element a child of this document. @param tagName element tag name (e.g. {@code a}) @return new element public Element createElement(String tagName) { return new Element(Tag.valueOf(tagName), this.baseUri()); } Normalise the document. This happens after the parse phase so generally does not need to be called. Moves any text content that is not in the body element into the body. @return this document after normalisation public Document normalise() {"
+      },
+      {
+        "txt": "Element htmlEl = findFirstElementByTagName(\"html\", this); if (htmlEl == null) htmlEl = appendElement(\"html\"); if (head() == null) htmlEl.prependElement(\"head\"); if (body() == null) htmlEl.appendElement(\"body\"); normaliseTextNodes(head()); normaliseTextNodes(htmlEl); normaliseTextNodes(this);"
+      },
+      {
+        "txt": "return this; } private void normaliseTextNodes(Element element) { List<Node> toMove = new ArrayList<Node>(); for (Node node: element.childNodes) { if (node instanceof TextNode) { TextNode tn = (TextNode) node; if (!tn.isBlank()) toMove.add(tn); }"
+      },
+      {
+        "txt": "} for (int i = toMove.size()-1; i >= 0; i--) { Node node = toMove.get(i); element.removeChild(node); body().prependChild(new TextNode(\" \", \"\")); body().prependChild(node); } } private Element findFirstElementByTagName(String tag, Node node) { if (node.nodeName().equals(tag))"
+      },
+      {
+        "txt": "return (Element) node; else { for (Node child: node.childNodes) { Element found = findFirstElementByTagName(tag, child); if (found != null) return found; } } return null; }"
+      },
+      {
+        "txt": "@Override public String outerHtml() { return super.html(); // no outer wrapper tag } Set the text of the {@code body} of this document. Any existing nodes within the body will be cleared. @param text unencoded text @return this document @Override public Element text(String text) { body().text(text); // overridden to not nuke doc structure"
+      },
+      {
+        "txt": "return this; } @Override public String nodeName() { return \"#document\"; } public class OutputSettings { private Entities.EscapeMode escapeMode = Entities.EscapeMode.base; private Charset charset = Charset.forName(\"UTF-8\"); private CharsetEncoder charsetEncoder = charset.newEncoder();"
+      },
+      {
+        "txt": "private boolean prettyPrint = true; private int indentAmount = 1; public OutputSettings() {} public Entities.EscapeMode escapeMode() { return escapeMode; } public OutputSettings escapeMode(Entities.EscapeMode escapeMode) { this.escapeMode = escapeMode; return this; }"
+      },
+      {
+        "txt": "public Charset charset() { return charset; } public OutputSettings charset(Charset charset) { this.charset = charset; charsetEncoder = charset.newEncoder(); return this; } public OutputSettings charset(String charset) { charset(Charset.forName(charset));"
+      },
+      {
+        "txt": "return this; } CharsetEncoder encoder() { return charsetEncoder; } public boolean prettyPrint() { return prettyPrint; } public OutputSettings prettyPrint(boolean pretty) { prettyPrint = pretty;"
+      },
+      {
+        "txt": "return this; } public int indentAmount() { return indentAmount; } public OutputSettings indentAmount(int indentAmount) { Validate.isTrue(indentAmount >= 0); this.indentAmount = indentAmount; return this; }"
+      },
+      {
+        "txt": "} public OutputSettings outputSettings() { return outputSettings; }"
+      }
+    ]
+  },
+  {
+    "id": 1876,
+    "file_path": "src/main/java/org/jsoup/nodes/Document.java",
+    "start-bug-line": 113,
+    "end-bug-line": 113,
+    "bug": "",
+    "fix": "normaliseStructure(\"head\", htmlEl); normaliseStructure(\"body\", htmlEl);",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.jsoup.nodes; import org.jsoup.helper.Validate; import org.jsoup.parser.Tag; import java.nio.charset.Charset; import java.nio.charset.CharsetEncoder; import java.util.ArrayList; import java.util.List; A HTML Document. @author Jonathan Hedley, jonathan@hedley.net */ public class Document extends Element {"
+      },
+      {
+        "txt": "private OutputSettings outputSettings = new OutputSettings(); Create a new, empty Document. @param baseUri base URI of document @see org.jsoup.Jsoup#parse @see #createShell public Document(String baseUri) { super(Tag.valueOf(\"#root\"), baseUri); } Create a valid, empty shell of a document, suitable for adding more elements to. @param baseUri baseUri of document"
+      },
+      {
+        "txt": "@return document with html, head, and body elements. static public Document createShell(String baseUri) { Validate.notNull(baseUri); Document doc = new Document(baseUri); Element html = doc.appendElement(\"html\"); html.appendElement(\"head\"); html.appendElement(\"body\"); return doc; } Accessor to the document's {@code head} element."
+      },
+      {
+        "txt": "@return {@code head} public Element head() { return findFirstElementByTagName(\"head\", this); } Accessor to the document's {@code body} element. @return {@code body} public Element body() { return findFirstElementByTagName(\"body\", this); } Get the string contents of the document's {@code title} element."
+      },
+      {
+        "txt": "@return Trimed title, or empty string if none set. public String title() { Element titleEl = getElementsByTag(\"title\").first(); return titleEl != null ? titleEl.text().trim() : \"\"; } Set the document's {@code title} element. Updates the existing element, or adds {@code title} to {@code head} if not present @param title string to set as title public void title(String title) { Validate.notNull(title);"
+      },
+      {
+        "txt": "Element titleEl = getElementsByTag(\"title\").first(); if (titleEl == null) { // add to head head().appendElement(\"title\").text(title); } else { titleEl.text(title); } } Create a new Element, with this document's base uri. Does not make the new element a child of this document. @param tagName element tag name (e.g. {@code a}) @return new element"
+      },
+      {
+        "txt": "public Element createElement(String tagName) { return new Element(Tag.valueOf(tagName), this.baseUri()); } Normalise the document. This happens after the parse phase so generally does not need to be called. Moves any text content that is not in the body element into the body. @return this document after normalisation public Document normalise() { Element htmlEl = findFirstElementByTagName(\"html\", this); if (htmlEl == null) htmlEl = appendElement(\"html\");"
+      },
+      {
+        "txt": "htmlEl.prependElement(\"head\"); if (body() == null) htmlEl.appendElement(\"body\"); normaliseTextNodes(head()); normaliseTextNodes(htmlEl); normaliseTextNodes(this); <extra_id_0> return this; } private void normaliseTextNodes(Element element) { List<Node> toMove = new ArrayList<Node>(); for (Node node: element.childNodes) { if (node instanceof TextNode) {"
+      },
+      {
+        "txt": "for (Node node: element.childNodes) { if (node instanceof TextNode) { TextNode tn = (TextNode) node; if (!tn.isBlank()) toMove.add(tn); } } for (int i = toMove.size()-1; i >= 0; i--) { Node node = toMove.get(i); element.removeChild(node);"
+      },
+      {
+        "txt": "body().prependChild(new TextNode(\" \", \"\")); body().prependChild(node); } } private Element findFirstElementByTagName(String tag, Node node) { if (node.nodeName().equals(tag)) return (Element) node; else { for (Node child: node.childNodes) { Element found = findFirstElementByTagName(tag, child);"
+      },
+      {
+        "txt": "if (found != null) return found; } } return null; } @Override public String outerHtml() { return super.html(); // no outer wrapper tag }"
+      },
+      {
+        "txt": "Set the text of the {@code body} of this document. Any existing nodes within the body will be cleared. @param text unencoded text @return this document @Override public Element text(String text) { body().text(text); // overridden to not nuke doc structure return this; } @Override public String nodeName() {"
+      },
+      {
+        "txt": "return \"#document\"; } public class OutputSettings { private Entities.EscapeMode escapeMode = Entities.EscapeMode.base; private Charset charset = Charset.forName(\"UTF-8\"); private CharsetEncoder charsetEncoder = charset.newEncoder(); private boolean prettyPrint = true; private int indentAmount = 1; public OutputSettings() {} public Entities.EscapeMode escapeMode() {"
+      },
+      {
+        "txt": "return escapeMode; } public OutputSettings escapeMode(Entities.EscapeMode escapeMode) { this.escapeMode = escapeMode; return this; } public Charset charset() { return charset; } public OutputSettings charset(Charset charset) {"
+      },
+      {
+        "txt": "this.charset = charset; charsetEncoder = charset.newEncoder(); return this; } public OutputSettings charset(String charset) { charset(Charset.forName(charset)); return this; } CharsetEncoder encoder() { return charsetEncoder;"
+      },
+      {
+        "txt": "} public boolean prettyPrint() { return prettyPrint; } public OutputSettings prettyPrint(boolean pretty) { prettyPrint = pretty; return this; } public int indentAmount() { return indentAmount;"
+      },
+      {
+        "txt": "} public OutputSettings indentAmount(int indentAmount) { Validate.isTrue(indentAmount >= 0); this.indentAmount = indentAmount; return this; } } public OutputSettings outputSettings() { return outputSettings; }"
+      }
+    ]
+  },
+  {
+    "id": 1877,
+    "file_path": "src/main/java/org/jsoup/nodes/Document.java",
+    "start-bug-line": 137,
+    "end-bug-line": 137,
+    "bug": "",
+    "fix": "private void normaliseStructure(String tag, Element htmlEl) { Elements elements = this.getElementsByTag(tag); Element master = elements.first(); // will always be available as created above if not existent if (elements.size() > 1) { // dupes, move contents to master List<Node> toMove = new ArrayList<Node>(); for (int i = 1; i < elements.size(); i++) { Node dupe = elements.get(i); for (Node node : dupe.childNodes) toMove.add(node); dupe.remove(); }  for (Node dupe : toMove) master.appendChild(dupe); }",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.jsoup.nodes; import org.jsoup.helper.Validate; import org.jsoup.parser.Tag; import java.nio.charset.Charset; import java.nio.charset.CharsetEncoder; import java.util.ArrayList; import java.util.List; A HTML Document."
+      },
+      {
+        "txt": "@author Jonathan Hedley, jonathan@hedley.net */ public class Document extends Element { private OutputSettings outputSettings = new OutputSettings(); Create a new, empty Document. @param baseUri base URI of document @see org.jsoup.Jsoup#parse @see #createShell public Document(String baseUri) { super(Tag.valueOf(\"#root\"), baseUri); }"
+      },
+      {
+        "txt": "Create a valid, empty shell of a document, suitable for adding more elements to. @param baseUri baseUri of document @return document with html, head, and body elements. static public Document createShell(String baseUri) { Validate.notNull(baseUri); Document doc = new Document(baseUri); Element html = doc.appendElement(\"html\"); html.appendElement(\"head\"); html.appendElement(\"body\"); return doc;"
+      },
+      {
+        "txt": "} Accessor to the document's {@code head} element. @return {@code head} public Element head() { return findFirstElementByTagName(\"head\", this); } Accessor to the document's {@code body} element. @return {@code body} public Element body() { return findFirstElementByTagName(\"body\", this);"
+      },
+      {
+        "txt": "} Get the string contents of the document's {@code title} element. @return Trimed title, or empty string if none set. public String title() { Element titleEl = getElementsByTag(\"title\").first(); return titleEl != null ? titleEl.text().trim() : \"\"; } Set the document's {@code title} element. Updates the existing element, or adds {@code title} to {@code head} if not present @param title string to set as title"
+      },
+      {
+        "txt": "public void title(String title) { Validate.notNull(title); Element titleEl = getElementsByTag(\"title\").first(); if (titleEl == null) { // add to head head().appendElement(\"title\").text(title); } else { titleEl.text(title); } } Create a new Element, with this document's base uri. Does not make the new element a child of this document."
+      },
+      {
+        "txt": "@param tagName element tag name (e.g. {@code a}) @return new element public Element createElement(String tagName) { return new Element(Tag.valueOf(tagName), this.baseUri()); } Normalise the document. This happens after the parse phase so generally does not need to be called. Moves any text content that is not in the body element into the body. @return this document after normalisation public Document normalise() { Element htmlEl = findFirstElementByTagName(\"html\", this);"
+      },
+      {
+        "txt": "if (htmlEl == null) htmlEl = appendElement(\"html\"); if (head() == null) htmlEl.prependElement(\"head\"); if (body() == null) htmlEl.appendElement(\"body\"); normaliseTextNodes(head()); normaliseTextNodes(htmlEl); normaliseTextNodes(this); return this;"
+      },
+      {
+        "txt": "} private void normaliseTextNodes(Element element) { List<Node> toMove = new ArrayList<Node>(); for (Node node: element.childNodes) { if (node instanceof TextNode) { TextNode tn = (TextNode) node; if (!tn.isBlank()) toMove.add(tn); } }"
+      },
+      {
+        "txt": "Node node = toMove.get(i); element.removeChild(node); body().prependChild(new TextNode(\" \", \"\")); body().prependChild(node); } } <extra_id_0> private Element findFirstElementByTagName(String tag, Node node) { if (node.nodeName().equals(tag)) return (Element) node; else { for (Node child: node.childNodes) { Element found = findFirstElementByTagName(tag, child);"
+      },
+      {
+        "txt": "for (Node child: node.childNodes) { Element found = findFirstElementByTagName(tag, child); if (found != null) return found; } } return null; } @Override public String outerHtml() {"
+      },
+      {
+        "txt": "return super.html(); // no outer wrapper tag } Set the text of the {@code body} of this document. Any existing nodes within the body will be cleared. @param text unencoded text @return this document @Override public Element text(String text) { body().text(text); // overridden to not nuke doc structure return this; }"
+      },
+      {
+        "txt": "@Override public String nodeName() { return \"#document\"; } public class OutputSettings { private Entities.EscapeMode escapeMode = Entities.EscapeMode.base; private Charset charset = Charset.forName(\"UTF-8\"); private CharsetEncoder charsetEncoder = charset.newEncoder(); private boolean prettyPrint = true; private int indentAmount = 1;"
+      },
+      {
+        "txt": "public OutputSettings() {} public Entities.EscapeMode escapeMode() { return escapeMode; } public OutputSettings escapeMode(Entities.EscapeMode escapeMode) { this.escapeMode = escapeMode; return this; } public Charset charset() { return charset;"
+      },
+      {
+        "txt": "} public OutputSettings charset(Charset charset) { this.charset = charset; charsetEncoder = charset.newEncoder(); return this; } public OutputSettings charset(String charset) { charset(Charset.forName(charset)); return this; }"
+      },
+      {
+        "txt": "CharsetEncoder encoder() { return charsetEncoder; } public boolean prettyPrint() { return prettyPrint; } public OutputSettings prettyPrint(boolean pretty) { prettyPrint = pretty; return this; }"
+      },
+      {
+        "txt": "public int indentAmount() { return indentAmount; } public OutputSettings indentAmount(int indentAmount) { Validate.isTrue(indentAmount >= 0); this.indentAmount = indentAmount; return this; } } public OutputSettings outputSettings() {"
+      },
+      {
+        "txt": "return outputSettings; }"
+      }
+    ]
+  },
+  {
+    "id": 1878,
+    "file_path": "src/main/java/org/jsoup/nodes/Document.java",
+    "start-bug-line": 138,
+    "end-bug-line": 138,
+    "bug": "",
+    "fix": "if (!master.parent().equals(htmlEl)) { htmlEl.appendChild(master); // includes remove() } }",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.jsoup.nodes; import org.jsoup.helper.Validate; import org.jsoup.parser.Tag; import java.nio.charset.Charset; import java.nio.charset.CharsetEncoder; import java.util.ArrayList; import java.util.List; A HTML Document."
+      },
+      {
+        "txt": "@author Jonathan Hedley, jonathan@hedley.net */ public class Document extends Element { private OutputSettings outputSettings = new OutputSettings(); Create a new, empty Document. @param baseUri base URI of document @see org.jsoup.Jsoup#parse @see #createShell public Document(String baseUri) { super(Tag.valueOf(\"#root\"), baseUri); }"
+      },
+      {
+        "txt": "Create a valid, empty shell of a document, suitable for adding more elements to. @param baseUri baseUri of document @return document with html, head, and body elements. static public Document createShell(String baseUri) { Validate.notNull(baseUri); Document doc = new Document(baseUri); Element html = doc.appendElement(\"html\"); html.appendElement(\"head\"); html.appendElement(\"body\"); return doc;"
+      },
+      {
+        "txt": "} Accessor to the document's {@code head} element. @return {@code head} public Element head() { return findFirstElementByTagName(\"head\", this); } Accessor to the document's {@code body} element. @return {@code body} public Element body() { return findFirstElementByTagName(\"body\", this);"
+      },
+      {
+        "txt": "} Get the string contents of the document's {@code title} element. @return Trimed title, or empty string if none set. public String title() { Element titleEl = getElementsByTag(\"title\").first(); return titleEl != null ? titleEl.text().trim() : \"\"; } Set the document's {@code title} element. Updates the existing element, or adds {@code title} to {@code head} if not present @param title string to set as title"
+      },
+      {
+        "txt": "public void title(String title) { Validate.notNull(title); Element titleEl = getElementsByTag(\"title\").first(); if (titleEl == null) { // add to head head().appendElement(\"title\").text(title); } else { titleEl.text(title); } } Create a new Element, with this document's base uri. Does not make the new element a child of this document."
+      },
+      {
+        "txt": "@param tagName element tag name (e.g. {@code a}) @return new element public Element createElement(String tagName) { return new Element(Tag.valueOf(tagName), this.baseUri()); } Normalise the document. This happens after the parse phase so generally does not need to be called. Moves any text content that is not in the body element into the body. @return this document after normalisation public Document normalise() { Element htmlEl = findFirstElementByTagName(\"html\", this);"
+      },
+      {
+        "txt": "if (htmlEl == null) htmlEl = appendElement(\"html\"); if (head() == null) htmlEl.prependElement(\"head\"); if (body() == null) htmlEl.appendElement(\"body\"); normaliseTextNodes(head()); normaliseTextNodes(htmlEl); normaliseTextNodes(this); return this;"
+      },
+      {
+        "txt": "} private void normaliseTextNodes(Element element) { List<Node> toMove = new ArrayList<Node>(); for (Node node: element.childNodes) { if (node instanceof TextNode) { TextNode tn = (TextNode) node; if (!tn.isBlank()) toMove.add(tn); } }"
+      },
+      {
+        "txt": "Node node = toMove.get(i); element.removeChild(node); body().prependChild(new TextNode(\" \", \"\")); body().prependChild(node); } } <extra_id_0> private Element findFirstElementByTagName(String tag, Node node) { if (node.nodeName().equals(tag)) return (Element) node; else { for (Node child: node.childNodes) { Element found = findFirstElementByTagName(tag, child);"
+      },
+      {
+        "txt": "for (Node child: node.childNodes) { Element found = findFirstElementByTagName(tag, child); if (found != null) return found; } } return null; } @Override public String outerHtml() {"
+      },
+      {
+        "txt": "return super.html(); // no outer wrapper tag } Set the text of the {@code body} of this document. Any existing nodes within the body will be cleared. @param text unencoded text @return this document @Override public Element text(String text) { body().text(text); // overridden to not nuke doc structure return this; }"
+      },
+      {
+        "txt": "@Override public String nodeName() { return \"#document\"; } public class OutputSettings { private Entities.EscapeMode escapeMode = Entities.EscapeMode.base; private Charset charset = Charset.forName(\"UTF-8\"); private CharsetEncoder charsetEncoder = charset.newEncoder(); private boolean prettyPrint = true; private int indentAmount = 1;"
+      },
+      {
+        "txt": "public OutputSettings() {} public Entities.EscapeMode escapeMode() { return escapeMode; } public OutputSettings escapeMode(Entities.EscapeMode escapeMode) { this.escapeMode = escapeMode; return this; } public Charset charset() { return charset;"
+      },
+      {
+        "txt": "} public OutputSettings charset(Charset charset) { this.charset = charset; charsetEncoder = charset.newEncoder(); return this; } public OutputSettings charset(String charset) { charset(Charset.forName(charset)); return this; }"
+      },
+      {
+        "txt": "CharsetEncoder encoder() { return charsetEncoder; } public boolean prettyPrint() { return prettyPrint; } public OutputSettings prettyPrint(boolean pretty) { prettyPrint = pretty; return this; }"
+      },
+      {
+        "txt": "public int indentAmount() { return indentAmount; } public OutputSettings indentAmount(int indentAmount) { Validate.isTrue(indentAmount >= 0); this.indentAmount = indentAmount; return this; } } public OutputSettings outputSettings() {"
+      },
+      {
+        "txt": "return outputSettings; }"
+      }
+    ]
+  }
+]

@@ -1,0 +1,365 @@
+[
+  {
+    "id": 108,
+    "file_path": "src/java/org/apache/commons/cli2/Option.java",
+    "start-bug-line": 206,
+    "end-bug-line": 206,
+    "bug": "",
+    "fix": "Option getParent();",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.cli2; import java.util.Comparator; import java.util.List;"
+      },
+      {
+        "txt": "import java.util.ListIterator; import java.util.Set; public interface Option { void process( final WriteableCommandLine commandLine, final ListIterator args) throws OptionException; void defaults(final WriteableCommandLine commandLine); boolean canProcess(final WriteableCommandLine commandLine, final String argument); boolean canProcess(final WriteableCommandLine commandLine, final ListIterator arguments);"
+      },
+      {
+        "txt": "Set getTriggers(); Set getPrefixes(); void validate(final WriteableCommandLine commandLine) throws OptionException; List helpLines( final int depth, final Set helpSettings, final Comparator comp); void appendUsage( final StringBuffer buffer,"
+      },
+      {
+        "txt": "final Comparator comp); String getPreferredName(); String getDescription(); int getId(); Option findOption(final String trigger); boolean isRequired(); <extra_id_0> }"
+      }
+    ]
+  },
+  {
+    "id": 109,
+    "file_path": "src/java/org/apache/commons/cli2/Option.java",
+    "start-bug-line": 216,
+    "end-bug-line": 216,
+    "bug": "",
+    "fix": "void setParent(Option parent);",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.cli2; import java.util.Comparator; import java.util.List;"
+      },
+      {
+        "txt": "import java.util.ListIterator; import java.util.Set; public interface Option { void process( final WriteableCommandLine commandLine, final ListIterator args) throws OptionException; void defaults(final WriteableCommandLine commandLine); boolean canProcess(final WriteableCommandLine commandLine, final String argument); boolean canProcess(final WriteableCommandLine commandLine, final ListIterator arguments);"
+      },
+      {
+        "txt": "Set getTriggers(); Set getPrefixes(); void validate(final WriteableCommandLine commandLine) throws OptionException; List helpLines( final int depth, final Set helpSettings, final Comparator comp); void appendUsage( final StringBuffer buffer,"
+      },
+      {
+        "txt": "final Comparator comp); String getPreferredName(); String getDescription(); int getId(); Option findOption(final String trigger); boolean isRequired(); <extra_id_0>"
+      }
+    ]
+  },
+  {
+    "id": 110,
+    "file_path": "src/java/org/apache/commons/cli2/commandline/WriteableCommandLineImpl.java",
+    "start-bug-line": 74,
+    "end-bug-line": 74,
+    "bug": "",
+    "fix": "Option parent = option.getParent(); while (parent != null && !options.contains(parent)) { options.add(parent); parent = parent.getParent(); }",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.cli2.commandline; import java.util.ArrayList; import java.util.Collections; import java.util.HashMap; import java.util.Iterator; import java.util.List; import java.util.Map; import java.util.Properties; import java.util.Set; import org.apache.commons.cli2.Argument;"
+      },
+      {
+        "txt": "import org.apache.commons.cli2.Option; import org.apache.commons.cli2.WriteableCommandLine; import org.apache.commons.cli2.option.PropertyOption; import org.apache.commons.cli2.resource.ResourceConstants; import org.apache.commons.cli2.resource.ResourceHelper; public class WriteableCommandLineImpl extends CommandLineImpl implements WriteableCommandLine { private final Map optionToProperties = new HashMap(); private final List options = new ArrayList(); private final Map nameToOption = new HashMap();"
+      },
+      {
+        "txt": "private final Map values = new HashMap(); private final Map switches = new HashMap(); private final Map defaultValues = new HashMap(); private final Map defaultSwitches = new HashMap(); private final List normalised; private final Set prefixes; public WriteableCommandLineImpl(final Option rootOption, final List arguments) { this.prefixes = rootOption.getPrefixes(); this.normalised = arguments;"
+      },
+      {
+        "txt": "public void addOption(Option option) { options.add(option); nameToOption.put(option.getPreferredName(), option); for (Iterator i = option.getTriggers().iterator(); i.hasNext();) { nameToOption.put(i.next(), option); } <extra_id_0> public void addValue(final Option option, final Object value) { if (option instanceof Argument) { addOption(option); } List valueList = (List) values.get(option);"
+      },
+      {
+        "txt": "} List valueList = (List) values.get(option); if (valueList == null) { valueList = new ArrayList(); values.put(option, valueList); } valueList.add(value); } public void addSwitch(final Option option, final boolean value) {"
+      },
+      {
+        "txt": "addOption(option); if (switches.containsKey(option)) { throw new IllegalStateException(ResourceHelper.getResourceHelper().getMessage(ResourceConstants.SWITCH_ALREADY_SET)); } else { switches.put(option, value ? Boolean.TRUE : Boolean.FALSE); } } public boolean hasOption(final Option option) { final boolean present = options.contains(option); return present;"
+      },
+      {
+        "txt": "} public Option getOption(final String trigger) { return (Option) nameToOption.get(trigger); } public List getValues(final Option option, List defaultValues) { List valueList = (List) values.get(option); if (defaultValues == null || defaultValues.isEmpty()) { defaultValues = (List) this.defaultValues.get(option); }"
+      },
+      {
+        "txt": "if (defaultValues != null && !defaultValues.isEmpty()) { if (valueList == null || valueList.isEmpty()) { valueList = defaultValues; } else { if (defaultValues.size() > valueList.size()) { valueList = new ArrayList(valueList); for (int i=valueList.size(); i<defaultValues.size(); i++) { valueList.add(defaultValues.get(i)); } }"
+      },
+      {
+        "txt": "} } return valueList == null ? Collections.EMPTY_LIST : valueList; } public List getUndefaultedValues(Option option) { List valueList = (List) values.get(option); if (valueList == null) { valueList = Collections.EMPTY_LIST; } return valueList;"
+      },
+      {
+        "txt": "} public Boolean getSwitch(final Option option, final Boolean defaultValue) { Boolean bool = (Boolean) switches.get(option); if (bool == null) { bool = defaultValue; } if (bool == null) { bool = (Boolean) this.defaultSwitches.get(option); }"
+      },
+      {
+        "txt": "return bool; } public String getProperty(final String property) { return getProperty(new PropertyOption(), property); } public void addProperty(final Option option, final String property, final String value) { Properties properties = (Properties) optionToProperties.get(option); if (properties == null) {"
+      },
+      {
+        "txt": "properties = new Properties(); optionToProperties.put(option, properties); } properties.setProperty(property, value); } public void addProperty(final String property, final String value) { addProperty(new PropertyOption(), property, value); } public String getProperty(final Option option, final String property,"
+      },
+      {
+        "txt": "final String defaultValue) { Properties properties = (Properties) optionToProperties.get(option); if (properties == null) { return defaultValue; } return properties.getProperty(property, defaultValue); } public Set getProperties(final Option option) { Properties properties = (Properties) optionToProperties.get(option); if (properties == null) {"
+      },
+      {
+        "txt": "return Collections.EMPTY_SET; } return Collections.unmodifiableSet(properties.keySet()); } public Set getProperties() { return getProperties(new PropertyOption()); } public boolean looksLikeOption(final String trigger) { for (final Iterator i = prefixes.iterator(); i.hasNext();) { final String prefix = (String) i.next();"
+      },
+      {
+        "txt": "if (trigger.startsWith(prefix)) { return true; } } return false; } public String toString() { final StringBuffer buffer = new StringBuffer(); for (final Iterator i = normalised.iterator(); i.hasNext();) { final String arg = (String) i.next();"
+      },
+      {
+        "txt": "if (arg.indexOf(' ') >= 0) { buffer.append(\"\\\"\").append(arg).append(\"\\\"\"); } else { buffer.append(arg); } if (i.hasNext()) { buffer.append(' '); } } return buffer.toString();"
+      },
+      {
+        "txt": "} public List getOptions() { return Collections.unmodifiableList(options); } public Set getOptionTriggers() { return Collections.unmodifiableSet(nameToOption.keySet()); } public void setDefaultValues(final Option option, final List defaults) { if (defaults == null) {"
+      },
+      {
+        "txt": "defaultValues.remove(option); } else { defaultValues.put(option, defaults); } } public void setDefaultSwitch(final Option option, final Boolean defaultSwitch) { if (defaultSwitch == null) { defaultSwitches.remove(option); } else {"
+      },
+      {
+        "txt": "defaultSwitches.put(option, defaultSwitch); } } public List getNormalised() { return Collections.unmodifiableList(normalised); }"
+      }
+    ]
+  },
+  {
+    "id": 111,
+    "file_path": "src/java/org/apache/commons/cli2/option/GroupImpl.java",
+    "start-bug-line": 92,
+    "end-bug-line": 92,
+    "bug": "",
+    "fix": "option.setParent(this);",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.cli2.option; import java.util.ArrayList; import java.util.Collection; import java.util.Collections; import java.util.Comparator; import java.util.HashSet; import java.util.Iterator; import java.util.List; import java.util.ListIterator; import java.util.Map;"
+      },
+      {
+        "txt": "import java.util.Set; import java.util.SortedMap; import java.util.TreeMap; import org.apache.commons.cli2.Argument; import org.apache.commons.cli2.DisplaySetting; import org.apache.commons.cli2.Group; import org.apache.commons.cli2.HelpLine; import org.apache.commons.cli2.Option; import org.apache.commons.cli2.OptionException; import org.apache.commons.cli2.WriteableCommandLine;"
+      },
+      {
+        "txt": "import org.apache.commons.cli2.resource.ResourceConstants; public class GroupImpl extends OptionImpl implements Group { private final String name; private final String description; private final List options; private final int minimum; private final int maximum; private final List anonymous; private final SortedMap optionMap;"
+      },
+      {
+        "txt": "private final Set prefixes; public GroupImpl(final List options, final String name, final String description, final int minimum, final int maximum) { super(0, false); this.name = name; this.description = description; this.minimum = minimum;"
+      },
+      {
+        "txt": "this.options = Collections.unmodifiableList(options); final List newAnonymous = new ArrayList(); final SortedMap newOptionMap = new TreeMap(ReverseStringComparator.getInstance()); final Set newPrefixes = new HashSet(); for (final Iterator i = options.iterator(); i.hasNext();) { final Option option = (Option) i.next(); <extra_id_0> if (option instanceof Argument) { i.remove(); newAnonymous.add(option); } else { final Set triggers = option.getTriggers(); for (Iterator j = triggers.iterator(); j.hasNext();) {"
+      },
+      {
+        "txt": "final Set triggers = option.getTriggers(); for (Iterator j = triggers.iterator(); j.hasNext();) { newOptionMap.put(j.next(), option); } newPrefixes.addAll(option.getPrefixes()); } } this.anonymous = Collections.unmodifiableList(newAnonymous); this.optionMap = Collections.unmodifiableSortedMap(newOptionMap); this.prefixes = Collections.unmodifiableSet(newPrefixes);"
+      },
+      {
+        "txt": "} public boolean canProcess(final WriteableCommandLine commandLine, final String arg) { if (arg == null) { return false; } if (optionMap.containsKey(arg)) { return true; } final Map tailMap = optionMap.tailMap(arg);"
+      },
+      {
+        "txt": "for (final Iterator iter = tailMap.values().iterator(); iter.hasNext();) { final Option option = (Option) iter.next(); if (option.canProcess(commandLine, arg)) { return true; } } if (commandLine.looksLikeOption(arg)) { return false; } if (anonymous.size() > 0) {"
+      },
+      {
+        "txt": "return true; } return false; } public Set getPrefixes() { return prefixes; } public Set getTriggers() { return optionMap.keySet(); }"
+      },
+      {
+        "txt": "public void process(final WriteableCommandLine commandLine, final ListIterator arguments) throws OptionException { String previous = null; while (arguments.hasNext()) { final String arg = (String) arguments.next(); if (arg == previous) { arguments.previous(); break; }"
+      },
+      {
+        "txt": "previous = arg; final Option opt = (Option) optionMap.get(arg); if (opt != null) { arguments.previous(); opt.process(commandLine, arguments); } else { if (commandLine.looksLikeOption(arg)) { final Collection values = optionMap.tailMap(arg).values(); boolean foundMemberOption = false;"
+      },
+      {
+        "txt": "for (Iterator i = values.iterator(); i.hasNext() && !foundMemberOption;) { final Option option = (Option) i.next(); if (option.canProcess(commandLine, arg)) { foundMemberOption = true; arguments.previous(); option.process(commandLine, arguments); } } if (!foundMemberOption) { arguments.previous();"
+      },
+      {
+        "txt": "return; } } // [END argument may be anonymous else { arguments.previous(); if (anonymous.isEmpty()) { break; } for (final Iterator i = anonymous.iterator(); i.hasNext();) { final Argument argument = (Argument) i.next();"
+      },
+      {
+        "txt": "if (argument.canProcess(commandLine, arguments)) { argument.process(commandLine, arguments); } } } // [END argument is NOT anonymous } // [END option NOT found } // [END process each command line token } public void validate(final WriteableCommandLine commandLine) throws OptionException {"
+      },
+      {
+        "txt": "int present = 0; Option unexpected = null; for (final Iterator i = options.iterator(); i.hasNext();) { final Option option = (Option) i.next(); boolean validate = option.isRequired() || option instanceof Group; if (commandLine.hasOption(option)) { if (++present > maximum) { unexpected = option; break; }"
+      },
+      {
+        "txt": "validate = true; } if (validate) { option.validate(commandLine); } } if (unexpected != null) { throw new OptionException(this, ResourceConstants.UNEXPECTED_TOKEN, unexpected.getPreferredName()); }"
+      },
+      {
+        "txt": "if (present < minimum) { throw new OptionException(this, ResourceConstants.MISSING_OPTION); } for (final Iterator i = anonymous.iterator(); i.hasNext();) { final Option option = (Option) i.next(); option.validate(commandLine); } } public String getPreferredName() { return name;"
+      },
+      {
+        "txt": "} public String getDescription() { return description; } public void appendUsage(final StringBuffer buffer, final Set helpSettings, final Comparator comp) { appendUsage(buffer, helpSettings, comp, \"|\"); } public void appendUsage(final StringBuffer buffer,"
+      },
+      {
+        "txt": "final Set helpSettings, final Comparator comp, final String separator) { final Set helpSettingsCopy = new HashSet(helpSettings); final boolean optional = (minimum == 0) && helpSettingsCopy.contains(DisplaySetting.DISPLAY_OPTIONAL); final boolean expanded = (name == null) || helpSettingsCopy.contains(DisplaySetting.DISPLAY_GROUP_EXPANDED); final boolean named = !expanded ||"
+      },
+      {
+        "txt": "((name != null) && helpSettingsCopy.contains(DisplaySetting.DISPLAY_GROUP_NAME)); final boolean arguments = helpSettingsCopy.contains(DisplaySetting.DISPLAY_GROUP_ARGUMENT); final boolean outer = helpSettingsCopy.contains(DisplaySetting.DISPLAY_GROUP_OUTER); helpSettingsCopy.remove(DisplaySetting.DISPLAY_GROUP_OUTER); final boolean both = named && expanded; if (optional) { buffer.append('['); } if (named) { buffer.append(name);"
+      },
+      {
+        "txt": "} if (both) { buffer.append(\" (\"); } if (expanded) { final Set childSettings; if (!helpSettingsCopy.contains(DisplaySetting.DISPLAY_GROUP_EXPANDED)) { childSettings = DisplaySetting.NONE; } else { childSettings = new HashSet(helpSettingsCopy);"
+      },
+      {
+        "txt": "childSettings.remove(DisplaySetting.DISPLAY_OPTIONAL); } final List list; if (comp == null) { list = options; } else { list = new ArrayList(options); Collections.sort(list, comp); } for (final Iterator i = list.iterator(); i.hasNext();) {"
+      },
+      {
+        "txt": "final Option option = (Option) i.next(); option.appendUsage(buffer, childSettings, comp); if (i.hasNext()) { buffer.append(separator); } } } if (both) { buffer.append(')'); }"
+      },
+      {
+        "txt": "if (optional && outer) { buffer.append(']'); } if (arguments) { for (final Iterator i = anonymous.iterator(); i.hasNext();) { buffer.append(' '); final Option option = (Option) i.next(); option.appendUsage(buffer, helpSettingsCopy, comp); } }"
+      },
+      {
+        "txt": "if (optional && !outer) { buffer.append(']'); } } public List helpLines(final int depth, final Set helpSettings, final Comparator comp) { final List helpLines = new ArrayList(); if (helpSettings.contains(DisplaySetting.DISPLAY_GROUP_NAME)) { final HelpLine helpLine = new HelpLineImpl(this, depth);"
+      },
+      {
+        "txt": "helpLines.add(helpLine); } if (helpSettings.contains(DisplaySetting.DISPLAY_GROUP_EXPANDED)) { final List list; if (comp == null) { list = options; } else { list = new ArrayList(options); Collections.sort(list, comp); }"
+      },
+      {
+        "txt": "for (final Iterator i = list.iterator(); i.hasNext();) { final Option option = (Option) i.next(); helpLines.addAll(option.helpLines(depth + 1, helpSettings, comp)); } } if (helpSettings.contains(DisplaySetting.DISPLAY_GROUP_ARGUMENT)) { for (final Iterator i = anonymous.iterator(); i.hasNext();) { final Option option = (Option) i.next(); helpLines.addAll(option.helpLines(depth + 1, helpSettings, comp)); }"
+      },
+      {
+        "txt": "} return helpLines; } public List getOptions() { return options; } public List getAnonymous() { return anonymous; } public Option findOption(final String trigger) {"
+      },
+      {
+        "txt": "final Iterator i = getOptions().iterator(); while (i.hasNext()) { final Option option = (Option) i.next(); final Option found = option.findOption(trigger); if (found != null) { return found; } } return null; }"
+      },
+      {
+        "txt": "public int getMinimum() { return minimum; } public int getMaximum() { return maximum; } public boolean isRequired() { return getMinimum() > 0; } public void defaults(final WriteableCommandLine commandLine) {"
+      },
+      {
+        "txt": "super.defaults(commandLine); for (final Iterator i = options.iterator(); i.hasNext();) { final Option option = (Option) i.next(); option.defaults(commandLine); } for (final Iterator i = anonymous.iterator(); i.hasNext();) { final Option option = (Option) i.next(); option.defaults(commandLine); } }"
+      },
+      {
+        "txt": "} class ReverseStringComparator implements Comparator { private static final Comparator instance = new ReverseStringComparator(); private ReverseStringComparator() { } public static final Comparator getInstance() { return instance; } public int compare(final Object o1, final Object o2) {"
+      },
+      {
+        "txt": "final String s1 = (String) o1; final String s2 = (String) o2; return -s1.compareTo(s2); }"
+      }
+    ]
+  },
+  {
+    "id": 112,
+    "file_path": "src/java/org/apache/commons/cli2/option/OptionImpl.java",
+    "start-bug-line": 36,
+    "end-bug-line": 36,
+    "bug": "",
+    "fix": "private Option parent;",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.cli2.option; import java.util.Iterator; import java.util.ListIterator; import java.util.Set; import org.apache.commons.cli2.DisplaySetting;"
+      },
+      {
+        "txt": "import org.apache.commons.cli2.WriteableCommandLine; import org.apache.commons.cli2.resource.ResourceConstants; import org.apache.commons.cli2.resource.ResourceHelper; public abstract class OptionImpl implements Option { private final int id; private final boolean required; <extra_id_0> public OptionImpl(final int id, final boolean required) { this.id = id; this.required = required; } public boolean canProcess(final WriteableCommandLine commandLine,"
+      },
+      {
+        "txt": "} public boolean canProcess(final WriteableCommandLine commandLine, final ListIterator arguments) { if (arguments.hasNext()) { final String argument = (String) arguments.next(); arguments.previous(); return canProcess(commandLine, argument); } else { return false; }"
+      },
+      {
+        "txt": "} public String toString() { final StringBuffer buffer = new StringBuffer(); appendUsage(buffer, DisplaySetting.ALL, null); return buffer.toString(); } public int getId() { return id; } public boolean equals(final Object thatObj) {"
+      },
+      {
+        "txt": "if (thatObj instanceof OptionImpl) { final OptionImpl that = (OptionImpl) thatObj; return (getId() == that.getId()) && equals(getPreferredName(), that.getPreferredName()) && equals(getDescription(), that.getDescription()) && equals(getPrefixes(), that.getPrefixes()) && equals(getTriggers(), that.getTriggers()); } else { return false; }"
+      },
+      {
+        "txt": "} private boolean equals(Object left, Object right) { if ((left == null) && (right == null)) { return true; } else if ((left == null) || (right == null)) { return false; } else { return left.equals(right); }"
+      },
+      {
+        "txt": "} public int hashCode() { int hashCode = getId(); if (getPreferredName() != null) { hashCode = (hashCode * 37) + getPreferredName().hashCode(); } if (getDescription() != null) { hashCode = (hashCode * 37) + getDescription().hashCode(); } hashCode = (hashCode * 37) + getPrefixes().hashCode();"
+      },
+      {
+        "txt": "hashCode = (hashCode * 37) + getTriggers().hashCode(); return hashCode; } public Option findOption(String trigger) { if (getTriggers().contains(trigger)) { return this; } else { return null; } }"
+      },
+      {
+        "txt": "public boolean isRequired() { return required; } public void defaults(final WriteableCommandLine commandLine) { } protected void checkPrefixes(final Set prefixes) { if (prefixes.isEmpty()) { return; } checkPrefix(prefixes, getPreferredName());"
+      },
+      {
+        "txt": "this.getTriggers(); for (final Iterator i = getTriggers().iterator(); i.hasNext();) { checkPrefix(prefixes, (String) i.next()); } } private void checkPrefix(final Set prefixes, final String trigger) { for (final Iterator i = prefixes.iterator(); i.hasNext();) { String prefix = (String) i.next(); if (trigger.startsWith(prefix)) {"
+      },
+      {
+        "txt": "return; } } final ResourceHelper helper = ResourceHelper.getResourceHelper(); final String message = helper.getMessage(ResourceConstants.OPTION_TRIGGER_NEEDS_PREFIX, trigger, prefixes.toString()); throw new IllegalArgumentException(message); }"
+      }
+    ]
+  },
+  {
+    "id": 113,
+    "file_path": "src/java/org/apache/commons/cli2/option/OptionImpl.java",
+    "start-bug-line": 128,
+    "end-bug-line": 128,
+    "bug": "",
+    "fix": "public Option getParent() { return parent; }",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.cli2.option; import java.util.Iterator; import java.util.ListIterator; import java.util.Set;"
+      },
+      {
+        "txt": "import org.apache.commons.cli2.DisplaySetting; import org.apache.commons.cli2.Option; import org.apache.commons.cli2.WriteableCommandLine; import org.apache.commons.cli2.resource.ResourceConstants; import org.apache.commons.cli2.resource.ResourceHelper; public abstract class OptionImpl implements Option { private final int id; private final boolean required; public OptionImpl(final int id, final boolean required) {"
+      },
+      {
+        "txt": "this.id = id; this.required = required; } public boolean canProcess(final WriteableCommandLine commandLine, final ListIterator arguments) { if (arguments.hasNext()) { final String argument = (String) arguments.next(); arguments.previous(); return canProcess(commandLine, argument); } else {"
+      },
+      {
+        "txt": "return false; } } public String toString() { final StringBuffer buffer = new StringBuffer(); appendUsage(buffer, DisplaySetting.ALL, null); return buffer.toString(); } public int getId() { return id;"
+      },
+      {
+        "txt": "} public boolean equals(final Object thatObj) { if (thatObj instanceof OptionImpl) { final OptionImpl that = (OptionImpl) thatObj; return (getId() == that.getId()) && equals(getPreferredName(), that.getPreferredName()) && equals(getDescription(), that.getDescription()) && equals(getPrefixes(), that.getPrefixes()) && equals(getTriggers(), that.getTriggers()); } else {"
+      },
+      {
+        "txt": "return false; } } private boolean equals(Object left, Object right) { if ((left == null) && (right == null)) { return true; } else if ((left == null) || (right == null)) { return false; } else {"
+      },
+      {
+        "txt": "return left.equals(right); } } public int hashCode() { int hashCode = getId(); if (getPreferredName() != null) { hashCode = (hashCode * 37) + getPreferredName().hashCode(); } if (getDescription() != null) { hashCode = (hashCode * 37) + getDescription().hashCode();"
+      },
+      {
+        "txt": "} hashCode = (hashCode * 37) + getPrefixes().hashCode(); hashCode = (hashCode * 37) + getTriggers().hashCode(); return hashCode; } public Option findOption(String trigger) { if (getTriggers().contains(trigger)) { return this; } else { return null;"
+      },
+      {
+        "txt": "} public boolean isRequired() { return required; } public void defaults(final WriteableCommandLine commandLine) { } <extra_id_0> protected void checkPrefixes(final Set prefixes) { if (prefixes.isEmpty()) { return; } checkPrefix(prefixes, getPreferredName()); this.getTriggers();"
+      },
+      {
+        "txt": "checkPrefix(prefixes, getPreferredName()); this.getTriggers(); for (final Iterator i = getTriggers().iterator(); i.hasNext();) { checkPrefix(prefixes, (String) i.next()); } } private void checkPrefix(final Set prefixes, final String trigger) { for (final Iterator i = prefixes.iterator(); i.hasNext();) { String prefix = (String) i.next();"
+      },
+      {
+        "txt": "if (trigger.startsWith(prefix)) { return; } } final ResourceHelper helper = ResourceHelper.getResourceHelper(); final String message = helper.getMessage(ResourceConstants.OPTION_TRIGGER_NEEDS_PREFIX, trigger, prefixes.toString()); throw new IllegalArgumentException(message); }"
+      }
+    ]
+  },
+  {
+    "id": 114,
+    "file_path": "src/java/org/apache/commons/cli2/option/OptionImpl.java",
+    "start-bug-line": 129,
+    "end-bug-line": 129,
+    "bug": "",
+    "fix": "public void setParent(Option parent) { this.parent = parent; }",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.cli2.option; import java.util.Iterator; import java.util.ListIterator; import java.util.Set;"
+      },
+      {
+        "txt": "import org.apache.commons.cli2.DisplaySetting; import org.apache.commons.cli2.Option; import org.apache.commons.cli2.WriteableCommandLine; import org.apache.commons.cli2.resource.ResourceConstants; import org.apache.commons.cli2.resource.ResourceHelper; public abstract class OptionImpl implements Option { private final int id; private final boolean required; public OptionImpl(final int id, final boolean required) {"
+      },
+      {
+        "txt": "this.id = id; this.required = required; } public boolean canProcess(final WriteableCommandLine commandLine, final ListIterator arguments) { if (arguments.hasNext()) { final String argument = (String) arguments.next(); arguments.previous(); return canProcess(commandLine, argument); } else {"
+      },
+      {
+        "txt": "return false; } } public String toString() { final StringBuffer buffer = new StringBuffer(); appendUsage(buffer, DisplaySetting.ALL, null); return buffer.toString(); } public int getId() { return id;"
+      },
+      {
+        "txt": "} public boolean equals(final Object thatObj) { if (thatObj instanceof OptionImpl) { final OptionImpl that = (OptionImpl) thatObj; return (getId() == that.getId()) && equals(getPreferredName(), that.getPreferredName()) && equals(getDescription(), that.getDescription()) && equals(getPrefixes(), that.getPrefixes()) && equals(getTriggers(), that.getTriggers()); } else {"
+      },
+      {
+        "txt": "return false; } } private boolean equals(Object left, Object right) { if ((left == null) && (right == null)) { return true; } else if ((left == null) || (right == null)) { return false; } else {"
+      },
+      {
+        "txt": "return left.equals(right); } } public int hashCode() { int hashCode = getId(); if (getPreferredName() != null) { hashCode = (hashCode * 37) + getPreferredName().hashCode(); } if (getDescription() != null) { hashCode = (hashCode * 37) + getDescription().hashCode();"
+      },
+      {
+        "txt": "} hashCode = (hashCode * 37) + getPrefixes().hashCode(); hashCode = (hashCode * 37) + getTriggers().hashCode(); return hashCode; } public Option findOption(String trigger) { if (getTriggers().contains(trigger)) { return this; } else { return null;"
+      },
+      {
+        "txt": "} public boolean isRequired() { return required; } public void defaults(final WriteableCommandLine commandLine) { } <extra_id_0> protected void checkPrefixes(final Set prefixes) { if (prefixes.isEmpty()) { return; } checkPrefix(prefixes, getPreferredName()); this.getTriggers();"
+      },
+      {
+        "txt": "checkPrefix(prefixes, getPreferredName()); this.getTriggers(); for (final Iterator i = getTriggers().iterator(); i.hasNext();) { checkPrefix(prefixes, (String) i.next()); } } private void checkPrefix(final Set prefixes, final String trigger) { for (final Iterator i = prefixes.iterator(); i.hasNext();) { String prefix = (String) i.next();"
+      },
+      {
+        "txt": "if (trigger.startsWith(prefix)) { return; } } final ResourceHelper helper = ResourceHelper.getResourceHelper(); final String message = helper.getMessage(ResourceConstants.OPTION_TRIGGER_NEEDS_PREFIX, trigger, prefixes.toString()); throw new IllegalArgumentException(message); }"
+      }
+    ]
+  }
+]

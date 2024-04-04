@@ -1,0 +1,110 @@
+[
+  {
+    "id": 2138,
+    "file_path": "src/main/java/org/jsoup/nodes/Attribute.java",
+    "start-bug-line": 88,
+    "end-bug-line": 88,
+    "bug": "String oldVal = parent.get(this.key);",
+    "fix": "String oldVal = this.val;",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.jsoup.nodes; import org.jsoup.SerializationException; import org.jsoup.internal.StringUtil; import org.jsoup.helper.Validate; import java.io.IOException; import java.util.Arrays; import java.util.Map; A single key + value attribute. (Only used for presentation.)"
+      },
+      {
+        "txt": "public class Attribute implements Map.Entry<String, String>, Cloneable { private static final String[] booleanAttributes = { \"allowfullscreen\", \"async\", \"autofocus\", \"checked\", \"compact\", \"declare\", \"default\", \"defer\", \"disabled\", \"formnovalidate\", \"hidden\", \"inert\", \"ismap\", \"itemscope\", \"multiple\", \"muted\", \"nohref\", \"noresize\", \"noshade\", \"novalidate\", \"nowrap\", \"open\", \"readonly\", \"required\", \"reversed\", \"seamless\", \"selected\", \"sortable\", \"truespeed\", \"typemustmatch\" }; private String key; private String val; Attributes parent; // used to update the holding Attributes when the key / value is changed via this interface"
+      },
+      {
+        "txt": "public Attribute(String key, String value) { this(key, value, null); } public Attribute(String key, String val, Attributes parent) { Validate.notNull(key); key = key.trim(); Validate.notEmpty(key); // trimming could potentially make empty, so validate here this.key = key; this.val = val; this.parent = parent;"
+      },
+      {
+        "txt": "} Get the attribute key. @return the attribute key public String getKey() { return key; } Set the attribute key; case is preserved. @param key the new key; must not be null public void setKey(String key) { Validate.notNull(key);"
+      },
+      {
+        "txt": "key = key.trim(); Validate.notEmpty(key); // trimming could potentially make empty, so validate here if (parent != null) { int i = parent.indexOfKey(this.key); if (i != Attributes.NotFound) parent.keys[i] = key; } this.key = key; } Get the attribute value."
+      },
+      {
+        "txt": "public String getValue() { return Attributes.checkNotNull(val); } Set the attribute value. @param val the new attribute value; must not be null public String setValue(String val) { <extra_id_0> if (parent != null) { int i = parent.indexOfKey(this.key); if (i != Attributes.NotFound) parent.vals[i] = val; } this.val = val;"
+      },
+      {
+        "txt": "} this.val = val; return Attributes.checkNotNull(oldVal); } Get the HTML representation of this attribute; e.g. {@code href=\"index.html\"}. @return HTML public String html() { StringBuilder sb = StringUtil.borrowBuilder(); try { html(sb, (new Document(\"\")).outputSettings());"
+      },
+      {
+        "txt": "} catch(IOException exception) { throw new SerializationException(exception); } return StringUtil.releaseBuilder(sb); } protected static void html(String key, String val, Appendable accum, Document.OutputSettings out) throws IOException { accum.append(key); if (!shouldCollapseAttribute(key, val, out)) { accum.append(\"=\\\"\"); Entities.escape(accum, Attributes.checkNotNull(val) , out, true, false, false);"
+      },
+      {
+        "txt": "accum.append('\"'); } } protected void html(Appendable accum, Document.OutputSettings out) throws IOException { html(key, val, accum, out); } Get the string representation of this attribute, implemented as {@link #html()}. @return string @Override public String toString() {"
+      },
+      {
+        "txt": "return html(); } public static Attribute createFromEncoded(String unencodedKey, String encodedValue) { String value = Entities.unescape(encodedValue, true); return new Attribute(unencodedKey, value, null); // parent will get set when Put } protected boolean isDataAttribute() { return isDataAttribute(key); } protected static boolean isDataAttribute(String key) {"
+      },
+      {
+        "txt": "return key.startsWith(Attributes.dataPrefix) && key.length() > Attributes.dataPrefix.length(); } protected final boolean shouldCollapseAttribute(Document.OutputSettings out) { return shouldCollapseAttribute(key, val, out); } protected static boolean shouldCollapseAttribute(final String key, final String val, final Document.OutputSettings out) { return ( out.syntax() == Document.OutputSettings.Syntax.html && (val == null || (\"\".equals(val) || val.equalsIgnoreCase(key)) && Attribute.isBooleanAttribute(key))); }"
+      },
+      {
+        "txt": "protected boolean isBooleanAttribute() { return Arrays.binarySearch(booleanAttributes, key) >= 0 || val == null; } protected static boolean isBooleanAttribute(final String key) { return Arrays.binarySearch(booleanAttributes, key) >= 0; } @Override public boolean equals(Object o) { // note parent not considered if (this == o) return true; if (o == null || getClass() != o.getClass()) return false;"
+      },
+      {
+        "txt": "Attribute attribute = (Attribute) o; if (key != null ? !key.equals(attribute.key) : attribute.key != null) return false; return val != null ? val.equals(attribute.val) : attribute.val == null; } @Override public int hashCode() { // note parent not considered int result = key != null ? key.hashCode() : 0; result = 31 * result + (val != null ? val.hashCode() : 0); return result; }"
+      },
+      {
+        "txt": "@Override public Attribute clone() { try { return (Attribute) super.clone(); } catch (CloneNotSupportedException e) { throw new RuntimeException(e); } }"
+      }
+    ]
+  },
+  {
+    "id": 2139,
+    "file_path": "src/main/java/org/jsoup/nodes/Attribute.java",
+    "start-bug-line": 90,
+    "end-bug-line": 90,
+    "bug": "",
+    "fix": "oldVal = parent.get(this.key); // trust the container more",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.jsoup.nodes; import org.jsoup.SerializationException; import org.jsoup.internal.StringUtil; import org.jsoup.helper.Validate; import java.io.IOException; import java.util.Arrays; import java.util.Map; A single key + value attribute. (Only used for presentation.) public class Attribute implements Map.Entry<String, String>, Cloneable { private static final String[] booleanAttributes = {"
+      },
+      {
+        "txt": "\"allowfullscreen\", \"async\", \"autofocus\", \"checked\", \"compact\", \"declare\", \"default\", \"defer\", \"disabled\", \"formnovalidate\", \"hidden\", \"inert\", \"ismap\", \"itemscope\", \"multiple\", \"muted\", \"nohref\", \"noresize\", \"noshade\", \"novalidate\", \"nowrap\", \"open\", \"readonly\", \"required\", \"reversed\", \"seamless\", \"selected\", \"sortable\", \"truespeed\", \"typemustmatch\" }; private String key; private String val; Attributes parent; // used to update the holding Attributes when the key / value is changed via this interface public Attribute(String key, String value) { this(key, value, null);"
+      },
+      {
+        "txt": "} public Attribute(String key, String val, Attributes parent) { Validate.notNull(key); key = key.trim(); Validate.notEmpty(key); // trimming could potentially make empty, so validate here this.key = key; this.val = val; this.parent = parent; } Get the attribute key."
+      },
+      {
+        "txt": "@return the attribute key public String getKey() { return key; } Set the attribute key; case is preserved. @param key the new key; must not be null public void setKey(String key) { Validate.notNull(key); key = key.trim(); Validate.notEmpty(key); // trimming could potentially make empty, so validate here"
+      },
+      {
+        "txt": "if (parent != null) { int i = parent.indexOfKey(this.key); if (i != Attributes.NotFound) parent.keys[i] = key; } this.key = key; } Get the attribute value. @return the attribute value public String getValue() {"
+      },
+      {
+        "txt": "} Set the attribute value. @param val the new attribute value; must not be null public String setValue(String val) { String oldVal = parent.get(this.key); if (parent != null) { <extra_id_0> if (i != Attributes.NotFound) parent.vals[i] = val; } this.val = val; return Attributes.checkNotNull(oldVal); }"
+      },
+      {
+        "txt": "return Attributes.checkNotNull(oldVal); } Get the HTML representation of this attribute; e.g. {@code href=\"index.html\"}. @return HTML public String html() { StringBuilder sb = StringUtil.borrowBuilder(); try { html(sb, (new Document(\"\")).outputSettings()); } catch(IOException exception) { throw new SerializationException(exception);"
+      },
+      {
+        "txt": "} return StringUtil.releaseBuilder(sb); } protected static void html(String key, String val, Appendable accum, Document.OutputSettings out) throws IOException { accum.append(key); if (!shouldCollapseAttribute(key, val, out)) { accum.append(\"=\\\"\"); Entities.escape(accum, Attributes.checkNotNull(val) , out, true, false, false); accum.append('\"'); }"
+      },
+      {
+        "txt": "} protected void html(Appendable accum, Document.OutputSettings out) throws IOException { html(key, val, accum, out); } Get the string representation of this attribute, implemented as {@link #html()}. @return string @Override public String toString() { return html(); }"
+      },
+      {
+        "txt": "public static Attribute createFromEncoded(String unencodedKey, String encodedValue) { String value = Entities.unescape(encodedValue, true); return new Attribute(unencodedKey, value, null); // parent will get set when Put } protected boolean isDataAttribute() { return isDataAttribute(key); } protected static boolean isDataAttribute(String key) { return key.startsWith(Attributes.dataPrefix) && key.length() > Attributes.dataPrefix.length(); }"
+      },
+      {
+        "txt": "protected final boolean shouldCollapseAttribute(Document.OutputSettings out) { return shouldCollapseAttribute(key, val, out); } protected static boolean shouldCollapseAttribute(final String key, final String val, final Document.OutputSettings out) { return ( out.syntax() == Document.OutputSettings.Syntax.html && (val == null || (\"\".equals(val) || val.equalsIgnoreCase(key)) && Attribute.isBooleanAttribute(key))); } protected boolean isBooleanAttribute() { return Arrays.binarySearch(booleanAttributes, key) >= 0 || val == null;"
+      },
+      {
+        "txt": "} protected static boolean isBooleanAttribute(final String key) { return Arrays.binarySearch(booleanAttributes, key) >= 0; } @Override public boolean equals(Object o) { // note parent not considered if (this == o) return true; if (o == null || getClass() != o.getClass()) return false; Attribute attribute = (Attribute) o; if (key != null ? !key.equals(attribute.key) : attribute.key != null) return false;"
+      },
+      {
+        "txt": "return val != null ? val.equals(attribute.val) : attribute.val == null; } @Override public int hashCode() { // note parent not considered int result = key != null ? key.hashCode() : 0; result = 31 * result + (val != null ? val.hashCode() : 0); return result; } @Override public Attribute clone() {"
+      },
+      {
+        "txt": "try { return (Attribute) super.clone(); } catch (CloneNotSupportedException e) { throw new RuntimeException(e); } }"
+      }
+    ]
+  }
+]

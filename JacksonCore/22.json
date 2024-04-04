@@ -1,0 +1,2000 @@
+[
+  {
+    "id": 1285,
+    "file_path": "src/main/java/com/fasterxml/jackson/core/filter/FilteringParserDelegate.java",
+    "start-bug-line": 417,
+    "end-bug-line": 417,
+    "bug": "if (_includePath) {",
+    "fix": "if (_verifyAllowedMatches() && _includePath) {",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.core.filter; import java.io.IOException; import java.io.OutputStream; import java.math.BigDecimal; import java.math.BigInteger; import com.fasterxml.jackson.core.*; import com.fasterxml.jackson.core.util.JsonParserDelegate; import static com.fasterxml.jackson.core.JsonTokenId.*; public class FilteringParserDelegate extends JsonParserDelegate"
+      },
+      {
+        "txt": "{ protected TokenFilter rootFilter; protected boolean _allowMultipleMatches; protected boolean _includePath; @Deprecated protected boolean _includeImmediateParent; protected JsonToken _currToken; protected JsonToken _lastClearedToken; protected TokenFilterContext _headContext; protected TokenFilterContext _exposedContext;"
+      },
+      {
+        "txt": "protected TokenFilter _itemFilter; protected int _matchCount; public FilteringParserDelegate(JsonParser p, TokenFilter f, boolean includePath, boolean allowMultipleMatches) { super(p); rootFilter = f; _itemFilter = f; _headContext = TokenFilterContext.createRootContext(f); _includePath = includePath;"
+      },
+      {
+        "txt": "_allowMultipleMatches = allowMultipleMatches; } public TokenFilter getFilter() { return rootFilter; } public int getMatchCount() { return _matchCount; } @Override public JsonToken getCurrentToken() { return _currToken; } @Override public JsonToken currentToken() { return _currToken; } @Override public final int getCurrentTokenId() { final JsonToken t = _currToken;"
+      },
+      {
+        "txt": "return (t == null) ? JsonTokenId.ID_NO_TOKEN : t.id(); } @Override public final int currentTokenId() { final JsonToken t = _currToken; return (t == null) ? JsonTokenId.ID_NO_TOKEN : t.id(); } @Override public boolean hasCurrentToken() { return _currToken != null; } @Override public boolean hasTokenId(int id) { final JsonToken t = _currToken; if (t == null) {"
+      },
+      {
+        "txt": "return (JsonTokenId.ID_NO_TOKEN == id); } return t.id() == id; } @Override public final boolean hasToken(JsonToken t) { return (_currToken == t); } @Override public boolean isExpectedStartArrayToken() { return _currToken == JsonToken.START_ARRAY; } @Override public boolean isExpectedStartObjectToken() { return _currToken == JsonToken.START_OBJECT; } @Override public JsonLocation getCurrentLocation() { return delegate.getCurrentLocation(); }"
+      },
+      {
+        "txt": "@Override public JsonStreamContext getParsingContext() { return _filterContext(); } @Override public String getCurrentName() throws IOException { JsonStreamContext ctxt = _filterContext(); if (_currToken == JsonToken.START_OBJECT || _currToken == JsonToken.START_ARRAY) { JsonStreamContext parent = ctxt.getParent(); return (parent == null) ? null : parent.getCurrentName();"
+      },
+      {
+        "txt": "} return ctxt.getCurrentName(); } @Override public void clearCurrentToken() { if (_currToken != null) { _lastClearedToken = _currToken; _currToken = null; } }"
+      },
+      {
+        "txt": "@Override public JsonToken getLastClearedToken() { return _lastClearedToken; } @Override public void overrideCurrentName(String name) { throw new UnsupportedOperationException(\"Can not currently override name during filtering read\"); } @Override public JsonToken nextToken() throws IOException { if (!_allowMultipleMatches && (_currToken != null) && (_exposedContext == null)) {"
+      },
+      {
+        "txt": "if (_currToken.isScalarValue() && !_headContext.isStartHandled() && !_includePath && (_itemFilter == TokenFilter.INCLUDE_ALL)) { return (_currToken = null); } } TokenFilterContext ctxt = _exposedContext; if (ctxt != null) { while (true) { JsonToken t = ctxt.nextTokenToRead(); if (t != null) {"
+      },
+      {
+        "txt": "_currToken = t; return t; } if (ctxt == _headContext) { _exposedContext = null; if (ctxt.inArray()) { t = delegate.getCurrentToken(); _currToken = t; return t; }"
+      },
+      {
+        "txt": "t = delegate.getCurrentToken(); if (t != JsonToken.FIELD_NAME) { _currToken = t; return t; } break; } ctxt = _headContext.findChildOf(ctxt); _exposedContext = ctxt; if (ctxt == null) { // should never occur"
+      },
+      {
+        "txt": "throw _constructError(\"Unexpected problem: chain of filtered context broken\"); } } } JsonToken t = delegate.nextToken(); if (t == null) { _currToken = t; return t; } TokenFilter f;"
+      },
+      {
+        "txt": "switch (t.id()) { case ID_START_ARRAY: f = _itemFilter; if (f == TokenFilter.INCLUDE_ALL) { _headContext = _headContext.createChildArrayContext(f, true); return (_currToken = t); } if (f == null) { // does this occur? delegate.skipChildren(); break;"
+      },
+      {
+        "txt": "} f = _headContext.checkValue(f); if (f == null) { delegate.skipChildren(); break; } if (f != TokenFilter.INCLUDE_ALL) { f = f.filterStartArray(); } _itemFilter = f;"
+      },
+      {
+        "txt": "if (f == TokenFilter.INCLUDE_ALL) { _headContext = _headContext.createChildArrayContext(f, true); return (_currToken = t); } _headContext = _headContext.createChildArrayContext(f, false); if (_includePath) { t = _nextTokenWithBuffering(_headContext); if (t != null) { _currToken = t; return t;"
+      },
+      {
+        "txt": "} } break; case ID_START_OBJECT: f = _itemFilter; if (f == TokenFilter.INCLUDE_ALL) { _headContext = _headContext.createChildObjectContext(f, true); return (_currToken = t); } if (f == null) { // does this occur?"
+      },
+      {
+        "txt": "delegate.skipChildren(); break; } f = _headContext.checkValue(f); if (f == null) { delegate.skipChildren(); break; } if (f != TokenFilter.INCLUDE_ALL) { f = f.filterStartObject();"
+      },
+      {
+        "txt": "} _itemFilter = f; if (f == TokenFilter.INCLUDE_ALL) { _headContext = _headContext.createChildObjectContext(f, true); return (_currToken = t); } _headContext = _headContext.createChildObjectContext(f, false); if (_includePath) { t = _nextTokenWithBuffering(_headContext); if (t != null) {"
+      },
+      {
+        "txt": "_currToken = t; return t; } } break; case ID_END_ARRAY: case ID_END_OBJECT: { boolean returnEnd = _headContext.isStartHandled(); f = _headContext.getFilter();"
+      },
+      {
+        "txt": "if ((f != null) && (f != TokenFilter.INCLUDE_ALL)) { f.filterFinishArray(); } _headContext = _headContext.getParent(); _itemFilter = _headContext.getFilter(); if (returnEnd) { return (_currToken = t); } } break;"
+      },
+      {
+        "txt": "case ID_FIELD_NAME: { final String name = delegate.getCurrentName(); f = _headContext.setFieldName(name); if (f == TokenFilter.INCLUDE_ALL) { _itemFilter = f; if (!_includePath) { if (_includeImmediateParent && !_headContext.isStartHandled()) { t = _headContext.nextTokenToRead(); // returns START_OBJECT but also marks it handled _exposedContext = _headContext;"
+      },
+      {
+        "txt": "} } return (_currToken = t); } if (f == null) { delegate.nextToken(); delegate.skipChildren(); break; } f = f.includeProperty(name);"
+      },
+      {
+        "txt": "delegate.nextToken(); delegate.skipChildren(); break; } _itemFilter = f; if (f == TokenFilter.INCLUDE_ALL) { <extra_id_0> return (_currToken = t); } } if (_includePath) { t = _nextTokenWithBuffering(_headContext); if (t != null) {"
+      },
+      {
+        "txt": "t = _nextTokenWithBuffering(_headContext); if (t != null) { _currToken = t; return t; } } break; } default: // scalar value f = _itemFilter;"
+      },
+      {
+        "txt": "if (f == TokenFilter.INCLUDE_ALL) { return (_currToken = t); } if (f != null) { f = _headContext.checkValue(f); if ((f == TokenFilter.INCLUDE_ALL) || ((f != null) && f.includeValue(delegate))) { return (_currToken = t); } }"
+      },
+      {
+        "txt": "break; } return _nextToken2(); } protected final JsonToken _nextToken2() throws IOException { main_loop: while (true) { JsonToken t = delegate.nextToken(); if (t == null) { // is this even legal?"
+      },
+      {
+        "txt": "_currToken = t; return t; } TokenFilter f; switch (t.id()) { case ID_START_ARRAY: f = _itemFilter; if (f == TokenFilter.INCLUDE_ALL) { _headContext = _headContext.createChildArrayContext(f, true); return (_currToken = t);"
+      },
+      {
+        "txt": "} if (f == null) { // does this occur? delegate.skipChildren(); continue main_loop; } f = _headContext.checkValue(f); if (f == null) { delegate.skipChildren(); continue main_loop; }"
+      },
+      {
+        "txt": "if (f != TokenFilter.INCLUDE_ALL) { f = f.filterStartArray(); } _itemFilter = f; if (f == TokenFilter.INCLUDE_ALL) { _headContext = _headContext.createChildArrayContext(f, true); return (_currToken = t); } _headContext = _headContext.createChildArrayContext(f, false); if (_includePath) {"
+      },
+      {
+        "txt": "t = _nextTokenWithBuffering(_headContext); if (t != null) { _currToken = t; return t; } } continue main_loop; case ID_START_OBJECT: f = _itemFilter; if (f == TokenFilter.INCLUDE_ALL) {"
+      },
+      {
+        "txt": "_headContext = _headContext.createChildObjectContext(f, true); return (_currToken = t); } if (f == null) { // does this occur? delegate.skipChildren(); continue main_loop; } f = _headContext.checkValue(f); if (f == null) { delegate.skipChildren();"
+      },
+      {
+        "txt": "continue main_loop; } if (f != TokenFilter.INCLUDE_ALL) { f = f.filterStartObject(); } _itemFilter = f; if (f == TokenFilter.INCLUDE_ALL) { _headContext = _headContext.createChildObjectContext(f, true); return (_currToken = t); }"
+      },
+      {
+        "txt": "_headContext = _headContext.createChildObjectContext(f, false); if (_includePath) { t = _nextTokenWithBuffering(_headContext); if (t != null) { _currToken = t; return t; } } continue main_loop; case ID_END_ARRAY:"
+      },
+      {
+        "txt": "case ID_END_OBJECT: { boolean returnEnd = _headContext.isStartHandled(); f = _headContext.getFilter(); if ((f != null) && (f != TokenFilter.INCLUDE_ALL)) { f.filterFinishArray(); } _headContext = _headContext.getParent(); _itemFilter = _headContext.getFilter(); if (returnEnd) {"
+      },
+      {
+        "txt": "return (_currToken = t); } } continue main_loop; case ID_FIELD_NAME: { final String name = delegate.getCurrentName(); f = _headContext.setFieldName(name); if (f == TokenFilter.INCLUDE_ALL) { _itemFilter = f;"
+      },
+      {
+        "txt": "return (_currToken = t); } if (f == null) { // filter out the value delegate.nextToken(); delegate.skipChildren(); continue main_loop; } f = f.includeProperty(name); if (f == null) { // filter out the value delegate.nextToken();"
+      },
+      {
+        "txt": "delegate.skipChildren(); continue main_loop; } _itemFilter = f; if (f == TokenFilter.INCLUDE_ALL) { if (_includePath) { return (_currToken = t); } continue main_loop; }"
+      },
+      {
+        "txt": "if (_includePath) { t = _nextTokenWithBuffering(_headContext); if (t != null) { _currToken = t; return t; } } } continue main_loop; default: // scalar value"
+      },
+      {
+        "txt": "f = _itemFilter; if (f == TokenFilter.INCLUDE_ALL) { return (_currToken = t); } if (f != null) { f = _headContext.checkValue(f); if ((f == TokenFilter.INCLUDE_ALL) || ((f != null) && f.includeValue(delegate))) { return (_currToken = t); }"
+      },
+      {
+        "txt": "} break; } } } protected final JsonToken _nextTokenWithBuffering(final TokenFilterContext buffRoot) throws IOException { main_loop: while (true) {"
+      },
+      {
+        "txt": "JsonToken t = delegate.nextToken(); if (t == null) { // is this even legal? return t; } TokenFilter f; switch (t.id()) { case ID_START_ARRAY: f = _headContext.checkValue(_itemFilter); if (f == null) { delegate.skipChildren();"
+      },
+      {
+        "txt": "continue main_loop; } if (f != TokenFilter.INCLUDE_ALL) { f = f.filterStartArray(); } _itemFilter = f; if (f == TokenFilter.INCLUDE_ALL) { _headContext = _headContext.createChildArrayContext(f, true); return _nextBuffered(buffRoot); }"
+      },
+      {
+        "txt": "_headContext = _headContext.createChildArrayContext(f, false); continue main_loop; case ID_START_OBJECT: f = _itemFilter; if (f == TokenFilter.INCLUDE_ALL) { _headContext = _headContext.createChildObjectContext(f, true); return t; } if (f == null) { // does this occur? delegate.skipChildren();"
+      },
+      {
+        "txt": "continue main_loop; } f = _headContext.checkValue(f); if (f == null) { delegate.skipChildren(); continue main_loop; } if (f != TokenFilter.INCLUDE_ALL) { f = f.filterStartObject(); }"
+      },
+      {
+        "txt": "_itemFilter = f; if (f == TokenFilter.INCLUDE_ALL) { _headContext = _headContext.createChildObjectContext(f, true); return _nextBuffered(buffRoot); } _headContext = _headContext.createChildObjectContext(f, false); continue main_loop; case ID_END_ARRAY: case ID_END_OBJECT: {"
+      },
+      {
+        "txt": "f = _headContext.getFilter(); if ((f != null) && (f != TokenFilter.INCLUDE_ALL)) { f.filterFinishArray(); } boolean gotEnd = (_headContext == buffRoot); boolean returnEnd = gotEnd && _headContext.isStartHandled(); _headContext = _headContext.getParent(); _itemFilter = _headContext.getFilter(); if (returnEnd) { return t;"
+      },
+      {
+        "txt": "} if (gotEnd || (_headContext == buffRoot)) { return null; } } continue main_loop; case ID_FIELD_NAME: { final String name = delegate.getCurrentName(); f = _headContext.setFieldName(name);"
+      },
+      {
+        "txt": "if (f == TokenFilter.INCLUDE_ALL) { _itemFilter = f; return _nextBuffered(buffRoot); } if (f == null) { // filter out the value delegate.nextToken(); delegate.skipChildren(); continue main_loop; } f = f.includeProperty(name);"
+      },
+      {
+        "txt": "if (f == null) { // filter out the value delegate.nextToken(); delegate.skipChildren(); continue main_loop; } _itemFilter = f; if (f == TokenFilter.INCLUDE_ALL) { return _nextBuffered(buffRoot); } }"
+      },
+      {
+        "txt": "continue main_loop; default: // scalar value f = _itemFilter; if (f == TokenFilter.INCLUDE_ALL) { return _nextBuffered(buffRoot); } if (f != null) { f = _headContext.checkValue(f); if ((f == TokenFilter.INCLUDE_ALL) || ((f != null) && f.includeValue(delegate))) {"
+      },
+      {
+        "txt": "return _nextBuffered(buffRoot); } } continue main_loop; } } } private JsonToken _nextBuffered(TokenFilterContext buffRoot) throws IOException { _exposedContext = buffRoot;"
+      },
+      {
+        "txt": "TokenFilterContext ctxt = buffRoot; JsonToken t = ctxt.nextTokenToRead(); if (t != null) { return t; } while (true) { if (ctxt == _headContext) { throw _constructError(\"Internal error: failed to locate expected buffered tokens\"); _exposedContext = null; break;"
+      },
+      {
+        "txt": "} ctxt = _exposedContext.findChildOf(ctxt); _exposedContext = ctxt; if (ctxt == null) { // should never occur throw _constructError(\"Unexpected problem: chain of filtered context broken\"); } t = _exposedContext.nextTokenToRead(); if (t != null) { return t; }"
+      },
+      {
+        "txt": "} } @Override public JsonToken nextValue() throws IOException { JsonToken t = nextToken(); if (t == JsonToken.FIELD_NAME) { t = nextToken(); } return t; }"
+      },
+      {
+        "txt": "@Override public JsonParser skipChildren() throws IOException { if ((_currToken != JsonToken.START_OBJECT) && (_currToken != JsonToken.START_ARRAY)) { return this; } int open = 1; while (true) { JsonToken t = nextToken();"
+      },
+      {
+        "txt": "if (t == null) { // not ideal but for now, just return return this; } if (t.isStructStart()) { ++open; } else if (t.isStructEnd()) { if (--open == 0) { return this; } }"
+      },
+      {
+        "txt": "} } @Override public String getText() throws IOException { return delegate.getText(); } @Override public boolean hasTextCharacters() { return delegate.hasTextCharacters(); } @Override public char[] getTextCharacters() throws IOException { return delegate.getTextCharacters(); } @Override public int getTextLength() throws IOException { return delegate.getTextLength(); } @Override public int getTextOffset() throws IOException { return delegate.getTextOffset(); } @Override public BigInteger getBigIntegerValue() throws IOException { return delegate.getBigIntegerValue(); } @Override"
+      },
+      {
+        "txt": "public boolean getBooleanValue() throws IOException { return delegate.getBooleanValue(); } @Override public byte getByteValue() throws IOException { return delegate.getByteValue(); } @Override public short getShortValue() throws IOException { return delegate.getShortValue(); } @Override public BigDecimal getDecimalValue() throws IOException { return delegate.getDecimalValue(); } @Override public double getDoubleValue() throws IOException { return delegate.getDoubleValue(); } @Override"
+      },
+      {
+        "txt": "public float getFloatValue() throws IOException { return delegate.getFloatValue(); } @Override public int getIntValue() throws IOException { return delegate.getIntValue(); } @Override public long getLongValue() throws IOException { return delegate.getLongValue(); } @Override public NumberType getNumberType() throws IOException { return delegate.getNumberType(); } @Override public Number getNumberValue() throws IOException { return delegate.getNumberValue(); } @Override public int getValueAsInt() throws IOException { return delegate.getValueAsInt(); }"
+      },
+      {
+        "txt": "@Override public int getValueAsInt(int defaultValue) throws IOException { return delegate.getValueAsInt(defaultValue); } @Override public long getValueAsLong() throws IOException { return delegate.getValueAsLong(); } @Override public long getValueAsLong(long defaultValue) throws IOException { return delegate.getValueAsLong(defaultValue); } @Override public double getValueAsDouble() throws IOException { return delegate.getValueAsDouble(); } @Override public double getValueAsDouble(double defaultValue) throws IOException { return delegate.getValueAsDouble(defaultValue); } @Override public boolean getValueAsBoolean() throws IOException { return delegate.getValueAsBoolean(); } @Override public boolean getValueAsBoolean(boolean defaultValue) throws IOException { return delegate.getValueAsBoolean(defaultValue); } @Override public String getValueAsString() throws IOException { return delegate.getValueAsString(); } @Override public String getValueAsString(String defaultValue) throws IOException { return delegate.getValueAsString(defaultValue); } @Override public Object getEmbeddedObject() throws IOException { return delegate.getEmbeddedObject(); }"
+      },
+      {
+        "txt": "@Override public byte[] getBinaryValue(Base64Variant b64variant) throws IOException { return delegate.getBinaryValue(b64variant); } @Override public int readBinaryValue(Base64Variant b64variant, OutputStream out) throws IOException { return delegate.readBinaryValue(b64variant, out); } @Override public JsonLocation getTokenLocation() { return delegate.getTokenLocation(); } protected JsonStreamContext _filterContext() { if (_exposedContext != null) { return _exposedContext; } return _headContext; }"
+      }
+    ]
+  },
+  {
+    "id": 1286,
+    "file_path": "src/main/java/com/fasterxml/jackson/core/filter/FilteringParserDelegate.java",
+    "start-bug-line": 440,
+    "end-bug-line": 440,
+    "bug": "",
+    "fix": "if (_verifyAllowedMatches()) {",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "import java.io.IOException; import java.io.OutputStream; import java.math.BigDecimal; import java.math.BigInteger; import com.fasterxml.jackson.core.*; import com.fasterxml.jackson.core.util.JsonParserDelegate; import static com.fasterxml.jackson.core.JsonTokenId.*; public class FilteringParserDelegate extends JsonParserDelegate { protected TokenFilter rootFilter;"
+      },
+      {
+        "txt": "protected boolean _allowMultipleMatches; protected boolean _includePath; @Deprecated protected boolean _includeImmediateParent; protected JsonToken _currToken; protected JsonToken _lastClearedToken; protected TokenFilterContext _headContext; protected TokenFilterContext _exposedContext; protected TokenFilter _itemFilter; protected int _matchCount;"
+      },
+      {
+        "txt": "public FilteringParserDelegate(JsonParser p, TokenFilter f, boolean includePath, boolean allowMultipleMatches) { super(p); rootFilter = f; _itemFilter = f; _headContext = TokenFilterContext.createRootContext(f); _includePath = includePath; _allowMultipleMatches = allowMultipleMatches; }"
+      },
+      {
+        "txt": "public TokenFilter getFilter() { return rootFilter; } public int getMatchCount() { return _matchCount; } @Override public JsonToken getCurrentToken() { return _currToken; } @Override public JsonToken currentToken() { return _currToken; } @Override public final int getCurrentTokenId() { final JsonToken t = _currToken; return (t == null) ? JsonTokenId.ID_NO_TOKEN : t.id(); }"
+      },
+      {
+        "txt": "@Override public final int currentTokenId() { final JsonToken t = _currToken; return (t == null) ? JsonTokenId.ID_NO_TOKEN : t.id(); } @Override public boolean hasCurrentToken() { return _currToken != null; } @Override public boolean hasTokenId(int id) { final JsonToken t = _currToken; if (t == null) { return (JsonTokenId.ID_NO_TOKEN == id); }"
+      },
+      {
+        "txt": "return t.id() == id; } @Override public final boolean hasToken(JsonToken t) { return (_currToken == t); } @Override public boolean isExpectedStartArrayToken() { return _currToken == JsonToken.START_ARRAY; } @Override public boolean isExpectedStartObjectToken() { return _currToken == JsonToken.START_OBJECT; } @Override public JsonLocation getCurrentLocation() { return delegate.getCurrentLocation(); } @Override public JsonStreamContext getParsingContext() {"
+      },
+      {
+        "txt": "return _filterContext(); } @Override public String getCurrentName() throws IOException { JsonStreamContext ctxt = _filterContext(); if (_currToken == JsonToken.START_OBJECT || _currToken == JsonToken.START_ARRAY) { JsonStreamContext parent = ctxt.getParent(); return (parent == null) ? null : parent.getCurrentName(); } return ctxt.getCurrentName();"
+      },
+      {
+        "txt": "} @Override public void clearCurrentToken() { if (_currToken != null) { _lastClearedToken = _currToken; _currToken = null; } } @Override public JsonToken getLastClearedToken() { return _lastClearedToken; }"
+      },
+      {
+        "txt": "@Override public void overrideCurrentName(String name) { throw new UnsupportedOperationException(\"Can not currently override name during filtering read\"); } @Override public JsonToken nextToken() throws IOException { if (!_allowMultipleMatches && (_currToken != null) && (_exposedContext == null)) { if (_currToken.isScalarValue() && !_headContext.isStartHandled() && !_includePath && (_itemFilter == TokenFilter.INCLUDE_ALL)) {"
+      },
+      {
+        "txt": "return (_currToken = null); } } TokenFilterContext ctxt = _exposedContext; if (ctxt != null) { while (true) { JsonToken t = ctxt.nextTokenToRead(); if (t != null) { _currToken = t; return t;"
+      },
+      {
+        "txt": "} if (ctxt == _headContext) { _exposedContext = null; if (ctxt.inArray()) { t = delegate.getCurrentToken(); _currToken = t; return t; } t = delegate.getCurrentToken(); if (t != JsonToken.FIELD_NAME) {"
+      },
+      {
+        "txt": "_currToken = t; return t; } break; } ctxt = _headContext.findChildOf(ctxt); _exposedContext = ctxt; if (ctxt == null) { // should never occur throw _constructError(\"Unexpected problem: chain of filtered context broken\"); }"
+      },
+      {
+        "txt": "} } JsonToken t = delegate.nextToken(); if (t == null) { _currToken = t; return t; } TokenFilter f; switch (t.id()) { case ID_START_ARRAY:"
+      },
+      {
+        "txt": "f = _itemFilter; if (f == TokenFilter.INCLUDE_ALL) { _headContext = _headContext.createChildArrayContext(f, true); return (_currToken = t); } if (f == null) { // does this occur? delegate.skipChildren(); break; } f = _headContext.checkValue(f);"
+      },
+      {
+        "txt": "if (f == null) { delegate.skipChildren(); break; } if (f != TokenFilter.INCLUDE_ALL) { f = f.filterStartArray(); } _itemFilter = f; if (f == TokenFilter.INCLUDE_ALL) { _headContext = _headContext.createChildArrayContext(f, true);"
+      },
+      {
+        "txt": "return (_currToken = t); } _headContext = _headContext.createChildArrayContext(f, false); if (_includePath) { t = _nextTokenWithBuffering(_headContext); if (t != null) { _currToken = t; return t; } }"
+      },
+      {
+        "txt": "break; case ID_START_OBJECT: f = _itemFilter; if (f == TokenFilter.INCLUDE_ALL) { _headContext = _headContext.createChildObjectContext(f, true); return (_currToken = t); } if (f == null) { // does this occur? delegate.skipChildren(); break;"
+      },
+      {
+        "txt": "} f = _headContext.checkValue(f); if (f == null) { delegate.skipChildren(); break; } if (f != TokenFilter.INCLUDE_ALL) { f = f.filterStartObject(); } _itemFilter = f;"
+      },
+      {
+        "txt": "if (f == TokenFilter.INCLUDE_ALL) { _headContext = _headContext.createChildObjectContext(f, true); return (_currToken = t); } _headContext = _headContext.createChildObjectContext(f, false); if (_includePath) { t = _nextTokenWithBuffering(_headContext); if (t != null) { _currToken = t; return t;"
+      },
+      {
+        "txt": "} } break; case ID_END_ARRAY: case ID_END_OBJECT: { boolean returnEnd = _headContext.isStartHandled(); f = _headContext.getFilter(); if ((f != null) && (f != TokenFilter.INCLUDE_ALL)) { f.filterFinishArray();"
+      },
+      {
+        "txt": "} _headContext = _headContext.getParent(); _itemFilter = _headContext.getFilter(); if (returnEnd) { return (_currToken = t); } } break; case ID_FIELD_NAME: {"
+      },
+      {
+        "txt": "final String name = delegate.getCurrentName(); f = _headContext.setFieldName(name); if (f == TokenFilter.INCLUDE_ALL) { _itemFilter = f; if (!_includePath) { if (_includeImmediateParent && !_headContext.isStartHandled()) { t = _headContext.nextTokenToRead(); // returns START_OBJECT but also marks it handled _exposedContext = _headContext; } }"
+      },
+      {
+        "txt": "return (_currToken = t); } if (f == null) { delegate.nextToken(); delegate.skipChildren(); break; } f = f.includeProperty(name); if (f == null) { delegate.nextToken();"
+      },
+      {
+        "txt": "delegate.skipChildren(); break; } _itemFilter = f; if (f == TokenFilter.INCLUDE_ALL) { if (_includePath) { return (_currToken = t); } } if (_includePath) {"
+      },
+      {
+        "txt": "t = _nextTokenWithBuffering(_headContext); if (t != null) { _currToken = t; return t; } } break; } default: // scalar value f = _itemFilter;"
+      },
+      {
+        "txt": "return (_currToken = t); } if (f != null) { f = _headContext.checkValue(f); if ((f == TokenFilter.INCLUDE_ALL) || ((f != null) && f.includeValue(delegate))) { <extra_id_0> } } break; } return _nextToken2(); }"
+      },
+      {
+        "txt": "return _nextToken2(); } protected final JsonToken _nextToken2() throws IOException { main_loop: while (true) { JsonToken t = delegate.nextToken(); if (t == null) { // is this even legal? _currToken = t; return t;"
+      },
+      {
+        "txt": "} TokenFilter f; switch (t.id()) { case ID_START_ARRAY: f = _itemFilter; if (f == TokenFilter.INCLUDE_ALL) { _headContext = _headContext.createChildArrayContext(f, true); return (_currToken = t); } if (f == null) { // does this occur?"
+      },
+      {
+        "txt": "delegate.skipChildren(); continue main_loop; } f = _headContext.checkValue(f); if (f == null) { delegate.skipChildren(); continue main_loop; } if (f != TokenFilter.INCLUDE_ALL) { f = f.filterStartArray();"
+      },
+      {
+        "txt": "} _itemFilter = f; if (f == TokenFilter.INCLUDE_ALL) { _headContext = _headContext.createChildArrayContext(f, true); return (_currToken = t); } _headContext = _headContext.createChildArrayContext(f, false); if (_includePath) { t = _nextTokenWithBuffering(_headContext); if (t != null) {"
+      },
+      {
+        "txt": "_currToken = t; return t; } } continue main_loop; case ID_START_OBJECT: f = _itemFilter; if (f == TokenFilter.INCLUDE_ALL) { _headContext = _headContext.createChildObjectContext(f, true); return (_currToken = t);"
+      },
+      {
+        "txt": "} if (f == null) { // does this occur? delegate.skipChildren(); continue main_loop; } f = _headContext.checkValue(f); if (f == null) { delegate.skipChildren(); continue main_loop; }"
+      },
+      {
+        "txt": "if (f != TokenFilter.INCLUDE_ALL) { f = f.filterStartObject(); } _itemFilter = f; if (f == TokenFilter.INCLUDE_ALL) { _headContext = _headContext.createChildObjectContext(f, true); return (_currToken = t); } _headContext = _headContext.createChildObjectContext(f, false); if (_includePath) {"
+      },
+      {
+        "txt": "t = _nextTokenWithBuffering(_headContext); if (t != null) { _currToken = t; return t; } } continue main_loop; case ID_END_ARRAY: case ID_END_OBJECT: {"
+      },
+      {
+        "txt": "boolean returnEnd = _headContext.isStartHandled(); f = _headContext.getFilter(); if ((f != null) && (f != TokenFilter.INCLUDE_ALL)) { f.filterFinishArray(); } _headContext = _headContext.getParent(); _itemFilter = _headContext.getFilter(); if (returnEnd) { return (_currToken = t); }"
+      },
+      {
+        "txt": "} continue main_loop; case ID_FIELD_NAME: { final String name = delegate.getCurrentName(); f = _headContext.setFieldName(name); if (f == TokenFilter.INCLUDE_ALL) { _itemFilter = f; return (_currToken = t); }"
+      },
+      {
+        "txt": "if (f == null) { // filter out the value delegate.nextToken(); delegate.skipChildren(); continue main_loop; } f = f.includeProperty(name); if (f == null) { // filter out the value delegate.nextToken(); delegate.skipChildren(); continue main_loop;"
+      },
+      {
+        "txt": "} _itemFilter = f; if (f == TokenFilter.INCLUDE_ALL) { if (_includePath) { return (_currToken = t); } continue main_loop; } if (_includePath) { t = _nextTokenWithBuffering(_headContext);"
+      },
+      {
+        "txt": "if (t != null) { _currToken = t; return t; } } } continue main_loop; default: // scalar value f = _itemFilter; if (f == TokenFilter.INCLUDE_ALL) {"
+      },
+      {
+        "txt": "return (_currToken = t); } if (f != null) { f = _headContext.checkValue(f); if ((f == TokenFilter.INCLUDE_ALL) || ((f != null) && f.includeValue(delegate))) { return (_currToken = t); } } break;"
+      },
+      {
+        "txt": "} } } protected final JsonToken _nextTokenWithBuffering(final TokenFilterContext buffRoot) throws IOException { main_loop: while (true) { JsonToken t = delegate.nextToken(); if (t == null) { // is this even legal?"
+      },
+      {
+        "txt": "return t; } TokenFilter f; switch (t.id()) { case ID_START_ARRAY: f = _headContext.checkValue(_itemFilter); if (f == null) { delegate.skipChildren(); continue main_loop; }"
+      },
+      {
+        "txt": "if (f != TokenFilter.INCLUDE_ALL) { f = f.filterStartArray(); } _itemFilter = f; if (f == TokenFilter.INCLUDE_ALL) { _headContext = _headContext.createChildArrayContext(f, true); return _nextBuffered(buffRoot); } _headContext = _headContext.createChildArrayContext(f, false); continue main_loop;"
+      },
+      {
+        "txt": "case ID_START_OBJECT: f = _itemFilter; if (f == TokenFilter.INCLUDE_ALL) { _headContext = _headContext.createChildObjectContext(f, true); return t; } if (f == null) { // does this occur? delegate.skipChildren(); continue main_loop; }"
+      },
+      {
+        "txt": "f = _headContext.checkValue(f); if (f == null) { delegate.skipChildren(); continue main_loop; } if (f != TokenFilter.INCLUDE_ALL) { f = f.filterStartObject(); } _itemFilter = f; if (f == TokenFilter.INCLUDE_ALL) {"
+      },
+      {
+        "txt": "_headContext = _headContext.createChildObjectContext(f, true); return _nextBuffered(buffRoot); } _headContext = _headContext.createChildObjectContext(f, false); continue main_loop; case ID_END_ARRAY: case ID_END_OBJECT: { f = _headContext.getFilter(); if ((f != null) && (f != TokenFilter.INCLUDE_ALL)) {"
+      },
+      {
+        "txt": "f.filterFinishArray(); } boolean gotEnd = (_headContext == buffRoot); boolean returnEnd = gotEnd && _headContext.isStartHandled(); _headContext = _headContext.getParent(); _itemFilter = _headContext.getFilter(); if (returnEnd) { return t; } if (gotEnd || (_headContext == buffRoot)) {"
+      },
+      {
+        "txt": "return null; } } continue main_loop; case ID_FIELD_NAME: { final String name = delegate.getCurrentName(); f = _headContext.setFieldName(name); if (f == TokenFilter.INCLUDE_ALL) { _itemFilter = f;"
+      },
+      {
+        "txt": "return _nextBuffered(buffRoot); } if (f == null) { // filter out the value delegate.nextToken(); delegate.skipChildren(); continue main_loop; } f = f.includeProperty(name); if (f == null) { // filter out the value delegate.nextToken();"
+      },
+      {
+        "txt": "delegate.skipChildren(); continue main_loop; } _itemFilter = f; if (f == TokenFilter.INCLUDE_ALL) { return _nextBuffered(buffRoot); } } continue main_loop; default: // scalar value"
+      },
+      {
+        "txt": "f = _itemFilter; if (f == TokenFilter.INCLUDE_ALL) { return _nextBuffered(buffRoot); } if (f != null) { f = _headContext.checkValue(f); if ((f == TokenFilter.INCLUDE_ALL) || ((f != null) && f.includeValue(delegate))) { return _nextBuffered(buffRoot); }"
+      },
+      {
+        "txt": "} continue main_loop; } } } private JsonToken _nextBuffered(TokenFilterContext buffRoot) throws IOException { _exposedContext = buffRoot; TokenFilterContext ctxt = buffRoot; JsonToken t = ctxt.nextTokenToRead();"
+      },
+      {
+        "txt": "if (t != null) { return t; } while (true) { if (ctxt == _headContext) { throw _constructError(\"Internal error: failed to locate expected buffered tokens\"); _exposedContext = null; break; } ctxt = _exposedContext.findChildOf(ctxt);"
+      },
+      {
+        "txt": "_exposedContext = ctxt; if (ctxt == null) { // should never occur throw _constructError(\"Unexpected problem: chain of filtered context broken\"); } t = _exposedContext.nextTokenToRead(); if (t != null) { return t; } } }"
+      },
+      {
+        "txt": "@Override public JsonToken nextValue() throws IOException { JsonToken t = nextToken(); if (t == JsonToken.FIELD_NAME) { t = nextToken(); } return t; } @Override public JsonParser skipChildren() throws IOException"
+      },
+      {
+        "txt": "{ if ((_currToken != JsonToken.START_OBJECT) && (_currToken != JsonToken.START_ARRAY)) { return this; } int open = 1; while (true) { JsonToken t = nextToken(); if (t == null) { // not ideal but for now, just return return this;"
+      },
+      {
+        "txt": "} if (t.isStructStart()) { ++open; } else if (t.isStructEnd()) { if (--open == 0) { return this; } } } }"
+      },
+      {
+        "txt": "@Override public String getText() throws IOException { return delegate.getText(); } @Override public boolean hasTextCharacters() { return delegate.hasTextCharacters(); } @Override public char[] getTextCharacters() throws IOException { return delegate.getTextCharacters(); } @Override public int getTextLength() throws IOException { return delegate.getTextLength(); } @Override public int getTextOffset() throws IOException { return delegate.getTextOffset(); } @Override public BigInteger getBigIntegerValue() throws IOException { return delegate.getBigIntegerValue(); } @Override public boolean getBooleanValue() throws IOException { return delegate.getBooleanValue(); } @Override"
+      },
+      {
+        "txt": "public byte getByteValue() throws IOException { return delegate.getByteValue(); } @Override public short getShortValue() throws IOException { return delegate.getShortValue(); } @Override public BigDecimal getDecimalValue() throws IOException { return delegate.getDecimalValue(); } @Override public double getDoubleValue() throws IOException { return delegate.getDoubleValue(); } @Override public float getFloatValue() throws IOException { return delegate.getFloatValue(); } @Override"
+      },
+      {
+        "txt": "public int getIntValue() throws IOException { return delegate.getIntValue(); } @Override public long getLongValue() throws IOException { return delegate.getLongValue(); } @Override public NumberType getNumberType() throws IOException { return delegate.getNumberType(); } @Override public Number getNumberValue() throws IOException { return delegate.getNumberValue(); } @Override public int getValueAsInt() throws IOException { return delegate.getValueAsInt(); } @Override public int getValueAsInt(int defaultValue) throws IOException { return delegate.getValueAsInt(defaultValue); } @Override public long getValueAsLong() throws IOException { return delegate.getValueAsLong(); }"
+      },
+      {
+        "txt": "@Override public long getValueAsLong(long defaultValue) throws IOException { return delegate.getValueAsLong(defaultValue); } @Override public double getValueAsDouble() throws IOException { return delegate.getValueAsDouble(); } @Override public double getValueAsDouble(double defaultValue) throws IOException { return delegate.getValueAsDouble(defaultValue); } @Override public boolean getValueAsBoolean() throws IOException { return delegate.getValueAsBoolean(); } @Override public boolean getValueAsBoolean(boolean defaultValue) throws IOException { return delegate.getValueAsBoolean(defaultValue); } @Override public String getValueAsString() throws IOException { return delegate.getValueAsString(); } @Override public String getValueAsString(String defaultValue) throws IOException { return delegate.getValueAsString(defaultValue); } @Override public Object getEmbeddedObject() throws IOException { return delegate.getEmbeddedObject(); } @Override public byte[] getBinaryValue(Base64Variant b64variant) throws IOException { return delegate.getBinaryValue(b64variant); } @Override public int readBinaryValue(Base64Variant b64variant, OutputStream out) throws IOException { return delegate.readBinaryValue(b64variant, out); }"
+      },
+      {
+        "txt": "@Override public JsonLocation getTokenLocation() { return delegate.getTokenLocation(); } protected JsonStreamContext _filterContext() { if (_exposedContext != null) { return _exposedContext; } return _headContext; }"
+      }
+    ]
+  },
+  {
+    "id": 1287,
+    "file_path": "src/main/java/com/fasterxml/jackson/core/filter/FilteringParserDelegate.java",
+    "start-bug-line": 441,
+    "end-bug-line": 441,
+    "bug": "",
+    "fix": "}",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.core.filter; import java.io.IOException;"
+      },
+      {
+        "txt": "import java.io.OutputStream; import java.math.BigDecimal; import java.math.BigInteger; import com.fasterxml.jackson.core.*; import com.fasterxml.jackson.core.util.JsonParserDelegate; import static com.fasterxml.jackson.core.JsonTokenId.*; public class FilteringParserDelegate extends JsonParserDelegate { protected TokenFilter rootFilter; protected boolean _allowMultipleMatches;"
+      },
+      {
+        "txt": "protected boolean _includePath; @Deprecated protected boolean _includeImmediateParent; protected JsonToken _currToken; protected JsonToken _lastClearedToken; protected TokenFilterContext _headContext; protected TokenFilterContext _exposedContext; protected TokenFilter _itemFilter; protected int _matchCount; public FilteringParserDelegate(JsonParser p, TokenFilter f,"
+      },
+      {
+        "txt": "boolean includePath, boolean allowMultipleMatches) { super(p); rootFilter = f; _itemFilter = f; _headContext = TokenFilterContext.createRootContext(f); _includePath = includePath; _allowMultipleMatches = allowMultipleMatches; } public TokenFilter getFilter() { return rootFilter; }"
+      },
+      {
+        "txt": "public int getMatchCount() { return _matchCount; } @Override public JsonToken getCurrentToken() { return _currToken; } @Override public JsonToken currentToken() { return _currToken; } @Override public final int getCurrentTokenId() { final JsonToken t = _currToken; return (t == null) ? JsonTokenId.ID_NO_TOKEN : t.id(); } @Override public final int currentTokenId() {"
+      },
+      {
+        "txt": "final JsonToken t = _currToken; return (t == null) ? JsonTokenId.ID_NO_TOKEN : t.id(); } @Override public boolean hasCurrentToken() { return _currToken != null; } @Override public boolean hasTokenId(int id) { final JsonToken t = _currToken; if (t == null) { return (JsonTokenId.ID_NO_TOKEN == id); } return t.id() == id;"
+      },
+      {
+        "txt": "} @Override public final boolean hasToken(JsonToken t) { return (_currToken == t); } @Override public boolean isExpectedStartArrayToken() { return _currToken == JsonToken.START_ARRAY; } @Override public boolean isExpectedStartObjectToken() { return _currToken == JsonToken.START_OBJECT; } @Override public JsonLocation getCurrentLocation() { return delegate.getCurrentLocation(); } @Override public JsonStreamContext getParsingContext() { return _filterContext();"
+      },
+      {
+        "txt": "} @Override public String getCurrentName() throws IOException { JsonStreamContext ctxt = _filterContext(); if (_currToken == JsonToken.START_OBJECT || _currToken == JsonToken.START_ARRAY) { JsonStreamContext parent = ctxt.getParent(); return (parent == null) ? null : parent.getCurrentName(); } return ctxt.getCurrentName(); }"
+      },
+      {
+        "txt": "@Override public void clearCurrentToken() { if (_currToken != null) { _lastClearedToken = _currToken; _currToken = null; } } @Override public JsonToken getLastClearedToken() { return _lastClearedToken; } @Override"
+      },
+      {
+        "txt": "public void overrideCurrentName(String name) { throw new UnsupportedOperationException(\"Can not currently override name during filtering read\"); } @Override public JsonToken nextToken() throws IOException { if (!_allowMultipleMatches && (_currToken != null) && (_exposedContext == null)) { if (_currToken.isScalarValue() && !_headContext.isStartHandled() && !_includePath && (_itemFilter == TokenFilter.INCLUDE_ALL)) { return (_currToken = null);"
+      },
+      {
+        "txt": "} } TokenFilterContext ctxt = _exposedContext; if (ctxt != null) { while (true) { JsonToken t = ctxt.nextTokenToRead(); if (t != null) { _currToken = t; return t; }"
+      },
+      {
+        "txt": "if (ctxt == _headContext) { _exposedContext = null; if (ctxt.inArray()) { t = delegate.getCurrentToken(); _currToken = t; return t; } t = delegate.getCurrentToken(); if (t != JsonToken.FIELD_NAME) { _currToken = t;"
+      },
+      {
+        "txt": "return t; } break; } ctxt = _headContext.findChildOf(ctxt); _exposedContext = ctxt; if (ctxt == null) { // should never occur throw _constructError(\"Unexpected problem: chain of filtered context broken\"); } }"
+      },
+      {
+        "txt": "} JsonToken t = delegate.nextToken(); if (t == null) { _currToken = t; return t; } TokenFilter f; switch (t.id()) { case ID_START_ARRAY: f = _itemFilter;"
+      },
+      {
+        "txt": "if (f == TokenFilter.INCLUDE_ALL) { _headContext = _headContext.createChildArrayContext(f, true); return (_currToken = t); } if (f == null) { // does this occur? delegate.skipChildren(); break; } f = _headContext.checkValue(f); if (f == null) {"
+      },
+      {
+        "txt": "delegate.skipChildren(); break; } if (f != TokenFilter.INCLUDE_ALL) { f = f.filterStartArray(); } _itemFilter = f; if (f == TokenFilter.INCLUDE_ALL) { _headContext = _headContext.createChildArrayContext(f, true); return (_currToken = t);"
+      },
+      {
+        "txt": "} _headContext = _headContext.createChildArrayContext(f, false); if (_includePath) { t = _nextTokenWithBuffering(_headContext); if (t != null) { _currToken = t; return t; } } break;"
+      },
+      {
+        "txt": "case ID_START_OBJECT: f = _itemFilter; if (f == TokenFilter.INCLUDE_ALL) { _headContext = _headContext.createChildObjectContext(f, true); return (_currToken = t); } if (f == null) { // does this occur? delegate.skipChildren(); break; }"
+      },
+      {
+        "txt": "f = _headContext.checkValue(f); if (f == null) { delegate.skipChildren(); break; } if (f != TokenFilter.INCLUDE_ALL) { f = f.filterStartObject(); } _itemFilter = f; if (f == TokenFilter.INCLUDE_ALL) {"
+      },
+      {
+        "txt": "_headContext = _headContext.createChildObjectContext(f, true); return (_currToken = t); } _headContext = _headContext.createChildObjectContext(f, false); if (_includePath) { t = _nextTokenWithBuffering(_headContext); if (t != null) { _currToken = t; return t; }"
+      },
+      {
+        "txt": "} break; case ID_END_ARRAY: case ID_END_OBJECT: { boolean returnEnd = _headContext.isStartHandled(); f = _headContext.getFilter(); if ((f != null) && (f != TokenFilter.INCLUDE_ALL)) { f.filterFinishArray(); }"
+      },
+      {
+        "txt": "_headContext = _headContext.getParent(); _itemFilter = _headContext.getFilter(); if (returnEnd) { return (_currToken = t); } } break; case ID_FIELD_NAME: { final String name = delegate.getCurrentName();"
+      },
+      {
+        "txt": "f = _headContext.setFieldName(name); if (f == TokenFilter.INCLUDE_ALL) { _itemFilter = f; if (!_includePath) { if (_includeImmediateParent && !_headContext.isStartHandled()) { t = _headContext.nextTokenToRead(); // returns START_OBJECT but also marks it handled _exposedContext = _headContext; } } return (_currToken = t);"
+      },
+      {
+        "txt": "} if (f == null) { delegate.nextToken(); delegate.skipChildren(); break; } f = f.includeProperty(name); if (f == null) { delegate.nextToken(); delegate.skipChildren();"
+      },
+      {
+        "txt": "break; } _itemFilter = f; if (f == TokenFilter.INCLUDE_ALL) { if (_includePath) { return (_currToken = t); } } if (_includePath) { t = _nextTokenWithBuffering(_headContext);"
+      },
+      {
+        "txt": "if (t != null) { _currToken = t; return t; } } break; } default: // scalar value f = _itemFilter; if (f == TokenFilter.INCLUDE_ALL) {"
+      },
+      {
+        "txt": "} if (f != null) { f = _headContext.checkValue(f); if ((f == TokenFilter.INCLUDE_ALL) || ((f != null) && f.includeValue(delegate))) { return (_currToken = t); <extra_id_0> } break; } return _nextToken2(); } protected final JsonToken _nextToken2() throws IOException"
+      },
+      {
+        "txt": "} protected final JsonToken _nextToken2() throws IOException { main_loop: while (true) { JsonToken t = delegate.nextToken(); if (t == null) { // is this even legal? _currToken = t; return t; }"
+      },
+      {
+        "txt": "TokenFilter f; switch (t.id()) { case ID_START_ARRAY: f = _itemFilter; if (f == TokenFilter.INCLUDE_ALL) { _headContext = _headContext.createChildArrayContext(f, true); return (_currToken = t); } if (f == null) { // does this occur? delegate.skipChildren();"
+      },
+      {
+        "txt": "continue main_loop; } f = _headContext.checkValue(f); if (f == null) { delegate.skipChildren(); continue main_loop; } if (f != TokenFilter.INCLUDE_ALL) { f = f.filterStartArray(); }"
+      },
+      {
+        "txt": "_itemFilter = f; if (f == TokenFilter.INCLUDE_ALL) { _headContext = _headContext.createChildArrayContext(f, true); return (_currToken = t); } _headContext = _headContext.createChildArrayContext(f, false); if (_includePath) { t = _nextTokenWithBuffering(_headContext); if (t != null) { _currToken = t;"
+      },
+      {
+        "txt": "return t; } } continue main_loop; case ID_START_OBJECT: f = _itemFilter; if (f == TokenFilter.INCLUDE_ALL) { _headContext = _headContext.createChildObjectContext(f, true); return (_currToken = t); }"
+      },
+      {
+        "txt": "if (f == null) { // does this occur? delegate.skipChildren(); continue main_loop; } f = _headContext.checkValue(f); if (f == null) { delegate.skipChildren(); continue main_loop; } if (f != TokenFilter.INCLUDE_ALL) {"
+      },
+      {
+        "txt": "f = f.filterStartObject(); } _itemFilter = f; if (f == TokenFilter.INCLUDE_ALL) { _headContext = _headContext.createChildObjectContext(f, true); return (_currToken = t); } _headContext = _headContext.createChildObjectContext(f, false); if (_includePath) { t = _nextTokenWithBuffering(_headContext);"
+      },
+      {
+        "txt": "if (t != null) { _currToken = t; return t; } } continue main_loop; case ID_END_ARRAY: case ID_END_OBJECT: { boolean returnEnd = _headContext.isStartHandled();"
+      },
+      {
+        "txt": "f = _headContext.getFilter(); if ((f != null) && (f != TokenFilter.INCLUDE_ALL)) { f.filterFinishArray(); } _headContext = _headContext.getParent(); _itemFilter = _headContext.getFilter(); if (returnEnd) { return (_currToken = t); } }"
+      },
+      {
+        "txt": "continue main_loop; case ID_FIELD_NAME: { final String name = delegate.getCurrentName(); f = _headContext.setFieldName(name); if (f == TokenFilter.INCLUDE_ALL) { _itemFilter = f; return (_currToken = t); } if (f == null) { // filter out the value"
+      },
+      {
+        "txt": "delegate.nextToken(); delegate.skipChildren(); continue main_loop; } f = f.includeProperty(name); if (f == null) { // filter out the value delegate.nextToken(); delegate.skipChildren(); continue main_loop; }"
+      },
+      {
+        "txt": "_itemFilter = f; if (f == TokenFilter.INCLUDE_ALL) { if (_includePath) { return (_currToken = t); } continue main_loop; } if (_includePath) { t = _nextTokenWithBuffering(_headContext); if (t != null) {"
+      },
+      {
+        "txt": "_currToken = t; return t; } } } continue main_loop; default: // scalar value f = _itemFilter; if (f == TokenFilter.INCLUDE_ALL) { return (_currToken = t);"
+      },
+      {
+        "txt": "} if (f != null) { f = _headContext.checkValue(f); if ((f == TokenFilter.INCLUDE_ALL) || ((f != null) && f.includeValue(delegate))) { return (_currToken = t); } } break; }"
+      },
+      {
+        "txt": "} } protected final JsonToken _nextTokenWithBuffering(final TokenFilterContext buffRoot) throws IOException { main_loop: while (true) { JsonToken t = delegate.nextToken(); if (t == null) { // is this even legal? return t;"
+      },
+      {
+        "txt": "} TokenFilter f; switch (t.id()) { case ID_START_ARRAY: f = _headContext.checkValue(_itemFilter); if (f == null) { delegate.skipChildren(); continue main_loop; } if (f != TokenFilter.INCLUDE_ALL) {"
+      },
+      {
+        "txt": "f = f.filterStartArray(); } _itemFilter = f; if (f == TokenFilter.INCLUDE_ALL) { _headContext = _headContext.createChildArrayContext(f, true); return _nextBuffered(buffRoot); } _headContext = _headContext.createChildArrayContext(f, false); continue main_loop; case ID_START_OBJECT:"
+      },
+      {
+        "txt": "f = _itemFilter; if (f == TokenFilter.INCLUDE_ALL) { _headContext = _headContext.createChildObjectContext(f, true); return t; } if (f == null) { // does this occur? delegate.skipChildren(); continue main_loop; } f = _headContext.checkValue(f);"
+      },
+      {
+        "txt": "if (f == null) { delegate.skipChildren(); continue main_loop; } if (f != TokenFilter.INCLUDE_ALL) { f = f.filterStartObject(); } _itemFilter = f; if (f == TokenFilter.INCLUDE_ALL) { _headContext = _headContext.createChildObjectContext(f, true);"
+      },
+      {
+        "txt": "return _nextBuffered(buffRoot); } _headContext = _headContext.createChildObjectContext(f, false); continue main_loop; case ID_END_ARRAY: case ID_END_OBJECT: { f = _headContext.getFilter(); if ((f != null) && (f != TokenFilter.INCLUDE_ALL)) { f.filterFinishArray();"
+      },
+      {
+        "txt": "} boolean gotEnd = (_headContext == buffRoot); boolean returnEnd = gotEnd && _headContext.isStartHandled(); _headContext = _headContext.getParent(); _itemFilter = _headContext.getFilter(); if (returnEnd) { return t; } if (gotEnd || (_headContext == buffRoot)) { return null;"
+      },
+      {
+        "txt": "} } continue main_loop; case ID_FIELD_NAME: { final String name = delegate.getCurrentName(); f = _headContext.setFieldName(name); if (f == TokenFilter.INCLUDE_ALL) { _itemFilter = f; return _nextBuffered(buffRoot);"
+      },
+      {
+        "txt": "} if (f == null) { // filter out the value delegate.nextToken(); delegate.skipChildren(); continue main_loop; } f = f.includeProperty(name); if (f == null) { // filter out the value delegate.nextToken(); delegate.skipChildren();"
+      },
+      {
+        "txt": "continue main_loop; } _itemFilter = f; if (f == TokenFilter.INCLUDE_ALL) { return _nextBuffered(buffRoot); } } continue main_loop; default: // scalar value f = _itemFilter;"
+      },
+      {
+        "txt": "if (f == TokenFilter.INCLUDE_ALL) { return _nextBuffered(buffRoot); } if (f != null) { f = _headContext.checkValue(f); if ((f == TokenFilter.INCLUDE_ALL) || ((f != null) && f.includeValue(delegate))) { return _nextBuffered(buffRoot); } }"
+      },
+      {
+        "txt": "continue main_loop; } } } private JsonToken _nextBuffered(TokenFilterContext buffRoot) throws IOException { _exposedContext = buffRoot; TokenFilterContext ctxt = buffRoot; JsonToken t = ctxt.nextTokenToRead(); if (t != null) {"
+      },
+      {
+        "txt": "return t; } while (true) { if (ctxt == _headContext) { throw _constructError(\"Internal error: failed to locate expected buffered tokens\"); _exposedContext = null; break; } ctxt = _exposedContext.findChildOf(ctxt); _exposedContext = ctxt;"
+      },
+      {
+        "txt": "if (ctxt == null) { // should never occur throw _constructError(\"Unexpected problem: chain of filtered context broken\"); } t = _exposedContext.nextTokenToRead(); if (t != null) { return t; } } } @Override"
+      },
+      {
+        "txt": "public JsonToken nextValue() throws IOException { JsonToken t = nextToken(); if (t == JsonToken.FIELD_NAME) { t = nextToken(); } return t; } @Override public JsonParser skipChildren() throws IOException {"
+      },
+      {
+        "txt": "if ((_currToken != JsonToken.START_OBJECT) && (_currToken != JsonToken.START_ARRAY)) { return this; } int open = 1; while (true) { JsonToken t = nextToken(); if (t == null) { // not ideal but for now, just return return this; }"
+      },
+      {
+        "txt": "if (t.isStructStart()) { ++open; } else if (t.isStructEnd()) { if (--open == 0) { return this; } } } } @Override public String getText() throws IOException { return delegate.getText(); }"
+      },
+      {
+        "txt": "@Override public boolean hasTextCharacters() { return delegate.hasTextCharacters(); } @Override public char[] getTextCharacters() throws IOException { return delegate.getTextCharacters(); } @Override public int getTextLength() throws IOException { return delegate.getTextLength(); } @Override public int getTextOffset() throws IOException { return delegate.getTextOffset(); } @Override public BigInteger getBigIntegerValue() throws IOException { return delegate.getBigIntegerValue(); } @Override public boolean getBooleanValue() throws IOException { return delegate.getBooleanValue(); } @Override public byte getByteValue() throws IOException { return delegate.getByteValue(); }"
+      },
+      {
+        "txt": "@Override public short getShortValue() throws IOException { return delegate.getShortValue(); } @Override public BigDecimal getDecimalValue() throws IOException { return delegate.getDecimalValue(); } @Override public double getDoubleValue() throws IOException { return delegate.getDoubleValue(); } @Override public float getFloatValue() throws IOException { return delegate.getFloatValue(); } @Override public int getIntValue() throws IOException { return delegate.getIntValue(); }"
+      },
+      {
+        "txt": "@Override public long getLongValue() throws IOException { return delegate.getLongValue(); } @Override public NumberType getNumberType() throws IOException { return delegate.getNumberType(); } @Override public Number getNumberValue() throws IOException { return delegate.getNumberValue(); } @Override public int getValueAsInt() throws IOException { return delegate.getValueAsInt(); } @Override public int getValueAsInt(int defaultValue) throws IOException { return delegate.getValueAsInt(defaultValue); } @Override public long getValueAsLong() throws IOException { return delegate.getValueAsLong(); } @Override public long getValueAsLong(long defaultValue) throws IOException { return delegate.getValueAsLong(defaultValue); }"
+      },
+      {
+        "txt": "@Override public double getValueAsDouble() throws IOException { return delegate.getValueAsDouble(); } @Override public double getValueAsDouble(double defaultValue) throws IOException { return delegate.getValueAsDouble(defaultValue); } @Override public boolean getValueAsBoolean() throws IOException { return delegate.getValueAsBoolean(); } @Override public boolean getValueAsBoolean(boolean defaultValue) throws IOException { return delegate.getValueAsBoolean(defaultValue); } @Override public String getValueAsString() throws IOException { return delegate.getValueAsString(); } @Override public String getValueAsString(String defaultValue) throws IOException { return delegate.getValueAsString(defaultValue); } @Override public Object getEmbeddedObject() throws IOException { return delegate.getEmbeddedObject(); } @Override public byte[] getBinaryValue(Base64Variant b64variant) throws IOException { return delegate.getBinaryValue(b64variant); } @Override public int readBinaryValue(Base64Variant b64variant, OutputStream out) throws IOException { return delegate.readBinaryValue(b64variant, out); } @Override public JsonLocation getTokenLocation() { return delegate.getTokenLocation(); }"
+      },
+      {
+        "txt": "protected JsonStreamContext _filterContext() { if (_exposedContext != null) { return _exposedContext; } return _headContext; }"
+      }
+    ]
+  },
+  {
+    "id": 1288,
+    "file_path": "src/main/java/com/fasterxml/jackson/core/filter/FilteringParserDelegate.java",
+    "start-bug-line": 575,
+    "end-bug-line": 575,
+    "bug": "if (_includePath) {",
+    "fix": "if (_verifyAllowedMatches() && _includePath) {",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.core.filter; import java.io.IOException; import java.io.OutputStream; import java.math.BigDecimal; import java.math.BigInteger; import com.fasterxml.jackson.core.*; import com.fasterxml.jackson.core.util.JsonParserDelegate; import static com.fasterxml.jackson.core.JsonTokenId.*; public class FilteringParserDelegate extends JsonParserDelegate"
+      },
+      {
+        "txt": "{ protected TokenFilter rootFilter; protected boolean _allowMultipleMatches; protected boolean _includePath; @Deprecated protected boolean _includeImmediateParent; protected JsonToken _currToken; protected JsonToken _lastClearedToken; protected TokenFilterContext _headContext; protected TokenFilterContext _exposedContext;"
+      },
+      {
+        "txt": "protected TokenFilter _itemFilter; protected int _matchCount; public FilteringParserDelegate(JsonParser p, TokenFilter f, boolean includePath, boolean allowMultipleMatches) { super(p); rootFilter = f; _itemFilter = f; _headContext = TokenFilterContext.createRootContext(f); _includePath = includePath;"
+      },
+      {
+        "txt": "_allowMultipleMatches = allowMultipleMatches; } public TokenFilter getFilter() { return rootFilter; } public int getMatchCount() { return _matchCount; } @Override public JsonToken getCurrentToken() { return _currToken; } @Override public JsonToken currentToken() { return _currToken; } @Override public final int getCurrentTokenId() { final JsonToken t = _currToken;"
+      },
+      {
+        "txt": "return (t == null) ? JsonTokenId.ID_NO_TOKEN : t.id(); } @Override public final int currentTokenId() { final JsonToken t = _currToken; return (t == null) ? JsonTokenId.ID_NO_TOKEN : t.id(); } @Override public boolean hasCurrentToken() { return _currToken != null; } @Override public boolean hasTokenId(int id) { final JsonToken t = _currToken; if (t == null) {"
+      },
+      {
+        "txt": "return (JsonTokenId.ID_NO_TOKEN == id); } return t.id() == id; } @Override public final boolean hasToken(JsonToken t) { return (_currToken == t); } @Override public boolean isExpectedStartArrayToken() { return _currToken == JsonToken.START_ARRAY; } @Override public boolean isExpectedStartObjectToken() { return _currToken == JsonToken.START_OBJECT; } @Override public JsonLocation getCurrentLocation() { return delegate.getCurrentLocation(); }"
+      },
+      {
+        "txt": "@Override public JsonStreamContext getParsingContext() { return _filterContext(); } @Override public String getCurrentName() throws IOException { JsonStreamContext ctxt = _filterContext(); if (_currToken == JsonToken.START_OBJECT || _currToken == JsonToken.START_ARRAY) { JsonStreamContext parent = ctxt.getParent(); return (parent == null) ? null : parent.getCurrentName();"
+      },
+      {
+        "txt": "} return ctxt.getCurrentName(); } @Override public void clearCurrentToken() { if (_currToken != null) { _lastClearedToken = _currToken; _currToken = null; } }"
+      },
+      {
+        "txt": "@Override public JsonToken getLastClearedToken() { return _lastClearedToken; } @Override public void overrideCurrentName(String name) { throw new UnsupportedOperationException(\"Can not currently override name during filtering read\"); } @Override public JsonToken nextToken() throws IOException { if (!_allowMultipleMatches && (_currToken != null) && (_exposedContext == null)) {"
+      },
+      {
+        "txt": "if (_currToken.isScalarValue() && !_headContext.isStartHandled() && !_includePath && (_itemFilter == TokenFilter.INCLUDE_ALL)) { return (_currToken = null); } } TokenFilterContext ctxt = _exposedContext; if (ctxt != null) { while (true) { JsonToken t = ctxt.nextTokenToRead(); if (t != null) {"
+      },
+      {
+        "txt": "_currToken = t; return t; } if (ctxt == _headContext) { _exposedContext = null; if (ctxt.inArray()) { t = delegate.getCurrentToken(); _currToken = t; return t; }"
+      },
+      {
+        "txt": "t = delegate.getCurrentToken(); if (t != JsonToken.FIELD_NAME) { _currToken = t; return t; } break; } ctxt = _headContext.findChildOf(ctxt); _exposedContext = ctxt; if (ctxt == null) { // should never occur"
+      },
+      {
+        "txt": "throw _constructError(\"Unexpected problem: chain of filtered context broken\"); } } } JsonToken t = delegate.nextToken(); if (t == null) { _currToken = t; return t; } TokenFilter f;"
+      },
+      {
+        "txt": "switch (t.id()) { case ID_START_ARRAY: f = _itemFilter; if (f == TokenFilter.INCLUDE_ALL) { _headContext = _headContext.createChildArrayContext(f, true); return (_currToken = t); } if (f == null) { // does this occur? delegate.skipChildren(); break;"
+      },
+      {
+        "txt": "} f = _headContext.checkValue(f); if (f == null) { delegate.skipChildren(); break; } if (f != TokenFilter.INCLUDE_ALL) { f = f.filterStartArray(); } _itemFilter = f;"
+      },
+      {
+        "txt": "if (f == TokenFilter.INCLUDE_ALL) { _headContext = _headContext.createChildArrayContext(f, true); return (_currToken = t); } _headContext = _headContext.createChildArrayContext(f, false); if (_includePath) { t = _nextTokenWithBuffering(_headContext); if (t != null) { _currToken = t; return t;"
+      },
+      {
+        "txt": "} } break; case ID_START_OBJECT: f = _itemFilter; if (f == TokenFilter.INCLUDE_ALL) { _headContext = _headContext.createChildObjectContext(f, true); return (_currToken = t); } if (f == null) { // does this occur?"
+      },
+      {
+        "txt": "delegate.skipChildren(); break; } f = _headContext.checkValue(f); if (f == null) { delegate.skipChildren(); break; } if (f != TokenFilter.INCLUDE_ALL) { f = f.filterStartObject();"
+      },
+      {
+        "txt": "} _itemFilter = f; if (f == TokenFilter.INCLUDE_ALL) { _headContext = _headContext.createChildObjectContext(f, true); return (_currToken = t); } _headContext = _headContext.createChildObjectContext(f, false); if (_includePath) { t = _nextTokenWithBuffering(_headContext); if (t != null) {"
+      },
+      {
+        "txt": "_currToken = t; return t; } } break; case ID_END_ARRAY: case ID_END_OBJECT: { boolean returnEnd = _headContext.isStartHandled(); f = _headContext.getFilter();"
+      },
+      {
+        "txt": "if ((f != null) && (f != TokenFilter.INCLUDE_ALL)) { f.filterFinishArray(); } _headContext = _headContext.getParent(); _itemFilter = _headContext.getFilter(); if (returnEnd) { return (_currToken = t); } } break;"
+      },
+      {
+        "txt": "case ID_FIELD_NAME: { final String name = delegate.getCurrentName(); f = _headContext.setFieldName(name); if (f == TokenFilter.INCLUDE_ALL) { _itemFilter = f; if (!_includePath) { if (_includeImmediateParent && !_headContext.isStartHandled()) { t = _headContext.nextTokenToRead(); // returns START_OBJECT but also marks it handled _exposedContext = _headContext;"
+      },
+      {
+        "txt": "} } return (_currToken = t); } if (f == null) { delegate.nextToken(); delegate.skipChildren(); break; } f = f.includeProperty(name);"
+      },
+      {
+        "txt": "if (f == null) { delegate.nextToken(); delegate.skipChildren(); break; } _itemFilter = f; if (f == TokenFilter.INCLUDE_ALL) { if (_includePath) { return (_currToken = t); }"
+      },
+      {
+        "txt": "} if (_includePath) { t = _nextTokenWithBuffering(_headContext); if (t != null) { _currToken = t; return t; } } break; }"
+      },
+      {
+        "txt": "default: // scalar value f = _itemFilter; if (f == TokenFilter.INCLUDE_ALL) { return (_currToken = t); } if (f != null) { f = _headContext.checkValue(f); if ((f == TokenFilter.INCLUDE_ALL) || ((f != null) && f.includeValue(delegate))) { return (_currToken = t);"
+      },
+      {
+        "txt": "} } break; } return _nextToken2(); } protected final JsonToken _nextToken2() throws IOException { main_loop: while (true) {"
+      },
+      {
+        "txt": "JsonToken t = delegate.nextToken(); if (t == null) { // is this even legal? _currToken = t; return t; } TokenFilter f; switch (t.id()) { case ID_START_ARRAY: f = _itemFilter; if (f == TokenFilter.INCLUDE_ALL) {"
+      },
+      {
+        "txt": "_headContext = _headContext.createChildArrayContext(f, true); return (_currToken = t); } if (f == null) { // does this occur? delegate.skipChildren(); continue main_loop; } f = _headContext.checkValue(f); if (f == null) { delegate.skipChildren();"
+      },
+      {
+        "txt": "continue main_loop; } if (f != TokenFilter.INCLUDE_ALL) { f = f.filterStartArray(); } _itemFilter = f; if (f == TokenFilter.INCLUDE_ALL) { _headContext = _headContext.createChildArrayContext(f, true); return (_currToken = t); }"
+      },
+      {
+        "txt": "_headContext = _headContext.createChildArrayContext(f, false); if (_includePath) { t = _nextTokenWithBuffering(_headContext); if (t != null) { _currToken = t; return t; } } continue main_loop; case ID_START_OBJECT:"
+      },
+      {
+        "txt": "f = _itemFilter; if (f == TokenFilter.INCLUDE_ALL) { _headContext = _headContext.createChildObjectContext(f, true); return (_currToken = t); } if (f == null) { // does this occur? delegate.skipChildren(); continue main_loop; } f = _headContext.checkValue(f);"
+      },
+      {
+        "txt": "if (f == null) { delegate.skipChildren(); continue main_loop; } if (f != TokenFilter.INCLUDE_ALL) { f = f.filterStartObject(); } _itemFilter = f; if (f == TokenFilter.INCLUDE_ALL) { _headContext = _headContext.createChildObjectContext(f, true);"
+      },
+      {
+        "txt": "return (_currToken = t); } _headContext = _headContext.createChildObjectContext(f, false); if (_includePath) { t = _nextTokenWithBuffering(_headContext); if (t != null) { _currToken = t; return t; } }"
+      },
+      {
+        "txt": "continue main_loop; case ID_END_ARRAY: case ID_END_OBJECT: { boolean returnEnd = _headContext.isStartHandled(); f = _headContext.getFilter(); if ((f != null) && (f != TokenFilter.INCLUDE_ALL)) { f.filterFinishArray(); } _headContext = _headContext.getParent();"
+      },
+      {
+        "txt": "_itemFilter = _headContext.getFilter(); if (returnEnd) { return (_currToken = t); } } continue main_loop; case ID_FIELD_NAME: { final String name = delegate.getCurrentName(); f = _headContext.setFieldName(name);"
+      },
+      {
+        "txt": "if (f == TokenFilter.INCLUDE_ALL) { _itemFilter = f; return (_currToken = t); } if (f == null) { // filter out the value delegate.nextToken(); delegate.skipChildren(); continue main_loop; } f = f.includeProperty(name);"
+      },
+      {
+        "txt": "delegate.nextToken(); delegate.skipChildren(); continue main_loop; } _itemFilter = f; if (f == TokenFilter.INCLUDE_ALL) { <extra_id_0> return (_currToken = t); } continue main_loop; } if (_includePath) { t = _nextTokenWithBuffering(_headContext);"
+      },
+      {
+        "txt": "if (_includePath) { t = _nextTokenWithBuffering(_headContext); if (t != null) { _currToken = t; return t; } } } continue main_loop; default: // scalar value"
+      },
+      {
+        "txt": "f = _itemFilter; if (f == TokenFilter.INCLUDE_ALL) { return (_currToken = t); } if (f != null) { f = _headContext.checkValue(f); if ((f == TokenFilter.INCLUDE_ALL) || ((f != null) && f.includeValue(delegate))) { return (_currToken = t); }"
+      },
+      {
+        "txt": "} break; } } } protected final JsonToken _nextTokenWithBuffering(final TokenFilterContext buffRoot) throws IOException { main_loop: while (true) {"
+      },
+      {
+        "txt": "JsonToken t = delegate.nextToken(); if (t == null) { // is this even legal? return t; } TokenFilter f; switch (t.id()) { case ID_START_ARRAY: f = _headContext.checkValue(_itemFilter); if (f == null) { delegate.skipChildren();"
+      },
+      {
+        "txt": "continue main_loop; } if (f != TokenFilter.INCLUDE_ALL) { f = f.filterStartArray(); } _itemFilter = f; if (f == TokenFilter.INCLUDE_ALL) { _headContext = _headContext.createChildArrayContext(f, true); return _nextBuffered(buffRoot); }"
+      },
+      {
+        "txt": "_headContext = _headContext.createChildArrayContext(f, false); continue main_loop; case ID_START_OBJECT: f = _itemFilter; if (f == TokenFilter.INCLUDE_ALL) { _headContext = _headContext.createChildObjectContext(f, true); return t; } if (f == null) { // does this occur? delegate.skipChildren();"
+      },
+      {
+        "txt": "continue main_loop; } f = _headContext.checkValue(f); if (f == null) { delegate.skipChildren(); continue main_loop; } if (f != TokenFilter.INCLUDE_ALL) { f = f.filterStartObject(); }"
+      },
+      {
+        "txt": "_itemFilter = f; if (f == TokenFilter.INCLUDE_ALL) { _headContext = _headContext.createChildObjectContext(f, true); return _nextBuffered(buffRoot); } _headContext = _headContext.createChildObjectContext(f, false); continue main_loop; case ID_END_ARRAY: case ID_END_OBJECT: {"
+      },
+      {
+        "txt": "f = _headContext.getFilter(); if ((f != null) && (f != TokenFilter.INCLUDE_ALL)) { f.filterFinishArray(); } boolean gotEnd = (_headContext == buffRoot); boolean returnEnd = gotEnd && _headContext.isStartHandled(); _headContext = _headContext.getParent(); _itemFilter = _headContext.getFilter(); if (returnEnd) { return t;"
+      },
+      {
+        "txt": "} if (gotEnd || (_headContext == buffRoot)) { return null; } } continue main_loop; case ID_FIELD_NAME: { final String name = delegate.getCurrentName(); f = _headContext.setFieldName(name);"
+      },
+      {
+        "txt": "if (f == TokenFilter.INCLUDE_ALL) { _itemFilter = f; return _nextBuffered(buffRoot); } if (f == null) { // filter out the value delegate.nextToken(); delegate.skipChildren(); continue main_loop; } f = f.includeProperty(name);"
+      },
+      {
+        "txt": "if (f == null) { // filter out the value delegate.nextToken(); delegate.skipChildren(); continue main_loop; } _itemFilter = f; if (f == TokenFilter.INCLUDE_ALL) { return _nextBuffered(buffRoot); } }"
+      },
+      {
+        "txt": "continue main_loop; default: // scalar value f = _itemFilter; if (f == TokenFilter.INCLUDE_ALL) { return _nextBuffered(buffRoot); } if (f != null) { f = _headContext.checkValue(f); if ((f == TokenFilter.INCLUDE_ALL) || ((f != null) && f.includeValue(delegate))) {"
+      },
+      {
+        "txt": "return _nextBuffered(buffRoot); } } continue main_loop; } } } private JsonToken _nextBuffered(TokenFilterContext buffRoot) throws IOException { _exposedContext = buffRoot;"
+      },
+      {
+        "txt": "TokenFilterContext ctxt = buffRoot; JsonToken t = ctxt.nextTokenToRead(); if (t != null) { return t; } while (true) { if (ctxt == _headContext) { throw _constructError(\"Internal error: failed to locate expected buffered tokens\"); _exposedContext = null; break;"
+      },
+      {
+        "txt": "} ctxt = _exposedContext.findChildOf(ctxt); _exposedContext = ctxt; if (ctxt == null) { // should never occur throw _constructError(\"Unexpected problem: chain of filtered context broken\"); } t = _exposedContext.nextTokenToRead(); if (t != null) { return t; }"
+      },
+      {
+        "txt": "} } @Override public JsonToken nextValue() throws IOException { JsonToken t = nextToken(); if (t == JsonToken.FIELD_NAME) { t = nextToken(); } return t; }"
+      },
+      {
+        "txt": "@Override public JsonParser skipChildren() throws IOException { if ((_currToken != JsonToken.START_OBJECT) && (_currToken != JsonToken.START_ARRAY)) { return this; } int open = 1; while (true) { JsonToken t = nextToken();"
+      },
+      {
+        "txt": "if (t == null) { // not ideal but for now, just return return this; } if (t.isStructStart()) { ++open; } else if (t.isStructEnd()) { if (--open == 0) { return this; } }"
+      },
+      {
+        "txt": "} } @Override public String getText() throws IOException { return delegate.getText(); } @Override public boolean hasTextCharacters() { return delegate.hasTextCharacters(); } @Override public char[] getTextCharacters() throws IOException { return delegate.getTextCharacters(); } @Override public int getTextLength() throws IOException { return delegate.getTextLength(); } @Override public int getTextOffset() throws IOException { return delegate.getTextOffset(); } @Override public BigInteger getBigIntegerValue() throws IOException { return delegate.getBigIntegerValue(); } @Override"
+      },
+      {
+        "txt": "public boolean getBooleanValue() throws IOException { return delegate.getBooleanValue(); } @Override public byte getByteValue() throws IOException { return delegate.getByteValue(); } @Override public short getShortValue() throws IOException { return delegate.getShortValue(); } @Override public BigDecimal getDecimalValue() throws IOException { return delegate.getDecimalValue(); } @Override public double getDoubleValue() throws IOException { return delegate.getDoubleValue(); } @Override"
+      },
+      {
+        "txt": "public float getFloatValue() throws IOException { return delegate.getFloatValue(); } @Override public int getIntValue() throws IOException { return delegate.getIntValue(); } @Override public long getLongValue() throws IOException { return delegate.getLongValue(); } @Override public NumberType getNumberType() throws IOException { return delegate.getNumberType(); } @Override public Number getNumberValue() throws IOException { return delegate.getNumberValue(); } @Override public int getValueAsInt() throws IOException { return delegate.getValueAsInt(); }"
+      },
+      {
+        "txt": "@Override public int getValueAsInt(int defaultValue) throws IOException { return delegate.getValueAsInt(defaultValue); } @Override public long getValueAsLong() throws IOException { return delegate.getValueAsLong(); } @Override public long getValueAsLong(long defaultValue) throws IOException { return delegate.getValueAsLong(defaultValue); } @Override public double getValueAsDouble() throws IOException { return delegate.getValueAsDouble(); } @Override public double getValueAsDouble(double defaultValue) throws IOException { return delegate.getValueAsDouble(defaultValue); } @Override public boolean getValueAsBoolean() throws IOException { return delegate.getValueAsBoolean(); } @Override public boolean getValueAsBoolean(boolean defaultValue) throws IOException { return delegate.getValueAsBoolean(defaultValue); } @Override public String getValueAsString() throws IOException { return delegate.getValueAsString(); } @Override public String getValueAsString(String defaultValue) throws IOException { return delegate.getValueAsString(defaultValue); } @Override public Object getEmbeddedObject() throws IOException { return delegate.getEmbeddedObject(); }"
+      },
+      {
+        "txt": "@Override public byte[] getBinaryValue(Base64Variant b64variant) throws IOException { return delegate.getBinaryValue(b64variant); } @Override public int readBinaryValue(Base64Variant b64variant, OutputStream out) throws IOException { return delegate.readBinaryValue(b64variant, out); } @Override public JsonLocation getTokenLocation() { return delegate.getTokenLocation(); } protected JsonStreamContext _filterContext() { if (_exposedContext != null) { return _exposedContext; } return _headContext; }"
+      }
+    ]
+  },
+  {
+    "id": 1289,
+    "file_path": "src/main/java/com/fasterxml/jackson/core/filter/FilteringParserDelegate.java",
+    "start-bug-line": 600,
+    "end-bug-line": 600,
+    "bug": "",
+    "fix": "if (_verifyAllowedMatches()) {",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.core.filter; import java.io.IOException;"
+      },
+      {
+        "txt": "import java.io.OutputStream; import java.math.BigDecimal; import java.math.BigInteger; import com.fasterxml.jackson.core.*; import com.fasterxml.jackson.core.util.JsonParserDelegate; import static com.fasterxml.jackson.core.JsonTokenId.*; public class FilteringParserDelegate extends JsonParserDelegate { protected TokenFilter rootFilter; protected boolean _allowMultipleMatches;"
+      },
+      {
+        "txt": "protected boolean _includePath; @Deprecated protected boolean _includeImmediateParent; protected JsonToken _currToken; protected JsonToken _lastClearedToken; protected TokenFilterContext _headContext; protected TokenFilterContext _exposedContext; protected TokenFilter _itemFilter; protected int _matchCount; public FilteringParserDelegate(JsonParser p, TokenFilter f,"
+      },
+      {
+        "txt": "boolean includePath, boolean allowMultipleMatches) { super(p); rootFilter = f; _itemFilter = f; _headContext = TokenFilterContext.createRootContext(f); _includePath = includePath; _allowMultipleMatches = allowMultipleMatches; } public TokenFilter getFilter() { return rootFilter; }"
+      },
+      {
+        "txt": "public int getMatchCount() { return _matchCount; } @Override public JsonToken getCurrentToken() { return _currToken; } @Override public JsonToken currentToken() { return _currToken; } @Override public final int getCurrentTokenId() { final JsonToken t = _currToken; return (t == null) ? JsonTokenId.ID_NO_TOKEN : t.id(); } @Override public final int currentTokenId() {"
+      },
+      {
+        "txt": "final JsonToken t = _currToken; return (t == null) ? JsonTokenId.ID_NO_TOKEN : t.id(); } @Override public boolean hasCurrentToken() { return _currToken != null; } @Override public boolean hasTokenId(int id) { final JsonToken t = _currToken; if (t == null) { return (JsonTokenId.ID_NO_TOKEN == id); } return t.id() == id;"
+      },
+      {
+        "txt": "} @Override public final boolean hasToken(JsonToken t) { return (_currToken == t); } @Override public boolean isExpectedStartArrayToken() { return _currToken == JsonToken.START_ARRAY; } @Override public boolean isExpectedStartObjectToken() { return _currToken == JsonToken.START_OBJECT; } @Override public JsonLocation getCurrentLocation() { return delegate.getCurrentLocation(); } @Override public JsonStreamContext getParsingContext() { return _filterContext();"
+      },
+      {
+        "txt": "} @Override public String getCurrentName() throws IOException { JsonStreamContext ctxt = _filterContext(); if (_currToken == JsonToken.START_OBJECT || _currToken == JsonToken.START_ARRAY) { JsonStreamContext parent = ctxt.getParent(); return (parent == null) ? null : parent.getCurrentName(); } return ctxt.getCurrentName(); }"
+      },
+      {
+        "txt": "@Override public void clearCurrentToken() { if (_currToken != null) { _lastClearedToken = _currToken; _currToken = null; } } @Override public JsonToken getLastClearedToken() { return _lastClearedToken; } @Override"
+      },
+      {
+        "txt": "public void overrideCurrentName(String name) { throw new UnsupportedOperationException(\"Can not currently override name during filtering read\"); } @Override public JsonToken nextToken() throws IOException { if (!_allowMultipleMatches && (_currToken != null) && (_exposedContext == null)) { if (_currToken.isScalarValue() && !_headContext.isStartHandled() && !_includePath && (_itemFilter == TokenFilter.INCLUDE_ALL)) { return (_currToken = null);"
+      },
+      {
+        "txt": "} } TokenFilterContext ctxt = _exposedContext; if (ctxt != null) { while (true) { JsonToken t = ctxt.nextTokenToRead(); if (t != null) { _currToken = t; return t; }"
+      },
+      {
+        "txt": "if (ctxt == _headContext) { _exposedContext = null; if (ctxt.inArray()) { t = delegate.getCurrentToken(); _currToken = t; return t; } t = delegate.getCurrentToken(); if (t != JsonToken.FIELD_NAME) { _currToken = t;"
+      },
+      {
+        "txt": "return t; } break; } ctxt = _headContext.findChildOf(ctxt); _exposedContext = ctxt; if (ctxt == null) { // should never occur throw _constructError(\"Unexpected problem: chain of filtered context broken\"); } }"
+      },
+      {
+        "txt": "} JsonToken t = delegate.nextToken(); if (t == null) { _currToken = t; return t; } TokenFilter f; switch (t.id()) { case ID_START_ARRAY: f = _itemFilter;"
+      },
+      {
+        "txt": "if (f == TokenFilter.INCLUDE_ALL) { _headContext = _headContext.createChildArrayContext(f, true); return (_currToken = t); } if (f == null) { // does this occur? delegate.skipChildren(); break; } f = _headContext.checkValue(f); if (f == null) {"
+      },
+      {
+        "txt": "delegate.skipChildren(); break; } if (f != TokenFilter.INCLUDE_ALL) { f = f.filterStartArray(); } _itemFilter = f; if (f == TokenFilter.INCLUDE_ALL) { _headContext = _headContext.createChildArrayContext(f, true); return (_currToken = t);"
+      },
+      {
+        "txt": "} _headContext = _headContext.createChildArrayContext(f, false); if (_includePath) { t = _nextTokenWithBuffering(_headContext); if (t != null) { _currToken = t; return t; } } break;"
+      },
+      {
+        "txt": "case ID_START_OBJECT: f = _itemFilter; if (f == TokenFilter.INCLUDE_ALL) { _headContext = _headContext.createChildObjectContext(f, true); return (_currToken = t); } if (f == null) { // does this occur? delegate.skipChildren(); break; }"
+      },
+      {
+        "txt": "f = _headContext.checkValue(f); if (f == null) { delegate.skipChildren(); break; } if (f != TokenFilter.INCLUDE_ALL) { f = f.filterStartObject(); } _itemFilter = f; if (f == TokenFilter.INCLUDE_ALL) {"
+      },
+      {
+        "txt": "_headContext = _headContext.createChildObjectContext(f, true); return (_currToken = t); } _headContext = _headContext.createChildObjectContext(f, false); if (_includePath) { t = _nextTokenWithBuffering(_headContext); if (t != null) { _currToken = t; return t; }"
+      },
+      {
+        "txt": "} break; case ID_END_ARRAY: case ID_END_OBJECT: { boolean returnEnd = _headContext.isStartHandled(); f = _headContext.getFilter(); if ((f != null) && (f != TokenFilter.INCLUDE_ALL)) { f.filterFinishArray(); }"
+      },
+      {
+        "txt": "_headContext = _headContext.getParent(); _itemFilter = _headContext.getFilter(); if (returnEnd) { return (_currToken = t); } } break; case ID_FIELD_NAME: { final String name = delegate.getCurrentName();"
+      },
+      {
+        "txt": "f = _headContext.setFieldName(name); if (f == TokenFilter.INCLUDE_ALL) { _itemFilter = f; if (!_includePath) { if (_includeImmediateParent && !_headContext.isStartHandled()) { t = _headContext.nextTokenToRead(); // returns START_OBJECT but also marks it handled _exposedContext = _headContext; } } return (_currToken = t);"
+      },
+      {
+        "txt": "} if (f == null) { delegate.nextToken(); delegate.skipChildren(); break; } f = f.includeProperty(name); if (f == null) { delegate.nextToken(); delegate.skipChildren();"
+      },
+      {
+        "txt": "break; } _itemFilter = f; if (f == TokenFilter.INCLUDE_ALL) { if (_includePath) { return (_currToken = t); } } if (_includePath) { t = _nextTokenWithBuffering(_headContext);"
+      },
+      {
+        "txt": "if (t != null) { _currToken = t; return t; } } break; } default: // scalar value f = _itemFilter; if (f == TokenFilter.INCLUDE_ALL) {"
+      },
+      {
+        "txt": "return (_currToken = t); } if (f != null) { f = _headContext.checkValue(f); if ((f == TokenFilter.INCLUDE_ALL) || ((f != null) && f.includeValue(delegate))) { return (_currToken = t); } } break;"
+      },
+      {
+        "txt": "} return _nextToken2(); } protected final JsonToken _nextToken2() throws IOException { main_loop: while (true) { JsonToken t = delegate.nextToken(); if (t == null) { // is this even legal? _currToken = t;"
+      },
+      {
+        "txt": "return t; } TokenFilter f; switch (t.id()) { case ID_START_ARRAY: f = _itemFilter; if (f == TokenFilter.INCLUDE_ALL) { _headContext = _headContext.createChildArrayContext(f, true); return (_currToken = t); }"
+      },
+      {
+        "txt": "if (f == null) { // does this occur? delegate.skipChildren(); continue main_loop; } f = _headContext.checkValue(f); if (f == null) { delegate.skipChildren(); continue main_loop; } if (f != TokenFilter.INCLUDE_ALL) {"
+      },
+      {
+        "txt": "f = f.filterStartArray(); } _itemFilter = f; if (f == TokenFilter.INCLUDE_ALL) { _headContext = _headContext.createChildArrayContext(f, true); return (_currToken = t); } _headContext = _headContext.createChildArrayContext(f, false); if (_includePath) { t = _nextTokenWithBuffering(_headContext);"
+      },
+      {
+        "txt": "if (t != null) { _currToken = t; return t; } } continue main_loop; case ID_START_OBJECT: f = _itemFilter; if (f == TokenFilter.INCLUDE_ALL) { _headContext = _headContext.createChildObjectContext(f, true);"
+      },
+      {
+        "txt": "return (_currToken = t); } if (f == null) { // does this occur? delegate.skipChildren(); continue main_loop; } f = _headContext.checkValue(f); if (f == null) { delegate.skipChildren(); continue main_loop;"
+      },
+      {
+        "txt": "} if (f != TokenFilter.INCLUDE_ALL) { f = f.filterStartObject(); } _itemFilter = f; if (f == TokenFilter.INCLUDE_ALL) { _headContext = _headContext.createChildObjectContext(f, true); return (_currToken = t); } _headContext = _headContext.createChildObjectContext(f, false);"
+      },
+      {
+        "txt": "if (_includePath) { t = _nextTokenWithBuffering(_headContext); if (t != null) { _currToken = t; return t; } } continue main_loop; case ID_END_ARRAY: case ID_END_OBJECT:"
+      },
+      {
+        "txt": "{ boolean returnEnd = _headContext.isStartHandled(); f = _headContext.getFilter(); if ((f != null) && (f != TokenFilter.INCLUDE_ALL)) { f.filterFinishArray(); } _headContext = _headContext.getParent(); _itemFilter = _headContext.getFilter(); if (returnEnd) { return (_currToken = t);"
+      },
+      {
+        "txt": "} } continue main_loop; case ID_FIELD_NAME: { final String name = delegate.getCurrentName(); f = _headContext.setFieldName(name); if (f == TokenFilter.INCLUDE_ALL) { _itemFilter = f; return (_currToken = t);"
+      },
+      {
+        "txt": "} if (f == null) { // filter out the value delegate.nextToken(); delegate.skipChildren(); continue main_loop; } f = f.includeProperty(name); if (f == null) { // filter out the value delegate.nextToken(); delegate.skipChildren();"
+      },
+      {
+        "txt": "continue main_loop; } _itemFilter = f; if (f == TokenFilter.INCLUDE_ALL) { if (_includePath) { return (_currToken = t); } continue main_loop; } if (_includePath) {"
+      },
+      {
+        "txt": "t = _nextTokenWithBuffering(_headContext); if (t != null) { _currToken = t; return t; } } } continue main_loop; default: // scalar value f = _itemFilter;"
+      },
+      {
+        "txt": "return (_currToken = t); } if (f != null) { f = _headContext.checkValue(f); if ((f == TokenFilter.INCLUDE_ALL) || ((f != null) && f.includeValue(delegate))) { <extra_id_0> } } break; } } }"
+      },
+      {
+        "txt": "} } protected final JsonToken _nextTokenWithBuffering(final TokenFilterContext buffRoot) throws IOException { main_loop: while (true) { JsonToken t = delegate.nextToken(); if (t == null) { // is this even legal? return t;"
+      },
+      {
+        "txt": "} TokenFilter f; switch (t.id()) { case ID_START_ARRAY: f = _headContext.checkValue(_itemFilter); if (f == null) { delegate.skipChildren(); continue main_loop; } if (f != TokenFilter.INCLUDE_ALL) {"
+      },
+      {
+        "txt": "f = f.filterStartArray(); } _itemFilter = f; if (f == TokenFilter.INCLUDE_ALL) { _headContext = _headContext.createChildArrayContext(f, true); return _nextBuffered(buffRoot); } _headContext = _headContext.createChildArrayContext(f, false); continue main_loop; case ID_START_OBJECT:"
+      },
+      {
+        "txt": "f = _itemFilter; if (f == TokenFilter.INCLUDE_ALL) { _headContext = _headContext.createChildObjectContext(f, true); return t; } if (f == null) { // does this occur? delegate.skipChildren(); continue main_loop; } f = _headContext.checkValue(f);"
+      },
+      {
+        "txt": "if (f == null) { delegate.skipChildren(); continue main_loop; } if (f != TokenFilter.INCLUDE_ALL) { f = f.filterStartObject(); } _itemFilter = f; if (f == TokenFilter.INCLUDE_ALL) { _headContext = _headContext.createChildObjectContext(f, true);"
+      },
+      {
+        "txt": "return _nextBuffered(buffRoot); } _headContext = _headContext.createChildObjectContext(f, false); continue main_loop; case ID_END_ARRAY: case ID_END_OBJECT: { f = _headContext.getFilter(); if ((f != null) && (f != TokenFilter.INCLUDE_ALL)) { f.filterFinishArray();"
+      },
+      {
+        "txt": "} boolean gotEnd = (_headContext == buffRoot); boolean returnEnd = gotEnd && _headContext.isStartHandled(); _headContext = _headContext.getParent(); _itemFilter = _headContext.getFilter(); if (returnEnd) { return t; } if (gotEnd || (_headContext == buffRoot)) { return null;"
+      },
+      {
+        "txt": "} } continue main_loop; case ID_FIELD_NAME: { final String name = delegate.getCurrentName(); f = _headContext.setFieldName(name); if (f == TokenFilter.INCLUDE_ALL) { _itemFilter = f; return _nextBuffered(buffRoot);"
+      },
+      {
+        "txt": "} if (f == null) { // filter out the value delegate.nextToken(); delegate.skipChildren(); continue main_loop; } f = f.includeProperty(name); if (f == null) { // filter out the value delegate.nextToken(); delegate.skipChildren();"
+      },
+      {
+        "txt": "continue main_loop; } _itemFilter = f; if (f == TokenFilter.INCLUDE_ALL) { return _nextBuffered(buffRoot); } } continue main_loop; default: // scalar value f = _itemFilter;"
+      },
+      {
+        "txt": "if (f == TokenFilter.INCLUDE_ALL) { return _nextBuffered(buffRoot); } if (f != null) { f = _headContext.checkValue(f); if ((f == TokenFilter.INCLUDE_ALL) || ((f != null) && f.includeValue(delegate))) { return _nextBuffered(buffRoot); } }"
+      },
+      {
+        "txt": "continue main_loop; } } } private JsonToken _nextBuffered(TokenFilterContext buffRoot) throws IOException { _exposedContext = buffRoot; TokenFilterContext ctxt = buffRoot; JsonToken t = ctxt.nextTokenToRead(); if (t != null) {"
+      },
+      {
+        "txt": "return t; } while (true) { if (ctxt == _headContext) { throw _constructError(\"Internal error: failed to locate expected buffered tokens\"); _exposedContext = null; break; } ctxt = _exposedContext.findChildOf(ctxt); _exposedContext = ctxt;"
+      },
+      {
+        "txt": "if (ctxt == null) { // should never occur throw _constructError(\"Unexpected problem: chain of filtered context broken\"); } t = _exposedContext.nextTokenToRead(); if (t != null) { return t; } } } @Override"
+      },
+      {
+        "txt": "public JsonToken nextValue() throws IOException { JsonToken t = nextToken(); if (t == JsonToken.FIELD_NAME) { t = nextToken(); } return t; } @Override public JsonParser skipChildren() throws IOException {"
+      },
+      {
+        "txt": "if ((_currToken != JsonToken.START_OBJECT) && (_currToken != JsonToken.START_ARRAY)) { return this; } int open = 1; while (true) { JsonToken t = nextToken(); if (t == null) { // not ideal but for now, just return return this; }"
+      },
+      {
+        "txt": "if (t.isStructStart()) { ++open; } else if (t.isStructEnd()) { if (--open == 0) { return this; } } } } @Override public String getText() throws IOException { return delegate.getText(); }"
+      },
+      {
+        "txt": "@Override public boolean hasTextCharacters() { return delegate.hasTextCharacters(); } @Override public char[] getTextCharacters() throws IOException { return delegate.getTextCharacters(); } @Override public int getTextLength() throws IOException { return delegate.getTextLength(); } @Override public int getTextOffset() throws IOException { return delegate.getTextOffset(); } @Override public BigInteger getBigIntegerValue() throws IOException { return delegate.getBigIntegerValue(); } @Override public boolean getBooleanValue() throws IOException { return delegate.getBooleanValue(); } @Override public byte getByteValue() throws IOException { return delegate.getByteValue(); }"
+      },
+      {
+        "txt": "@Override public short getShortValue() throws IOException { return delegate.getShortValue(); } @Override public BigDecimal getDecimalValue() throws IOException { return delegate.getDecimalValue(); } @Override public double getDoubleValue() throws IOException { return delegate.getDoubleValue(); } @Override public float getFloatValue() throws IOException { return delegate.getFloatValue(); } @Override public int getIntValue() throws IOException { return delegate.getIntValue(); }"
+      },
+      {
+        "txt": "@Override public long getLongValue() throws IOException { return delegate.getLongValue(); } @Override public NumberType getNumberType() throws IOException { return delegate.getNumberType(); } @Override public Number getNumberValue() throws IOException { return delegate.getNumberValue(); } @Override public int getValueAsInt() throws IOException { return delegate.getValueAsInt(); } @Override public int getValueAsInt(int defaultValue) throws IOException { return delegate.getValueAsInt(defaultValue); } @Override public long getValueAsLong() throws IOException { return delegate.getValueAsLong(); } @Override public long getValueAsLong(long defaultValue) throws IOException { return delegate.getValueAsLong(defaultValue); }"
+      },
+      {
+        "txt": "@Override public double getValueAsDouble() throws IOException { return delegate.getValueAsDouble(); } @Override public double getValueAsDouble(double defaultValue) throws IOException { return delegate.getValueAsDouble(defaultValue); } @Override public boolean getValueAsBoolean() throws IOException { return delegate.getValueAsBoolean(); } @Override public boolean getValueAsBoolean(boolean defaultValue) throws IOException { return delegate.getValueAsBoolean(defaultValue); } @Override public String getValueAsString() throws IOException { return delegate.getValueAsString(); } @Override public String getValueAsString(String defaultValue) throws IOException { return delegate.getValueAsString(defaultValue); } @Override public Object getEmbeddedObject() throws IOException { return delegate.getEmbeddedObject(); } @Override public byte[] getBinaryValue(Base64Variant b64variant) throws IOException { return delegate.getBinaryValue(b64variant); } @Override public int readBinaryValue(Base64Variant b64variant, OutputStream out) throws IOException { return delegate.readBinaryValue(b64variant, out); } @Override public JsonLocation getTokenLocation() { return delegate.getTokenLocation(); }"
+      },
+      {
+        "txt": "protected JsonStreamContext _filterContext() { if (_exposedContext != null) { return _exposedContext; } return _headContext; }"
+      }
+    ]
+  },
+  {
+    "id": 1290,
+    "file_path": "src/main/java/com/fasterxml/jackson/core/filter/FilteringParserDelegate.java",
+    "start-bug-line": 601,
+    "end-bug-line": 601,
+    "bug": "",
+    "fix": "}",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.core.filter; import java.io.IOException; import java.io.OutputStream;"
+      },
+      {
+        "txt": "import java.math.BigDecimal; import java.math.BigInteger; import com.fasterxml.jackson.core.*; import com.fasterxml.jackson.core.util.JsonParserDelegate; import static com.fasterxml.jackson.core.JsonTokenId.*; public class FilteringParserDelegate extends JsonParserDelegate { protected TokenFilter rootFilter; protected boolean _allowMultipleMatches; protected boolean _includePath;"
+      },
+      {
+        "txt": "@Deprecated protected boolean _includeImmediateParent; protected JsonToken _currToken; protected JsonToken _lastClearedToken; protected TokenFilterContext _headContext; protected TokenFilterContext _exposedContext; protected TokenFilter _itemFilter; protected int _matchCount; public FilteringParserDelegate(JsonParser p, TokenFilter f, boolean includePath, boolean allowMultipleMatches)"
+      },
+      {
+        "txt": "{ super(p); rootFilter = f; _itemFilter = f; _headContext = TokenFilterContext.createRootContext(f); _includePath = includePath; _allowMultipleMatches = allowMultipleMatches; } public TokenFilter getFilter() { return rootFilter; } public int getMatchCount() {"
+      },
+      {
+        "txt": "return _matchCount; } @Override public JsonToken getCurrentToken() { return _currToken; } @Override public JsonToken currentToken() { return _currToken; } @Override public final int getCurrentTokenId() { final JsonToken t = _currToken; return (t == null) ? JsonTokenId.ID_NO_TOKEN : t.id(); } @Override public final int currentTokenId() { final JsonToken t = _currToken;"
+      },
+      {
+        "txt": "return (t == null) ? JsonTokenId.ID_NO_TOKEN : t.id(); } @Override public boolean hasCurrentToken() { return _currToken != null; } @Override public boolean hasTokenId(int id) { final JsonToken t = _currToken; if (t == null) { return (JsonTokenId.ID_NO_TOKEN == id); } return t.id() == id; }"
+      },
+      {
+        "txt": "@Override public final boolean hasToken(JsonToken t) { return (_currToken == t); } @Override public boolean isExpectedStartArrayToken() { return _currToken == JsonToken.START_ARRAY; } @Override public boolean isExpectedStartObjectToken() { return _currToken == JsonToken.START_OBJECT; } @Override public JsonLocation getCurrentLocation() { return delegate.getCurrentLocation(); } @Override public JsonStreamContext getParsingContext() { return _filterContext(); }"
+      },
+      {
+        "txt": "@Override public String getCurrentName() throws IOException { JsonStreamContext ctxt = _filterContext(); if (_currToken == JsonToken.START_OBJECT || _currToken == JsonToken.START_ARRAY) { JsonStreamContext parent = ctxt.getParent(); return (parent == null) ? null : parent.getCurrentName(); } return ctxt.getCurrentName(); } @Override"
+      },
+      {
+        "txt": "public void clearCurrentToken() { if (_currToken != null) { _lastClearedToken = _currToken; _currToken = null; } } @Override public JsonToken getLastClearedToken() { return _lastClearedToken; } @Override public void overrideCurrentName(String name) {"
+      },
+      {
+        "txt": "throw new UnsupportedOperationException(\"Can not currently override name during filtering read\"); } @Override public JsonToken nextToken() throws IOException { if (!_allowMultipleMatches && (_currToken != null) && (_exposedContext == null)) { if (_currToken.isScalarValue() && !_headContext.isStartHandled() && !_includePath && (_itemFilter == TokenFilter.INCLUDE_ALL)) { return (_currToken = null); }"
+      },
+      {
+        "txt": "} TokenFilterContext ctxt = _exposedContext; if (ctxt != null) { while (true) { JsonToken t = ctxt.nextTokenToRead(); if (t != null) { _currToken = t; return t; } if (ctxt == _headContext) {"
+      },
+      {
+        "txt": "_exposedContext = null; if (ctxt.inArray()) { t = delegate.getCurrentToken(); _currToken = t; return t; } t = delegate.getCurrentToken(); if (t != JsonToken.FIELD_NAME) { _currToken = t; return t;"
+      },
+      {
+        "txt": "} break; } ctxt = _headContext.findChildOf(ctxt); _exposedContext = ctxt; if (ctxt == null) { // should never occur throw _constructError(\"Unexpected problem: chain of filtered context broken\"); } } }"
+      },
+      {
+        "txt": "JsonToken t = delegate.nextToken(); if (t == null) { _currToken = t; return t; } TokenFilter f; switch (t.id()) { case ID_START_ARRAY: f = _itemFilter; if (f == TokenFilter.INCLUDE_ALL) {"
+      },
+      {
+        "txt": "_headContext = _headContext.createChildArrayContext(f, true); return (_currToken = t); } if (f == null) { // does this occur? delegate.skipChildren(); break; } f = _headContext.checkValue(f); if (f == null) { delegate.skipChildren();"
+      },
+      {
+        "txt": "break; } if (f != TokenFilter.INCLUDE_ALL) { f = f.filterStartArray(); } _itemFilter = f; if (f == TokenFilter.INCLUDE_ALL) { _headContext = _headContext.createChildArrayContext(f, true); return (_currToken = t); }"
+      },
+      {
+        "txt": "_headContext = _headContext.createChildArrayContext(f, false); if (_includePath) { t = _nextTokenWithBuffering(_headContext); if (t != null) { _currToken = t; return t; } } break; case ID_START_OBJECT:"
+      },
+      {
+        "txt": "f = _itemFilter; if (f == TokenFilter.INCLUDE_ALL) { _headContext = _headContext.createChildObjectContext(f, true); return (_currToken = t); } if (f == null) { // does this occur? delegate.skipChildren(); break; } f = _headContext.checkValue(f);"
+      },
+      {
+        "txt": "if (f == null) { delegate.skipChildren(); break; } if (f != TokenFilter.INCLUDE_ALL) { f = f.filterStartObject(); } _itemFilter = f; if (f == TokenFilter.INCLUDE_ALL) { _headContext = _headContext.createChildObjectContext(f, true);"
+      },
+      {
+        "txt": "return (_currToken = t); } _headContext = _headContext.createChildObjectContext(f, false); if (_includePath) { t = _nextTokenWithBuffering(_headContext); if (t != null) { _currToken = t; return t; } }"
+      },
+      {
+        "txt": "break; case ID_END_ARRAY: case ID_END_OBJECT: { boolean returnEnd = _headContext.isStartHandled(); f = _headContext.getFilter(); if ((f != null) && (f != TokenFilter.INCLUDE_ALL)) { f.filterFinishArray(); } _headContext = _headContext.getParent();"
+      },
+      {
+        "txt": "_itemFilter = _headContext.getFilter(); if (returnEnd) { return (_currToken = t); } } break; case ID_FIELD_NAME: { final String name = delegate.getCurrentName(); f = _headContext.setFieldName(name);"
+      },
+      {
+        "txt": "if (f == TokenFilter.INCLUDE_ALL) { _itemFilter = f; if (!_includePath) { if (_includeImmediateParent && !_headContext.isStartHandled()) { t = _headContext.nextTokenToRead(); // returns START_OBJECT but also marks it handled _exposedContext = _headContext; } } return (_currToken = t); }"
+      },
+      {
+        "txt": "if (f == null) { delegate.nextToken(); delegate.skipChildren(); break; } f = f.includeProperty(name); if (f == null) { delegate.nextToken(); delegate.skipChildren(); break;"
+      },
+      {
+        "txt": "} _itemFilter = f; if (f == TokenFilter.INCLUDE_ALL) { if (_includePath) { return (_currToken = t); } } if (_includePath) { t = _nextTokenWithBuffering(_headContext); if (t != null) {"
+      },
+      {
+        "txt": "_currToken = t; return t; } } break; } default: // scalar value f = _itemFilter; if (f == TokenFilter.INCLUDE_ALL) { return (_currToken = t);"
+      },
+      {
+        "txt": "} if (f != null) { f = _headContext.checkValue(f); if ((f == TokenFilter.INCLUDE_ALL) || ((f != null) && f.includeValue(delegate))) { return (_currToken = t); } } break; }"
+      },
+      {
+        "txt": "return _nextToken2(); } protected final JsonToken _nextToken2() throws IOException { main_loop: while (true) { JsonToken t = delegate.nextToken(); if (t == null) { // is this even legal? _currToken = t; return t;"
+      },
+      {
+        "txt": "} TokenFilter f; switch (t.id()) { case ID_START_ARRAY: f = _itemFilter; if (f == TokenFilter.INCLUDE_ALL) { _headContext = _headContext.createChildArrayContext(f, true); return (_currToken = t); } if (f == null) { // does this occur?"
+      },
+      {
+        "txt": "delegate.skipChildren(); continue main_loop; } f = _headContext.checkValue(f); if (f == null) { delegate.skipChildren(); continue main_loop; } if (f != TokenFilter.INCLUDE_ALL) { f = f.filterStartArray();"
+      },
+      {
+        "txt": "} _itemFilter = f; if (f == TokenFilter.INCLUDE_ALL) { _headContext = _headContext.createChildArrayContext(f, true); return (_currToken = t); } _headContext = _headContext.createChildArrayContext(f, false); if (_includePath) { t = _nextTokenWithBuffering(_headContext); if (t != null) {"
+      },
+      {
+        "txt": "_currToken = t; return t; } } continue main_loop; case ID_START_OBJECT: f = _itemFilter; if (f == TokenFilter.INCLUDE_ALL) { _headContext = _headContext.createChildObjectContext(f, true); return (_currToken = t);"
+      },
+      {
+        "txt": "} if (f == null) { // does this occur? delegate.skipChildren(); continue main_loop; } f = _headContext.checkValue(f); if (f == null) { delegate.skipChildren(); continue main_loop; }"
+      },
+      {
+        "txt": "if (f != TokenFilter.INCLUDE_ALL) { f = f.filterStartObject(); } _itemFilter = f; if (f == TokenFilter.INCLUDE_ALL) { _headContext = _headContext.createChildObjectContext(f, true); return (_currToken = t); } _headContext = _headContext.createChildObjectContext(f, false); if (_includePath) {"
+      },
+      {
+        "txt": "t = _nextTokenWithBuffering(_headContext); if (t != null) { _currToken = t; return t; } } continue main_loop; case ID_END_ARRAY: case ID_END_OBJECT: {"
+      },
+      {
+        "txt": "boolean returnEnd = _headContext.isStartHandled(); f = _headContext.getFilter(); if ((f != null) && (f != TokenFilter.INCLUDE_ALL)) { f.filterFinishArray(); } _headContext = _headContext.getParent(); _itemFilter = _headContext.getFilter(); if (returnEnd) { return (_currToken = t); }"
+      },
+      {
+        "txt": "} continue main_loop; case ID_FIELD_NAME: { final String name = delegate.getCurrentName(); f = _headContext.setFieldName(name); if (f == TokenFilter.INCLUDE_ALL) { _itemFilter = f; return (_currToken = t); }"
+      },
+      {
+        "txt": "if (f == null) { // filter out the value delegate.nextToken(); delegate.skipChildren(); continue main_loop; } f = f.includeProperty(name); if (f == null) { // filter out the value delegate.nextToken(); delegate.skipChildren(); continue main_loop;"
+      },
+      {
+        "txt": "} _itemFilter = f; if (f == TokenFilter.INCLUDE_ALL) { if (_includePath) { return (_currToken = t); } continue main_loop; } if (_includePath) { t = _nextTokenWithBuffering(_headContext);"
+      },
+      {
+        "txt": "if (t != null) { _currToken = t; return t; } } } continue main_loop; default: // scalar value f = _itemFilter; if (f == TokenFilter.INCLUDE_ALL) {"
+      },
+      {
+        "txt": "} if (f != null) { f = _headContext.checkValue(f); if ((f == TokenFilter.INCLUDE_ALL) || ((f != null) && f.includeValue(delegate))) { return (_currToken = t); <extra_id_0> } break; } } } protected final JsonToken _nextTokenWithBuffering(final TokenFilterContext buffRoot)"
+      },
+      {
+        "txt": "} protected final JsonToken _nextTokenWithBuffering(final TokenFilterContext buffRoot) throws IOException { main_loop: while (true) { JsonToken t = delegate.nextToken(); if (t == null) { // is this even legal? return t; }"
+      },
+      {
+        "txt": "TokenFilter f; switch (t.id()) { case ID_START_ARRAY: f = _headContext.checkValue(_itemFilter); if (f == null) { delegate.skipChildren(); continue main_loop; } if (f != TokenFilter.INCLUDE_ALL) { f = f.filterStartArray();"
+      },
+      {
+        "txt": "} _itemFilter = f; if (f == TokenFilter.INCLUDE_ALL) { _headContext = _headContext.createChildArrayContext(f, true); return _nextBuffered(buffRoot); } _headContext = _headContext.createChildArrayContext(f, false); continue main_loop; case ID_START_OBJECT: f = _itemFilter;"
+      },
+      {
+        "txt": "if (f == TokenFilter.INCLUDE_ALL) { _headContext = _headContext.createChildObjectContext(f, true); return t; } if (f == null) { // does this occur? delegate.skipChildren(); continue main_loop; } f = _headContext.checkValue(f); if (f == null) {"
+      },
+      {
+        "txt": "delegate.skipChildren(); continue main_loop; } if (f != TokenFilter.INCLUDE_ALL) { f = f.filterStartObject(); } _itemFilter = f; if (f == TokenFilter.INCLUDE_ALL) { _headContext = _headContext.createChildObjectContext(f, true); return _nextBuffered(buffRoot);"
+      },
+      {
+        "txt": "} _headContext = _headContext.createChildObjectContext(f, false); continue main_loop; case ID_END_ARRAY: case ID_END_OBJECT: { f = _headContext.getFilter(); if ((f != null) && (f != TokenFilter.INCLUDE_ALL)) { f.filterFinishArray(); }"
+      },
+      {
+        "txt": "boolean gotEnd = (_headContext == buffRoot); boolean returnEnd = gotEnd && _headContext.isStartHandled(); _headContext = _headContext.getParent(); _itemFilter = _headContext.getFilter(); if (returnEnd) { return t; } if (gotEnd || (_headContext == buffRoot)) { return null; }"
+      },
+      {
+        "txt": "} continue main_loop; case ID_FIELD_NAME: { final String name = delegate.getCurrentName(); f = _headContext.setFieldName(name); if (f == TokenFilter.INCLUDE_ALL) { _itemFilter = f; return _nextBuffered(buffRoot); }"
+      },
+      {
+        "txt": "if (f == null) { // filter out the value delegate.nextToken(); delegate.skipChildren(); continue main_loop; } f = f.includeProperty(name); if (f == null) { // filter out the value delegate.nextToken(); delegate.skipChildren(); continue main_loop;"
+      },
+      {
+        "txt": "} _itemFilter = f; if (f == TokenFilter.INCLUDE_ALL) { return _nextBuffered(buffRoot); } } continue main_loop; default: // scalar value f = _itemFilter; if (f == TokenFilter.INCLUDE_ALL) {"
+      },
+      {
+        "txt": "return _nextBuffered(buffRoot); } if (f != null) { f = _headContext.checkValue(f); if ((f == TokenFilter.INCLUDE_ALL) || ((f != null) && f.includeValue(delegate))) { return _nextBuffered(buffRoot); } } continue main_loop;"
+      },
+      {
+        "txt": "} } } private JsonToken _nextBuffered(TokenFilterContext buffRoot) throws IOException { _exposedContext = buffRoot; TokenFilterContext ctxt = buffRoot; JsonToken t = ctxt.nextTokenToRead(); if (t != null) { return t;"
+      },
+      {
+        "txt": "} while (true) { if (ctxt == _headContext) { throw _constructError(\"Internal error: failed to locate expected buffered tokens\"); _exposedContext = null; break; } ctxt = _exposedContext.findChildOf(ctxt); _exposedContext = ctxt; if (ctxt == null) { // should never occur"
+      },
+      {
+        "txt": "throw _constructError(\"Unexpected problem: chain of filtered context broken\"); } t = _exposedContext.nextTokenToRead(); if (t != null) { return t; } } } @Override public JsonToken nextValue() throws IOException {"
+      },
+      {
+        "txt": "JsonToken t = nextToken(); if (t == JsonToken.FIELD_NAME) { t = nextToken(); } return t; } @Override public JsonParser skipChildren() throws IOException { if ((_currToken != JsonToken.START_OBJECT)"
+      },
+      {
+        "txt": "&& (_currToken != JsonToken.START_ARRAY)) { return this; } int open = 1; while (true) { JsonToken t = nextToken(); if (t == null) { // not ideal but for now, just return return this; } if (t.isStructStart()) {"
+      },
+      {
+        "txt": "++open; } else if (t.isStructEnd()) { if (--open == 0) { return this; } } } } @Override public String getText() throws IOException { return delegate.getText(); } @Override public boolean hasTextCharacters() { return delegate.hasTextCharacters(); }"
+      },
+      {
+        "txt": "@Override public char[] getTextCharacters() throws IOException { return delegate.getTextCharacters(); } @Override public int getTextLength() throws IOException { return delegate.getTextLength(); } @Override public int getTextOffset() throws IOException { return delegate.getTextOffset(); } @Override public BigInteger getBigIntegerValue() throws IOException { return delegate.getBigIntegerValue(); } @Override public boolean getBooleanValue() throws IOException { return delegate.getBooleanValue(); } @Override public byte getByteValue() throws IOException { return delegate.getByteValue(); } @Override"
+      },
+      {
+        "txt": "public short getShortValue() throws IOException { return delegate.getShortValue(); } @Override public BigDecimal getDecimalValue() throws IOException { return delegate.getDecimalValue(); } @Override public double getDoubleValue() throws IOException { return delegate.getDoubleValue(); } @Override public float getFloatValue() throws IOException { return delegate.getFloatValue(); } @Override public int getIntValue() throws IOException { return delegate.getIntValue(); } @Override"
+      },
+      {
+        "txt": "public long getLongValue() throws IOException { return delegate.getLongValue(); } @Override public NumberType getNumberType() throws IOException { return delegate.getNumberType(); } @Override public Number getNumberValue() throws IOException { return delegate.getNumberValue(); } @Override public int getValueAsInt() throws IOException { return delegate.getValueAsInt(); } @Override public int getValueAsInt(int defaultValue) throws IOException { return delegate.getValueAsInt(defaultValue); } @Override public long getValueAsLong() throws IOException { return delegate.getValueAsLong(); } @Override public long getValueAsLong(long defaultValue) throws IOException { return delegate.getValueAsLong(defaultValue); } @Override public double getValueAsDouble() throws IOException { return delegate.getValueAsDouble(); }"
+      },
+      {
+        "txt": "@Override public double getValueAsDouble(double defaultValue) throws IOException { return delegate.getValueAsDouble(defaultValue); } @Override public boolean getValueAsBoolean() throws IOException { return delegate.getValueAsBoolean(); } @Override public boolean getValueAsBoolean(boolean defaultValue) throws IOException { return delegate.getValueAsBoolean(defaultValue); } @Override public String getValueAsString() throws IOException { return delegate.getValueAsString(); } @Override public String getValueAsString(String defaultValue) throws IOException { return delegate.getValueAsString(defaultValue); } @Override public Object getEmbeddedObject() throws IOException { return delegate.getEmbeddedObject(); } @Override public byte[] getBinaryValue(Base64Variant b64variant) throws IOException { return delegate.getBinaryValue(b64variant); } @Override public int readBinaryValue(Base64Variant b64variant, OutputStream out) throws IOException { return delegate.readBinaryValue(b64variant, out); } @Override public JsonLocation getTokenLocation() { return delegate.getTokenLocation(); } protected JsonStreamContext _filterContext() {"
+      },
+      {
+        "txt": "if (_exposedContext != null) { return _exposedContext; } return _headContext; }"
+      }
+    ]
+  },
+  {
+    "id": 1291,
+    "file_path": "src/main/java/com/fasterxml/jackson/core/filter/FilteringParserDelegate.java",
+    "start-bug-line": 717,
+    "end-bug-line": 717,
+    "bug": "if (f == TokenFilter.INCLUDE_ALL) {",
+    "fix": "if (f == TokenFilter.INCLUDE_ALL && _verifyAllowedMatches()) {",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.core.filter; import java.io.IOException; import java.io.OutputStream; import java.math.BigDecimal; import java.math.BigInteger; import com.fasterxml.jackson.core.*; import com.fasterxml.jackson.core.util.JsonParserDelegate; import static com.fasterxml.jackson.core.JsonTokenId.*; public class FilteringParserDelegate extends JsonParserDelegate {"
+      },
+      {
+        "txt": "protected TokenFilter rootFilter; protected boolean _allowMultipleMatches; protected boolean _includePath; @Deprecated protected boolean _includeImmediateParent; protected JsonToken _currToken; protected JsonToken _lastClearedToken; protected TokenFilterContext _headContext; protected TokenFilterContext _exposedContext; protected TokenFilter _itemFilter;"
+      },
+      {
+        "txt": "protected int _matchCount; public FilteringParserDelegate(JsonParser p, TokenFilter f, boolean includePath, boolean allowMultipleMatches) { super(p); rootFilter = f; _itemFilter = f; _headContext = TokenFilterContext.createRootContext(f); _includePath = includePath; _allowMultipleMatches = allowMultipleMatches;"
+      },
+      {
+        "txt": "} public TokenFilter getFilter() { return rootFilter; } public int getMatchCount() { return _matchCount; } @Override public JsonToken getCurrentToken() { return _currToken; } @Override public JsonToken currentToken() { return _currToken; } @Override public final int getCurrentTokenId() { final JsonToken t = _currToken; return (t == null) ? JsonTokenId.ID_NO_TOKEN : t.id();"
+      },
+      {
+        "txt": "} @Override public final int currentTokenId() { final JsonToken t = _currToken; return (t == null) ? JsonTokenId.ID_NO_TOKEN : t.id(); } @Override public boolean hasCurrentToken() { return _currToken != null; } @Override public boolean hasTokenId(int id) { final JsonToken t = _currToken; if (t == null) { return (JsonTokenId.ID_NO_TOKEN == id);"
+      },
+      {
+        "txt": "} return t.id() == id; } @Override public final boolean hasToken(JsonToken t) { return (_currToken == t); } @Override public boolean isExpectedStartArrayToken() { return _currToken == JsonToken.START_ARRAY; } @Override public boolean isExpectedStartObjectToken() { return _currToken == JsonToken.START_OBJECT; } @Override public JsonLocation getCurrentLocation() { return delegate.getCurrentLocation(); } @Override"
+      },
+      {
+        "txt": "public JsonStreamContext getParsingContext() { return _filterContext(); } @Override public String getCurrentName() throws IOException { JsonStreamContext ctxt = _filterContext(); if (_currToken == JsonToken.START_OBJECT || _currToken == JsonToken.START_ARRAY) { JsonStreamContext parent = ctxt.getParent(); return (parent == null) ? null : parent.getCurrentName(); }"
+      },
+      {
+        "txt": "return ctxt.getCurrentName(); } @Override public void clearCurrentToken() { if (_currToken != null) { _lastClearedToken = _currToken; _currToken = null; } } @Override"
+      },
+      {
+        "txt": "public JsonToken getLastClearedToken() { return _lastClearedToken; } @Override public void overrideCurrentName(String name) { throw new UnsupportedOperationException(\"Can not currently override name during filtering read\"); } @Override public JsonToken nextToken() throws IOException { if (!_allowMultipleMatches && (_currToken != null) && (_exposedContext == null)) { if (_currToken.isScalarValue() && !_headContext.isStartHandled() && !_includePath"
+      },
+      {
+        "txt": "&& (_itemFilter == TokenFilter.INCLUDE_ALL)) { return (_currToken = null); } } TokenFilterContext ctxt = _exposedContext; if (ctxt != null) { while (true) { JsonToken t = ctxt.nextTokenToRead(); if (t != null) { _currToken = t;"
+      },
+      {
+        "txt": "return t; } if (ctxt == _headContext) { _exposedContext = null; if (ctxt.inArray()) { t = delegate.getCurrentToken(); _currToken = t; return t; } t = delegate.getCurrentToken();"
+      },
+      {
+        "txt": "if (t != JsonToken.FIELD_NAME) { _currToken = t; return t; } break; } ctxt = _headContext.findChildOf(ctxt); _exposedContext = ctxt; if (ctxt == null) { // should never occur throw _constructError(\"Unexpected problem: chain of filtered context broken\");"
+      },
+      {
+        "txt": "} } } JsonToken t = delegate.nextToken(); if (t == null) { _currToken = t; return t; } TokenFilter f; switch (t.id()) {"
+      },
+      {
+        "txt": "case ID_START_ARRAY: f = _itemFilter; if (f == TokenFilter.INCLUDE_ALL) { _headContext = _headContext.createChildArrayContext(f, true); return (_currToken = t); } if (f == null) { // does this occur? delegate.skipChildren(); break; }"
+      },
+      {
+        "txt": "f = _headContext.checkValue(f); if (f == null) { delegate.skipChildren(); break; } if (f != TokenFilter.INCLUDE_ALL) { f = f.filterStartArray(); } _itemFilter = f; if (f == TokenFilter.INCLUDE_ALL) {"
+      },
+      {
+        "txt": "_headContext = _headContext.createChildArrayContext(f, true); return (_currToken = t); } _headContext = _headContext.createChildArrayContext(f, false); if (_includePath) { t = _nextTokenWithBuffering(_headContext); if (t != null) { _currToken = t; return t; }"
+      },
+      {
+        "txt": "} break; case ID_START_OBJECT: f = _itemFilter; if (f == TokenFilter.INCLUDE_ALL) { _headContext = _headContext.createChildObjectContext(f, true); return (_currToken = t); } if (f == null) { // does this occur? delegate.skipChildren();"
+      },
+      {
+        "txt": "break; } f = _headContext.checkValue(f); if (f == null) { delegate.skipChildren(); break; } if (f != TokenFilter.INCLUDE_ALL) { f = f.filterStartObject(); }"
+      },
+      {
+        "txt": "_itemFilter = f; if (f == TokenFilter.INCLUDE_ALL) { _headContext = _headContext.createChildObjectContext(f, true); return (_currToken = t); } _headContext = _headContext.createChildObjectContext(f, false); if (_includePath) { t = _nextTokenWithBuffering(_headContext); if (t != null) { _currToken = t;"
+      },
+      {
+        "txt": "return t; } } break; case ID_END_ARRAY: case ID_END_OBJECT: { boolean returnEnd = _headContext.isStartHandled(); f = _headContext.getFilter(); if ((f != null) && (f != TokenFilter.INCLUDE_ALL)) {"
+      },
+      {
+        "txt": "f.filterFinishArray(); } _headContext = _headContext.getParent(); _itemFilter = _headContext.getFilter(); if (returnEnd) { return (_currToken = t); } } break; case ID_FIELD_NAME:"
+      },
+      {
+        "txt": "{ final String name = delegate.getCurrentName(); f = _headContext.setFieldName(name); if (f == TokenFilter.INCLUDE_ALL) { _itemFilter = f; if (!_includePath) { if (_includeImmediateParent && !_headContext.isStartHandled()) { t = _headContext.nextTokenToRead(); // returns START_OBJECT but also marks it handled _exposedContext = _headContext; }"
+      },
+      {
+        "txt": "} return (_currToken = t); } if (f == null) { delegate.nextToken(); delegate.skipChildren(); break; } f = f.includeProperty(name); if (f == null) {"
+      },
+      {
+        "txt": "delegate.nextToken(); delegate.skipChildren(); break; } _itemFilter = f; if (f == TokenFilter.INCLUDE_ALL) { if (_includePath) { return (_currToken = t); } }"
+      },
+      {
+        "txt": "if (_includePath) { t = _nextTokenWithBuffering(_headContext); if (t != null) { _currToken = t; return t; } } break; } default: // scalar value"
+      },
+      {
+        "txt": "f = _itemFilter; if (f == TokenFilter.INCLUDE_ALL) { return (_currToken = t); } if (f != null) { f = _headContext.checkValue(f); if ((f == TokenFilter.INCLUDE_ALL) || ((f != null) && f.includeValue(delegate))) { return (_currToken = t); }"
+      },
+      {
+        "txt": "} break; } return _nextToken2(); } protected final JsonToken _nextToken2() throws IOException { main_loop: while (true) { JsonToken t = delegate.nextToken();"
+      },
+      {
+        "txt": "if (t == null) { // is this even legal? _currToken = t; return t; } TokenFilter f; switch (t.id()) { case ID_START_ARRAY: f = _itemFilter; if (f == TokenFilter.INCLUDE_ALL) { _headContext = _headContext.createChildArrayContext(f, true);"
+      },
+      {
+        "txt": "return (_currToken = t); } if (f == null) { // does this occur? delegate.skipChildren(); continue main_loop; } f = _headContext.checkValue(f); if (f == null) { delegate.skipChildren(); continue main_loop;"
+      },
+      {
+        "txt": "} if (f != TokenFilter.INCLUDE_ALL) { f = f.filterStartArray(); } _itemFilter = f; if (f == TokenFilter.INCLUDE_ALL) { _headContext = _headContext.createChildArrayContext(f, true); return (_currToken = t); } _headContext = _headContext.createChildArrayContext(f, false);"
+      },
+      {
+        "txt": "if (_includePath) { t = _nextTokenWithBuffering(_headContext); if (t != null) { _currToken = t; return t; } } continue main_loop; case ID_START_OBJECT: f = _itemFilter;"
+      },
+      {
+        "txt": "if (f == TokenFilter.INCLUDE_ALL) { _headContext = _headContext.createChildObjectContext(f, true); return (_currToken = t); } if (f == null) { // does this occur? delegate.skipChildren(); continue main_loop; } f = _headContext.checkValue(f); if (f == null) {"
+      },
+      {
+        "txt": "delegate.skipChildren(); continue main_loop; } if (f != TokenFilter.INCLUDE_ALL) { f = f.filterStartObject(); } _itemFilter = f; if (f == TokenFilter.INCLUDE_ALL) { _headContext = _headContext.createChildObjectContext(f, true); return (_currToken = t);"
+      },
+      {
+        "txt": "} _headContext = _headContext.createChildObjectContext(f, false); if (_includePath) { t = _nextTokenWithBuffering(_headContext); if (t != null) { _currToken = t; return t; } } continue main_loop;"
+      },
+      {
+        "txt": "case ID_END_ARRAY: case ID_END_OBJECT: { boolean returnEnd = _headContext.isStartHandled(); f = _headContext.getFilter(); if ((f != null) && (f != TokenFilter.INCLUDE_ALL)) { f.filterFinishArray(); } _headContext = _headContext.getParent(); _itemFilter = _headContext.getFilter();"
+      },
+      {
+        "txt": "if (returnEnd) { return (_currToken = t); } } continue main_loop; case ID_FIELD_NAME: { final String name = delegate.getCurrentName(); f = _headContext.setFieldName(name); if (f == TokenFilter.INCLUDE_ALL) {"
+      },
+      {
+        "txt": "_itemFilter = f; return (_currToken = t); } if (f == null) { // filter out the value delegate.nextToken(); delegate.skipChildren(); continue main_loop; } f = f.includeProperty(name); if (f == null) { // filter out the value"
+      },
+      {
+        "txt": "delegate.nextToken(); delegate.skipChildren(); continue main_loop; } _itemFilter = f; if (f == TokenFilter.INCLUDE_ALL) { if (_includePath) { return (_currToken = t); } continue main_loop;"
+      },
+      {
+        "txt": "} if (_includePath) { t = _nextTokenWithBuffering(_headContext); if (t != null) { _currToken = t; return t; } } } continue main_loop;"
+      },
+      {
+        "txt": "default: // scalar value f = _itemFilter; if (f == TokenFilter.INCLUDE_ALL) { return (_currToken = t); } if (f != null) { f = _headContext.checkValue(f); if ((f == TokenFilter.INCLUDE_ALL) || ((f != null) && f.includeValue(delegate))) { return (_currToken = t);"
+      },
+      {
+        "txt": "} } break; } } } protected final JsonToken _nextTokenWithBuffering(final TokenFilterContext buffRoot) throws IOException { main_loop:"
+      },
+      {
+        "txt": "while (true) { JsonToken t = delegate.nextToken(); if (t == null) { // is this even legal? return t; } TokenFilter f; switch (t.id()) { case ID_START_ARRAY: f = _headContext.checkValue(_itemFilter); if (f == null) {"
+      },
+      {
+        "txt": "delegate.skipChildren(); continue main_loop; } if (f != TokenFilter.INCLUDE_ALL) { f = f.filterStartArray(); } _itemFilter = f; if (f == TokenFilter.INCLUDE_ALL) { _headContext = _headContext.createChildArrayContext(f, true); return _nextBuffered(buffRoot);"
+      },
+      {
+        "txt": "} _headContext = _headContext.createChildArrayContext(f, false); continue main_loop; case ID_START_OBJECT: f = _itemFilter; if (f == TokenFilter.INCLUDE_ALL) { _headContext = _headContext.createChildObjectContext(f, true); return t; } if (f == null) { // does this occur?"
+      },
+      {
+        "txt": "delegate.skipChildren(); continue main_loop; } f = _headContext.checkValue(f); if (f == null) { delegate.skipChildren(); continue main_loop; } if (f != TokenFilter.INCLUDE_ALL) { f = f.filterStartObject();"
+      },
+      {
+        "txt": "} _itemFilter = f; if (f == TokenFilter.INCLUDE_ALL) { _headContext = _headContext.createChildObjectContext(f, true); return _nextBuffered(buffRoot); } _headContext = _headContext.createChildObjectContext(f, false); continue main_loop; case ID_END_ARRAY: case ID_END_OBJECT:"
+      },
+      {
+        "txt": "{ f = _headContext.getFilter(); if ((f != null) && (f != TokenFilter.INCLUDE_ALL)) { f.filterFinishArray(); } boolean gotEnd = (_headContext == buffRoot); boolean returnEnd = gotEnd && _headContext.isStartHandled(); _headContext = _headContext.getParent(); _itemFilter = _headContext.getFilter(); if (returnEnd) {"
+      },
+      {
+        "txt": "return t; } if (gotEnd || (_headContext == buffRoot)) { return null; } } continue main_loop; case ID_FIELD_NAME: { final String name = delegate.getCurrentName();"
+      },
+      {
+        "txt": "f = _headContext.setFieldName(name); if (f == TokenFilter.INCLUDE_ALL) { _itemFilter = f; return _nextBuffered(buffRoot); } if (f == null) { // filter out the value delegate.nextToken(); delegate.skipChildren(); continue main_loop; }"
+      },
+      {
+        "txt": "if (f == null) { // filter out the value delegate.nextToken(); delegate.skipChildren(); continue main_loop; } _itemFilter = f; <extra_id_0> return _nextBuffered(buffRoot); } } continue main_loop; default: // scalar value f = _itemFilter;"
+      },
+      {
+        "txt": "default: // scalar value f = _itemFilter; if (f == TokenFilter.INCLUDE_ALL) { return _nextBuffered(buffRoot); } if (f != null) { f = _headContext.checkValue(f); if ((f == TokenFilter.INCLUDE_ALL) || ((f != null) && f.includeValue(delegate))) { return _nextBuffered(buffRoot);"
+      },
+      {
+        "txt": "} } continue main_loop; } } } private JsonToken _nextBuffered(TokenFilterContext buffRoot) throws IOException { _exposedContext = buffRoot; TokenFilterContext ctxt = buffRoot;"
+      },
+      {
+        "txt": "JsonToken t = ctxt.nextTokenToRead(); if (t != null) { return t; } while (true) { if (ctxt == _headContext) { throw _constructError(\"Internal error: failed to locate expected buffered tokens\"); _exposedContext = null; break; }"
+      },
+      {
+        "txt": "ctxt = _exposedContext.findChildOf(ctxt); _exposedContext = ctxt; if (ctxt == null) { // should never occur throw _constructError(\"Unexpected problem: chain of filtered context broken\"); } t = _exposedContext.nextTokenToRead(); if (t != null) { return t; } }"
+      },
+      {
+        "txt": "} @Override public JsonToken nextValue() throws IOException { JsonToken t = nextToken(); if (t == JsonToken.FIELD_NAME) { t = nextToken(); } return t; } @Override"
+      },
+      {
+        "txt": "public JsonParser skipChildren() throws IOException { if ((_currToken != JsonToken.START_OBJECT) && (_currToken != JsonToken.START_ARRAY)) { return this; } int open = 1; while (true) { JsonToken t = nextToken(); if (t == null) { // not ideal but for now, just return"
+      },
+      {
+        "txt": "return this; } if (t.isStructStart()) { ++open; } else if (t.isStructEnd()) { if (--open == 0) { return this; } } }"
+      },
+      {
+        "txt": "} @Override public String getText() throws IOException { return delegate.getText(); } @Override public boolean hasTextCharacters() { return delegate.hasTextCharacters(); } @Override public char[] getTextCharacters() throws IOException { return delegate.getTextCharacters(); } @Override public int getTextLength() throws IOException { return delegate.getTextLength(); } @Override public int getTextOffset() throws IOException { return delegate.getTextOffset(); } @Override public BigInteger getBigIntegerValue() throws IOException { return delegate.getBigIntegerValue(); } @Override public boolean getBooleanValue() throws IOException { return delegate.getBooleanValue(); }"
+      },
+      {
+        "txt": "@Override public byte getByteValue() throws IOException { return delegate.getByteValue(); } @Override public short getShortValue() throws IOException { return delegate.getShortValue(); } @Override public BigDecimal getDecimalValue() throws IOException { return delegate.getDecimalValue(); } @Override public double getDoubleValue() throws IOException { return delegate.getDoubleValue(); } @Override public float getFloatValue() throws IOException { return delegate.getFloatValue(); }"
+      },
+      {
+        "txt": "@Override public int getIntValue() throws IOException { return delegate.getIntValue(); } @Override public long getLongValue() throws IOException { return delegate.getLongValue(); } @Override public NumberType getNumberType() throws IOException { return delegate.getNumberType(); } @Override public Number getNumberValue() throws IOException { return delegate.getNumberValue(); } @Override public int getValueAsInt() throws IOException { return delegate.getValueAsInt(); } @Override public int getValueAsInt(int defaultValue) throws IOException { return delegate.getValueAsInt(defaultValue); }"
+      },
+      {
+        "txt": "@Override public long getValueAsLong() throws IOException { return delegate.getValueAsLong(); } @Override public long getValueAsLong(long defaultValue) throws IOException { return delegate.getValueAsLong(defaultValue); } @Override public double getValueAsDouble() throws IOException { return delegate.getValueAsDouble(); } @Override public double getValueAsDouble(double defaultValue) throws IOException { return delegate.getValueAsDouble(defaultValue); } @Override public boolean getValueAsBoolean() throws IOException { return delegate.getValueAsBoolean(); } @Override public boolean getValueAsBoolean(boolean defaultValue) throws IOException { return delegate.getValueAsBoolean(defaultValue); } @Override public String getValueAsString() throws IOException { return delegate.getValueAsString(); } @Override public String getValueAsString(String defaultValue) throws IOException { return delegate.getValueAsString(defaultValue); } @Override public Object getEmbeddedObject() throws IOException { return delegate.getEmbeddedObject(); } @Override public byte[] getBinaryValue(Base64Variant b64variant) throws IOException { return delegate.getBinaryValue(b64variant); }"
+      },
+      {
+        "txt": "@Override public int readBinaryValue(Base64Variant b64variant, OutputStream out) throws IOException { return delegate.readBinaryValue(b64variant, out); } @Override public JsonLocation getTokenLocation() { return delegate.getTokenLocation(); } protected JsonStreamContext _filterContext() { if (_exposedContext != null) { return _exposedContext; } return _headContext; }"
+      }
+    ]
+  },
+  {
+    "id": 1292,
+    "file_path": "src/main/java/com/fasterxml/jackson/core/filter/FilteringParserDelegate.java",
+    "start-bug-line": 732,
+    "end-bug-line": 732,
+    "bug": "",
+    "fix": "if (_verifyAllowedMatches()) {",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.core.filter; import java.io.IOException; import java.io.OutputStream; import java.math.BigDecimal;"
+      },
+      {
+        "txt": "import java.math.BigInteger; import com.fasterxml.jackson.core.*; import com.fasterxml.jackson.core.util.JsonParserDelegate; import static com.fasterxml.jackson.core.JsonTokenId.*; public class FilteringParserDelegate extends JsonParserDelegate { protected TokenFilter rootFilter; protected boolean _allowMultipleMatches; protected boolean _includePath; @Deprecated"
+      },
+      {
+        "txt": "protected boolean _includeImmediateParent; protected JsonToken _currToken; protected JsonToken _lastClearedToken; protected TokenFilterContext _headContext; protected TokenFilterContext _exposedContext; protected TokenFilter _itemFilter; protected int _matchCount; public FilteringParserDelegate(JsonParser p, TokenFilter f, boolean includePath, boolean allowMultipleMatches) {"
+      },
+      {
+        "txt": "super(p); rootFilter = f; _itemFilter = f; _headContext = TokenFilterContext.createRootContext(f); _includePath = includePath; _allowMultipleMatches = allowMultipleMatches; } public TokenFilter getFilter() { return rootFilter; } public int getMatchCount() { return _matchCount;"
+      },
+      {
+        "txt": "} @Override public JsonToken getCurrentToken() { return _currToken; } @Override public JsonToken currentToken() { return _currToken; } @Override public final int getCurrentTokenId() { final JsonToken t = _currToken; return (t == null) ? JsonTokenId.ID_NO_TOKEN : t.id(); } @Override public final int currentTokenId() { final JsonToken t = _currToken; return (t == null) ? JsonTokenId.ID_NO_TOKEN : t.id();"
+      },
+      {
+        "txt": "} @Override public boolean hasCurrentToken() { return _currToken != null; } @Override public boolean hasTokenId(int id) { final JsonToken t = _currToken; if (t == null) { return (JsonTokenId.ID_NO_TOKEN == id); } return t.id() == id; } @Override public final boolean hasToken(JsonToken t) {"
+      },
+      {
+        "txt": "return (_currToken == t); } @Override public boolean isExpectedStartArrayToken() { return _currToken == JsonToken.START_ARRAY; } @Override public boolean isExpectedStartObjectToken() { return _currToken == JsonToken.START_OBJECT; } @Override public JsonLocation getCurrentLocation() { return delegate.getCurrentLocation(); } @Override public JsonStreamContext getParsingContext() { return _filterContext(); } @Override"
+      },
+      {
+        "txt": "public String getCurrentName() throws IOException { JsonStreamContext ctxt = _filterContext(); if (_currToken == JsonToken.START_OBJECT || _currToken == JsonToken.START_ARRAY) { JsonStreamContext parent = ctxt.getParent(); return (parent == null) ? null : parent.getCurrentName(); } return ctxt.getCurrentName(); } @Override public void clearCurrentToken() {"
+      },
+      {
+        "txt": "if (_currToken != null) { _lastClearedToken = _currToken; _currToken = null; } } @Override public JsonToken getLastClearedToken() { return _lastClearedToken; } @Override public void overrideCurrentName(String name) { throw new UnsupportedOperationException(\"Can not currently override name during filtering read\");"
+      },
+      {
+        "txt": "} @Override public JsonToken nextToken() throws IOException { if (!_allowMultipleMatches && (_currToken != null) && (_exposedContext == null)) { if (_currToken.isScalarValue() && !_headContext.isStartHandled() && !_includePath && (_itemFilter == TokenFilter.INCLUDE_ALL)) { return (_currToken = null); } }"
+      },
+      {
+        "txt": "TokenFilterContext ctxt = _exposedContext; if (ctxt != null) { while (true) { JsonToken t = ctxt.nextTokenToRead(); if (t != null) { _currToken = t; return t; } if (ctxt == _headContext) { _exposedContext = null;"
+      },
+      {
+        "txt": "if (ctxt.inArray()) { t = delegate.getCurrentToken(); _currToken = t; return t; } t = delegate.getCurrentToken(); if (t != JsonToken.FIELD_NAME) { _currToken = t; return t; }"
+      },
+      {
+        "txt": "break; } ctxt = _headContext.findChildOf(ctxt); _exposedContext = ctxt; if (ctxt == null) { // should never occur throw _constructError(\"Unexpected problem: chain of filtered context broken\"); } } } JsonToken t = delegate.nextToken();"
+      },
+      {
+        "txt": "if (t == null) { _currToken = t; return t; } TokenFilter f; switch (t.id()) { case ID_START_ARRAY: f = _itemFilter; if (f == TokenFilter.INCLUDE_ALL) { _headContext = _headContext.createChildArrayContext(f, true);"
+      },
+      {
+        "txt": "return (_currToken = t); } if (f == null) { // does this occur? delegate.skipChildren(); break; } f = _headContext.checkValue(f); if (f == null) { delegate.skipChildren(); break;"
+      },
+      {
+        "txt": "} if (f != TokenFilter.INCLUDE_ALL) { f = f.filterStartArray(); } _itemFilter = f; if (f == TokenFilter.INCLUDE_ALL) { _headContext = _headContext.createChildArrayContext(f, true); return (_currToken = t); } _headContext = _headContext.createChildArrayContext(f, false);"
+      },
+      {
+        "txt": "if (_includePath) { t = _nextTokenWithBuffering(_headContext); if (t != null) { _currToken = t; return t; } } break; case ID_START_OBJECT: f = _itemFilter;"
+      },
+      {
+        "txt": "if (f == TokenFilter.INCLUDE_ALL) { _headContext = _headContext.createChildObjectContext(f, true); return (_currToken = t); } if (f == null) { // does this occur? delegate.skipChildren(); break; } f = _headContext.checkValue(f); if (f == null) {"
+      },
+      {
+        "txt": "delegate.skipChildren(); break; } if (f != TokenFilter.INCLUDE_ALL) { f = f.filterStartObject(); } _itemFilter = f; if (f == TokenFilter.INCLUDE_ALL) { _headContext = _headContext.createChildObjectContext(f, true); return (_currToken = t);"
+      },
+      {
+        "txt": "} _headContext = _headContext.createChildObjectContext(f, false); if (_includePath) { t = _nextTokenWithBuffering(_headContext); if (t != null) { _currToken = t; return t; } } break;"
+      },
+      {
+        "txt": "case ID_END_ARRAY: case ID_END_OBJECT: { boolean returnEnd = _headContext.isStartHandled(); f = _headContext.getFilter(); if ((f != null) && (f != TokenFilter.INCLUDE_ALL)) { f.filterFinishArray(); } _headContext = _headContext.getParent(); _itemFilter = _headContext.getFilter();"
+      },
+      {
+        "txt": "if (returnEnd) { return (_currToken = t); } } break; case ID_FIELD_NAME: { final String name = delegate.getCurrentName(); f = _headContext.setFieldName(name); if (f == TokenFilter.INCLUDE_ALL) {"
+      },
+      {
+        "txt": "_itemFilter = f; if (!_includePath) { if (_includeImmediateParent && !_headContext.isStartHandled()) { t = _headContext.nextTokenToRead(); // returns START_OBJECT but also marks it handled _exposedContext = _headContext; } } return (_currToken = t); } if (f == null) {"
+      },
+      {
+        "txt": "delegate.nextToken(); delegate.skipChildren(); break; } f = f.includeProperty(name); if (f == null) { delegate.nextToken(); delegate.skipChildren(); break; }"
+      },
+      {
+        "txt": "_itemFilter = f; if (f == TokenFilter.INCLUDE_ALL) { if (_includePath) { return (_currToken = t); } } if (_includePath) { t = _nextTokenWithBuffering(_headContext); if (t != null) { _currToken = t;"
+      },
+      {
+        "txt": "return t; } } break; } default: // scalar value f = _itemFilter; if (f == TokenFilter.INCLUDE_ALL) { return (_currToken = t); }"
+      },
+      {
+        "txt": "if (f != null) { f = _headContext.checkValue(f); if ((f == TokenFilter.INCLUDE_ALL) || ((f != null) && f.includeValue(delegate))) { return (_currToken = t); } } break; } return _nextToken2();"
+      },
+      {
+        "txt": "} protected final JsonToken _nextToken2() throws IOException { main_loop: while (true) { JsonToken t = delegate.nextToken(); if (t == null) { // is this even legal? _currToken = t; return t; }"
+      },
+      {
+        "txt": "TokenFilter f; switch (t.id()) { case ID_START_ARRAY: f = _itemFilter; if (f == TokenFilter.INCLUDE_ALL) { _headContext = _headContext.createChildArrayContext(f, true); return (_currToken = t); } if (f == null) { // does this occur? delegate.skipChildren();"
+      },
+      {
+        "txt": "continue main_loop; } f = _headContext.checkValue(f); if (f == null) { delegate.skipChildren(); continue main_loop; } if (f != TokenFilter.INCLUDE_ALL) { f = f.filterStartArray(); }"
+      },
+      {
+        "txt": "_itemFilter = f; if (f == TokenFilter.INCLUDE_ALL) { _headContext = _headContext.createChildArrayContext(f, true); return (_currToken = t); } _headContext = _headContext.createChildArrayContext(f, false); if (_includePath) { t = _nextTokenWithBuffering(_headContext); if (t != null) { _currToken = t;"
+      },
+      {
+        "txt": "return t; } } continue main_loop; case ID_START_OBJECT: f = _itemFilter; if (f == TokenFilter.INCLUDE_ALL) { _headContext = _headContext.createChildObjectContext(f, true); return (_currToken = t); }"
+      },
+      {
+        "txt": "if (f == null) { // does this occur? delegate.skipChildren(); continue main_loop; } f = _headContext.checkValue(f); if (f == null) { delegate.skipChildren(); continue main_loop; } if (f != TokenFilter.INCLUDE_ALL) {"
+      },
+      {
+        "txt": "f = f.filterStartObject(); } _itemFilter = f; if (f == TokenFilter.INCLUDE_ALL) { _headContext = _headContext.createChildObjectContext(f, true); return (_currToken = t); } _headContext = _headContext.createChildObjectContext(f, false); if (_includePath) { t = _nextTokenWithBuffering(_headContext);"
+      },
+      {
+        "txt": "if (t != null) { _currToken = t; return t; } } continue main_loop; case ID_END_ARRAY: case ID_END_OBJECT: { boolean returnEnd = _headContext.isStartHandled();"
+      },
+      {
+        "txt": "f = _headContext.getFilter(); if ((f != null) && (f != TokenFilter.INCLUDE_ALL)) { f.filterFinishArray(); } _headContext = _headContext.getParent(); _itemFilter = _headContext.getFilter(); if (returnEnd) { return (_currToken = t); } }"
+      },
+      {
+        "txt": "continue main_loop; case ID_FIELD_NAME: { final String name = delegate.getCurrentName(); f = _headContext.setFieldName(name); if (f == TokenFilter.INCLUDE_ALL) { _itemFilter = f; return (_currToken = t); } if (f == null) { // filter out the value"
+      },
+      {
+        "txt": "delegate.nextToken(); delegate.skipChildren(); continue main_loop; } f = f.includeProperty(name); if (f == null) { // filter out the value delegate.nextToken(); delegate.skipChildren(); continue main_loop; }"
+      },
+      {
+        "txt": "_itemFilter = f; if (f == TokenFilter.INCLUDE_ALL) { if (_includePath) { return (_currToken = t); } continue main_loop; } if (_includePath) { t = _nextTokenWithBuffering(_headContext); if (t != null) {"
+      },
+      {
+        "txt": "_currToken = t; return t; } } } continue main_loop; default: // scalar value f = _itemFilter; if (f == TokenFilter.INCLUDE_ALL) { return (_currToken = t);"
+      },
+      {
+        "txt": "} if (f != null) { f = _headContext.checkValue(f); if ((f == TokenFilter.INCLUDE_ALL) || ((f != null) && f.includeValue(delegate))) { return (_currToken = t); } } break; }"
+      },
+      {
+        "txt": "} } protected final JsonToken _nextTokenWithBuffering(final TokenFilterContext buffRoot) throws IOException { main_loop: while (true) { JsonToken t = delegate.nextToken(); if (t == null) { // is this even legal? return t;"
+      },
+      {
+        "txt": "} TokenFilter f; switch (t.id()) { case ID_START_ARRAY: f = _headContext.checkValue(_itemFilter); if (f == null) { delegate.skipChildren(); continue main_loop; } if (f != TokenFilter.INCLUDE_ALL) {"
+      },
+      {
+        "txt": "f = f.filterStartArray(); } _itemFilter = f; if (f == TokenFilter.INCLUDE_ALL) { _headContext = _headContext.createChildArrayContext(f, true); return _nextBuffered(buffRoot); } _headContext = _headContext.createChildArrayContext(f, false); continue main_loop; case ID_START_OBJECT:"
+      },
+      {
+        "txt": "f = _itemFilter; if (f == TokenFilter.INCLUDE_ALL) { _headContext = _headContext.createChildObjectContext(f, true); return t; } if (f == null) { // does this occur? delegate.skipChildren(); continue main_loop; } f = _headContext.checkValue(f);"
+      },
+      {
+        "txt": "if (f == null) { delegate.skipChildren(); continue main_loop; } if (f != TokenFilter.INCLUDE_ALL) { f = f.filterStartObject(); } _itemFilter = f; if (f == TokenFilter.INCLUDE_ALL) { _headContext = _headContext.createChildObjectContext(f, true);"
+      },
+      {
+        "txt": "return _nextBuffered(buffRoot); } _headContext = _headContext.createChildObjectContext(f, false); continue main_loop; case ID_END_ARRAY: case ID_END_OBJECT: { f = _headContext.getFilter(); if ((f != null) && (f != TokenFilter.INCLUDE_ALL)) { f.filterFinishArray();"
+      },
+      {
+        "txt": "} boolean gotEnd = (_headContext == buffRoot); boolean returnEnd = gotEnd && _headContext.isStartHandled(); _headContext = _headContext.getParent(); _itemFilter = _headContext.getFilter(); if (returnEnd) { return t; } if (gotEnd || (_headContext == buffRoot)) { return null;"
+      },
+      {
+        "txt": "} } continue main_loop; case ID_FIELD_NAME: { final String name = delegate.getCurrentName(); f = _headContext.setFieldName(name); if (f == TokenFilter.INCLUDE_ALL) { _itemFilter = f; return _nextBuffered(buffRoot);"
+      },
+      {
+        "txt": "} if (f == null) { // filter out the value delegate.nextToken(); delegate.skipChildren(); continue main_loop; } f = f.includeProperty(name); if (f == null) { // filter out the value delegate.nextToken(); delegate.skipChildren();"
+      },
+      {
+        "txt": "continue main_loop; } _itemFilter = f; if (f == TokenFilter.INCLUDE_ALL) { return _nextBuffered(buffRoot); } } continue main_loop; default: // scalar value f = _itemFilter;"
+      },
+      {
+        "txt": "return _nextBuffered(buffRoot); } if (f != null) { f = _headContext.checkValue(f); if ((f == TokenFilter.INCLUDE_ALL) || ((f != null) && f.includeValue(delegate))) { <extra_id_0> } } continue main_loop; } } }"
+      },
+      {
+        "txt": "} } private JsonToken _nextBuffered(TokenFilterContext buffRoot) throws IOException { _exposedContext = buffRoot; TokenFilterContext ctxt = buffRoot; JsonToken t = ctxt.nextTokenToRead(); if (t != null) { return t; }"
+      },
+      {
+        "txt": "while (true) { if (ctxt == _headContext) { throw _constructError(\"Internal error: failed to locate expected buffered tokens\"); _exposedContext = null; break; } ctxt = _exposedContext.findChildOf(ctxt); _exposedContext = ctxt; if (ctxt == null) { // should never occur throw _constructError(\"Unexpected problem: chain of filtered context broken\");"
+      },
+      {
+        "txt": "} t = _exposedContext.nextTokenToRead(); if (t != null) { return t; } } } @Override public JsonToken nextValue() throws IOException { JsonToken t = nextToken();"
+      },
+      {
+        "txt": "if (t == JsonToken.FIELD_NAME) { t = nextToken(); } return t; } @Override public JsonParser skipChildren() throws IOException { if ((_currToken != JsonToken.START_OBJECT) && (_currToken != JsonToken.START_ARRAY)) {"
+      },
+      {
+        "txt": "return this; } int open = 1; while (true) { JsonToken t = nextToken(); if (t == null) { // not ideal but for now, just return return this; } if (t.isStructStart()) { ++open;"
+      },
+      {
+        "txt": "} else if (t.isStructEnd()) { if (--open == 0) { return this; } } } } @Override public String getText() throws IOException { return delegate.getText(); } @Override public boolean hasTextCharacters() { return delegate.hasTextCharacters(); } @Override public char[] getTextCharacters() throws IOException { return delegate.getTextCharacters(); }"
+      },
+      {
+        "txt": "@Override public int getTextLength() throws IOException { return delegate.getTextLength(); } @Override public int getTextOffset() throws IOException { return delegate.getTextOffset(); } @Override public BigInteger getBigIntegerValue() throws IOException { return delegate.getBigIntegerValue(); } @Override public boolean getBooleanValue() throws IOException { return delegate.getBooleanValue(); } @Override public byte getByteValue() throws IOException { return delegate.getByteValue(); } @Override public short getShortValue() throws IOException { return delegate.getShortValue(); }"
+      },
+      {
+        "txt": "@Override public BigDecimal getDecimalValue() throws IOException { return delegate.getDecimalValue(); } @Override public double getDoubleValue() throws IOException { return delegate.getDoubleValue(); } @Override public float getFloatValue() throws IOException { return delegate.getFloatValue(); } @Override public int getIntValue() throws IOException { return delegate.getIntValue(); } @Override public long getLongValue() throws IOException { return delegate.getLongValue(); }"
+      },
+      {
+        "txt": "@Override public NumberType getNumberType() throws IOException { return delegate.getNumberType(); } @Override public Number getNumberValue() throws IOException { return delegate.getNumberValue(); } @Override public int getValueAsInt() throws IOException { return delegate.getValueAsInt(); } @Override public int getValueAsInt(int defaultValue) throws IOException { return delegate.getValueAsInt(defaultValue); } @Override public long getValueAsLong() throws IOException { return delegate.getValueAsLong(); } @Override public long getValueAsLong(long defaultValue) throws IOException { return delegate.getValueAsLong(defaultValue); } @Override public double getValueAsDouble() throws IOException { return delegate.getValueAsDouble(); } @Override public double getValueAsDouble(double defaultValue) throws IOException { return delegate.getValueAsDouble(defaultValue); }"
+      },
+      {
+        "txt": "@Override public boolean getValueAsBoolean() throws IOException { return delegate.getValueAsBoolean(); } @Override public boolean getValueAsBoolean(boolean defaultValue) throws IOException { return delegate.getValueAsBoolean(defaultValue); } @Override public String getValueAsString() throws IOException { return delegate.getValueAsString(); } @Override public String getValueAsString(String defaultValue) throws IOException { return delegate.getValueAsString(defaultValue); } @Override public Object getEmbeddedObject() throws IOException { return delegate.getEmbeddedObject(); } @Override public byte[] getBinaryValue(Base64Variant b64variant) throws IOException { return delegate.getBinaryValue(b64variant); } @Override public int readBinaryValue(Base64Variant b64variant, OutputStream out) throws IOException { return delegate.readBinaryValue(b64variant, out); } @Override public JsonLocation getTokenLocation() { return delegate.getTokenLocation(); } protected JsonStreamContext _filterContext() { if (_exposedContext != null) {"
+      },
+      {
+        "txt": "return _exposedContext; } return _headContext; }"
+      }
+    ]
+  },
+  {
+    "id": 1293,
+    "file_path": "src/main/java/com/fasterxml/jackson/core/filter/FilteringParserDelegate.java",
+    "start-bug-line": 733,
+    "end-bug-line": 733,
+    "bug": "",
+    "fix": "}",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.core.filter; import java.io.IOException; import java.io.OutputStream; import java.math.BigDecimal; import java.math.BigInteger;"
+      },
+      {
+        "txt": "import com.fasterxml.jackson.core.*; import com.fasterxml.jackson.core.util.JsonParserDelegate; import static com.fasterxml.jackson.core.JsonTokenId.*; public class FilteringParserDelegate extends JsonParserDelegate { protected TokenFilter rootFilter; protected boolean _allowMultipleMatches; protected boolean _includePath; @Deprecated protected boolean _includeImmediateParent;"
+      },
+      {
+        "txt": "protected JsonToken _currToken; protected JsonToken _lastClearedToken; protected TokenFilterContext _headContext; protected TokenFilterContext _exposedContext; protected TokenFilter _itemFilter; protected int _matchCount; public FilteringParserDelegate(JsonParser p, TokenFilter f, boolean includePath, boolean allowMultipleMatches) { super(p);"
+      },
+      {
+        "txt": "rootFilter = f; _itemFilter = f; _headContext = TokenFilterContext.createRootContext(f); _includePath = includePath; _allowMultipleMatches = allowMultipleMatches; } public TokenFilter getFilter() { return rootFilter; } public int getMatchCount() { return _matchCount; }"
+      },
+      {
+        "txt": "@Override public JsonToken getCurrentToken() { return _currToken; } @Override public JsonToken currentToken() { return _currToken; } @Override public final int getCurrentTokenId() { final JsonToken t = _currToken; return (t == null) ? JsonTokenId.ID_NO_TOKEN : t.id(); } @Override public final int currentTokenId() { final JsonToken t = _currToken; return (t == null) ? JsonTokenId.ID_NO_TOKEN : t.id(); }"
+      },
+      {
+        "txt": "@Override public boolean hasCurrentToken() { return _currToken != null; } @Override public boolean hasTokenId(int id) { final JsonToken t = _currToken; if (t == null) { return (JsonTokenId.ID_NO_TOKEN == id); } return t.id() == id; } @Override public final boolean hasToken(JsonToken t) { return (_currToken == t);"
+      },
+      {
+        "txt": "} @Override public boolean isExpectedStartArrayToken() { return _currToken == JsonToken.START_ARRAY; } @Override public boolean isExpectedStartObjectToken() { return _currToken == JsonToken.START_OBJECT; } @Override public JsonLocation getCurrentLocation() { return delegate.getCurrentLocation(); } @Override public JsonStreamContext getParsingContext() { return _filterContext(); } @Override public String getCurrentName() throws IOException {"
+      },
+      {
+        "txt": "JsonStreamContext ctxt = _filterContext(); if (_currToken == JsonToken.START_OBJECT || _currToken == JsonToken.START_ARRAY) { JsonStreamContext parent = ctxt.getParent(); return (parent == null) ? null : parent.getCurrentName(); } return ctxt.getCurrentName(); } @Override public void clearCurrentToken() { if (_currToken != null) {"
+      },
+      {
+        "txt": "_lastClearedToken = _currToken; _currToken = null; } } @Override public JsonToken getLastClearedToken() { return _lastClearedToken; } @Override public void overrideCurrentName(String name) { throw new UnsupportedOperationException(\"Can not currently override name during filtering read\"); }"
+      },
+      {
+        "txt": "@Override public JsonToken nextToken() throws IOException { if (!_allowMultipleMatches && (_currToken != null) && (_exposedContext == null)) { if (_currToken.isScalarValue() && !_headContext.isStartHandled() && !_includePath && (_itemFilter == TokenFilter.INCLUDE_ALL)) { return (_currToken = null); } } TokenFilterContext ctxt = _exposedContext;"
+      },
+      {
+        "txt": "if (ctxt != null) { while (true) { JsonToken t = ctxt.nextTokenToRead(); if (t != null) { _currToken = t; return t; } if (ctxt == _headContext) { _exposedContext = null; if (ctxt.inArray()) {"
+      },
+      {
+        "txt": "t = delegate.getCurrentToken(); _currToken = t; return t; } t = delegate.getCurrentToken(); if (t != JsonToken.FIELD_NAME) { _currToken = t; return t; } break;"
+      },
+      {
+        "txt": "} ctxt = _headContext.findChildOf(ctxt); _exposedContext = ctxt; if (ctxt == null) { // should never occur throw _constructError(\"Unexpected problem: chain of filtered context broken\"); } } } JsonToken t = delegate.nextToken(); if (t == null) {"
+      },
+      {
+        "txt": "_currToken = t; return t; } TokenFilter f; switch (t.id()) { case ID_START_ARRAY: f = _itemFilter; if (f == TokenFilter.INCLUDE_ALL) { _headContext = _headContext.createChildArrayContext(f, true); return (_currToken = t);"
+      },
+      {
+        "txt": "} if (f == null) { // does this occur? delegate.skipChildren(); break; } f = _headContext.checkValue(f); if (f == null) { delegate.skipChildren(); break; }"
+      },
+      {
+        "txt": "if (f != TokenFilter.INCLUDE_ALL) { f = f.filterStartArray(); } _itemFilter = f; if (f == TokenFilter.INCLUDE_ALL) { _headContext = _headContext.createChildArrayContext(f, true); return (_currToken = t); } _headContext = _headContext.createChildArrayContext(f, false); if (_includePath) {"
+      },
+      {
+        "txt": "t = _nextTokenWithBuffering(_headContext); if (t != null) { _currToken = t; return t; } } break; case ID_START_OBJECT: f = _itemFilter; if (f == TokenFilter.INCLUDE_ALL) {"
+      },
+      {
+        "txt": "_headContext = _headContext.createChildObjectContext(f, true); return (_currToken = t); } if (f == null) { // does this occur? delegate.skipChildren(); break; } f = _headContext.checkValue(f); if (f == null) { delegate.skipChildren();"
+      },
+      {
+        "txt": "break; } if (f != TokenFilter.INCLUDE_ALL) { f = f.filterStartObject(); } _itemFilter = f; if (f == TokenFilter.INCLUDE_ALL) { _headContext = _headContext.createChildObjectContext(f, true); return (_currToken = t); }"
+      },
+      {
+        "txt": "_headContext = _headContext.createChildObjectContext(f, false); if (_includePath) { t = _nextTokenWithBuffering(_headContext); if (t != null) { _currToken = t; return t; } } break; case ID_END_ARRAY:"
+      },
+      {
+        "txt": "case ID_END_OBJECT: { boolean returnEnd = _headContext.isStartHandled(); f = _headContext.getFilter(); if ((f != null) && (f != TokenFilter.INCLUDE_ALL)) { f.filterFinishArray(); } _headContext = _headContext.getParent(); _itemFilter = _headContext.getFilter(); if (returnEnd) {"
+      },
+      {
+        "txt": "return (_currToken = t); } } break; case ID_FIELD_NAME: { final String name = delegate.getCurrentName(); f = _headContext.setFieldName(name); if (f == TokenFilter.INCLUDE_ALL) { _itemFilter = f;"
+      },
+      {
+        "txt": "if (!_includePath) { if (_includeImmediateParent && !_headContext.isStartHandled()) { t = _headContext.nextTokenToRead(); // returns START_OBJECT but also marks it handled _exposedContext = _headContext; } } return (_currToken = t); } if (f == null) { delegate.nextToken();"
+      },
+      {
+        "txt": "delegate.skipChildren(); break; } f = f.includeProperty(name); if (f == null) { delegate.nextToken(); delegate.skipChildren(); break; } _itemFilter = f;"
+      },
+      {
+        "txt": "if (f == TokenFilter.INCLUDE_ALL) { if (_includePath) { return (_currToken = t); } } if (_includePath) { t = _nextTokenWithBuffering(_headContext); if (t != null) { _currToken = t; return t;"
+      },
+      {
+        "txt": "} } break; } default: // scalar value f = _itemFilter; if (f == TokenFilter.INCLUDE_ALL) { return (_currToken = t); } if (f != null) {"
+      },
+      {
+        "txt": "f = _headContext.checkValue(f); if ((f == TokenFilter.INCLUDE_ALL) || ((f != null) && f.includeValue(delegate))) { return (_currToken = t); } } break; } return _nextToken2(); }"
+      },
+      {
+        "txt": "protected final JsonToken _nextToken2() throws IOException { main_loop: while (true) { JsonToken t = delegate.nextToken(); if (t == null) { // is this even legal? _currToken = t; return t; } TokenFilter f;"
+      },
+      {
+        "txt": "switch (t.id()) { case ID_START_ARRAY: f = _itemFilter; if (f == TokenFilter.INCLUDE_ALL) { _headContext = _headContext.createChildArrayContext(f, true); return (_currToken = t); } if (f == null) { // does this occur? delegate.skipChildren(); continue main_loop;"
+      },
+      {
+        "txt": "} f = _headContext.checkValue(f); if (f == null) { delegate.skipChildren(); continue main_loop; } if (f != TokenFilter.INCLUDE_ALL) { f = f.filterStartArray(); } _itemFilter = f;"
+      },
+      {
+        "txt": "if (f == TokenFilter.INCLUDE_ALL) { _headContext = _headContext.createChildArrayContext(f, true); return (_currToken = t); } _headContext = _headContext.createChildArrayContext(f, false); if (_includePath) { t = _nextTokenWithBuffering(_headContext); if (t != null) { _currToken = t; return t;"
+      },
+      {
+        "txt": "} } continue main_loop; case ID_START_OBJECT: f = _itemFilter; if (f == TokenFilter.INCLUDE_ALL) { _headContext = _headContext.createChildObjectContext(f, true); return (_currToken = t); } if (f == null) { // does this occur?"
+      },
+      {
+        "txt": "delegate.skipChildren(); continue main_loop; } f = _headContext.checkValue(f); if (f == null) { delegate.skipChildren(); continue main_loop; } if (f != TokenFilter.INCLUDE_ALL) { f = f.filterStartObject();"
+      },
+      {
+        "txt": "} _itemFilter = f; if (f == TokenFilter.INCLUDE_ALL) { _headContext = _headContext.createChildObjectContext(f, true); return (_currToken = t); } _headContext = _headContext.createChildObjectContext(f, false); if (_includePath) { t = _nextTokenWithBuffering(_headContext); if (t != null) {"
+      },
+      {
+        "txt": "_currToken = t; return t; } } continue main_loop; case ID_END_ARRAY: case ID_END_OBJECT: { boolean returnEnd = _headContext.isStartHandled(); f = _headContext.getFilter();"
+      },
+      {
+        "txt": "if ((f != null) && (f != TokenFilter.INCLUDE_ALL)) { f.filterFinishArray(); } _headContext = _headContext.getParent(); _itemFilter = _headContext.getFilter(); if (returnEnd) { return (_currToken = t); } } continue main_loop;"
+      },
+      {
+        "txt": "case ID_FIELD_NAME: { final String name = delegate.getCurrentName(); f = _headContext.setFieldName(name); if (f == TokenFilter.INCLUDE_ALL) { _itemFilter = f; return (_currToken = t); } if (f == null) { // filter out the value delegate.nextToken();"
+      },
+      {
+        "txt": "delegate.skipChildren(); continue main_loop; } f = f.includeProperty(name); if (f == null) { // filter out the value delegate.nextToken(); delegate.skipChildren(); continue main_loop; } _itemFilter = f;"
+      },
+      {
+        "txt": "if (f == TokenFilter.INCLUDE_ALL) { if (_includePath) { return (_currToken = t); } continue main_loop; } if (_includePath) { t = _nextTokenWithBuffering(_headContext); if (t != null) { _currToken = t;"
+      },
+      {
+        "txt": "return t; } } } continue main_loop; default: // scalar value f = _itemFilter; if (f == TokenFilter.INCLUDE_ALL) { return (_currToken = t); }"
+      },
+      {
+        "txt": "if (f != null) { f = _headContext.checkValue(f); if ((f == TokenFilter.INCLUDE_ALL) || ((f != null) && f.includeValue(delegate))) { return (_currToken = t); } } break; } }"
+      },
+      {
+        "txt": "} protected final JsonToken _nextTokenWithBuffering(final TokenFilterContext buffRoot) throws IOException { main_loop: while (true) { JsonToken t = delegate.nextToken(); if (t == null) { // is this even legal? return t; }"
+      },
+      {
+        "txt": "TokenFilter f; switch (t.id()) { case ID_START_ARRAY: f = _headContext.checkValue(_itemFilter); if (f == null) { delegate.skipChildren(); continue main_loop; } if (f != TokenFilter.INCLUDE_ALL) { f = f.filterStartArray();"
+      },
+      {
+        "txt": "} _itemFilter = f; if (f == TokenFilter.INCLUDE_ALL) { _headContext = _headContext.createChildArrayContext(f, true); return _nextBuffered(buffRoot); } _headContext = _headContext.createChildArrayContext(f, false); continue main_loop; case ID_START_OBJECT: f = _itemFilter;"
+      },
+      {
+        "txt": "if (f == TokenFilter.INCLUDE_ALL) { _headContext = _headContext.createChildObjectContext(f, true); return t; } if (f == null) { // does this occur? delegate.skipChildren(); continue main_loop; } f = _headContext.checkValue(f); if (f == null) {"
+      },
+      {
+        "txt": "delegate.skipChildren(); continue main_loop; } if (f != TokenFilter.INCLUDE_ALL) { f = f.filterStartObject(); } _itemFilter = f; if (f == TokenFilter.INCLUDE_ALL) { _headContext = _headContext.createChildObjectContext(f, true); return _nextBuffered(buffRoot);"
+      },
+      {
+        "txt": "} _headContext = _headContext.createChildObjectContext(f, false); continue main_loop; case ID_END_ARRAY: case ID_END_OBJECT: { f = _headContext.getFilter(); if ((f != null) && (f != TokenFilter.INCLUDE_ALL)) { f.filterFinishArray(); }"
+      },
+      {
+        "txt": "boolean gotEnd = (_headContext == buffRoot); boolean returnEnd = gotEnd && _headContext.isStartHandled(); _headContext = _headContext.getParent(); _itemFilter = _headContext.getFilter(); if (returnEnd) { return t; } if (gotEnd || (_headContext == buffRoot)) { return null; }"
+      },
+      {
+        "txt": "} continue main_loop; case ID_FIELD_NAME: { final String name = delegate.getCurrentName(); f = _headContext.setFieldName(name); if (f == TokenFilter.INCLUDE_ALL) { _itemFilter = f; return _nextBuffered(buffRoot); }"
+      },
+      {
+        "txt": "if (f == null) { // filter out the value delegate.nextToken(); delegate.skipChildren(); continue main_loop; } f = f.includeProperty(name); if (f == null) { // filter out the value delegate.nextToken(); delegate.skipChildren(); continue main_loop;"
+      },
+      {
+        "txt": "} _itemFilter = f; if (f == TokenFilter.INCLUDE_ALL) { return _nextBuffered(buffRoot); } } continue main_loop; default: // scalar value f = _itemFilter; if (f == TokenFilter.INCLUDE_ALL) {"
+      },
+      {
+        "txt": "} if (f != null) { f = _headContext.checkValue(f); if ((f == TokenFilter.INCLUDE_ALL) || ((f != null) && f.includeValue(delegate))) { return _nextBuffered(buffRoot); <extra_id_0> } continue main_loop; } } } private JsonToken _nextBuffered(TokenFilterContext buffRoot) throws IOException"
+      },
+      {
+        "txt": "} private JsonToken _nextBuffered(TokenFilterContext buffRoot) throws IOException { _exposedContext = buffRoot; TokenFilterContext ctxt = buffRoot; JsonToken t = ctxt.nextTokenToRead(); if (t != null) { return t; } while (true) {"
+      },
+      {
+        "txt": "if (ctxt == _headContext) { throw _constructError(\"Internal error: failed to locate expected buffered tokens\"); _exposedContext = null; break; } ctxt = _exposedContext.findChildOf(ctxt); _exposedContext = ctxt; if (ctxt == null) { // should never occur throw _constructError(\"Unexpected problem: chain of filtered context broken\"); }"
+      },
+      {
+        "txt": "t = _exposedContext.nextTokenToRead(); if (t != null) { return t; } } } @Override public JsonToken nextValue() throws IOException { JsonToken t = nextToken(); if (t == JsonToken.FIELD_NAME) {"
+      },
+      {
+        "txt": "t = nextToken(); } return t; } @Override public JsonParser skipChildren() throws IOException { if ((_currToken != JsonToken.START_OBJECT) && (_currToken != JsonToken.START_ARRAY)) { return this;"
+      },
+      {
+        "txt": "} int open = 1; while (true) { JsonToken t = nextToken(); if (t == null) { // not ideal but for now, just return return this; } if (t.isStructStart()) { ++open; } else if (t.isStructEnd()) {"
+      },
+      {
+        "txt": "if (--open == 0) { return this; } } } } @Override public String getText() throws IOException { return delegate.getText(); } @Override public boolean hasTextCharacters() { return delegate.hasTextCharacters(); } @Override public char[] getTextCharacters() throws IOException { return delegate.getTextCharacters(); } @Override public int getTextLength() throws IOException { return delegate.getTextLength(); }"
+      },
+      {
+        "txt": "@Override public int getTextOffset() throws IOException { return delegate.getTextOffset(); } @Override public BigInteger getBigIntegerValue() throws IOException { return delegate.getBigIntegerValue(); } @Override public boolean getBooleanValue() throws IOException { return delegate.getBooleanValue(); } @Override public byte getByteValue() throws IOException { return delegate.getByteValue(); } @Override public short getShortValue() throws IOException { return delegate.getShortValue(); } @Override"
+      },
+      {
+        "txt": "public BigDecimal getDecimalValue() throws IOException { return delegate.getDecimalValue(); } @Override public double getDoubleValue() throws IOException { return delegate.getDoubleValue(); } @Override public float getFloatValue() throws IOException { return delegate.getFloatValue(); } @Override public int getIntValue() throws IOException { return delegate.getIntValue(); } @Override public long getLongValue() throws IOException { return delegate.getLongValue(); } @Override"
+      },
+      {
+        "txt": "public NumberType getNumberType() throws IOException { return delegate.getNumberType(); } @Override public Number getNumberValue() throws IOException { return delegate.getNumberValue(); } @Override public int getValueAsInt() throws IOException { return delegate.getValueAsInt(); } @Override public int getValueAsInt(int defaultValue) throws IOException { return delegate.getValueAsInt(defaultValue); } @Override public long getValueAsLong() throws IOException { return delegate.getValueAsLong(); } @Override public long getValueAsLong(long defaultValue) throws IOException { return delegate.getValueAsLong(defaultValue); } @Override public double getValueAsDouble() throws IOException { return delegate.getValueAsDouble(); } @Override public double getValueAsDouble(double defaultValue) throws IOException { return delegate.getValueAsDouble(defaultValue); } @Override public boolean getValueAsBoolean() throws IOException { return delegate.getValueAsBoolean(); }"
+      },
+      {
+        "txt": "@Override public boolean getValueAsBoolean(boolean defaultValue) throws IOException { return delegate.getValueAsBoolean(defaultValue); } @Override public String getValueAsString() throws IOException { return delegate.getValueAsString(); } @Override public String getValueAsString(String defaultValue) throws IOException { return delegate.getValueAsString(defaultValue); } @Override public Object getEmbeddedObject() throws IOException { return delegate.getEmbeddedObject(); } @Override public byte[] getBinaryValue(Base64Variant b64variant) throws IOException { return delegate.getBinaryValue(b64variant); } @Override public int readBinaryValue(Base64Variant b64variant, OutputStream out) throws IOException { return delegate.readBinaryValue(b64variant, out); } @Override public JsonLocation getTokenLocation() { return delegate.getTokenLocation(); } protected JsonStreamContext _filterContext() { if (_exposedContext != null) { return _exposedContext;"
+      },
+      {
+        "txt": "} return _headContext; }"
+      }
+    ]
+  },
+  {
+    "id": 1294,
+    "file_path": "src/main/java/com/fasterxml/jackson/core/filter/FilteringParserDelegate.java",
+    "start-bug-line": 771,
+    "end-bug-line": 771,
+    "bug": "",
+    "fix": "private final boolean _verifyAllowedMatches() throws IOException { if (_matchCount == 0 || _allowMultipleMatches) { ++_matchCount; return true; } return false; }",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.core.filter; import java.io.IOException; import java.io.OutputStream; import java.math.BigDecimal; import java.math.BigInteger; import com.fasterxml.jackson.core.*;"
+      },
+      {
+        "txt": "import com.fasterxml.jackson.core.util.JsonParserDelegate; import static com.fasterxml.jackson.core.JsonTokenId.*; public class FilteringParserDelegate extends JsonParserDelegate { protected TokenFilter rootFilter; protected boolean _allowMultipleMatches; protected boolean _includePath; @Deprecated protected boolean _includeImmediateParent; protected JsonToken _currToken;"
+      },
+      {
+        "txt": "protected JsonToken _lastClearedToken; protected TokenFilterContext _headContext; protected TokenFilterContext _exposedContext; protected TokenFilter _itemFilter; protected int _matchCount; public FilteringParserDelegate(JsonParser p, TokenFilter f, boolean includePath, boolean allowMultipleMatches) { super(p); rootFilter = f;"
+      },
+      {
+        "txt": "_itemFilter = f; _headContext = TokenFilterContext.createRootContext(f); _includePath = includePath; _allowMultipleMatches = allowMultipleMatches; } public TokenFilter getFilter() { return rootFilter; } public int getMatchCount() { return _matchCount; } @Override public JsonToken getCurrentToken() { return _currToken; }"
+      },
+      {
+        "txt": "@Override public JsonToken currentToken() { return _currToken; } @Override public final int getCurrentTokenId() { final JsonToken t = _currToken; return (t == null) ? JsonTokenId.ID_NO_TOKEN : t.id(); } @Override public final int currentTokenId() { final JsonToken t = _currToken; return (t == null) ? JsonTokenId.ID_NO_TOKEN : t.id(); } @Override public boolean hasCurrentToken() { return _currToken != null; }"
+      },
+      {
+        "txt": "@Override public boolean hasTokenId(int id) { final JsonToken t = _currToken; if (t == null) { return (JsonTokenId.ID_NO_TOKEN == id); } return t.id() == id; } @Override public final boolean hasToken(JsonToken t) { return (_currToken == t); }"
+      },
+      {
+        "txt": "@Override public boolean isExpectedStartArrayToken() { return _currToken == JsonToken.START_ARRAY; } @Override public boolean isExpectedStartObjectToken() { return _currToken == JsonToken.START_OBJECT; } @Override public JsonLocation getCurrentLocation() { return delegate.getCurrentLocation(); } @Override public JsonStreamContext getParsingContext() { return _filterContext(); } @Override public String getCurrentName() throws IOException { JsonStreamContext ctxt = _filterContext();"
+      },
+      {
+        "txt": "if (_currToken == JsonToken.START_OBJECT || _currToken == JsonToken.START_ARRAY) { JsonStreamContext parent = ctxt.getParent(); return (parent == null) ? null : parent.getCurrentName(); } return ctxt.getCurrentName(); } @Override public void clearCurrentToken() { if (_currToken != null) { _lastClearedToken = _currToken;"
+      },
+      {
+        "txt": "_currToken = null; } } @Override public JsonToken getLastClearedToken() { return _lastClearedToken; } @Override public void overrideCurrentName(String name) { throw new UnsupportedOperationException(\"Can not currently override name during filtering read\"); } @Override"
+      },
+      {
+        "txt": "public JsonToken nextToken() throws IOException { if (!_allowMultipleMatches && (_currToken != null) && (_exposedContext == null)) { if (_currToken.isScalarValue() && !_headContext.isStartHandled() && !_includePath && (_itemFilter == TokenFilter.INCLUDE_ALL)) { return (_currToken = null); } } TokenFilterContext ctxt = _exposedContext; if (ctxt != null) {"
+      },
+      {
+        "txt": "while (true) { JsonToken t = ctxt.nextTokenToRead(); if (t != null) { _currToken = t; return t; } if (ctxt == _headContext) { _exposedContext = null; if (ctxt.inArray()) { t = delegate.getCurrentToken();"
+      },
+      {
+        "txt": "_currToken = t; return t; } t = delegate.getCurrentToken(); if (t != JsonToken.FIELD_NAME) { _currToken = t; return t; } break; }"
+      },
+      {
+        "txt": "ctxt = _headContext.findChildOf(ctxt); _exposedContext = ctxt; if (ctxt == null) { // should never occur throw _constructError(\"Unexpected problem: chain of filtered context broken\"); } } } JsonToken t = delegate.nextToken(); if (t == null) { _currToken = t;"
+      },
+      {
+        "txt": "return t; } TokenFilter f; switch (t.id()) { case ID_START_ARRAY: f = _itemFilter; if (f == TokenFilter.INCLUDE_ALL) { _headContext = _headContext.createChildArrayContext(f, true); return (_currToken = t); }"
+      },
+      {
+        "txt": "if (f == null) { // does this occur? delegate.skipChildren(); break; } f = _headContext.checkValue(f); if (f == null) { delegate.skipChildren(); break; } if (f != TokenFilter.INCLUDE_ALL) {"
+      },
+      {
+        "txt": "f = f.filterStartArray(); } _itemFilter = f; if (f == TokenFilter.INCLUDE_ALL) { _headContext = _headContext.createChildArrayContext(f, true); return (_currToken = t); } _headContext = _headContext.createChildArrayContext(f, false); if (_includePath) { t = _nextTokenWithBuffering(_headContext);"
+      },
+      {
+        "txt": "if (t != null) { _currToken = t; return t; } } break; case ID_START_OBJECT: f = _itemFilter; if (f == TokenFilter.INCLUDE_ALL) { _headContext = _headContext.createChildObjectContext(f, true);"
+      },
+      {
+        "txt": "return (_currToken = t); } if (f == null) { // does this occur? delegate.skipChildren(); break; } f = _headContext.checkValue(f); if (f == null) { delegate.skipChildren(); break;"
+      },
+      {
+        "txt": "} if (f != TokenFilter.INCLUDE_ALL) { f = f.filterStartObject(); } _itemFilter = f; if (f == TokenFilter.INCLUDE_ALL) { _headContext = _headContext.createChildObjectContext(f, true); return (_currToken = t); } _headContext = _headContext.createChildObjectContext(f, false);"
+      },
+      {
+        "txt": "if (_includePath) { t = _nextTokenWithBuffering(_headContext); if (t != null) { _currToken = t; return t; } } break; case ID_END_ARRAY: case ID_END_OBJECT:"
+      },
+      {
+        "txt": "{ boolean returnEnd = _headContext.isStartHandled(); f = _headContext.getFilter(); if ((f != null) && (f != TokenFilter.INCLUDE_ALL)) { f.filterFinishArray(); } _headContext = _headContext.getParent(); _itemFilter = _headContext.getFilter(); if (returnEnd) { return (_currToken = t);"
+      },
+      {
+        "txt": "} } break; case ID_FIELD_NAME: { final String name = delegate.getCurrentName(); f = _headContext.setFieldName(name); if (f == TokenFilter.INCLUDE_ALL) { _itemFilter = f; if (!_includePath) {"
+      },
+      {
+        "txt": "if (_includeImmediateParent && !_headContext.isStartHandled()) { t = _headContext.nextTokenToRead(); // returns START_OBJECT but also marks it handled _exposedContext = _headContext; } } return (_currToken = t); } if (f == null) { delegate.nextToken(); delegate.skipChildren();"
+      },
+      {
+        "txt": "break; } f = f.includeProperty(name); if (f == null) { delegate.nextToken(); delegate.skipChildren(); break; } _itemFilter = f; if (f == TokenFilter.INCLUDE_ALL) {"
+      },
+      {
+        "txt": "if (_includePath) { return (_currToken = t); } } if (_includePath) { t = _nextTokenWithBuffering(_headContext); if (t != null) { _currToken = t; return t; }"
+      },
+      {
+        "txt": "} break; } default: // scalar value f = _itemFilter; if (f == TokenFilter.INCLUDE_ALL) { return (_currToken = t); } if (f != null) { f = _headContext.checkValue(f);"
+      },
+      {
+        "txt": "if ((f == TokenFilter.INCLUDE_ALL) || ((f != null) && f.includeValue(delegate))) { return (_currToken = t); } } break; } return _nextToken2(); } protected final JsonToken _nextToken2() throws IOException"
+      },
+      {
+        "txt": "{ main_loop: while (true) { JsonToken t = delegate.nextToken(); if (t == null) { // is this even legal? _currToken = t; return t; } TokenFilter f; switch (t.id()) {"
+      },
+      {
+        "txt": "case ID_START_ARRAY: f = _itemFilter; if (f == TokenFilter.INCLUDE_ALL) { _headContext = _headContext.createChildArrayContext(f, true); return (_currToken = t); } if (f == null) { // does this occur? delegate.skipChildren(); continue main_loop; }"
+      },
+      {
+        "txt": "f = _headContext.checkValue(f); if (f == null) { delegate.skipChildren(); continue main_loop; } if (f != TokenFilter.INCLUDE_ALL) { f = f.filterStartArray(); } _itemFilter = f; if (f == TokenFilter.INCLUDE_ALL) {"
+      },
+      {
+        "txt": "_headContext = _headContext.createChildArrayContext(f, true); return (_currToken = t); } _headContext = _headContext.createChildArrayContext(f, false); if (_includePath) { t = _nextTokenWithBuffering(_headContext); if (t != null) { _currToken = t; return t; }"
+      },
+      {
+        "txt": "} continue main_loop; case ID_START_OBJECT: f = _itemFilter; if (f == TokenFilter.INCLUDE_ALL) { _headContext = _headContext.createChildObjectContext(f, true); return (_currToken = t); } if (f == null) { // does this occur? delegate.skipChildren();"
+      },
+      {
+        "txt": "continue main_loop; } f = _headContext.checkValue(f); if (f == null) { delegate.skipChildren(); continue main_loop; } if (f != TokenFilter.INCLUDE_ALL) { f = f.filterStartObject(); }"
+      },
+      {
+        "txt": "_itemFilter = f; if (f == TokenFilter.INCLUDE_ALL) { _headContext = _headContext.createChildObjectContext(f, true); return (_currToken = t); } _headContext = _headContext.createChildObjectContext(f, false); if (_includePath) { t = _nextTokenWithBuffering(_headContext); if (t != null) { _currToken = t;"
+      },
+      {
+        "txt": "return t; } } continue main_loop; case ID_END_ARRAY: case ID_END_OBJECT: { boolean returnEnd = _headContext.isStartHandled(); f = _headContext.getFilter(); if ((f != null) && (f != TokenFilter.INCLUDE_ALL)) {"
+      },
+      {
+        "txt": "f.filterFinishArray(); } _headContext = _headContext.getParent(); _itemFilter = _headContext.getFilter(); if (returnEnd) { return (_currToken = t); } } continue main_loop; case ID_FIELD_NAME:"
+      },
+      {
+        "txt": "{ final String name = delegate.getCurrentName(); f = _headContext.setFieldName(name); if (f == TokenFilter.INCLUDE_ALL) { _itemFilter = f; return (_currToken = t); } if (f == null) { // filter out the value delegate.nextToken(); delegate.skipChildren();"
+      },
+      {
+        "txt": "continue main_loop; } f = f.includeProperty(name); if (f == null) { // filter out the value delegate.nextToken(); delegate.skipChildren(); continue main_loop; } _itemFilter = f; if (f == TokenFilter.INCLUDE_ALL) {"
+      },
+      {
+        "txt": "if (_includePath) { return (_currToken = t); } continue main_loop; } if (_includePath) { t = _nextTokenWithBuffering(_headContext); if (t != null) { _currToken = t; return t;"
+      },
+      {
+        "txt": "} } } continue main_loop; default: // scalar value f = _itemFilter; if (f == TokenFilter.INCLUDE_ALL) { return (_currToken = t); } if (f != null) {"
+      },
+      {
+        "txt": "f = _headContext.checkValue(f); if ((f == TokenFilter.INCLUDE_ALL) || ((f != null) && f.includeValue(delegate))) { return (_currToken = t); } } break; } } }"
+      },
+      {
+        "txt": "protected final JsonToken _nextTokenWithBuffering(final TokenFilterContext buffRoot) throws IOException { main_loop: while (true) { JsonToken t = delegate.nextToken(); if (t == null) { // is this even legal? return t; } TokenFilter f;"
+      },
+      {
+        "txt": "switch (t.id()) { case ID_START_ARRAY: f = _headContext.checkValue(_itemFilter); if (f == null) { delegate.skipChildren(); continue main_loop; } if (f != TokenFilter.INCLUDE_ALL) { f = f.filterStartArray(); }"
+      },
+      {
+        "txt": "_itemFilter = f; if (f == TokenFilter.INCLUDE_ALL) { _headContext = _headContext.createChildArrayContext(f, true); return _nextBuffered(buffRoot); } _headContext = _headContext.createChildArrayContext(f, false); continue main_loop; case ID_START_OBJECT: f = _itemFilter; if (f == TokenFilter.INCLUDE_ALL) {"
+      },
+      {
+        "txt": "_headContext = _headContext.createChildObjectContext(f, true); return t; } if (f == null) { // does this occur? delegate.skipChildren(); continue main_loop; } f = _headContext.checkValue(f); if (f == null) { delegate.skipChildren();"
+      },
+      {
+        "txt": "continue main_loop; } if (f != TokenFilter.INCLUDE_ALL) { f = f.filterStartObject(); } _itemFilter = f; if (f == TokenFilter.INCLUDE_ALL) { _headContext = _headContext.createChildObjectContext(f, true); return _nextBuffered(buffRoot); }"
+      },
+      {
+        "txt": "_headContext = _headContext.createChildObjectContext(f, false); continue main_loop; case ID_END_ARRAY: case ID_END_OBJECT: { f = _headContext.getFilter(); if ((f != null) && (f != TokenFilter.INCLUDE_ALL)) { f.filterFinishArray(); } boolean gotEnd = (_headContext == buffRoot);"
+      },
+      {
+        "txt": "boolean returnEnd = gotEnd && _headContext.isStartHandled(); _headContext = _headContext.getParent(); _itemFilter = _headContext.getFilter(); if (returnEnd) { return t; } if (gotEnd || (_headContext == buffRoot)) { return null; } }"
+      },
+      {
+        "txt": "continue main_loop; case ID_FIELD_NAME: { final String name = delegate.getCurrentName(); f = _headContext.setFieldName(name); if (f == TokenFilter.INCLUDE_ALL) { _itemFilter = f; return _nextBuffered(buffRoot); } if (f == null) { // filter out the value"
+      },
+      {
+        "txt": "delegate.nextToken(); delegate.skipChildren(); continue main_loop; } f = f.includeProperty(name); if (f == null) { // filter out the value delegate.nextToken(); delegate.skipChildren(); continue main_loop; }"
+      },
+      {
+        "txt": "_itemFilter = f; if (f == TokenFilter.INCLUDE_ALL) { return _nextBuffered(buffRoot); } } continue main_loop; default: // scalar value f = _itemFilter; if (f == TokenFilter.INCLUDE_ALL) { return _nextBuffered(buffRoot);"
+      },
+      {
+        "txt": "} if (f != null) { f = _headContext.checkValue(f); if ((f == TokenFilter.INCLUDE_ALL) || ((f != null) && f.includeValue(delegate))) { return _nextBuffered(buffRoot); } } continue main_loop; }"
+      },
+      {
+        "txt": "} } private JsonToken _nextBuffered(TokenFilterContext buffRoot) throws IOException { _exposedContext = buffRoot; TokenFilterContext ctxt = buffRoot; JsonToken t = ctxt.nextTokenToRead(); if (t != null) { return t; }"
+      },
+      {
+        "txt": "while (true) { if (ctxt == _headContext) { throw _constructError(\"Internal error: failed to locate expected buffered tokens\"); _exposedContext = null; break; } ctxt = _exposedContext.findChildOf(ctxt); _exposedContext = ctxt; if (ctxt == null) { // should never occur throw _constructError(\"Unexpected problem: chain of filtered context broken\");"
+      },
+      {
+        "txt": "t = _exposedContext.nextTokenToRead(); if (t != null) { return t; } } } <extra_id_0> @Override public JsonToken nextValue() throws IOException { JsonToken t = nextToken(); if (t == JsonToken.FIELD_NAME) { t = nextToken(); }"
+      },
+      {
+        "txt": "t = nextToken(); } return t; } @Override public JsonParser skipChildren() throws IOException { if ((_currToken != JsonToken.START_OBJECT) && (_currToken != JsonToken.START_ARRAY)) { return this;"
+      },
+      {
+        "txt": "} int open = 1; while (true) { JsonToken t = nextToken(); if (t == null) { // not ideal but for now, just return return this; } if (t.isStructStart()) { ++open; } else if (t.isStructEnd()) {"
+      },
+      {
+        "txt": "if (--open == 0) { return this; } } } } @Override public String getText() throws IOException { return delegate.getText(); } @Override public boolean hasTextCharacters() { return delegate.hasTextCharacters(); } @Override public char[] getTextCharacters() throws IOException { return delegate.getTextCharacters(); } @Override public int getTextLength() throws IOException { return delegate.getTextLength(); }"
+      },
+      {
+        "txt": "@Override public int getTextOffset() throws IOException { return delegate.getTextOffset(); } @Override public BigInteger getBigIntegerValue() throws IOException { return delegate.getBigIntegerValue(); } @Override public boolean getBooleanValue() throws IOException { return delegate.getBooleanValue(); } @Override public byte getByteValue() throws IOException { return delegate.getByteValue(); } @Override public short getShortValue() throws IOException { return delegate.getShortValue(); } @Override"
+      },
+      {
+        "txt": "public BigDecimal getDecimalValue() throws IOException { return delegate.getDecimalValue(); } @Override public double getDoubleValue() throws IOException { return delegate.getDoubleValue(); } @Override public float getFloatValue() throws IOException { return delegate.getFloatValue(); } @Override public int getIntValue() throws IOException { return delegate.getIntValue(); } @Override public long getLongValue() throws IOException { return delegate.getLongValue(); } @Override"
+      },
+      {
+        "txt": "public NumberType getNumberType() throws IOException { return delegate.getNumberType(); } @Override public Number getNumberValue() throws IOException { return delegate.getNumberValue(); } @Override public int getValueAsInt() throws IOException { return delegate.getValueAsInt(); } @Override public int getValueAsInt(int defaultValue) throws IOException { return delegate.getValueAsInt(defaultValue); } @Override public long getValueAsLong() throws IOException { return delegate.getValueAsLong(); } @Override public long getValueAsLong(long defaultValue) throws IOException { return delegate.getValueAsLong(defaultValue); } @Override public double getValueAsDouble() throws IOException { return delegate.getValueAsDouble(); } @Override public double getValueAsDouble(double defaultValue) throws IOException { return delegate.getValueAsDouble(defaultValue); } @Override public boolean getValueAsBoolean() throws IOException { return delegate.getValueAsBoolean(); }"
+      },
+      {
+        "txt": "@Override public boolean getValueAsBoolean(boolean defaultValue) throws IOException { return delegate.getValueAsBoolean(defaultValue); } @Override public String getValueAsString() throws IOException { return delegate.getValueAsString(); } @Override public String getValueAsString(String defaultValue) throws IOException { return delegate.getValueAsString(defaultValue); } @Override public Object getEmbeddedObject() throws IOException { return delegate.getEmbeddedObject(); } @Override public byte[] getBinaryValue(Base64Variant b64variant) throws IOException { return delegate.getBinaryValue(b64variant); } @Override public int readBinaryValue(Base64Variant b64variant, OutputStream out) throws IOException { return delegate.readBinaryValue(b64variant, out); } @Override public JsonLocation getTokenLocation() { return delegate.getTokenLocation(); } protected JsonStreamContext _filterContext() { if (_exposedContext != null) { return _exposedContext;"
+      },
+      {
+        "txt": "} return _headContext; }"
+      }
+    ]
+  }
+]

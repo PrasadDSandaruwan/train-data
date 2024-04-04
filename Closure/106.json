@@ -1,0 +1,491 @@
+[
+  {
+    "id": 441,
+    "file_path": "src/com/google/javascript/jscomp/GlobalNamespace.java",
+    "start-bug-line": 907,
+    "end-bug-line": 907,
+    "bug": "",
+    "fix": "Preconditions.checkNotNull(declaration); if (declaration.getTwin() != null) { return false; }",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.google.javascript.jscomp; import com.google.common.base.Preconditions; import com.google.common.base.Predicate;"
+      },
+      {
+        "txt": "import com.google.javascript.jscomp.NodeTraversal.AbstractPostOrderCallback; import com.google.javascript.rhino.JSDocInfo; import com.google.javascript.rhino.Node; import com.google.javascript.rhino.Token; import com.google.javascript.rhino.TokenStream; import java.util.ArrayList; import java.util.HashMap; import java.util.LinkedList; import java.util.List; import java.util.Map;"
+      },
+      {
+        "txt": "import java.util.Set; class GlobalNamespace { private AbstractCompiler compiler; private final Node root; private final Node externsRoot; private boolean inExterns; private Scope externsScope; private boolean generated = false; private List<Name> globalNames = new ArrayList<Name>(); private Map<String, Name> nameMap = new HashMap<String, Name>();"
+      },
+      {
+        "txt": "GlobalNamespace(AbstractCompiler compiler, Node root) { this(compiler, null, root); } GlobalNamespace(AbstractCompiler compiler, Node externsRoot, Node root) { this.compiler = compiler; this.externsRoot = externsRoot; this.root = root; } List<Name> getNameForest() { if (!generated) {"
+      },
+      {
+        "txt": "process(); } return globalNames; } Map<String, Name> getNameIndex() { if (!generated) { process(); } return nameMap; }"
+      },
+      {
+        "txt": "void scanNewNodes(Scope scope, Set<Node> newNodes) { NodeTraversal t = new NodeTraversal(compiler, new BuildGlobalNamespace(new NodeFilter(newNodes))); t.traverseAtScope(scope); } private static class NodeFilter implements Predicate<Node> { private final Set<Node> newNodes; NodeFilter(Set<Node> newNodes) { this.newNodes = newNodes; }"
+      },
+      {
+        "txt": "public boolean apply(Node n) { if (!n.isQualifiedName()) { return false; } Node current; for (current = n; current.getType() == Token.GETPROP; current = current.getFirstChild()) { if (newNodes.contains(current)) { return true;"
+      },
+      {
+        "txt": "} } return current.getType() == Token.NAME && newNodes.contains(current); } } private void process() { if (externsRoot != null) { inExterns = true; NodeTraversal.traverse(compiler, externsRoot, new BuildGlobalNamespace()); }"
+      },
+      {
+        "txt": "inExterns = false; NodeTraversal.traverse(compiler, root, new BuildGlobalNamespace()); generated = true; } private boolean isGlobalNameReference(String name, Scope s) { String topVarName = getTopVarName(name); return isGlobalVarReference(topVarName, s); } private String getTopVarName(String name) { int firstDotIndex = name.indexOf('.');"
+      },
+      {
+        "txt": "return firstDotIndex == -1 ? name : name.substring(0, firstDotIndex); } private boolean isGlobalVarReference(String name, Scope s) { Scope.Var v = s.getVar(name); if (v == null && externsScope != null) { v = externsScope.getVar(name); } return v != null && !v.isLocal(); } private boolean isGlobalScope(Scope s) {"
+      },
+      {
+        "txt": "return s.getParent() == null; } private class BuildGlobalNamespace extends AbstractPostOrderCallback { private final Predicate<Node> nodeFilter; BuildGlobalNamespace() { this(null); } BuildGlobalNamespace(Predicate<Node> nodeFilter) { this.nodeFilter = nodeFilter; }"
+      },
+      {
+        "txt": "public void visit(NodeTraversal t, Node n, Node parent) { if (nodeFilter != null && !nodeFilter.apply(n)) { return; } if (externsRoot != null && n == externsRoot) { externsScope = t.getScope(); } String name; boolean isSet = false; Name.Type type = Name.Type.OTHER;"
+      },
+      {
+        "txt": "boolean isPropAssign = false; switch (n.getType()) { case Token.STRING: name = null; if (parent != null && parent.getType() == Token.OBJECTLIT) { name = getNameForObjLitKey(n); } if (name == null) return; isSet = true; type = getValueType(n.getNext());"
+      },
+      {
+        "txt": "break; case Token.NAME: if (parent != null) { switch (parent.getType()) { case Token.VAR: isSet = true; Node rvalue = n.getFirstChild(); type = rvalue == null ? Name.Type.OTHER : getValueType(rvalue); break; case Token.ASSIGN:"
+      },
+      {
+        "txt": "if (parent.getFirstChild() == n) { isSet = true; type = getValueType(n.getNext()); } break; case Token.GETPROP: return; case Token.FUNCTION: Node gramps = parent.getParent(); if (gramps == null ||"
+      },
+      {
+        "txt": "NodeUtil.isFunctionAnonymous(parent)) return; isSet = true; type = Name.Type.FUNCTION; break; } } name = n.getString(); break; case Token.GETPROP: if (parent != null) {"
+      },
+      {
+        "txt": "switch (parent.getType()) { case Token.ASSIGN: if (parent.getFirstChild() == n) { isSet = true; type = getValueType(n.getNext()); isPropAssign = true; } break; case Token.GETPROP: return;"
+      },
+      {
+        "txt": "} } name = n.getQualifiedName(); if (name == null) return; break; default: return; } Scope scope = t.getScope(); if (!isGlobalNameReference(name, scope)) {"
+      },
+      {
+        "txt": "return; } if (isSet) { if (isGlobalScope(scope)) { handleSetFromGlobal(t, n, parent, name, isPropAssign, type); } else { handleSetFromLocal(t, n, parent, name); } } else { handleGet(t, n, parent, name);"
+      },
+      {
+        "txt": "} } String getNameForObjLitKey(Node n) { Node parent = n.getParent(); for (Node walker = parent.getFirstChild(); walker != n; walker = walker.getNext().getNext()) { if (walker == null) { return null; } }"
+      },
+      {
+        "txt": "Node gramps = parent.getParent(); if (gramps == null) { return null; } String name; switch (gramps.getType()) { case Token.NAME: Node greatGramps = gramps.getParent(); if (greatGramps == null || greatGramps.getType() != Token.VAR) {"
+      },
+      {
+        "txt": "return null; } name = gramps.getString(); break; case Token.ASSIGN: Node lvalue = gramps.getFirstChild(); name = lvalue.getQualifiedName(); break; case Token.OBJECTLIT: Node key = gramps.getChildBefore(parent);"
+      },
+      {
+        "txt": "if (key.getType() == Token.STRING) { name = getNameForObjLitKey(key); } else { return null; } break; default: return null; } if (name != null) {"
+      },
+      {
+        "txt": "String key = n.getString(); if (TokenStream.isJSIdentifier(key)) { return name + '.' + key; } } return null; } Name.Type getValueType(Node n) { switch (n.getType()) { case Token.OBJECTLIT:"
+      },
+      {
+        "txt": "return Name.Type.OBJECTLIT; case Token.FUNCTION: return Name.Type.FUNCTION; case Token.OR: return getValueType(n.getLastChild()); case Token.HOOK: Node second = n.getFirstChild().getNext(); Name.Type t = getValueType(second); if (t != Name.Type.OTHER) return t; Node third = second.getNext();"
+      },
+      {
+        "txt": "return getValueType(third); } return Name.Type.OTHER; } void handleSetFromGlobal(NodeTraversal t, Node n, Node parent, String name, boolean isPropAssign, Name.Type type) { if (maybeHandlePrototypePrefix(t, n, parent, name)) return; Name nameObj = getOrCreateName(name); nameObj.type = type; Ref set = new Ref(t, n, Ref.Type.SET_FROM_GLOBAL);"
+      },
+      {
+        "txt": "nameObj.addRef(set); if (isNestedAssign(parent)) { Ref get = new Ref(t, n, Ref.Type.ALIASING_GET); nameObj.addRef(get); Ref.markTwins(set, get); } else if (isConstructorOrEnumDeclaration(n, parent)) { nameObj.setIsClassOrEnum(); } } private boolean isConstructorOrEnumDeclaration(Node n, Node parent) {"
+      },
+      {
+        "txt": "JSDocInfo info; int valueNodeType; switch (parent.getType()) { case Token.ASSIGN: info = parent.getJSDocInfo(); valueNodeType = n.getNext().getType(); break; case Token.VAR: info = n.getJSDocInfo(); if (info == null) {"
+      },
+      {
+        "txt": "info = parent.getJSDocInfo(); } Node valueNode = n.getFirstChild(); valueNodeType = valueNode != null ? valueNode.getType() : Token.VOID; break; default: return false; } return info != null && (info.isConstructor() && valueNodeType == Token.FUNCTION ||"
+      },
+      {
+        "txt": "info.hasEnumParameterType() && valueNodeType == Token.OBJECTLIT); } void handleSetFromLocal(NodeTraversal t, Node n, Node parent, String name) { if (maybeHandlePrototypePrefix(t, n, parent, name)) return; Name node = getOrCreateName(name); Ref set = new Ref(t, n, Ref.Type.SET_FROM_LOCAL); node.addRef(set); if (isNestedAssign(parent)) { Ref get = new Ref(t, n, Ref.Type.ALIASING_GET);"
+      },
+      {
+        "txt": "node.addRef(get); Ref.markTwins(set, get); } } void handleGet(NodeTraversal t, Node n, Node parent, String name) { if (maybeHandlePrototypePrefix(t, n, parent, name)) return; Ref.Type type = Ref.Type.DIRECT_GET; if (parent != null) { switch (parent.getType()) { case Token.IF:"
+      },
+      {
+        "txt": "case Token.TYPEOF: case Token.VOID: case Token.NOT: case Token.BITNOT: case Token.POS: case Token.NEG: break; case Token.CALL: type = n == parent.getFirstChild() ? Ref.Type.CALL_GET"
+      },
+      {
+        "txt": ": Ref.Type.ALIASING_GET; break; case Token.NEW: type = n == parent.getFirstChild() ? Ref.Type.DIRECT_GET : Ref.Type.ALIASING_GET; break; case Token.OR: case Token.AND: type = determineGetTypeForHookOrBooleanExpr(t, parent, name);"
+      },
+      {
+        "txt": "break; case Token.HOOK: if (n != parent.getFirstChild()) { type = determineGetTypeForHookOrBooleanExpr(t, parent, name); } break; default: type = Ref.Type.ALIASING_GET; break; }"
+      },
+      {
+        "txt": "} handleGet(t, n, parent, name, type); } Ref.Type determineGetTypeForHookOrBooleanExpr( NodeTraversal t, Node parent, String name) { Node prev = parent; for (Node anc : parent.getAncestors()) { switch (anc.getType()) { case Token.EXPR_RESULT: case Token.VAR:"
+      },
+      {
+        "txt": "case Token.IF: case Token.WHILE: case Token.FOR: case Token.TYPEOF: case Token.VOID: case Token.NOT: case Token.BITNOT: case Token.POS: case Token.NEG: return Ref.Type.DIRECT_GET;"
+      },
+      {
+        "txt": "case Token.HOOK: if (anc.getFirstChild() == prev) { return Ref.Type.DIRECT_GET; } break; case Token.ASSIGN: if (!name.equals(anc.getFirstChild().getQualifiedName())) { return Ref.Type.ALIASING_GET; } break;"
+      },
+      {
+        "txt": "case Token.NAME: // a variable declaration if (!name.equals(anc.getString())) { return Ref.Type.ALIASING_GET; } break; case Token.CALL: if (anc.getFirstChild() != prev) { return Ref.Type.ALIASING_GET; } break;"
+      },
+      {
+        "txt": "} prev = anc; } return Ref.Type.ALIASING_GET; } void handleGet(NodeTraversal t, Node n, Node parent, String name, Ref.Type type) { Name node = getOrCreateName(name); node.addRef(new Ref(t, n, type)); }"
+      },
+      {
+        "txt": "boolean maybeHandlePrototypePrefix(NodeTraversal t, Node n, Node parent, String name) { int numLevelsToRemove; String prefix; if (name.endsWith(\".prototype\")) { numLevelsToRemove = 1; prefix = name.substring(0, name.length() - 10); } else { int i = name.indexOf(\".prototype.\"); if (i == -1) {"
+      },
+      {
+        "txt": "return false; } prefix = name.substring(0, i); numLevelsToRemove = 2; i = name.indexOf('.', i + 11); while (i >= 0) { numLevelsToRemove++; i = name.indexOf('.', i + 1); } }"
+      },
+      {
+        "txt": "if (parent != null && NodeUtil.isObjectLitKey(n, parent)) { return true; } for (int i = 0; i < numLevelsToRemove; i++) { parent = n; n = n.getFirstChild(); } handleGet(t, n, parent, prefix, Ref.Type.PROTOTYPE_GET); return true; }"
+      },
+      {
+        "txt": "boolean isNestedAssign(Node parent) { return parent.getType() == Token.ASSIGN && !NodeUtil.isExpressionNode(parent.getParent()); } Name getOrCreateName(String name) { Name node = nameMap.get(name); if (node == null) { int i = name.lastIndexOf('.'); if (i >= 0) { String parentName = name.substring(0, i);"
+      },
+      {
+        "txt": "Name parent = getOrCreateName(parentName); node = parent.addProperty(name.substring(i + 1), inExterns); } else { node = new Name(name, null, inExterns); globalNames.add(node); } nameMap.put(name, node); } return node; }"
+      },
+      {
+        "txt": "} static class Name { enum Type { OBJECTLIT, FUNCTION, OTHER, } final String name; final Name parent; List<Name> props;"
+      },
+      {
+        "txt": "Ref declaration; List<Ref> refs; Type type; private boolean isClassOrEnum = false; private boolean hasClassOrEnumDescendant = false; int globalSets = 0; int localSets = 0; int aliasingGets = 0; int totalGets = 0; int callGets = 0;"
+      },
+      {
+        "txt": "boolean inExterns; JSDocInfo docInfo = null; Name(String name, Name parent, boolean inExterns) { this.name = name; this.parent = parent; this.type = Type.OTHER; this.inExterns = inExterns; } Name addProperty(String name, boolean inExterns) { if (props == null) {"
+      },
+      {
+        "txt": "props = new ArrayList<Name>(); } Name node = new Name(name, this, inExterns); props.add(node); return node; } void addRef(Ref ref) { switch (ref.type) { case SET_FROM_GLOBAL: if (declaration == null) {"
+      },
+      {
+        "txt": "declaration = ref; docInfo = getDocInfoForDeclaration(ref); } else { addRefInternal(ref); } globalSets++; break; case SET_FROM_LOCAL: addRefInternal(ref); localSets++;"
+      },
+      {
+        "txt": "break; case PROTOTYPE_GET: case DIRECT_GET: addRefInternal(ref); totalGets++; break; case ALIASING_GET: addRefInternal(ref); aliasingGets++; totalGets++;"
+      },
+      {
+        "txt": "break; case CALL_GET: addRefInternal(ref); callGets++; totalGets++; break; default: throw new IllegalStateException(); } }"
+      },
+      {
+        "txt": "void removeRef(Ref ref) { if (ref == declaration || (refs != null && refs.remove(ref))) { if (ref == declaration) { declaration = null; if (refs != null) { for (Ref maybeNewDecl : refs) { if (maybeNewDecl.type == Ref.Type.SET_FROM_GLOBAL) { declaration = maybeNewDecl; refs.remove(declaration);"
+      },
+      {
+        "txt": "break; } } } } switch (ref.type) { case SET_FROM_GLOBAL: globalSets--; break; case SET_FROM_LOCAL:"
+      },
+      {
+        "txt": "localSets--; break; case PROTOTYPE_GET: case DIRECT_GET: totalGets--; break; case ALIASING_GET: aliasingGets--; totalGets--; break;"
+      },
+      {
+        "txt": "case CALL_GET: callGets--; totalGets--; break; default: throw new IllegalStateException(); } } } void addRefInternal(Ref ref) {"
+      },
+      {
+        "txt": "if (refs == null) { refs = new LinkedList<Ref>(); } refs.add(ref); } boolean canEliminate() { if (!canCollapseUnannotatedChildNames() || totalGets > 0) { return false; } if (props != null) {"
+      },
+      {
+        "txt": "for (Name n : props) { if (!n.canCollapse()) { return false; } } } return true; } boolean canCollapse() { return !inExterns && (isClassOrEnum ||"
+      },
+      {
+        "txt": "(globalSets > 0 || localSets > 0)); } boolean canCollapseUnannotatedChildNames() { if (type == Type.OTHER || globalSets != 1 || localSets != 0) { return false; } <extra_id_0> if (isClassOrEnum) { return true; } return (type == Type.FUNCTION || aliasingGets == 0) && (parent == null || parent.canCollapseUnannotatedChildNames()); }"
+      },
+      {
+        "txt": "(parent == null || parent.canCollapseUnannotatedChildNames()); } boolean needsToBeStubbed() { return globalSets == 0 && localSets > 0; } void setIsClassOrEnum() { isClassOrEnum = true; for (Name ancestor = parent; ancestor != null; ancestor = ancestor.parent) { ancestor.hasClassOrEnumDescendant = true;"
+      },
+      {
+        "txt": "} } boolean isNamespace() { return hasClassOrEnumDescendant && type == Type.OBJECTLIT; } boolean isSimpleName() { return parent == null; } @Override public String toString() { return fullName() + \" (\" + type + \"): globalSets=\" + globalSets +"
+      },
+      {
+        "txt": "\", localSets=\" + localSets + \", totalGets=\" + totalGets + \", aliasingGets=\" + aliasingGets + \", callGets=\" + callGets; } String fullName() { return parent == null ? name : parent.fullName() + '.' + name; } private static JSDocInfo getDocInfoForDeclaration(Ref ref) { if (ref.node != null) { Node refParent = ref.node.getParent(); switch (refParent.getType()) {"
+      },
+      {
+        "txt": "case Token.FUNCTION: case Token.ASSIGN: return refParent.getJSDocInfo(); case Token.VAR: return ref.node == refParent.getFirstChild() ? refParent.getJSDocInfo() : ref.node.getJSDocInfo(); } } return null; }"
+      },
+      {
+        "txt": "} static class Ref { enum Type { SET_FROM_GLOBAL, SET_FROM_LOCAL, PROTOTYPE_GET, ALIASING_GET, // Prevents a name's properties from being collapsed DIRECT_GET, // Prevents a name from being completely eliminated CALL_GET, // Prevents a name from being collapsed if never set }"
+      },
+      {
+        "txt": "Node node; final Type type; final String sourceName; final Scope scope; final JSModule module; private Ref twin = null; Ref(NodeTraversal t, Node name, Type type) { this.node = name; this.sourceName = t.getSourceName(); this.type = type;"
+      },
+      {
+        "txt": "this.scope = t.getScope(); this.module = t.getModule(); } private Ref(Ref original, Type type) { this.node = original.node; this.sourceName = original.sourceName; this.type = type; this.scope = original.scope; this.module = original.module; }"
+      },
+      {
+        "txt": "private Ref(Type type) { this.type = type; this.sourceName = \"source\"; this.scope = null; this.module = null; } Ref getTwin() { return twin; } boolean isSet() {"
+      },
+      {
+        "txt": "return type == Type.SET_FROM_GLOBAL || type == Type.SET_FROM_LOCAL; } static void markTwins(Ref a, Ref b) { Preconditions.checkArgument( (a.type == Type.ALIASING_GET || b.type == Type.ALIASING_GET) && (a.type == Type.SET_FROM_GLOBAL || a.type == Type.SET_FROM_LOCAL || b.type == Type.SET_FROM_GLOBAL || b.type == Type.SET_FROM_LOCAL)); a.twin = b; b.twin = a; }"
+      },
+      {
+        "txt": "Ref cloneAndReclassify(Type type) { return new Ref(this, type); } static Ref createRefForTesting(Type type) { return new Ref(type); } }"
+      }
+    ]
+  },
+  {
+    "id": 442,
+    "file_path": "src/com/google/javascript/rhino/JSDocInfoBuilder.java",
+    "start-bug-line": 189,
+    "end-bug-line": 189,
+    "bug": "if (parseDocumentation) {",
+    "fix": "[Delete]",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.google.javascript.rhino; import com.google.javascript.rhino.JSDocInfo.Visibility; import java.util.Set; final public class JSDocInfoBuilder { private JSDocInfo currentInfo; private boolean populated = false; private boolean parseDocumentation = false; private JSDocInfo.Marker currentMarker = null; public JSDocInfoBuilder(boolean parseDocumentation) {"
+      },
+      {
+        "txt": "this.currentInfo = new JSDocInfo(parseDocumentation); this.parseDocumentation = parseDocumentation; } public boolean isPopulated() { return populated; } public boolean isPopulatedWithFileOverview() { return isPopulated() && currentInfo.hasFileOverview(); } public boolean isDescriptionRecorded() {"
+      },
+      {
+        "txt": "return currentInfo.getDescription() != null; } public JSDocInfo build(String sourceName) { if (populated) { JSDocInfo built = currentInfo; built.setSourceName(sourceName); populateDefaults(built); populated = false; currentInfo = new JSDocInfo(this.parseDocumentation); return built;"
+      },
+      {
+        "txt": "} else { return null; } } private static void populateDefaults(JSDocInfo info) { if (info.getVisibility() == null) { info.setVisibility(Visibility.INHERITED); } } public void markAnnotation(String annotation, int lineno, int charno) {"
+      },
+      {
+        "txt": "JSDocInfo.Marker marker = currentInfo.addMarker(); if (marker != null) { marker.annotation = new JSDocInfo.StringPosition(); marker.annotation.setItem(annotation); marker.annotation.setPositionInformation(lineno, charno, lineno, charno + annotation.length()); } currentMarker = marker; } public void markText(String text, int startLineno, int startCharno, int endLineno,"
+      },
+      {
+        "txt": "int endCharno) { if (currentMarker != null) { currentMarker.description = new JSDocInfo.StringPosition(); currentMarker.description.setItem(text); currentMarker.description.setPositionInformation(startLineno, startCharno, endLineno, endCharno); } } public void markTypeNode(Node typeNode, int lineno, int startCharno, int endCharno, boolean hasLC) {"
+      },
+      {
+        "txt": "if (currentMarker != null) { currentMarker.type = new JSDocInfo.TypePosition(); currentMarker.type.setItem(typeNode); currentMarker.type.hasBrackets = hasLC; currentMarker.type.setPositionInformation(lineno, startCharno, lineno, endCharno); } } public void markName(String name, int lineno, int charno) { if (currentMarker != null) {"
+      },
+      {
+        "txt": "currentMarker.name.setItem(name); currentMarker.name.setPositionInformation(lineno, charno, lineno, charno + name.length()); } } public boolean recordBlockDescription(String description) { <extra_id_0> populated = true; } return currentInfo.documentBlock(description); } public boolean recordVisibility(Visibility visibility) { if (currentInfo.getVisibility() == null) {"
+      },
+      {
+        "txt": "public boolean recordVisibility(Visibility visibility) { if (currentInfo.getVisibility() == null) { populated = true; currentInfo.setVisibility(visibility); return true; } else { return false; } } public boolean recordParameter(String parameterName, JSTypeExpression type) {"
+      },
+      {
+        "txt": "if (!hasAnySingletonTypeTags() && currentInfo.declareParam(type, parameterName)) { populated = true; return true; } else { return false; } } public boolean recordParameterDescription(String parameterName, String description) { if (currentInfo.documentParam(parameterName, description)) {"
+      },
+      {
+        "txt": "populated = true; return true; } else { return false; } } public boolean recordTemplateTypeName(String name) { if (currentInfo.declareTemplateTypeName(name)) { populated = true; return true;"
+      },
+      {
+        "txt": "} else { return false; } } public boolean recordThrowType(JSTypeExpression type) { if (!hasAnySingletonTypeTags()) { currentInfo.declareThrows(type); populated = true; return true; }"
+      },
+      {
+        "txt": "return false; } public boolean recordThrowDescription(JSTypeExpression type, String description) { if (currentInfo.documentThrows(type, description)) { populated = true; return true; } else { return false; } }"
+      },
+      {
+        "txt": "public boolean addAuthor(String author) { if (currentInfo.documentAuthor(author)) { populated = true; return true; } else { return false; } } public boolean addReference(String reference) { if (currentInfo.documentReference(reference)) {"
+      },
+      {
+        "txt": "populated = true; return true; } else { return false; } } public boolean recordVersion(String version) { if (currentInfo.documentVersion(version)) { populated = true; return true;"
+      },
+      {
+        "txt": "} else { return false; } } public boolean recordDeprecationReason(String reason) { if (currentInfo.setDeprecationReason(reason)) { populated = true; return true; } else { return false;"
+      },
+      {
+        "txt": "} } public boolean recordSuppressions(Set<String> suppressions) { if (currentInfo.setSuppressions(suppressions)) { populated = true; return true; } else { return false; } }"
+      },
+      {
+        "txt": "public boolean recordType(JSTypeExpression type) { if (type != null && !hasAnyTypeRelatedTags()) { currentInfo.setType(type); populated = true; return true; } else { return false; } } public boolean recordTypedef(JSTypeExpression type) {"
+      },
+      {
+        "txt": "if (type != null && !hasAnyTypeRelatedTags()) { currentInfo.setTypedefType(type); populated = true; return true; } return false; } public boolean recordReturnType(JSTypeExpression jsType) { if (jsType != null && currentInfo.getReturnType() == null && !hasAnySingletonTypeTags()) {"
+      },
+      {
+        "txt": "currentInfo.setReturnType(jsType); populated = true; return true; } else { return false; } } public boolean recordReturnDescription(String description) { if (currentInfo.documentReturn(description)) { populated = true;"
+      },
+      {
+        "txt": "return true; } else { return false; } } public boolean recordDefineType(JSTypeExpression type) { if (type != null && !currentInfo.isConstant() && !currentInfo.isDefine() && recordType(type)) {"
+      },
+      {
+        "txt": "currentInfo.setDefine(true); populated = true; return true; } else { return false; } } public boolean recordEnumParameterType(JSTypeExpression type) { if (type != null && !hasAnyTypeRelatedTags()) { currentInfo.setEnumParameterType(type);"
+      },
+      {
+        "txt": "populated = true; return true; } else { return false; } } public boolean recordThisType(JSTypeExpression type) { if (type != null && !hasAnySingletonTypeTags() && !currentInfo.hasThisType()) { currentInfo.setThisType(type);"
+      },
+      {
+        "txt": "populated = true; return true; } else { return false; } } public boolean recordBaseType(JSTypeExpression jsType) { if (jsType != null && !hasAnySingletonTypeTags() && !currentInfo.hasBaseType()) { currentInfo.setBaseType(jsType);"
+      },
+      {
+        "txt": "populated = true; return true; } else { return false; } } public boolean recordConstancy() { if (!currentInfo.isConstant()) { currentInfo.setConstant(true); populated = true;"
+      },
+      {
+        "txt": "return true; } else { return false; } } public boolean recordDescription(String description) { if (description != null && currentInfo.getDescription() == null) { currentInfo.setDescription(description); populated = true; return true;"
+      },
+      {
+        "txt": "} else { return false; } } public boolean recordFileOverview(String description) { if (currentInfo.documentFileOverview(description)) { populated = true; return true; } else { return false;"
+      },
+      {
+        "txt": "} } public boolean recordHiddenness() { if (!currentInfo.isHidden()) { currentInfo.setHidden(true); populated = true; return true; } else { return false; }"
+      },
+      {
+        "txt": "} public boolean recordNoTypeCheck() { if (!currentInfo.isNoTypeCheck()) { currentInfo.setNoCheck(true); populated = true; return true; } else { return false; } }"
+      },
+      {
+        "txt": "public boolean recordConstructor() { if (!hasAnySingletonTypeTags() && !currentInfo.isConstructor() && !currentInfo.isInterface()) { currentInfo.setConstructor(true); populated = true; return true; } else { return false; } }"
+      },
+      {
+        "txt": "public boolean isConstructorRecorded() { return currentInfo.isConstructor(); } public boolean recordPreserveTry() { if (!currentInfo.shouldPreserveTry()) { currentInfo.setShouldPreserveTry(true); populated = true; return true; } else { return false;"
+      },
+      {
+        "txt": "} } public boolean recordOverride() { if (!currentInfo.isOverride()) { currentInfo.setOverride(true); populated = true; return true; } else { return false; }"
+      },
+      {
+        "txt": "} public boolean recordNoAlias() { if (!currentInfo.isNoAlias()) { currentInfo.setNoAlias(true); populated = true; return true; } else { return false; } }"
+      },
+      {
+        "txt": "public boolean recordDeprecated() { if (!currentInfo.isDeprecated()) { currentInfo.setDeprecated(true); populated = true; return true; } else { return false; } } public boolean recordInterface() {"
+      },
+      {
+        "txt": "if (!hasAnySingletonTypeTags() && !currentInfo.isConstructor() && !currentInfo.isInterface()) { currentInfo.setInterface(true); populated = true; return true; } else { return false; } } public boolean recordExport() {"
+      },
+      {
+        "txt": "if (!currentInfo.isExport()) { currentInfo.setExport(true); populated = true; return true; } else { return false; } } public boolean recordNoShadow() { if (!currentInfo.isNoShadow()) {"
+      },
+      {
+        "txt": "currentInfo.setNoShadow(true); populated = true; return true; } else { return false; } } public boolean recordImplicitCast() { if (!currentInfo.isImplicitCast()) { currentInfo.setImplicitCast(true);"
+      },
+      {
+        "txt": "populated = true; return true; } else { return false; } } public boolean recordNoSideEffects() { if (!currentInfo.isNoSideEffects()) { currentInfo.setNoSideEffects(true); populated = true;"
+      },
+      {
+        "txt": "return true; } else { return false; } } public boolean isInterfaceRecorded() { return currentInfo.isInterface(); } public boolean hasParameter(String name) { return currentInfo.hasParameter(name);"
+      },
+      {
+        "txt": "} public boolean recordImplementedInterface(JSTypeExpression interfaceName) { if (currentInfo.addImplementedInterface(interfaceName)) { populated = true; return true; } else { return false; } } private boolean hasAnyTypeRelatedTags() {"
+      },
+      {
+        "txt": "return currentInfo.isConstructor() || currentInfo.isInterface() || currentInfo.getParameterCount() > 0 || currentInfo.hasReturnType() || currentInfo.hasBaseType() || currentInfo.hasThisType() || hasAnySingletonTypeTags(); } private boolean hasAnySingletonTypeTags() { return currentInfo.hasType() ||"
+      },
+      {
+        "txt": "currentInfo.hasTypedefType() || currentInfo.hasEnumParameterType(); }"
+      }
+    ]
+  },
+  {
+    "id": 443,
+    "file_path": "src/com/google/javascript/rhino/JSDocInfoBuilder.java",
+    "start-bug-line": 191,
+    "end-bug-line": 191,
+    "bug": "}",
+    "fix": "[Delete]",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "import com.google.javascript.rhino.JSDocInfo.Visibility; import java.util.Set; final public class JSDocInfoBuilder { private JSDocInfo currentInfo; private boolean populated = false; private boolean parseDocumentation = false; private JSDocInfo.Marker currentMarker = null; public JSDocInfoBuilder(boolean parseDocumentation) { this.currentInfo = new JSDocInfo(parseDocumentation); this.parseDocumentation = parseDocumentation;"
+      },
+      {
+        "txt": "} public boolean isPopulated() { return populated; } public boolean isPopulatedWithFileOverview() { return isPopulated() && currentInfo.hasFileOverview(); } public boolean isDescriptionRecorded() { return currentInfo.getDescription() != null; }"
+      },
+      {
+        "txt": "public JSDocInfo build(String sourceName) { if (populated) { JSDocInfo built = currentInfo; built.setSourceName(sourceName); populateDefaults(built); populated = false; currentInfo = new JSDocInfo(this.parseDocumentation); return built; } else { return null;"
+      },
+      {
+        "txt": "} } private static void populateDefaults(JSDocInfo info) { if (info.getVisibility() == null) { info.setVisibility(Visibility.INHERITED); } } public void markAnnotation(String annotation, int lineno, int charno) { JSDocInfo.Marker marker = currentInfo.addMarker(); if (marker != null) {"
+      },
+      {
+        "txt": "marker.annotation = new JSDocInfo.StringPosition(); marker.annotation.setItem(annotation); marker.annotation.setPositionInformation(lineno, charno, lineno, charno + annotation.length()); } currentMarker = marker; } public void markText(String text, int startLineno, int startCharno, int endLineno, int endCharno) { if (currentMarker != null) {"
+      },
+      {
+        "txt": "currentMarker.description = new JSDocInfo.StringPosition(); currentMarker.description.setItem(text); currentMarker.description.setPositionInformation(startLineno, startCharno, endLineno, endCharno); } } public void markTypeNode(Node typeNode, int lineno, int startCharno, int endCharno, boolean hasLC) { if (currentMarker != null) { currentMarker.type = new JSDocInfo.TypePosition();"
+      },
+      {
+        "txt": "currentMarker.type.setItem(typeNode); currentMarker.type.hasBrackets = hasLC; currentMarker.type.setPositionInformation(lineno, startCharno, lineno, endCharno); } } public void markName(String name, int lineno, int charno) { if (currentMarker != null) { currentMarker.name = new JSDocInfo.StringPosition(); currentMarker.name.setItem(name);"
+      },
+      {
+        "txt": "lineno, charno + name.length()); } } public boolean recordBlockDescription(String description) { if (parseDocumentation) { populated = true; <extra_id_0> return currentInfo.documentBlock(description); } public boolean recordVisibility(Visibility visibility) { if (currentInfo.getVisibility() == null) { populated = true; currentInfo.setVisibility(visibility);"
+      },
+      {
+        "txt": "populated = true; currentInfo.setVisibility(visibility); return true; } else { return false; } } public boolean recordParameter(String parameterName, JSTypeExpression type) { if (!hasAnySingletonTypeTags() && currentInfo.declareParam(type, parameterName)) {"
+      },
+      {
+        "txt": "populated = true; return true; } else { return false; } } public boolean recordParameterDescription(String parameterName, String description) { if (currentInfo.documentParam(parameterName, description)) { populated = true; return true;"
+      },
+      {
+        "txt": "} else { return false; } } public boolean recordTemplateTypeName(String name) { if (currentInfo.declareTemplateTypeName(name)) { populated = true; return true; } else { return false;"
+      },
+      {
+        "txt": "} } public boolean recordThrowType(JSTypeExpression type) { if (!hasAnySingletonTypeTags()) { currentInfo.declareThrows(type); populated = true; return true; } return false; }"
+      },
+      {
+        "txt": "public boolean recordThrowDescription(JSTypeExpression type, String description) { if (currentInfo.documentThrows(type, description)) { populated = true; return true; } else { return false; } } public boolean addAuthor(String author) { if (currentInfo.documentAuthor(author)) {"
+      },
+      {
+        "txt": "populated = true; return true; } else { return false; } } public boolean addReference(String reference) { if (currentInfo.documentReference(reference)) { populated = true; return true;"
+      },
+      {
+        "txt": "} else { return false; } } public boolean recordVersion(String version) { if (currentInfo.documentVersion(version)) { populated = true; return true; } else { return false;"
+      },
+      {
+        "txt": "} } public boolean recordDeprecationReason(String reason) { if (currentInfo.setDeprecationReason(reason)) { populated = true; return true; } else { return false; } }"
+      },
+      {
+        "txt": "public boolean recordSuppressions(Set<String> suppressions) { if (currentInfo.setSuppressions(suppressions)) { populated = true; return true; } else { return false; } } public boolean recordType(JSTypeExpression type) { if (type != null && !hasAnyTypeRelatedTags()) {"
+      },
+      {
+        "txt": "currentInfo.setType(type); populated = true; return true; } else { return false; } } public boolean recordTypedef(JSTypeExpression type) { if (type != null && !hasAnyTypeRelatedTags()) { currentInfo.setTypedefType(type);"
+      },
+      {
+        "txt": "populated = true; return true; } return false; } public boolean recordReturnType(JSTypeExpression jsType) { if (jsType != null && currentInfo.getReturnType() == null && !hasAnySingletonTypeTags()) { currentInfo.setReturnType(jsType); populated = true;"
+      },
+      {
+        "txt": "return true; } else { return false; } } public boolean recordReturnDescription(String description) { if (currentInfo.documentReturn(description)) { populated = true; return true; } else {"
+      },
+      {
+        "txt": "return false; } } public boolean recordDefineType(JSTypeExpression type) { if (type != null && !currentInfo.isConstant() && !currentInfo.isDefine() && recordType(type)) { currentInfo.setDefine(true); populated = true;"
+      },
+      {
+        "txt": "return true; } else { return false; } } public boolean recordEnumParameterType(JSTypeExpression type) { if (type != null && !hasAnyTypeRelatedTags()) { currentInfo.setEnumParameterType(type); populated = true; return true;"
+      },
+      {
+        "txt": "} else { return false; } } public boolean recordThisType(JSTypeExpression type) { if (type != null && !hasAnySingletonTypeTags() && !currentInfo.hasThisType()) { currentInfo.setThisType(type); populated = true; return true;"
+      },
+      {
+        "txt": "} else { return false; } } public boolean recordBaseType(JSTypeExpression jsType) { if (jsType != null && !hasAnySingletonTypeTags() && !currentInfo.hasBaseType()) { currentInfo.setBaseType(jsType); populated = true; return true;"
+      },
+      {
+        "txt": "} else { return false; } } public boolean recordConstancy() { if (!currentInfo.isConstant()) { currentInfo.setConstant(true); populated = true; return true; } else {"
+      },
+      {
+        "txt": "return false; } } public boolean recordDescription(String description) { if (description != null && currentInfo.getDescription() == null) { currentInfo.setDescription(description); populated = true; return true; } else { return false;"
+      },
+      {
+        "txt": "} } public boolean recordFileOverview(String description) { if (currentInfo.documentFileOverview(description)) { populated = true; return true; } else { return false; } }"
+      },
+      {
+        "txt": "public boolean recordHiddenness() { if (!currentInfo.isHidden()) { currentInfo.setHidden(true); populated = true; return true; } else { return false; } } public boolean recordNoTypeCheck() {"
+      },
+      {
+        "txt": "if (!currentInfo.isNoTypeCheck()) { currentInfo.setNoCheck(true); populated = true; return true; } else { return false; } } public boolean recordConstructor() { if (!hasAnySingletonTypeTags() &&"
+      },
+      {
+        "txt": "!currentInfo.isConstructor() && !currentInfo.isInterface()) { currentInfo.setConstructor(true); populated = true; return true; } else { return false; } } public boolean isConstructorRecorded() { return currentInfo.isConstructor();"
+      },
+      {
+        "txt": "} public boolean recordPreserveTry() { if (!currentInfo.shouldPreserveTry()) { currentInfo.setShouldPreserveTry(true); populated = true; return true; } else { return false; } }"
+      },
+      {
+        "txt": "public boolean recordOverride() { if (!currentInfo.isOverride()) { currentInfo.setOverride(true); populated = true; return true; } else { return false; } } public boolean recordNoAlias() {"
+      },
+      {
+        "txt": "if (!currentInfo.isNoAlias()) { currentInfo.setNoAlias(true); populated = true; return true; } else { return false; } } public boolean recordDeprecated() { if (!currentInfo.isDeprecated()) {"
+      },
+      {
+        "txt": "currentInfo.setDeprecated(true); populated = true; return true; } else { return false; } } public boolean recordInterface() { if (!hasAnySingletonTypeTags() && !currentInfo.isConstructor() && !currentInfo.isInterface()) {"
+      },
+      {
+        "txt": "currentInfo.setInterface(true); populated = true; return true; } else { return false; } } public boolean recordExport() { if (!currentInfo.isExport()) { currentInfo.setExport(true);"
+      },
+      {
+        "txt": "populated = true; return true; } else { return false; } } public boolean recordNoShadow() { if (!currentInfo.isNoShadow()) { currentInfo.setNoShadow(true); populated = true;"
+      },
+      {
+        "txt": "return true; } else { return false; } } public boolean recordImplicitCast() { if (!currentInfo.isImplicitCast()) { currentInfo.setImplicitCast(true); populated = true; return true;"
+      },
+      {
+        "txt": "} else { return false; } } public boolean recordNoSideEffects() { if (!currentInfo.isNoSideEffects()) { currentInfo.setNoSideEffects(true); populated = true; return true; } else {"
+      },
+      {
+        "txt": "return false; } } public boolean isInterfaceRecorded() { return currentInfo.isInterface(); } public boolean hasParameter(String name) { return currentInfo.hasParameter(name); } public boolean recordImplementedInterface(JSTypeExpression interfaceName) {"
+      },
+      {
+        "txt": "if (currentInfo.addImplementedInterface(interfaceName)) { populated = true; return true; } else { return false; } } private boolean hasAnyTypeRelatedTags() { return currentInfo.isConstructor() || currentInfo.isInterface() ||"
+      },
+      {
+        "txt": "currentInfo.getParameterCount() > 0 || currentInfo.hasReturnType() || currentInfo.hasBaseType() || currentInfo.hasThisType() || hasAnySingletonTypeTags(); } private boolean hasAnySingletonTypeTags() { return currentInfo.hasType() || currentInfo.hasTypedefType() || currentInfo.hasEnumParameterType();"
+      }
+    ]
+  }
+]

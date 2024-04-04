@@ -1,0 +1,68 @@
+[
+  {
+    "id": 1962,
+    "file_path": "src/main/java/org/jsoup/nodes/FormElement.java",
+    "start-bug-line": 80,
+    "end-bug-line": 80,
+    "bug": "",
+    "fix": "if (el.hasAttr(\"disabled\")) continue; // skip disabled form inputs",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.jsoup.nodes; import org.jsoup.Connection; import org.jsoup.Jsoup; import org.jsoup.helper.HttpConnection; import org.jsoup.helper.Validate; import org.jsoup.parser.Tag; import org.jsoup.select.Elements; import java.util.ArrayList;"
+      },
+      {
+        "txt": "import java.util.List; public class FormElement extends Element { private final Elements elements = new Elements(); public FormElement(Tag tag, String baseUri, Attributes attributes) { super(tag, baseUri, attributes); } public Elements elements() { return elements; } public FormElement addElement(Element element) {"
+      },
+      {
+        "txt": "elements.add(element); return this; } public Connection submit() { String action = hasAttr(\"action\") ? absUrl(\"action\") : baseUri(); Validate.notEmpty(action, \"Could not determine a form action URL for submit. Ensure you set a base URI when parsing.\"); Connection.Method method = attr(\"method\").toUpperCase().equals(\"POST\") ? Connection.Method.POST : Connection.Method.GET; Connection con = Jsoup.connect(action) .data(formData())"
+      },
+      {
+        "txt": "return con; } public List<Connection.KeyVal> formData() { ArrayList<Connection.KeyVal> data = new ArrayList<Connection.KeyVal>(); for (Element el: elements) { if (!el.tag().isFormSubmittable()) continue; // contents are form listable, superset of submitable <extra_id_0> if (name.length() == 0) continue; String type = el.attr(\"type\"); if (\"select\".equals(el.tagName())) { Elements options = el.select(\"option[selected]\"); boolean set = false; for (Element option: options) {"
+      },
+      {
+        "txt": "boolean set = false; for (Element option: options) { data.add(HttpConnection.KeyVal.create(name, option.val())); set = true; } if (!set) { Element option = el.select(\"option\").first(); if (option != null) data.add(HttpConnection.KeyVal.create(name, option.val())); }"
+      },
+      {
+        "txt": "} else if (\"checkbox\".equalsIgnoreCase(type) || \"radio\".equalsIgnoreCase(type)) { if (el.hasAttr(\"checked\")) { final String val = el.val(); data.add(HttpConnection.KeyVal.create(name, val)); } } else { data.add(HttpConnection.KeyVal.create(name, el.val())); } } return data;"
+      },
+      {
+        "txt": "} @Override public boolean equals(Object o) { return super.equals(o); }"
+      }
+    ]
+  },
+  {
+    "id": 1963,
+    "file_path": "src/main/java/org/jsoup/nodes/FormElement.java",
+    "start-bug-line": 99,
+    "end-bug-line": 99,
+    "bug": "final String val = el.val();",
+    "fix": "final String val = el.val().length() >  0 ? el.val() : \"on\";",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.jsoup.nodes; import org.jsoup.Connection; import org.jsoup.Jsoup; import org.jsoup.helper.HttpConnection; import org.jsoup.helper.Validate;"
+      },
+      {
+        "txt": "import org.jsoup.parser.Tag; import org.jsoup.select.Elements; import java.util.ArrayList; import java.util.List; public class FormElement extends Element { private final Elements elements = new Elements(); public FormElement(Tag tag, String baseUri, Attributes attributes) { super(tag, baseUri, attributes); } public Elements elements() {"
+      },
+      {
+        "txt": "return elements; } public FormElement addElement(Element element) { elements.add(element); return this; } public Connection submit() { String action = hasAttr(\"action\") ? absUrl(\"action\") : baseUri(); Validate.notEmpty(action, \"Could not determine a form action URL for submit. Ensure you set a base URI when parsing.\"); Connection.Method method = attr(\"method\").toUpperCase().equals(\"POST\") ?"
+      },
+      {
+        "txt": "Connection.Method.POST : Connection.Method.GET; Connection con = Jsoup.connect(action) .data(formData()) .method(method); return con; } public List<Connection.KeyVal> formData() { ArrayList<Connection.KeyVal> data = new ArrayList<Connection.KeyVal>(); for (Element el: elements) { if (!el.tag().isFormSubmittable()) continue; // contents are form listable, superset of submitable"
+      },
+      {
+        "txt": "String name = el.attr(\"name\"); if (name.length() == 0) continue; String type = el.attr(\"type\"); if (\"select\".equals(el.tagName())) { Elements options = el.select(\"option[selected]\"); boolean set = false; for (Element option: options) { data.add(HttpConnection.KeyVal.create(name, option.val())); set = true; }"
+      },
+      {
+        "txt": "Element option = el.select(\"option\").first(); if (option != null) data.add(HttpConnection.KeyVal.create(name, option.val())); } } else if (\"checkbox\".equalsIgnoreCase(type) || \"radio\".equalsIgnoreCase(type)) { if (el.hasAttr(\"checked\")) { <extra_id_0> data.add(HttpConnection.KeyVal.create(name, val)); } } else { data.add(HttpConnection.KeyVal.create(name, el.val())); } }"
+      },
+      {
+        "txt": "} } return data; } @Override public boolean equals(Object o) { return super.equals(o); }"
+      }
+    ]
+  }
+]

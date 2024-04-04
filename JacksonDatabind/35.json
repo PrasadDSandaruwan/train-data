@@ -1,0 +1,77 @@
+[
+  {
+    "id": 1489,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/jsontype/impl/AsWrapperTypeDeserializer.java",
+    "start-bug-line": 89,
+    "end-bug-line": 92,
+    "bug": "if (p.getCurrentToken() != JsonToken.START_OBJECT) { throw ctxt.wrongTokenException(p, JsonToken.START_OBJECT, \"need JSON Object to contain As.WRAPPER_OBJECT type information for class \"+baseTypeName()); }",
+    "fix": "JsonToken t = p.getCurrentToken(); if (t == JsonToken.START_OBJECT) {",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind.jsontype.impl; import java.io.IOException; import com.fasterxml.jackson.annotation.JsonTypeInfo.As; import com.fasterxml.jackson.core.*; import com.fasterxml.jackson.core.util.JsonParserSequence; import com.fasterxml.jackson.databind.*;"
+      },
+      {
+        "txt": "import com.fasterxml.jackson.databind.jsontype.TypeDeserializer; import com.fasterxml.jackson.databind.jsontype.TypeIdResolver; import com.fasterxml.jackson.databind.util.TokenBuffer; public class AsWrapperTypeDeserializer extends TypeDeserializerBase implements java.io.Serializable { private static final long serialVersionUID = 5345570420394408290L; public AsWrapperTypeDeserializer(JavaType bt, TypeIdResolver idRes, String typePropertyName, boolean typeIdVisible, Class<?> defaultImpl)"
+      },
+      {
+        "txt": "{ super(bt, idRes, typePropertyName, typeIdVisible, defaultImpl); } protected AsWrapperTypeDeserializer(AsWrapperTypeDeserializer src, BeanProperty property) { super(src, property); } @Override public TypeDeserializer forProperty(BeanProperty prop) { return (prop == _property) ? this : new AsWrapperTypeDeserializer(this, prop); }"
+      },
+      {
+        "txt": "@Override public As getTypeInclusion() { return As.WRAPPER_OBJECT; } @Override public Object deserializeTypedFromObject(JsonParser jp, DeserializationContext ctxt) throws IOException { return _deserialize(jp, ctxt); } @Override public Object deserializeTypedFromArray(JsonParser jp, DeserializationContext ctxt) throws IOException { return _deserialize(jp, ctxt); }"
+      },
+      {
+        "txt": "@Override public Object deserializeTypedFromScalar(JsonParser jp, DeserializationContext ctxt) throws IOException { return _deserialize(jp, ctxt); } @Override public Object deserializeTypedFromAny(JsonParser jp, DeserializationContext ctxt) throws IOException { return _deserialize(jp, ctxt); } @SuppressWarnings(\"resource\") private final Object _deserialize(JsonParser p, DeserializationContext ctxt) throws IOException"
+      },
+      {
+        "txt": "if (p.canReadTypeId()) { Object typeId = p.getTypeId(); if (typeId != null) { return _deserializeWithNativeTypeId(p, ctxt, typeId); } } <extra_id_0> if (p.nextToken() != JsonToken.FIELD_NAME) { throw ctxt.wrongTokenException(p, JsonToken.FIELD_NAME, \"need JSON String that contains type id (for subtype of \"+baseTypeName()+\")\"); } final String typeId = p.getText(); JsonDeserializer<Object> deser = _findDeserializer(ctxt, typeId);"
+      },
+      {
+        "txt": "final String typeId = p.getText(); JsonDeserializer<Object> deser = _findDeserializer(ctxt, typeId); p.nextToken(); if (_typeIdVisible && p.getCurrentToken() == JsonToken.START_OBJECT) { TokenBuffer tb = new TokenBuffer(null, false); tb.writeStartObject(); // recreate START_OBJECT tb.writeFieldName(_typePropertyName); tb.writeString(typeId); p = JsonParserSequence.createFlattened(tb.asParser(p), p); p.nextToken();"
+      },
+      {
+        "txt": "} Object value = deser.deserialize(p, ctxt); if (p.nextToken() != JsonToken.END_OBJECT) { throw ctxt.wrongTokenException(p, JsonToken.END_OBJECT, \"expected closing END_OBJECT after type information and deserialized value\"); } return value; }"
+      }
+    ]
+  },
+  {
+    "id": 1490,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/jsontype/impl/AsWrapperTypeDeserializer.java",
+    "start-bug-line": 98,
+    "end-bug-line": 98,
+    "bug": "",
+    "fix": "} else if (t != JsonToken.FIELD_NAME) { throw ctxt.wrongTokenException(p, JsonToken.START_OBJECT, \"need JSON Object to contain As.WRAPPER_OBJECT type information for class \"+baseTypeName()); }",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind.jsontype.impl; import java.io.IOException; import com.fasterxml.jackson.annotation.JsonTypeInfo.As; import com.fasterxml.jackson.core.*;"
+      },
+      {
+        "txt": "import com.fasterxml.jackson.core.util.JsonParserSequence; import com.fasterxml.jackson.databind.*; import com.fasterxml.jackson.databind.jsontype.TypeDeserializer; import com.fasterxml.jackson.databind.jsontype.TypeIdResolver; import com.fasterxml.jackson.databind.util.TokenBuffer; public class AsWrapperTypeDeserializer extends TypeDeserializerBase implements java.io.Serializable { private static final long serialVersionUID = 5345570420394408290L;"
+      },
+      {
+        "txt": "public AsWrapperTypeDeserializer(JavaType bt, TypeIdResolver idRes, String typePropertyName, boolean typeIdVisible, Class<?> defaultImpl) { super(bt, idRes, typePropertyName, typeIdVisible, defaultImpl); } protected AsWrapperTypeDeserializer(AsWrapperTypeDeserializer src, BeanProperty property) { super(src, property); } @Override public TypeDeserializer forProperty(BeanProperty prop) {"
+      },
+      {
+        "txt": "return (prop == _property) ? this : new AsWrapperTypeDeserializer(this, prop); } @Override public As getTypeInclusion() { return As.WRAPPER_OBJECT; } @Override public Object deserializeTypedFromObject(JsonParser jp, DeserializationContext ctxt) throws IOException { return _deserialize(jp, ctxt); } @Override public Object deserializeTypedFromArray(JsonParser jp, DeserializationContext ctxt) throws IOException {"
+      },
+      {
+        "txt": "return _deserialize(jp, ctxt); } @Override public Object deserializeTypedFromScalar(JsonParser jp, DeserializationContext ctxt) throws IOException { return _deserialize(jp, ctxt); } @Override public Object deserializeTypedFromAny(JsonParser jp, DeserializationContext ctxt) throws IOException { return _deserialize(jp, ctxt); }"
+      },
+      {
+        "txt": "@SuppressWarnings(\"resource\") private final Object _deserialize(JsonParser p, DeserializationContext ctxt) throws IOException { if (p.canReadTypeId()) { Object typeId = p.getTypeId(); if (typeId != null) { return _deserializeWithNativeTypeId(p, ctxt, typeId); } } if (p.getCurrentToken() != JsonToken.START_OBJECT) {"
+      },
+      {
+        "txt": "\"need JSON Object to contain As.WRAPPER_OBJECT type information for class \"+baseTypeName()); } if (p.nextToken() != JsonToken.FIELD_NAME) { throw ctxt.wrongTokenException(p, JsonToken.FIELD_NAME, \"need JSON String that contains type id (for subtype of \"+baseTypeName()+\")\"); } <extra_id_0> JsonDeserializer<Object> deser = _findDeserializer(ctxt, typeId); p.nextToken(); if (_typeIdVisible && p.getCurrentToken() == JsonToken.START_OBJECT) { TokenBuffer tb = new TokenBuffer(null, false); tb.writeStartObject(); // recreate START_OBJECT tb.writeFieldName(_typePropertyName);"
+      },
+      {
+        "txt": "tb.writeStartObject(); // recreate START_OBJECT tb.writeFieldName(_typePropertyName); tb.writeString(typeId); p = JsonParserSequence.createFlattened(tb.asParser(p), p); p.nextToken(); } Object value = deser.deserialize(p, ctxt); if (p.nextToken() != JsonToken.END_OBJECT) { throw ctxt.wrongTokenException(p, JsonToken.END_OBJECT, \"expected closing END_OBJECT after type information and deserialized value\");"
+      },
+      {
+        "txt": "} return value; }"
+      }
+    ]
+  }
+]

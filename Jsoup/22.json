@@ -1,0 +1,1148 @@
+[
+  {
+    "id": 1907,
+    "file_path": "src/main/java/org/jsoup/nodes/Element.java",
+    "start-bug-line": 434,
+    "end-bug-line": 434,
+    "bug": "",
+    "fix": "if (parentNode == null) return new Elements(0);",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.jsoup.nodes; import org.jsoup.helper.StringUtil; import org.jsoup.helper.Validate; import org.jsoup.parser.Parser; import org.jsoup.parser.Tag; import org.jsoup.select.Collector; import org.jsoup.select.Elements; import org.jsoup.select.Evaluator;"
+      },
+      {
+        "txt": "import org.jsoup.select.Selector; import java.util.*; import java.util.regex.Pattern; import java.util.regex.PatternSyntaxException; public class Element extends Node { private Tag tag; private Set<String> classNames; public Element(Tag tag, String baseUri, Attributes attributes) { super(baseUri, attributes); Validate.notNull(tag);"
+      },
+      {
+        "txt": "this.tag = tag; } public Element(Tag tag, String baseUri) { this(tag, baseUri, new Attributes()); } @Override public String nodeName() { return tag.getName(); } public String tagName() {"
+      },
+      {
+        "txt": "return tag.getName(); } public Element tagName(String tagName) { Validate.notEmpty(tagName, \"Tag name must not be empty.\"); tag = Tag.valueOf(tagName); return this; } public Tag tag() { return tag; }"
+      },
+      {
+        "txt": "public boolean isBlock() { return tag.isBlock(); } public String id() { String id = attr(\"id\"); return id == null ? \"\" : id; } public Element attr(String attributeKey, String attributeValue) { super.attr(attributeKey, attributeValue); return this;"
+      },
+      {
+        "txt": "} public Map<String, String> dataset() { return attributes.dataset(); } @Override public final Element parent() { return (Element) parentNode; } public Elements parents() { Elements parents = new Elements();"
+      },
+      {
+        "txt": "accumulateParents(this, parents); return parents; } private static void accumulateParents(Element el, Elements parents) { Element parent = el.parent(); if (parent != null && !parent.tagName().equals(\"#root\")) { parents.add(parent); accumulateParents(parent, parents); } }"
+      },
+      {
+        "txt": "public Element child(int index) { return children().get(index); } public Elements children() { List<Element> elements = new ArrayList<Element>(); for (Node node : childNodes) { if (node instanceof Element) elements.add((Element) node); } return new Elements(elements);"
+      },
+      {
+        "txt": "} public List<TextNode> textNodes() { List<TextNode> textNodes = new ArrayList<TextNode>(); for (Node node : childNodes) { if (node instanceof TextNode) textNodes.add((TextNode) node); } return Collections.unmodifiableList(textNodes); } public List<DataNode> dataNodes() {"
+      },
+      {
+        "txt": "List<DataNode> dataNodes = new ArrayList<DataNode>(); for (Node node : childNodes) { if (node instanceof DataNode) dataNodes.add((DataNode) node); } return Collections.unmodifiableList(dataNodes); } public Elements select(String cssQuery) { return Selector.select(cssQuery, this); }"
+      },
+      {
+        "txt": "public Element appendChild(Node child) { Validate.notNull(child); addChildren(child); return this; } public Element prependChild(Node child) { Validate.notNull(child); addChildren(0, child); return this; }"
+      },
+      {
+        "txt": "public Element appendElement(String tagName) { Element child = new Element(Tag.valueOf(tagName), baseUri()); appendChild(child); return child; } public Element prependElement(String tagName) { Element child = new Element(Tag.valueOf(tagName), baseUri()); prependChild(child); return child; }"
+      },
+      {
+        "txt": "public Element appendText(String text) { TextNode node = new TextNode(text, baseUri()); appendChild(node); return this; } public Element prependText(String text) { TextNode node = new TextNode(text, baseUri()); prependChild(node); return this; }"
+      },
+      {
+        "txt": "public Element append(String html) { Validate.notNull(html); List<Node> nodes = Parser.parseFragment(html, this, baseUri()); addChildren(nodes.toArray(new Node[nodes.size()])); return this; } public Element prepend(String html) { Validate.notNull(html); List<Node> nodes = Parser.parseFragment(html, this, baseUri()); addChildren(0, nodes.toArray(new Node[nodes.size()]));"
+      },
+      {
+        "txt": "return this; } @Override public Element before(String html) { return (Element) super.before(html); } @Override public Element before(Node node) { return (Element) super.before(node); }"
+      },
+      {
+        "txt": "@Override public Element after(String html) { return (Element) super.after(html); } @Override public Element after(Node node) { return (Element) super.after(node); } public Element empty() { childNodes.clear();"
+      },
+      {
+        "txt": "} @Override public Element wrap(String html) { return (Element) super.wrap(html); } public Elements siblingElements() { <extra_id_0> return parent().children(); } public Element nextElementSibling() { List<Element> siblings = parent().children(); Integer index = indexInList(this, siblings); Validate.notNull(index);"
+      },
+      {
+        "txt": "Integer index = indexInList(this, siblings); Validate.notNull(index); if (siblings.size() > index+1) return siblings.get(index+1); else return null; } public Element previousElementSibling() { List<Element> siblings = parent().children(); Integer index = indexInList(this, siblings);"
+      },
+      {
+        "txt": "Validate.notNull(index); if (index > 0) return siblings.get(index-1); else return null; } public Element firstElementSibling() { List<Element> siblings = parent().children(); return siblings.size() > 1 ? siblings.get(0) : null; }"
+      },
+      {
+        "txt": "public Integer elementSiblingIndex() { if (parent() == null) return 0; return indexInList(this, parent().children()); } public Element lastElementSibling() { List<Element> siblings = parent().children(); return siblings.size() > 1 ? siblings.get(siblings.size() - 1) : null; } private static <E extends Element> Integer indexInList(Element search, List<E> elements) { Validate.notNull(search);"
+      },
+      {
+        "txt": "Validate.notNull(elements); for (int i = 0; i < elements.size(); i++) { E element = elements.get(i); if (element.equals(search)) return i; } return null; } public Elements getElementsByTag(String tagName) { Validate.notEmpty(tagName);"
+      },
+      {
+        "txt": "tagName = tagName.toLowerCase().trim(); return Collector.collect(new Evaluator.Tag(tagName), this); } public Element getElementById(String id) { Validate.notEmpty(id); Elements elements = Collector.collect(new Evaluator.Id(id), this); if (elements.size() > 0) return elements.get(0); else return null;"
+      },
+      {
+        "txt": "} public Elements getElementsByClass(String className) { Validate.notEmpty(className); return Collector.collect(new Evaluator.Class(className), this); } public Elements getElementsByAttribute(String key) { Validate.notEmpty(key); key = key.trim().toLowerCase(); return Collector.collect(new Evaluator.Attribute(key), this); }"
+      },
+      {
+        "txt": "public Elements getElementsByAttributeStarting(String keyPrefix) { Validate.notEmpty(keyPrefix); keyPrefix = keyPrefix.trim().toLowerCase(); return Collector.collect(new Evaluator.AttributeStarting(keyPrefix), this); } public Elements getElementsByAttributeValue(String key, String value) { return Collector.collect(new Evaluator.AttributeWithValue(key, value), this); } public Elements getElementsByAttributeValueNot(String key, String value) { return Collector.collect(new Evaluator.AttributeWithValueNot(key, value), this);"
+      },
+      {
+        "txt": "} public Elements getElementsByAttributeValueStarting(String key, String valuePrefix) { return Collector.collect(new Evaluator.AttributeWithValueStarting(key, valuePrefix), this); } public Elements getElementsByAttributeValueEnding(String key, String valueSuffix) { return Collector.collect(new Evaluator.AttributeWithValueEnding(key, valueSuffix), this); } public Elements getElementsByAttributeValueContaining(String key, String match) { return Collector.collect(new Evaluator.AttributeWithValueContaining(key, match), this); }"
+      },
+      {
+        "txt": "public Elements getElementsByAttributeValueMatching(String key, Pattern pattern) { return Collector.collect(new Evaluator.AttributeWithValueMatching(key, pattern), this); } public Elements getElementsByAttributeValueMatching(String key, String regex) { Pattern pattern; try { pattern = Pattern.compile(regex); } catch (PatternSyntaxException e) { throw new IllegalArgumentException(\"Pattern syntax error: \" + regex, e); }"
+      },
+      {
+        "txt": "return getElementsByAttributeValueMatching(key, pattern); } public Elements getElementsByIndexLessThan(int index) { return Collector.collect(new Evaluator.IndexLessThan(index), this); } public Elements getElementsByIndexGreaterThan(int index) { return Collector.collect(new Evaluator.IndexGreaterThan(index), this); } public Elements getElementsByIndexEquals(int index) { return Collector.collect(new Evaluator.IndexEquals(index), this);"
+      },
+      {
+        "txt": "} public Elements getElementsContainingText(String searchText) { return Collector.collect(new Evaluator.ContainsText(searchText), this); } public Elements getElementsContainingOwnText(String searchText) { return Collector.collect(new Evaluator.ContainsOwnText(searchText), this); } public Elements getElementsMatchingText(Pattern pattern) { return Collector.collect(new Evaluator.Matches(pattern), this); }"
+      },
+      {
+        "txt": "public Elements getElementsMatchingText(String regex) { Pattern pattern; try { pattern = Pattern.compile(regex); } catch (PatternSyntaxException e) { throw new IllegalArgumentException(\"Pattern syntax error: \" + regex, e); } return getElementsMatchingText(pattern); } public Elements getElementsMatchingOwnText(Pattern pattern) {"
+      },
+      {
+        "txt": "return Collector.collect(new Evaluator.MatchesOwn(pattern), this); } public Elements getElementsMatchingOwnText(String regex) { Pattern pattern; try { pattern = Pattern.compile(regex); } catch (PatternSyntaxException e) { throw new IllegalArgumentException(\"Pattern syntax error: \" + regex, e); } return getElementsMatchingOwnText(pattern);"
+      },
+      {
+        "txt": "} public Elements getAllElements() { return Collector.collect(new Evaluator.AllElements(), this); } public String text() { StringBuilder sb = new StringBuilder(); text(sb); return sb.toString().trim(); } private void text(StringBuilder accum) {"
+      },
+      {
+        "txt": "appendWhitespaceIfBr(this, accum); for (Node child : childNodes) { if (child instanceof TextNode) { TextNode textNode = (TextNode) child; appendNormalisedText(accum, textNode); } else if (child instanceof Element) { Element element = (Element) child; if (accum.length() > 0 && element.isBlock() && !TextNode.lastCharIsWhitespace(accum)) accum.append(\" \"); element.text(accum);"
+      },
+      {
+        "txt": "} } } public String ownText() { StringBuilder sb = new StringBuilder(); ownText(sb); return sb.toString().trim(); } private void ownText(StringBuilder accum) { for (Node child : childNodes) {"
+      },
+      {
+        "txt": "if (child instanceof TextNode) { TextNode textNode = (TextNode) child; appendNormalisedText(accum, textNode); } else if (child instanceof Element) { appendWhitespaceIfBr((Element) child, accum); } } } private void appendNormalisedText(StringBuilder accum, TextNode textNode) { String text = textNode.getWholeText();"
+      },
+      {
+        "txt": "if (!preserveWhitespace()) { text = TextNode.normaliseWhitespace(text); if (TextNode.lastCharIsWhitespace(accum)) text = TextNode.stripLeadingWhitespace(text); } accum.append(text); } private static void appendWhitespaceIfBr(Element element, StringBuilder accum) { if (element.tag.getName().equals(\"br\") && !TextNode.lastCharIsWhitespace(accum)) accum.append(\" \");"
+      },
+      {
+        "txt": "} boolean preserveWhitespace() { return tag.preserveWhitespace() || parent() != null && parent().preserveWhitespace(); } public Element text(String text) { Validate.notNull(text); empty(); TextNode textNode = new TextNode(text, baseUri); appendChild(textNode); return this;"
+      },
+      {
+        "txt": "} Test if this element has any text content (that is not just whitespace). @return true if element has non-blank text content. public boolean hasText() { for (Node child: childNodes) { if (child instanceof TextNode) { TextNode textNode = (TextNode) child; if (!textNode.isBlank()) return true; } else if (child instanceof Element) {"
+      },
+      {
+        "txt": "Element el = (Element) child; if (el.hasText()) return true; } } return false; } public String data() { StringBuilder sb = new StringBuilder(); for (Node childNode : childNodes) {"
+      },
+      {
+        "txt": "if (childNode instanceof DataNode) { DataNode data = (DataNode) childNode; sb.append(data.getWholeData()); } else if (childNode instanceof Element) { Element element = (Element) childNode; String elementData = element.data(); sb.append(elementData); } } return sb.toString();"
+      },
+      {
+        "txt": "} public String className() { return attr(\"class\"); } public Set<String> classNames() { if (classNames == null) { String[] names = className().split(\"\\\\s+\"); classNames = new LinkedHashSet<String>(Arrays.asList(names)); } return classNames;"
+      },
+      {
+        "txt": "} Set the element's {@code class} attribute to the supplied class names. @param classNames set of classes @return this element, for chaining public Element classNames(Set<String> classNames) { Validate.notNull(classNames); attributes.put(\"class\", StringUtil.join(classNames, \" \")); return this; } public boolean hasClass(String className) {"
+      },
+      {
+        "txt": "Set<String> classNames = classNames(); for (String name : classNames) { if (className.equalsIgnoreCase(name)) return true; } return false; } Add a class name to this element's {@code class} attribute. @param className class name to add @return this element"
+      },
+      {
+        "txt": "public Element addClass(String className) { Validate.notNull(className); Set<String> classes = classNames(); classes.add(className); classNames(classes); return this; } Remove a class name from this element's {@code class} attribute. @param className class name to remove @return this element"
+      },
+      {
+        "txt": "public Element removeClass(String className) { Validate.notNull(className); Set<String> classes = classNames(); classes.remove(className); classNames(classes); return this; } Toggle a class name on this element's {@code class} attribute: if present, remove it; otherwise add it. @param className class name to toggle @return this element"
+      },
+      {
+        "txt": "public Element toggleClass(String className) { Validate.notNull(className); Set<String> classes = classNames(); if (classes.contains(className)) classes.remove(className); else classes.add(className); classNames(classes); return this; }"
+      },
+      {
+        "txt": "public String val() { if (tagName().equals(\"textarea\")) return text(); else return attr(\"value\"); } public Element val(String value) { if (tagName().equals(\"textarea\")) text(value); else"
+      },
+      {
+        "txt": "attr(\"value\", value); return this; } void outerHtmlHead(StringBuilder accum, int depth, Document.OutputSettings out) { if (accum.length() > 0 && out.prettyPrint() && (tag.formatAsBlock() || (parent() != null && parent().tag().formatAsBlock()))) indent(accum, depth, out); accum .append(\"<\") .append(tagName()); attributes.html(accum, out);"
+      },
+      {
+        "txt": "if (childNodes.isEmpty() && tag.isSelfClosing()) accum.append(\" />\"); else accum.append(\">\"); } void outerHtmlTail(StringBuilder accum, int depth, Document.OutputSettings out) { if (!(childNodes.isEmpty() && tag.isSelfClosing())) { if (out.prettyPrint() && !childNodes.isEmpty() && tag.formatAsBlock()) indent(accum, depth, out); accum.append(\"</\").append(tagName()).append(\">\");"
+      },
+      {
+        "txt": "} } public String html() { StringBuilder accum = new StringBuilder(); html(accum); return accum.toString().trim(); } private void html(StringBuilder accum) { for (Node node : childNodes) node.outerHtml(accum);"
+      },
+      {
+        "txt": "} public Element html(String html) { empty(); append(html); return this; } public String toString() { return outerHtml(); } @Override"
+      },
+      {
+        "txt": "public boolean equals(Object o) { return this == o; } @Override public int hashCode() { int result = super.hashCode(); result = 31 * result + (tag != null ? tag.hashCode() : 0); return result; } @Override"
+      },
+      {
+        "txt": "public Element clone() { Element clone = (Element) super.clone(); clone.classNames(); // creates linked set of class names from class attribute return clone; }"
+      }
+    ]
+  },
+  {
+    "id": 1908,
+    "file_path": "src/main/java/org/jsoup/nodes/Element.java",
+    "start-bug-line": 435,
+    "end-bug-line": 435,
+    "bug": "return parent().children();",
+    "fix": "List<Element> elements = parent().children(); Elements siblings = new Elements(elements.size() - 1); for (Element el: elements) if (el != this) siblings.add(el); return siblings;",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.jsoup.nodes; import org.jsoup.helper.StringUtil; import org.jsoup.helper.Validate; import org.jsoup.parser.Parser; import org.jsoup.parser.Tag; import org.jsoup.select.Collector; import org.jsoup.select.Elements; import org.jsoup.select.Evaluator;"
+      },
+      {
+        "txt": "import org.jsoup.select.Selector; import java.util.*; import java.util.regex.Pattern; import java.util.regex.PatternSyntaxException; public class Element extends Node { private Tag tag; private Set<String> classNames; public Element(Tag tag, String baseUri, Attributes attributes) { super(baseUri, attributes); Validate.notNull(tag);"
+      },
+      {
+        "txt": "this.tag = tag; } public Element(Tag tag, String baseUri) { this(tag, baseUri, new Attributes()); } @Override public String nodeName() { return tag.getName(); } public String tagName() {"
+      },
+      {
+        "txt": "return tag.getName(); } public Element tagName(String tagName) { Validate.notEmpty(tagName, \"Tag name must not be empty.\"); tag = Tag.valueOf(tagName); return this; } public Tag tag() { return tag; }"
+      },
+      {
+        "txt": "public boolean isBlock() { return tag.isBlock(); } public String id() { String id = attr(\"id\"); return id == null ? \"\" : id; } public Element attr(String attributeKey, String attributeValue) { super.attr(attributeKey, attributeValue); return this;"
+      },
+      {
+        "txt": "} public Map<String, String> dataset() { return attributes.dataset(); } @Override public final Element parent() { return (Element) parentNode; } public Elements parents() { Elements parents = new Elements();"
+      },
+      {
+        "txt": "accumulateParents(this, parents); return parents; } private static void accumulateParents(Element el, Elements parents) { Element parent = el.parent(); if (parent != null && !parent.tagName().equals(\"#root\")) { parents.add(parent); accumulateParents(parent, parents); } }"
+      },
+      {
+        "txt": "public Element child(int index) { return children().get(index); } public Elements children() { List<Element> elements = new ArrayList<Element>(); for (Node node : childNodes) { if (node instanceof Element) elements.add((Element) node); } return new Elements(elements);"
+      },
+      {
+        "txt": "} public List<TextNode> textNodes() { List<TextNode> textNodes = new ArrayList<TextNode>(); for (Node node : childNodes) { if (node instanceof TextNode) textNodes.add((TextNode) node); } return Collections.unmodifiableList(textNodes); } public List<DataNode> dataNodes() {"
+      },
+      {
+        "txt": "List<DataNode> dataNodes = new ArrayList<DataNode>(); for (Node node : childNodes) { if (node instanceof DataNode) dataNodes.add((DataNode) node); } return Collections.unmodifiableList(dataNodes); } public Elements select(String cssQuery) { return Selector.select(cssQuery, this); }"
+      },
+      {
+        "txt": "public Element appendChild(Node child) { Validate.notNull(child); addChildren(child); return this; } public Element prependChild(Node child) { Validate.notNull(child); addChildren(0, child); return this; }"
+      },
+      {
+        "txt": "public Element appendElement(String tagName) { Element child = new Element(Tag.valueOf(tagName), baseUri()); appendChild(child); return child; } public Element prependElement(String tagName) { Element child = new Element(Tag.valueOf(tagName), baseUri()); prependChild(child); return child; }"
+      },
+      {
+        "txt": "public Element appendText(String text) { TextNode node = new TextNode(text, baseUri()); appendChild(node); return this; } public Element prependText(String text) { TextNode node = new TextNode(text, baseUri()); prependChild(node); return this; }"
+      },
+      {
+        "txt": "public Element append(String html) { Validate.notNull(html); List<Node> nodes = Parser.parseFragment(html, this, baseUri()); addChildren(nodes.toArray(new Node[nodes.size()])); return this; } public Element prepend(String html) { Validate.notNull(html); List<Node> nodes = Parser.parseFragment(html, this, baseUri()); addChildren(0, nodes.toArray(new Node[nodes.size()]));"
+      },
+      {
+        "txt": "return this; } @Override public Element before(String html) { return (Element) super.before(html); } @Override public Element before(Node node) { return (Element) super.before(node); }"
+      },
+      {
+        "txt": "@Override public Element after(String html) { return (Element) super.after(html); } @Override public Element after(Node node) { return (Element) super.after(node); } public Element empty() { childNodes.clear();"
+      },
+      {
+        "txt": "} @Override public Element wrap(String html) { return (Element) super.wrap(html); } public Elements siblingElements() { <extra_id_0> } public Element nextElementSibling() { List<Element> siblings = parent().children(); Integer index = indexInList(this, siblings); Validate.notNull(index); if (siblings.size() > index+1)"
+      },
+      {
+        "txt": "Validate.notNull(index); if (siblings.size() > index+1) return siblings.get(index+1); else return null; } public Element previousElementSibling() { List<Element> siblings = parent().children(); Integer index = indexInList(this, siblings); Validate.notNull(index);"
+      },
+      {
+        "txt": "if (index > 0) return siblings.get(index-1); else return null; } public Element firstElementSibling() { List<Element> siblings = parent().children(); return siblings.size() > 1 ? siblings.get(0) : null; } public Integer elementSiblingIndex() {"
+      },
+      {
+        "txt": "if (parent() == null) return 0; return indexInList(this, parent().children()); } public Element lastElementSibling() { List<Element> siblings = parent().children(); return siblings.size() > 1 ? siblings.get(siblings.size() - 1) : null; } private static <E extends Element> Integer indexInList(Element search, List<E> elements) { Validate.notNull(search); Validate.notNull(elements);"
+      },
+      {
+        "txt": "for (int i = 0; i < elements.size(); i++) { E element = elements.get(i); if (element.equals(search)) return i; } return null; } public Elements getElementsByTag(String tagName) { Validate.notEmpty(tagName); tagName = tagName.toLowerCase().trim();"
+      },
+      {
+        "txt": "return Collector.collect(new Evaluator.Tag(tagName), this); } public Element getElementById(String id) { Validate.notEmpty(id); Elements elements = Collector.collect(new Evaluator.Id(id), this); if (elements.size() > 0) return elements.get(0); else return null; }"
+      },
+      {
+        "txt": "public Elements getElementsByClass(String className) { Validate.notEmpty(className); return Collector.collect(new Evaluator.Class(className), this); } public Elements getElementsByAttribute(String key) { Validate.notEmpty(key); key = key.trim().toLowerCase(); return Collector.collect(new Evaluator.Attribute(key), this); } public Elements getElementsByAttributeStarting(String keyPrefix) {"
+      },
+      {
+        "txt": "Validate.notEmpty(keyPrefix); keyPrefix = keyPrefix.trim().toLowerCase(); return Collector.collect(new Evaluator.AttributeStarting(keyPrefix), this); } public Elements getElementsByAttributeValue(String key, String value) { return Collector.collect(new Evaluator.AttributeWithValue(key, value), this); } public Elements getElementsByAttributeValueNot(String key, String value) { return Collector.collect(new Evaluator.AttributeWithValueNot(key, value), this); }"
+      },
+      {
+        "txt": "public Elements getElementsByAttributeValueStarting(String key, String valuePrefix) { return Collector.collect(new Evaluator.AttributeWithValueStarting(key, valuePrefix), this); } public Elements getElementsByAttributeValueEnding(String key, String valueSuffix) { return Collector.collect(new Evaluator.AttributeWithValueEnding(key, valueSuffix), this); } public Elements getElementsByAttributeValueContaining(String key, String match) { return Collector.collect(new Evaluator.AttributeWithValueContaining(key, match), this); } public Elements getElementsByAttributeValueMatching(String key, Pattern pattern) {"
+      },
+      {
+        "txt": "return Collector.collect(new Evaluator.AttributeWithValueMatching(key, pattern), this); } public Elements getElementsByAttributeValueMatching(String key, String regex) { Pattern pattern; try { pattern = Pattern.compile(regex); } catch (PatternSyntaxException e) { throw new IllegalArgumentException(\"Pattern syntax error: \" + regex, e); } return getElementsByAttributeValueMatching(key, pattern);"
+      },
+      {
+        "txt": "} public Elements getElementsByIndexLessThan(int index) { return Collector.collect(new Evaluator.IndexLessThan(index), this); } public Elements getElementsByIndexGreaterThan(int index) { return Collector.collect(new Evaluator.IndexGreaterThan(index), this); } public Elements getElementsByIndexEquals(int index) { return Collector.collect(new Evaluator.IndexEquals(index), this); }"
+      },
+      {
+        "txt": "public Elements getElementsContainingText(String searchText) { return Collector.collect(new Evaluator.ContainsText(searchText), this); } public Elements getElementsContainingOwnText(String searchText) { return Collector.collect(new Evaluator.ContainsOwnText(searchText), this); } public Elements getElementsMatchingText(Pattern pattern) { return Collector.collect(new Evaluator.Matches(pattern), this); } public Elements getElementsMatchingText(String regex) {"
+      },
+      {
+        "txt": "Pattern pattern; try { pattern = Pattern.compile(regex); } catch (PatternSyntaxException e) { throw new IllegalArgumentException(\"Pattern syntax error: \" + regex, e); } return getElementsMatchingText(pattern); } public Elements getElementsMatchingOwnText(Pattern pattern) { return Collector.collect(new Evaluator.MatchesOwn(pattern), this);"
+      },
+      {
+        "txt": "} public Elements getElementsMatchingOwnText(String regex) { Pattern pattern; try { pattern = Pattern.compile(regex); } catch (PatternSyntaxException e) { throw new IllegalArgumentException(\"Pattern syntax error: \" + regex, e); } return getElementsMatchingOwnText(pattern); }"
+      },
+      {
+        "txt": "public Elements getAllElements() { return Collector.collect(new Evaluator.AllElements(), this); } public String text() { StringBuilder sb = new StringBuilder(); text(sb); return sb.toString().trim(); } private void text(StringBuilder accum) { appendWhitespaceIfBr(this, accum);"
+      },
+      {
+        "txt": "for (Node child : childNodes) { if (child instanceof TextNode) { TextNode textNode = (TextNode) child; appendNormalisedText(accum, textNode); } else if (child instanceof Element) { Element element = (Element) child; if (accum.length() > 0 && element.isBlock() && !TextNode.lastCharIsWhitespace(accum)) accum.append(\" \"); element.text(accum); }"
+      },
+      {
+        "txt": "} } public String ownText() { StringBuilder sb = new StringBuilder(); ownText(sb); return sb.toString().trim(); } private void ownText(StringBuilder accum) { for (Node child : childNodes) { if (child instanceof TextNode) {"
+      },
+      {
+        "txt": "TextNode textNode = (TextNode) child; appendNormalisedText(accum, textNode); } else if (child instanceof Element) { appendWhitespaceIfBr((Element) child, accum); } } } private void appendNormalisedText(StringBuilder accum, TextNode textNode) { String text = textNode.getWholeText(); if (!preserveWhitespace()) {"
+      },
+      {
+        "txt": "text = TextNode.normaliseWhitespace(text); if (TextNode.lastCharIsWhitespace(accum)) text = TextNode.stripLeadingWhitespace(text); } accum.append(text); } private static void appendWhitespaceIfBr(Element element, StringBuilder accum) { if (element.tag.getName().equals(\"br\") && !TextNode.lastCharIsWhitespace(accum)) accum.append(\" \"); }"
+      },
+      {
+        "txt": "boolean preserveWhitespace() { return tag.preserveWhitespace() || parent() != null && parent().preserveWhitespace(); } public Element text(String text) { Validate.notNull(text); empty(); TextNode textNode = new TextNode(text, baseUri); appendChild(textNode); return this; }"
+      },
+      {
+        "txt": "Test if this element has any text content (that is not just whitespace). @return true if element has non-blank text content. public boolean hasText() { for (Node child: childNodes) { if (child instanceof TextNode) { TextNode textNode = (TextNode) child; if (!textNode.isBlank()) return true; } else if (child instanceof Element) { Element el = (Element) child;"
+      },
+      {
+        "txt": "if (el.hasText()) return true; } } return false; } public String data() { StringBuilder sb = new StringBuilder(); for (Node childNode : childNodes) { if (childNode instanceof DataNode) {"
+      },
+      {
+        "txt": "DataNode data = (DataNode) childNode; sb.append(data.getWholeData()); } else if (childNode instanceof Element) { Element element = (Element) childNode; String elementData = element.data(); sb.append(elementData); } } return sb.toString(); }"
+      },
+      {
+        "txt": "public String className() { return attr(\"class\"); } public Set<String> classNames() { if (classNames == null) { String[] names = className().split(\"\\\\s+\"); classNames = new LinkedHashSet<String>(Arrays.asList(names)); } return classNames; }"
+      },
+      {
+        "txt": "Set the element's {@code class} attribute to the supplied class names. @param classNames set of classes @return this element, for chaining public Element classNames(Set<String> classNames) { Validate.notNull(classNames); attributes.put(\"class\", StringUtil.join(classNames, \" \")); return this; } public boolean hasClass(String className) { Set<String> classNames = classNames();"
+      },
+      {
+        "txt": "for (String name : classNames) { if (className.equalsIgnoreCase(name)) return true; } return false; } Add a class name to this element's {@code class} attribute. @param className class name to add @return this element public Element addClass(String className) {"
+      },
+      {
+        "txt": "Validate.notNull(className); Set<String> classes = classNames(); classes.add(className); classNames(classes); return this; } Remove a class name from this element's {@code class} attribute. @param className class name to remove @return this element public Element removeClass(String className) {"
+      },
+      {
+        "txt": "Validate.notNull(className); Set<String> classes = classNames(); classes.remove(className); classNames(classes); return this; } Toggle a class name on this element's {@code class} attribute: if present, remove it; otherwise add it. @param className class name to toggle @return this element public Element toggleClass(String className) {"
+      },
+      {
+        "txt": "Validate.notNull(className); Set<String> classes = classNames(); if (classes.contains(className)) classes.remove(className); else classes.add(className); classNames(classes); return this; } public String val() {"
+      },
+      {
+        "txt": "if (tagName().equals(\"textarea\")) return text(); else return attr(\"value\"); } public Element val(String value) { if (tagName().equals(\"textarea\")) text(value); else attr(\"value\", value);"
+      },
+      {
+        "txt": "return this; } void outerHtmlHead(StringBuilder accum, int depth, Document.OutputSettings out) { if (accum.length() > 0 && out.prettyPrint() && (tag.formatAsBlock() || (parent() != null && parent().tag().formatAsBlock()))) indent(accum, depth, out); accum .append(\"<\") .append(tagName()); attributes.html(accum, out); if (childNodes.isEmpty() && tag.isSelfClosing())"
+      },
+      {
+        "txt": "accum.append(\" />\"); else accum.append(\">\"); } void outerHtmlTail(StringBuilder accum, int depth, Document.OutputSettings out) { if (!(childNodes.isEmpty() && tag.isSelfClosing())) { if (out.prettyPrint() && !childNodes.isEmpty() && tag.formatAsBlock()) indent(accum, depth, out); accum.append(\"</\").append(tagName()).append(\">\"); }"
+      },
+      {
+        "txt": "} public String html() { StringBuilder accum = new StringBuilder(); html(accum); return accum.toString().trim(); } private void html(StringBuilder accum) { for (Node node : childNodes) node.outerHtml(accum); }"
+      },
+      {
+        "txt": "public Element html(String html) { empty(); append(html); return this; } public String toString() { return outerHtml(); } @Override public boolean equals(Object o) {"
+      },
+      {
+        "txt": "return this == o; } @Override public int hashCode() { int result = super.hashCode(); result = 31 * result + (tag != null ? tag.hashCode() : 0); return result; } @Override public Element clone() {"
+      },
+      {
+        "txt": "Element clone = (Element) super.clone(); clone.classNames(); // creates linked set of class names from class attribute return clone; }"
+      }
+    ]
+  },
+  {
+    "id": 1909,
+    "file_path": "src/main/java/org/jsoup/nodes/Element.java",
+    "start-bug-line": 447,
+    "end-bug-line": 447,
+    "bug": "",
+    "fix": "if (parentNode == null) return null;",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "import org.jsoup.helper.StringUtil; import org.jsoup.helper.Validate; import org.jsoup.parser.Parser; import org.jsoup.parser.Tag; import org.jsoup.select.Collector; import org.jsoup.select.Elements; import org.jsoup.select.Evaluator; import org.jsoup.select.Selector; import java.util.*; import java.util.regex.Pattern;"
+      },
+      {
+        "txt": "import java.util.regex.PatternSyntaxException; public class Element extends Node { private Tag tag; private Set<String> classNames; public Element(Tag tag, String baseUri, Attributes attributes) { super(baseUri, attributes); Validate.notNull(tag); this.tag = tag; } public Element(Tag tag, String baseUri) {"
+      },
+      {
+        "txt": "this(tag, baseUri, new Attributes()); } @Override public String nodeName() { return tag.getName(); } public String tagName() { return tag.getName(); } public Element tagName(String tagName) {"
+      },
+      {
+        "txt": "Validate.notEmpty(tagName, \"Tag name must not be empty.\"); tag = Tag.valueOf(tagName); return this; } public Tag tag() { return tag; } public boolean isBlock() { return tag.isBlock(); }"
+      },
+      {
+        "txt": "public String id() { String id = attr(\"id\"); return id == null ? \"\" : id; } public Element attr(String attributeKey, String attributeValue) { super.attr(attributeKey, attributeValue); return this; } public Map<String, String> dataset() { return attributes.dataset();"
+      },
+      {
+        "txt": "} @Override public final Element parent() { return (Element) parentNode; } public Elements parents() { Elements parents = new Elements(); accumulateParents(this, parents); return parents; }"
+      },
+      {
+        "txt": "private static void accumulateParents(Element el, Elements parents) { Element parent = el.parent(); if (parent != null && !parent.tagName().equals(\"#root\")) { parents.add(parent); accumulateParents(parent, parents); } } public Element child(int index) { return children().get(index); }"
+      },
+      {
+        "txt": "public Elements children() { List<Element> elements = new ArrayList<Element>(); for (Node node : childNodes) { if (node instanceof Element) elements.add((Element) node); } return new Elements(elements); } public List<TextNode> textNodes() { List<TextNode> textNodes = new ArrayList<TextNode>();"
+      },
+      {
+        "txt": "for (Node node : childNodes) { if (node instanceof TextNode) textNodes.add((TextNode) node); } return Collections.unmodifiableList(textNodes); } public List<DataNode> dataNodes() { List<DataNode> dataNodes = new ArrayList<DataNode>(); for (Node node : childNodes) { if (node instanceof DataNode)"
+      },
+      {
+        "txt": "dataNodes.add((DataNode) node); } return Collections.unmodifiableList(dataNodes); } public Elements select(String cssQuery) { return Selector.select(cssQuery, this); } public Element appendChild(Node child) { Validate.notNull(child); addChildren(child);"
+      },
+      {
+        "txt": "return this; } public Element prependChild(Node child) { Validate.notNull(child); addChildren(0, child); return this; } public Element appendElement(String tagName) { Element child = new Element(Tag.valueOf(tagName), baseUri()); appendChild(child);"
+      },
+      {
+        "txt": "return child; } public Element prependElement(String tagName) { Element child = new Element(Tag.valueOf(tagName), baseUri()); prependChild(child); return child; } public Element appendText(String text) { TextNode node = new TextNode(text, baseUri()); appendChild(node);"
+      },
+      {
+        "txt": "return this; } public Element prependText(String text) { TextNode node = new TextNode(text, baseUri()); prependChild(node); return this; } public Element append(String html) { Validate.notNull(html); List<Node> nodes = Parser.parseFragment(html, this, baseUri());"
+      },
+      {
+        "txt": "addChildren(nodes.toArray(new Node[nodes.size()])); return this; } public Element prepend(String html) { Validate.notNull(html); List<Node> nodes = Parser.parseFragment(html, this, baseUri()); addChildren(0, nodes.toArray(new Node[nodes.size()])); return this; } @Override"
+      },
+      {
+        "txt": "public Element before(String html) { return (Element) super.before(html); } @Override public Element before(Node node) { return (Element) super.before(node); } @Override public Element after(String html) { return (Element) super.after(html);"
+      },
+      {
+        "txt": "} @Override public Element after(Node node) { return (Element) super.after(node); } public Element empty() { childNodes.clear(); return this; } @Override"
+      },
+      {
+        "txt": "return (Element) super.wrap(html); } public Elements siblingElements() { return parent().children(); } public Element nextElementSibling() { <extra_id_0> Integer index = indexInList(this, siblings); Validate.notNull(index); if (siblings.size() > index+1) return siblings.get(index+1); else return null;"
+      },
+      {
+        "txt": "else return null; } public Element previousElementSibling() { List<Element> siblings = parent().children(); Integer index = indexInList(this, siblings); Validate.notNull(index); if (index > 0) return siblings.get(index-1); else"
+      },
+      {
+        "txt": "return null; } public Element firstElementSibling() { List<Element> siblings = parent().children(); return siblings.size() > 1 ? siblings.get(0) : null; } public Integer elementSiblingIndex() { if (parent() == null) return 0; return indexInList(this, parent().children()); }"
+      },
+      {
+        "txt": "public Element lastElementSibling() { List<Element> siblings = parent().children(); return siblings.size() > 1 ? siblings.get(siblings.size() - 1) : null; } private static <E extends Element> Integer indexInList(Element search, List<E> elements) { Validate.notNull(search); Validate.notNull(elements); for (int i = 0; i < elements.size(); i++) { E element = elements.get(i); if (element.equals(search))"
+      },
+      {
+        "txt": "return i; } return null; } public Elements getElementsByTag(String tagName) { Validate.notEmpty(tagName); tagName = tagName.toLowerCase().trim(); return Collector.collect(new Evaluator.Tag(tagName), this); } public Element getElementById(String id) {"
+      },
+      {
+        "txt": "Validate.notEmpty(id); Elements elements = Collector.collect(new Evaluator.Id(id), this); if (elements.size() > 0) return elements.get(0); else return null; } public Elements getElementsByClass(String className) { Validate.notEmpty(className); return Collector.collect(new Evaluator.Class(className), this);"
+      },
+      {
+        "txt": "} public Elements getElementsByAttribute(String key) { Validate.notEmpty(key); key = key.trim().toLowerCase(); return Collector.collect(new Evaluator.Attribute(key), this); } public Elements getElementsByAttributeStarting(String keyPrefix) { Validate.notEmpty(keyPrefix); keyPrefix = keyPrefix.trim().toLowerCase(); return Collector.collect(new Evaluator.AttributeStarting(keyPrefix), this);"
+      },
+      {
+        "txt": "} public Elements getElementsByAttributeValue(String key, String value) { return Collector.collect(new Evaluator.AttributeWithValue(key, value), this); } public Elements getElementsByAttributeValueNot(String key, String value) { return Collector.collect(new Evaluator.AttributeWithValueNot(key, value), this); } public Elements getElementsByAttributeValueStarting(String key, String valuePrefix) { return Collector.collect(new Evaluator.AttributeWithValueStarting(key, valuePrefix), this); }"
+      },
+      {
+        "txt": "public Elements getElementsByAttributeValueEnding(String key, String valueSuffix) { return Collector.collect(new Evaluator.AttributeWithValueEnding(key, valueSuffix), this); } public Elements getElementsByAttributeValueContaining(String key, String match) { return Collector.collect(new Evaluator.AttributeWithValueContaining(key, match), this); } public Elements getElementsByAttributeValueMatching(String key, Pattern pattern) { return Collector.collect(new Evaluator.AttributeWithValueMatching(key, pattern), this); } public Elements getElementsByAttributeValueMatching(String key, String regex) {"
+      },
+      {
+        "txt": "Pattern pattern; try { pattern = Pattern.compile(regex); } catch (PatternSyntaxException e) { throw new IllegalArgumentException(\"Pattern syntax error: \" + regex, e); } return getElementsByAttributeValueMatching(key, pattern); } public Elements getElementsByIndexLessThan(int index) { return Collector.collect(new Evaluator.IndexLessThan(index), this);"
+      },
+      {
+        "txt": "} public Elements getElementsByIndexGreaterThan(int index) { return Collector.collect(new Evaluator.IndexGreaterThan(index), this); } public Elements getElementsByIndexEquals(int index) { return Collector.collect(new Evaluator.IndexEquals(index), this); } public Elements getElementsContainingText(String searchText) { return Collector.collect(new Evaluator.ContainsText(searchText), this); }"
+      },
+      {
+        "txt": "public Elements getElementsContainingOwnText(String searchText) { return Collector.collect(new Evaluator.ContainsOwnText(searchText), this); } public Elements getElementsMatchingText(Pattern pattern) { return Collector.collect(new Evaluator.Matches(pattern), this); } public Elements getElementsMatchingText(String regex) { Pattern pattern; try { pattern = Pattern.compile(regex);"
+      },
+      {
+        "txt": "} catch (PatternSyntaxException e) { throw new IllegalArgumentException(\"Pattern syntax error: \" + regex, e); } return getElementsMatchingText(pattern); } public Elements getElementsMatchingOwnText(Pattern pattern) { return Collector.collect(new Evaluator.MatchesOwn(pattern), this); } public Elements getElementsMatchingOwnText(String regex) { Pattern pattern;"
+      },
+      {
+        "txt": "try { pattern = Pattern.compile(regex); } catch (PatternSyntaxException e) { throw new IllegalArgumentException(\"Pattern syntax error: \" + regex, e); } return getElementsMatchingOwnText(pattern); } public Elements getAllElements() { return Collector.collect(new Evaluator.AllElements(), this); }"
+      },
+      {
+        "txt": "public String text() { StringBuilder sb = new StringBuilder(); text(sb); return sb.toString().trim(); } private void text(StringBuilder accum) { appendWhitespaceIfBr(this, accum); for (Node child : childNodes) { if (child instanceof TextNode) { TextNode textNode = (TextNode) child;"
+      },
+      {
+        "txt": "appendNormalisedText(accum, textNode); } else if (child instanceof Element) { Element element = (Element) child; if (accum.length() > 0 && element.isBlock() && !TextNode.lastCharIsWhitespace(accum)) accum.append(\" \"); element.text(accum); } } } public String ownText() {"
+      },
+      {
+        "txt": "StringBuilder sb = new StringBuilder(); ownText(sb); return sb.toString().trim(); } private void ownText(StringBuilder accum) { for (Node child : childNodes) { if (child instanceof TextNode) { TextNode textNode = (TextNode) child; appendNormalisedText(accum, textNode); } else if (child instanceof Element) {"
+      },
+      {
+        "txt": "appendWhitespaceIfBr((Element) child, accum); } } } private void appendNormalisedText(StringBuilder accum, TextNode textNode) { String text = textNode.getWholeText(); if (!preserveWhitespace()) { text = TextNode.normaliseWhitespace(text); if (TextNode.lastCharIsWhitespace(accum)) text = TextNode.stripLeadingWhitespace(text);"
+      },
+      {
+        "txt": "} accum.append(text); } private static void appendWhitespaceIfBr(Element element, StringBuilder accum) { if (element.tag.getName().equals(\"br\") && !TextNode.lastCharIsWhitespace(accum)) accum.append(\" \"); } boolean preserveWhitespace() { return tag.preserveWhitespace() || parent() != null && parent().preserveWhitespace(); }"
+      },
+      {
+        "txt": "public Element text(String text) { Validate.notNull(text); empty(); TextNode textNode = new TextNode(text, baseUri); appendChild(textNode); return this; } Test if this element has any text content (that is not just whitespace). @return true if element has non-blank text content. public boolean hasText() {"
+      },
+      {
+        "txt": "for (Node child: childNodes) { if (child instanceof TextNode) { TextNode textNode = (TextNode) child; if (!textNode.isBlank()) return true; } else if (child instanceof Element) { Element el = (Element) child; if (el.hasText()) return true; }"
+      },
+      {
+        "txt": "} return false; } public String data() { StringBuilder sb = new StringBuilder(); for (Node childNode : childNodes) { if (childNode instanceof DataNode) { DataNode data = (DataNode) childNode; sb.append(data.getWholeData()); } else if (childNode instanceof Element) {"
+      },
+      {
+        "txt": "Element element = (Element) childNode; String elementData = element.data(); sb.append(elementData); } } return sb.toString(); } public String className() { return attr(\"class\"); }"
+      },
+      {
+        "txt": "public Set<String> classNames() { if (classNames == null) { String[] names = className().split(\"\\\\s+\"); classNames = new LinkedHashSet<String>(Arrays.asList(names)); } return classNames; } Set the element's {@code class} attribute to the supplied class names. @param classNames set of classes @return this element, for chaining"
+      },
+      {
+        "txt": "public Element classNames(Set<String> classNames) { Validate.notNull(classNames); attributes.put(\"class\", StringUtil.join(classNames, \" \")); return this; } public boolean hasClass(String className) { Set<String> classNames = classNames(); for (String name : classNames) { if (className.equalsIgnoreCase(name)) return true;"
+      },
+      {
+        "txt": "} return false; } Add a class name to this element's {@code class} attribute. @param className class name to add @return this element public Element addClass(String className) { Validate.notNull(className); Set<String> classes = classNames(); classes.add(className);"
+      },
+      {
+        "txt": "classNames(classes); return this; } Remove a class name from this element's {@code class} attribute. @param className class name to remove @return this element public Element removeClass(String className) { Validate.notNull(className); Set<String> classes = classNames(); classes.remove(className);"
+      },
+      {
+        "txt": "classNames(classes); return this; } Toggle a class name on this element's {@code class} attribute: if present, remove it; otherwise add it. @param className class name to toggle @return this element public Element toggleClass(String className) { Validate.notNull(className); Set<String> classes = classNames(); if (classes.contains(className))"
+      },
+      {
+        "txt": "classes.remove(className); else classes.add(className); classNames(classes); return this; } public String val() { if (tagName().equals(\"textarea\")) return text(); else"
+      },
+      {
+        "txt": "return attr(\"value\"); } public Element val(String value) { if (tagName().equals(\"textarea\")) text(value); else attr(\"value\", value); return this; } void outerHtmlHead(StringBuilder accum, int depth, Document.OutputSettings out) {"
+      },
+      {
+        "txt": "if (accum.length() > 0 && out.prettyPrint() && (tag.formatAsBlock() || (parent() != null && parent().tag().formatAsBlock()))) indent(accum, depth, out); accum .append(\"<\") .append(tagName()); attributes.html(accum, out); if (childNodes.isEmpty() && tag.isSelfClosing()) accum.append(\" />\"); else accum.append(\">\");"
+      },
+      {
+        "txt": "} void outerHtmlTail(StringBuilder accum, int depth, Document.OutputSettings out) { if (!(childNodes.isEmpty() && tag.isSelfClosing())) { if (out.prettyPrint() && !childNodes.isEmpty() && tag.formatAsBlock()) indent(accum, depth, out); accum.append(\"</\").append(tagName()).append(\">\"); } } public String html() { StringBuilder accum = new StringBuilder();"
+      },
+      {
+        "txt": "html(accum); return accum.toString().trim(); } private void html(StringBuilder accum) { for (Node node : childNodes) node.outerHtml(accum); } public Element html(String html) { empty(); append(html);"
+      },
+      {
+        "txt": "return this; } public String toString() { return outerHtml(); } @Override public boolean equals(Object o) { return this == o; } @Override"
+      },
+      {
+        "txt": "public int hashCode() { int result = super.hashCode(); result = 31 * result + (tag != null ? tag.hashCode() : 0); return result; } @Override public Element clone() { Element clone = (Element) super.clone(); clone.classNames(); // creates linked set of class names from class attribute return clone;"
+      }
+    ]
+  },
+  {
+    "id": 1910,
+    "file_path": "src/main/java/org/jsoup/nodes/Element.java",
+    "start-bug-line": 462,
+    "end-bug-line": 462,
+    "bug": "",
+    "fix": "if (parentNode == null) return null;",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.jsoup.nodes; import org.jsoup.helper.StringUtil; import org.jsoup.helper.Validate; import org.jsoup.parser.Parser; import org.jsoup.parser.Tag; import org.jsoup.select.Collector; import org.jsoup.select.Elements; import org.jsoup.select.Evaluator; import org.jsoup.select.Selector; import java.util.*;"
+      },
+      {
+        "txt": "import java.util.regex.Pattern; import java.util.regex.PatternSyntaxException; public class Element extends Node { private Tag tag; private Set<String> classNames; public Element(Tag tag, String baseUri, Attributes attributes) { super(baseUri, attributes); Validate.notNull(tag); this.tag = tag; }"
+      },
+      {
+        "txt": "public Element(Tag tag, String baseUri) { this(tag, baseUri, new Attributes()); } @Override public String nodeName() { return tag.getName(); } public String tagName() { return tag.getName(); }"
+      },
+      {
+        "txt": "public Element tagName(String tagName) { Validate.notEmpty(tagName, \"Tag name must not be empty.\"); tag = Tag.valueOf(tagName); return this; } public Tag tag() { return tag; } public boolean isBlock() { return tag.isBlock();"
+      },
+      {
+        "txt": "} public String id() { String id = attr(\"id\"); return id == null ? \"\" : id; } public Element attr(String attributeKey, String attributeValue) { super.attr(attributeKey, attributeValue); return this; } public Map<String, String> dataset() {"
+      },
+      {
+        "txt": "return attributes.dataset(); } @Override public final Element parent() { return (Element) parentNode; } public Elements parents() { Elements parents = new Elements(); accumulateParents(this, parents); return parents;"
+      },
+      {
+        "txt": "} private static void accumulateParents(Element el, Elements parents) { Element parent = el.parent(); if (parent != null && !parent.tagName().equals(\"#root\")) { parents.add(parent); accumulateParents(parent, parents); } } public Element child(int index) { return children().get(index);"
+      },
+      {
+        "txt": "} public Elements children() { List<Element> elements = new ArrayList<Element>(); for (Node node : childNodes) { if (node instanceof Element) elements.add((Element) node); } return new Elements(elements); } public List<TextNode> textNodes() {"
+      },
+      {
+        "txt": "List<TextNode> textNodes = new ArrayList<TextNode>(); for (Node node : childNodes) { if (node instanceof TextNode) textNodes.add((TextNode) node); } return Collections.unmodifiableList(textNodes); } public List<DataNode> dataNodes() { List<DataNode> dataNodes = new ArrayList<DataNode>(); for (Node node : childNodes) {"
+      },
+      {
+        "txt": "if (node instanceof DataNode) dataNodes.add((DataNode) node); } return Collections.unmodifiableList(dataNodes); } public Elements select(String cssQuery) { return Selector.select(cssQuery, this); } public Element appendChild(Node child) { Validate.notNull(child);"
+      },
+      {
+        "txt": "addChildren(child); return this; } public Element prependChild(Node child) { Validate.notNull(child); addChildren(0, child); return this; } public Element appendElement(String tagName) { Element child = new Element(Tag.valueOf(tagName), baseUri());"
+      },
+      {
+        "txt": "appendChild(child); return child; } public Element prependElement(String tagName) { Element child = new Element(Tag.valueOf(tagName), baseUri()); prependChild(child); return child; } public Element appendText(String text) { TextNode node = new TextNode(text, baseUri());"
+      },
+      {
+        "txt": "appendChild(node); return this; } public Element prependText(String text) { TextNode node = new TextNode(text, baseUri()); prependChild(node); return this; } public Element append(String html) { Validate.notNull(html);"
+      },
+      {
+        "txt": "List<Node> nodes = Parser.parseFragment(html, this, baseUri()); addChildren(nodes.toArray(new Node[nodes.size()])); return this; } public Element prepend(String html) { Validate.notNull(html); List<Node> nodes = Parser.parseFragment(html, this, baseUri()); addChildren(0, nodes.toArray(new Node[nodes.size()])); return this; }"
+      },
+      {
+        "txt": "@Override public Element before(String html) { return (Element) super.before(html); } @Override public Element before(Node node) { return (Element) super.before(node); } @Override public Element after(String html) {"
+      },
+      {
+        "txt": "return (Element) super.after(html); } @Override public Element after(Node node) { return (Element) super.after(node); } public Element empty() { childNodes.clear(); return this; }"
+      },
+      {
+        "txt": "@Override public Element wrap(String html) { return (Element) super.wrap(html); } public Elements siblingElements() { return parent().children(); } public Element nextElementSibling() { List<Element> siblings = parent().children(); Integer index = indexInList(this, siblings);"
+      },
+      {
+        "txt": "if (siblings.size() > index+1) return siblings.get(index+1); else return null; } public Element previousElementSibling() { <extra_id_0> Integer index = indexInList(this, siblings); Validate.notNull(index); if (index > 0) return siblings.get(index-1); else return null;"
+      },
+      {
+        "txt": "else return null; } public Element firstElementSibling() { List<Element> siblings = parent().children(); return siblings.size() > 1 ? siblings.get(0) : null; } public Integer elementSiblingIndex() { if (parent() == null) return 0; return indexInList(this, parent().children());"
+      },
+      {
+        "txt": "} public Element lastElementSibling() { List<Element> siblings = parent().children(); return siblings.size() > 1 ? siblings.get(siblings.size() - 1) : null; } private static <E extends Element> Integer indexInList(Element search, List<E> elements) { Validate.notNull(search); Validate.notNull(elements); for (int i = 0; i < elements.size(); i++) { E element = elements.get(i);"
+      },
+      {
+        "txt": "if (element.equals(search)) return i; } return null; } public Elements getElementsByTag(String tagName) { Validate.notEmpty(tagName); tagName = tagName.toLowerCase().trim(); return Collector.collect(new Evaluator.Tag(tagName), this); }"
+      },
+      {
+        "txt": "public Element getElementById(String id) { Validate.notEmpty(id); Elements elements = Collector.collect(new Evaluator.Id(id), this); if (elements.size() > 0) return elements.get(0); else return null; } public Elements getElementsByClass(String className) { Validate.notEmpty(className);"
+      },
+      {
+        "txt": "return Collector.collect(new Evaluator.Class(className), this); } public Elements getElementsByAttribute(String key) { Validate.notEmpty(key); key = key.trim().toLowerCase(); return Collector.collect(new Evaluator.Attribute(key), this); } public Elements getElementsByAttributeStarting(String keyPrefix) { Validate.notEmpty(keyPrefix); keyPrefix = keyPrefix.trim().toLowerCase();"
+      },
+      {
+        "txt": "return Collector.collect(new Evaluator.AttributeStarting(keyPrefix), this); } public Elements getElementsByAttributeValue(String key, String value) { return Collector.collect(new Evaluator.AttributeWithValue(key, value), this); } public Elements getElementsByAttributeValueNot(String key, String value) { return Collector.collect(new Evaluator.AttributeWithValueNot(key, value), this); } public Elements getElementsByAttributeValueStarting(String key, String valuePrefix) { return Collector.collect(new Evaluator.AttributeWithValueStarting(key, valuePrefix), this);"
+      },
+      {
+        "txt": "} public Elements getElementsByAttributeValueEnding(String key, String valueSuffix) { return Collector.collect(new Evaluator.AttributeWithValueEnding(key, valueSuffix), this); } public Elements getElementsByAttributeValueContaining(String key, String match) { return Collector.collect(new Evaluator.AttributeWithValueContaining(key, match), this); } public Elements getElementsByAttributeValueMatching(String key, Pattern pattern) { return Collector.collect(new Evaluator.AttributeWithValueMatching(key, pattern), this); }"
+      },
+      {
+        "txt": "public Elements getElementsByAttributeValueMatching(String key, String regex) { Pattern pattern; try { pattern = Pattern.compile(regex); } catch (PatternSyntaxException e) { throw new IllegalArgumentException(\"Pattern syntax error: \" + regex, e); } return getElementsByAttributeValueMatching(key, pattern); } public Elements getElementsByIndexLessThan(int index) {"
+      },
+      {
+        "txt": "return Collector.collect(new Evaluator.IndexLessThan(index), this); } public Elements getElementsByIndexGreaterThan(int index) { return Collector.collect(new Evaluator.IndexGreaterThan(index), this); } public Elements getElementsByIndexEquals(int index) { return Collector.collect(new Evaluator.IndexEquals(index), this); } public Elements getElementsContainingText(String searchText) { return Collector.collect(new Evaluator.ContainsText(searchText), this);"
+      },
+      {
+        "txt": "} public Elements getElementsContainingOwnText(String searchText) { return Collector.collect(new Evaluator.ContainsOwnText(searchText), this); } public Elements getElementsMatchingText(Pattern pattern) { return Collector.collect(new Evaluator.Matches(pattern), this); } public Elements getElementsMatchingText(String regex) { Pattern pattern; try {"
+      },
+      {
+        "txt": "pattern = Pattern.compile(regex); } catch (PatternSyntaxException e) { throw new IllegalArgumentException(\"Pattern syntax error: \" + regex, e); } return getElementsMatchingText(pattern); } public Elements getElementsMatchingOwnText(Pattern pattern) { return Collector.collect(new Evaluator.MatchesOwn(pattern), this); } public Elements getElementsMatchingOwnText(String regex) {"
+      },
+      {
+        "txt": "Pattern pattern; try { pattern = Pattern.compile(regex); } catch (PatternSyntaxException e) { throw new IllegalArgumentException(\"Pattern syntax error: \" + regex, e); } return getElementsMatchingOwnText(pattern); } public Elements getAllElements() { return Collector.collect(new Evaluator.AllElements(), this);"
+      },
+      {
+        "txt": "} public String text() { StringBuilder sb = new StringBuilder(); text(sb); return sb.toString().trim(); } private void text(StringBuilder accum) { appendWhitespaceIfBr(this, accum); for (Node child : childNodes) { if (child instanceof TextNode) {"
+      },
+      {
+        "txt": "TextNode textNode = (TextNode) child; appendNormalisedText(accum, textNode); } else if (child instanceof Element) { Element element = (Element) child; if (accum.length() > 0 && element.isBlock() && !TextNode.lastCharIsWhitespace(accum)) accum.append(\" \"); element.text(accum); } } }"
+      },
+      {
+        "txt": "public String ownText() { StringBuilder sb = new StringBuilder(); ownText(sb); return sb.toString().trim(); } private void ownText(StringBuilder accum) { for (Node child : childNodes) { if (child instanceof TextNode) { TextNode textNode = (TextNode) child; appendNormalisedText(accum, textNode);"
+      },
+      {
+        "txt": "} else if (child instanceof Element) { appendWhitespaceIfBr((Element) child, accum); } } } private void appendNormalisedText(StringBuilder accum, TextNode textNode) { String text = textNode.getWholeText(); if (!preserveWhitespace()) { text = TextNode.normaliseWhitespace(text); if (TextNode.lastCharIsWhitespace(accum))"
+      },
+      {
+        "txt": "text = TextNode.stripLeadingWhitespace(text); } accum.append(text); } private static void appendWhitespaceIfBr(Element element, StringBuilder accum) { if (element.tag.getName().equals(\"br\") && !TextNode.lastCharIsWhitespace(accum)) accum.append(\" \"); } boolean preserveWhitespace() { return tag.preserveWhitespace() || parent() != null && parent().preserveWhitespace();"
+      },
+      {
+        "txt": "} public Element text(String text) { Validate.notNull(text); empty(); TextNode textNode = new TextNode(text, baseUri); appendChild(textNode); return this; } Test if this element has any text content (that is not just whitespace). @return true if element has non-blank text content."
+      },
+      {
+        "txt": "public boolean hasText() { for (Node child: childNodes) { if (child instanceof TextNode) { TextNode textNode = (TextNode) child; if (!textNode.isBlank()) return true; } else if (child instanceof Element) { Element el = (Element) child; if (el.hasText()) return true;"
+      },
+      {
+        "txt": "} } return false; } public String data() { StringBuilder sb = new StringBuilder(); for (Node childNode : childNodes) { if (childNode instanceof DataNode) { DataNode data = (DataNode) childNode; sb.append(data.getWholeData());"
+      },
+      {
+        "txt": "} else if (childNode instanceof Element) { Element element = (Element) childNode; String elementData = element.data(); sb.append(elementData); } } return sb.toString(); } public String className() { return attr(\"class\");"
+      },
+      {
+        "txt": "} public Set<String> classNames() { if (classNames == null) { String[] names = className().split(\"\\\\s+\"); classNames = new LinkedHashSet<String>(Arrays.asList(names)); } return classNames; } Set the element's {@code class} attribute to the supplied class names. @param classNames set of classes"
+      },
+      {
+        "txt": "@return this element, for chaining public Element classNames(Set<String> classNames) { Validate.notNull(classNames); attributes.put(\"class\", StringUtil.join(classNames, \" \")); return this; } public boolean hasClass(String className) { Set<String> classNames = classNames(); for (String name : classNames) { if (className.equalsIgnoreCase(name))"
+      },
+      {
+        "txt": "return true; } return false; } Add a class name to this element's {@code class} attribute. @param className class name to add @return this element public Element addClass(String className) { Validate.notNull(className); Set<String> classes = classNames();"
+      },
+      {
+        "txt": "classes.add(className); classNames(classes); return this; } Remove a class name from this element's {@code class} attribute. @param className class name to remove @return this element public Element removeClass(String className) { Validate.notNull(className); Set<String> classes = classNames();"
+      },
+      {
+        "txt": "classes.remove(className); classNames(classes); return this; } Toggle a class name on this element's {@code class} attribute: if present, remove it; otherwise add it. @param className class name to toggle @return this element public Element toggleClass(String className) { Validate.notNull(className); Set<String> classes = classNames();"
+      },
+      {
+        "txt": "if (classes.contains(className)) classes.remove(className); else classes.add(className); classNames(classes); return this; } public String val() { if (tagName().equals(\"textarea\")) return text();"
+      },
+      {
+        "txt": "else return attr(\"value\"); } public Element val(String value) { if (tagName().equals(\"textarea\")) text(value); else attr(\"value\", value); return this; }"
+      },
+      {
+        "txt": "void outerHtmlHead(StringBuilder accum, int depth, Document.OutputSettings out) { if (accum.length() > 0 && out.prettyPrint() && (tag.formatAsBlock() || (parent() != null && parent().tag().formatAsBlock()))) indent(accum, depth, out); accum .append(\"<\") .append(tagName()); attributes.html(accum, out); if (childNodes.isEmpty() && tag.isSelfClosing()) accum.append(\" />\"); else"
+      },
+      {
+        "txt": "accum.append(\">\"); } void outerHtmlTail(StringBuilder accum, int depth, Document.OutputSettings out) { if (!(childNodes.isEmpty() && tag.isSelfClosing())) { if (out.prettyPrint() && !childNodes.isEmpty() && tag.formatAsBlock()) indent(accum, depth, out); accum.append(\"</\").append(tagName()).append(\">\"); } } public String html() {"
+      },
+      {
+        "txt": "StringBuilder accum = new StringBuilder(); html(accum); return accum.toString().trim(); } private void html(StringBuilder accum) { for (Node node : childNodes) node.outerHtml(accum); } public Element html(String html) { empty();"
+      },
+      {
+        "txt": "append(html); return this; } public String toString() { return outerHtml(); } @Override public boolean equals(Object o) { return this == o; }"
+      },
+      {
+        "txt": "@Override public int hashCode() { int result = super.hashCode(); result = 31 * result + (tag != null ? tag.hashCode() : 0); return result; } @Override public Element clone() { Element clone = (Element) super.clone(); clone.classNames(); // creates linked set of class names from class attribute"
+      },
+      {
+        "txt": "return clone; }"
+      }
+    ]
+  },
+  {
+    "id": 1911,
+    "file_path": "src/main/java/org/jsoup/nodes/Node.java",
+    "start-bug-line": 444,
+    "end-bug-line": 444,
+    "bug": "",
+    "fix": "if (parentNode == null) return Collections.emptyList();",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.jsoup.nodes; import org.jsoup.helper.StringUtil; import org.jsoup.helper.Validate; import org.jsoup.parser.Parser; import org.jsoup.select.NodeTraversor; import org.jsoup.select.NodeVisitor;"
+      },
+      {
+        "txt": "import java.net.MalformedURLException; import java.net.URL; import java.util.ArrayList; import java.util.Collections; import java.util.List; The base, abstract Node model. Elements, Documents, Comments etc are all Node instances. @author Jonathan Hedley, jonathan@hedley.net */ public abstract class Node implements Cloneable { Node parentNode; List<Node> childNodes;"
+      },
+      {
+        "txt": "Attributes attributes; String baseUri; int siblingIndex; Create a new Node. @param baseUri base URI @param attributes attributes (not null, but may be empty) protected Node(String baseUri, Attributes attributes) { Validate.notNull(baseUri); Validate.notNull(attributes); childNodes = new ArrayList<Node>(4);"
+      },
+      {
+        "txt": "this.baseUri = baseUri.trim(); this.attributes = attributes; } protected Node(String baseUri) { this(baseUri, new Attributes()); } protected Node() { childNodes = Collections.emptyList(); attributes = null; }"
+      },
+      {
+        "txt": "Get the node name of this node. Use for debugging purposes and not logic switching (for that, use instanceof). @return node name public abstract String nodeName(); public String attr(String attributeKey) { Validate.notNull(attributeKey); if (attributes.hasKey(attributeKey)) return attributes.get(attributeKey); else if (attributeKey.toLowerCase().startsWith(\"abs:\")) return absUrl(attributeKey.substring(\"abs:\".length())); else return \"\";"
+      },
+      {
+        "txt": "} public Attributes attributes() { return attributes; } public Node attr(String attributeKey, String attributeValue) { attributes.put(attributeKey, attributeValue); return this; } public boolean hasAttr(String attributeKey) { Validate.notNull(attributeKey);"
+      },
+      {
+        "txt": "if (attributeKey.toLowerCase().startsWith(\"abs:\")) { String key = attributeKey.substring(\"abs:\".length()); if (attributes.hasKey(key) && !absUrl(key).equals(\"\")) return true; } return attributes.hasKey(attributeKey); } public Node removeAttr(String attributeKey) { Validate.notNull(attributeKey); attributes.remove(attributeKey);"
+      },
+      {
+        "txt": "return this; } Get the base URI of this node. @return base URI public String baseUri() { return baseUri; } Update the base URI of this node and all of its descendants. @param baseUri base URI to set public void setBaseUri(final String baseUri) {"
+      },
+      {
+        "txt": "Validate.notNull(baseUri); traverse(new NodeVisitor() { public void head(Node node, int depth) { node.baseUri = baseUri; } public void tail(Node node, int depth) { } }); } public String absUrl(String attributeKey) {"
+      },
+      {
+        "txt": "Validate.notEmpty(attributeKey); String relUrl = attr(attributeKey); if (!hasAttr(attributeKey)) { return \"\"; // nothing to make absolute with } else { URL base; try { try { base = new URL(baseUri); } catch (MalformedURLException e) {"
+      },
+      {
+        "txt": "URL abs = new URL(relUrl); return abs.toExternalForm(); } if (relUrl.startsWith(\"?\")) relUrl = base.getPath() + relUrl; URL abs = new URL(base, relUrl); return abs.toExternalForm(); } catch (MalformedURLException e) { return \"\"; }"
+      },
+      {
+        "txt": "} } Get a child node by index @param index index of child node @return the child node at this index. public Node childNode(int index) { return childNodes.get(index); } Get this node's children. Presented as an unmodifiable list: new children can not be added, but the child nodes themselves can be manipulated."
+      },
+      {
+        "txt": "@return list of children. If no children, returns an empty list. public List<Node> childNodes() { return Collections.unmodifiableList(childNodes); } protected Node[] childNodesAsArray() { return childNodes.toArray(new Node[childNodes().size()]); } Gets this node's parent node. @return parent node; or null if no parent. public Node parent() {"
+      },
+      {
+        "txt": "return parentNode; } public Document ownerDocument() { if (this instanceof Document) return (Document) this; else if (parentNode == null) return null; else return parentNode.ownerDocument(); }"
+      },
+      {
+        "txt": "public void remove() { Validate.notNull(parentNode); parentNode.removeChild(this); } public Node before(String html) { addSiblingHtml(siblingIndex(), html); return this; } public Node before(Node node) { Validate.notNull(node);"
+      },
+      {
+        "txt": "Validate.notNull(parentNode); parentNode.addChildren(siblingIndex(), node); return this; } public Node after(String html) { addSiblingHtml(siblingIndex()+1, html); return this; } public Node after(Node node) { Validate.notNull(node);"
+      },
+      {
+        "txt": "Validate.notNull(parentNode); parentNode.addChildren(siblingIndex()+1, node); return this; } private void addSiblingHtml(int index, String html) { Validate.notNull(html); Validate.notNull(parentNode); Element context = parent() instanceof Element ? (Element) parent() : null; List<Node> nodes = Parser.parseFragment(html, context, baseUri()); parentNode.addChildren(index, nodes.toArray(new Node[nodes.size()]));"
+      },
+      {
+        "txt": "} Wrap the supplied HTML around this node. @param html HTML to wrap around this element, e.g. {@code <div class=\"head\"></div>}. Can be arbitrarily deep. @return this node, for chaining. public Node wrap(String html) { Validate.notEmpty(html); Element context = parent() instanceof Element ? (Element) parent() : null; List<Node> wrapChildren = Parser.parseFragment(html, context, baseUri()); Node wrapNode = wrapChildren.get(0); if (wrapNode == null || !(wrapNode instanceof Element)) // nothing to wrap with; noop"
+      },
+      {
+        "txt": "return null; Element wrap = (Element) wrapNode; Element deepest = getDeepChild(wrap); parentNode.replaceChild(this, wrap); deepest.addChildren(this); if (wrapChildren.size() > 0) { for (int i = 0; i < wrapChildren.size(); i++) { Node remainder = wrapChildren.get(i); remainder.parentNode.removeChild(remainder); wrap.appendChild(remainder);"
+      },
+      {
+        "txt": "} } return this; } public Node unwrap() { Validate.notNull(parentNode); int index = siblingIndex; Node firstChild = childNodes.size() > 0 ? childNodes.get(0) : null; parentNode.addChildren(index, this.childNodesAsArray()); this.remove();"
+      },
+      {
+        "txt": "return firstChild; } private Element getDeepChild(Element el) { List<Element> children = el.children(); if (children.size() > 0) return getDeepChild(children.get(0)); else return el; } public void replaceWith(Node in) {"
+      },
+      {
+        "txt": "Validate.notNull(in); Validate.notNull(parentNode); parentNode.replaceChild(this, in); } protected void setParentNode(Node parentNode) { if (this.parentNode != null) this.parentNode.removeChild(this); this.parentNode = parentNode; } protected void replaceChild(Node out, Node in) {"
+      },
+      {
+        "txt": "Validate.isTrue(out.parentNode == this); Validate.notNull(in); if (in.parentNode != null) in.parentNode.removeChild(in); Integer index = out.siblingIndex(); childNodes.set(index, in); in.parentNode = this; in.setSiblingIndex(index); out.parentNode = null; }"
+      },
+      {
+        "txt": "protected void removeChild(Node out) { Validate.isTrue(out.parentNode == this); int index = out.siblingIndex(); childNodes.remove(index); reindexChildren(); out.parentNode = null; } protected void addChildren(Node... children) { for (Node child: children) { reparentChild(child);"
+      },
+      {
+        "txt": "childNodes.add(child); child.setSiblingIndex(childNodes.size()-1); } } protected void addChildren(int index, Node... children) { Validate.noNullElements(children); for (int i = children.length - 1; i >= 0; i--) { Node in = children[i]; reparentChild(in); childNodes.add(index, in);"
+      },
+      {
+        "txt": "} reindexChildren(); } private void reparentChild(Node child) { if (child.parentNode != null) child.parentNode.removeChild(child); child.setParentNode(this); } private void reindexChildren() { for (int i = 0; i < childNodes.size(); i++) {"
+      },
+      {
+        "txt": "} } Retrieves this node's sibling nodes. Similar to {@link #childNodes() node.parent.childNodes()}, but does not include this node (a node is not a sibling of itself). @return node siblings. If the node has no parent, returns an empty list. public List<Node> siblingNodes() { <extra_id_0> return parent().childNodes(); } Get this node's next sibling. @return next sibling, or null if this is the last sibling public Node nextSibling() { if (parentNode == null)"
+      },
+      {
+        "txt": "public Node nextSibling() { if (parentNode == null) return null; // root List<Node> siblings = parentNode.childNodes; Integer index = siblingIndex(); Validate.notNull(index); if (siblings.size() > index+1) return siblings.get(index+1); else return null;"
+      },
+      {
+        "txt": "} Get this node's previous sibling. @return the previous sibling, or null if this is the first sibling public Node previousSibling() { List<Node> siblings = parentNode.childNodes; Integer index = siblingIndex(); Validate.notNull(index); if (index > 0) return siblings.get(index-1); else"
+      },
+      {
+        "txt": "return null; } public int siblingIndex() { return siblingIndex; } protected void setSiblingIndex(int siblingIndex) { this.siblingIndex = siblingIndex; } public Node traverse(NodeVisitor nodeVisitor) { Validate.notNull(nodeVisitor);"
+      },
+      {
+        "txt": "NodeTraversor traversor = new NodeTraversor(nodeVisitor); traversor.traverse(this); return this; } Get the outer HTML of this node. @return HTML public String outerHtml() { StringBuilder accum = new StringBuilder(128); outerHtml(accum); return accum.toString();"
+      },
+      {
+        "txt": "} protected void outerHtml(StringBuilder accum) { new NodeTraversor(new OuterHtmlVisitor(accum, getOutputSettings())).traverse(this); } private Document.OutputSettings getOutputSettings() { return ownerDocument() != null ? ownerDocument().outputSettings() : (new Document(\"\")).outputSettings(); } Get the outer HTML of this node. @param accum accumulator to place HTML into abstract void outerHtmlHead(StringBuilder accum, int depth, Document.OutputSettings out);"
+      },
+      {
+        "txt": "abstract void outerHtmlTail(StringBuilder accum, int depth, Document.OutputSettings out); public String toString() { return outerHtml(); } protected void indent(StringBuilder accum, int depth, Document.OutputSettings out) { accum.append(\"\\n\").append(StringUtil.padding(depth * out.indentAmount())); } @Override public boolean equals(Object o) { if (this == o) return true;"
+      },
+      {
+        "txt": "return false; } @Override public int hashCode() { int result = parentNode != null ? parentNode.hashCode() : 0; result = 31 * result + (attributes != null ? attributes.hashCode() : 0); return result; } @Override public Node clone() {"
+      },
+      {
+        "txt": "return doClone(null); // splits for orphan } protected Node doClone(Node parent) { Node clone; try { clone = (Node) super.clone(); } catch (CloneNotSupportedException e) { throw new RuntimeException(e); } clone.parentNode = parent; // can be null, to create an orphan split"
+      },
+      {
+        "txt": "clone.siblingIndex = parent == null ? 0 : siblingIndex; clone.attributes = attributes != null ? attributes.clone() : null; clone.baseUri = baseUri; clone.childNodes = new ArrayList<Node>(childNodes.size()); for (Node child: childNodes) clone.childNodes.add(child.doClone(clone)); // clone() creates orphans, doClone() keeps parent return clone; } private static class OuterHtmlVisitor implements NodeVisitor { private StringBuilder accum;"
+      },
+      {
+        "txt": "private Document.OutputSettings out; OuterHtmlVisitor(StringBuilder accum, Document.OutputSettings out) { this.accum = accum; this.out = out; } public void head(Node node, int depth) { node.outerHtmlHead(accum, depth, out); } public void tail(Node node, int depth) { if (!node.nodeName().equals(\"#text\")) // saves a void hit."
+      },
+      {
+        "txt": "node.outerHtmlTail(accum, depth, out); } }"
+      }
+    ]
+  },
+  {
+    "id": 1912,
+    "file_path": "src/main/java/org/jsoup/nodes/Node.java",
+    "start-bug-line": 445,
+    "end-bug-line": 445,
+    "bug": "return parent().childNodes();",
+    "fix": "List<Node> nodes = parentNode.childNodes; List<Node> siblings = new ArrayList<Node>(nodes.size() - 1); for (Node node: nodes) if (node != this) siblings.add(node); return siblings;",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.jsoup.nodes; import org.jsoup.helper.StringUtil; import org.jsoup.helper.Validate; import org.jsoup.parser.Parser; import org.jsoup.select.NodeTraversor; import org.jsoup.select.NodeVisitor;"
+      },
+      {
+        "txt": "import java.net.MalformedURLException; import java.net.URL; import java.util.ArrayList; import java.util.Collections; import java.util.List; The base, abstract Node model. Elements, Documents, Comments etc are all Node instances. @author Jonathan Hedley, jonathan@hedley.net */ public abstract class Node implements Cloneable { Node parentNode; List<Node> childNodes;"
+      },
+      {
+        "txt": "Attributes attributes; String baseUri; int siblingIndex; Create a new Node. @param baseUri base URI @param attributes attributes (not null, but may be empty) protected Node(String baseUri, Attributes attributes) { Validate.notNull(baseUri); Validate.notNull(attributes); childNodes = new ArrayList<Node>(4);"
+      },
+      {
+        "txt": "this.baseUri = baseUri.trim(); this.attributes = attributes; } protected Node(String baseUri) { this(baseUri, new Attributes()); } protected Node() { childNodes = Collections.emptyList(); attributes = null; }"
+      },
+      {
+        "txt": "Get the node name of this node. Use for debugging purposes and not logic switching (for that, use instanceof). @return node name public abstract String nodeName(); public String attr(String attributeKey) { Validate.notNull(attributeKey); if (attributes.hasKey(attributeKey)) return attributes.get(attributeKey); else if (attributeKey.toLowerCase().startsWith(\"abs:\")) return absUrl(attributeKey.substring(\"abs:\".length())); else return \"\";"
+      },
+      {
+        "txt": "} public Attributes attributes() { return attributes; } public Node attr(String attributeKey, String attributeValue) { attributes.put(attributeKey, attributeValue); return this; } public boolean hasAttr(String attributeKey) { Validate.notNull(attributeKey);"
+      },
+      {
+        "txt": "if (attributeKey.toLowerCase().startsWith(\"abs:\")) { String key = attributeKey.substring(\"abs:\".length()); if (attributes.hasKey(key) && !absUrl(key).equals(\"\")) return true; } return attributes.hasKey(attributeKey); } public Node removeAttr(String attributeKey) { Validate.notNull(attributeKey); attributes.remove(attributeKey);"
+      },
+      {
+        "txt": "return this; } Get the base URI of this node. @return base URI public String baseUri() { return baseUri; } Update the base URI of this node and all of its descendants. @param baseUri base URI to set public void setBaseUri(final String baseUri) {"
+      },
+      {
+        "txt": "Validate.notNull(baseUri); traverse(new NodeVisitor() { public void head(Node node, int depth) { node.baseUri = baseUri; } public void tail(Node node, int depth) { } }); } public String absUrl(String attributeKey) {"
+      },
+      {
+        "txt": "Validate.notEmpty(attributeKey); String relUrl = attr(attributeKey); if (!hasAttr(attributeKey)) { return \"\"; // nothing to make absolute with } else { URL base; try { try { base = new URL(baseUri); } catch (MalformedURLException e) {"
+      },
+      {
+        "txt": "URL abs = new URL(relUrl); return abs.toExternalForm(); } if (relUrl.startsWith(\"?\")) relUrl = base.getPath() + relUrl; URL abs = new URL(base, relUrl); return abs.toExternalForm(); } catch (MalformedURLException e) { return \"\"; }"
+      },
+      {
+        "txt": "} } Get a child node by index @param index index of child node @return the child node at this index. public Node childNode(int index) { return childNodes.get(index); } Get this node's children. Presented as an unmodifiable list: new children can not be added, but the child nodes themselves can be manipulated."
+      },
+      {
+        "txt": "@return list of children. If no children, returns an empty list. public List<Node> childNodes() { return Collections.unmodifiableList(childNodes); } protected Node[] childNodesAsArray() { return childNodes.toArray(new Node[childNodes().size()]); } Gets this node's parent node. @return parent node; or null if no parent. public Node parent() {"
+      },
+      {
+        "txt": "return parentNode; } public Document ownerDocument() { if (this instanceof Document) return (Document) this; else if (parentNode == null) return null; else return parentNode.ownerDocument(); }"
+      },
+      {
+        "txt": "public void remove() { Validate.notNull(parentNode); parentNode.removeChild(this); } public Node before(String html) { addSiblingHtml(siblingIndex(), html); return this; } public Node before(Node node) { Validate.notNull(node);"
+      },
+      {
+        "txt": "Validate.notNull(parentNode); parentNode.addChildren(siblingIndex(), node); return this; } public Node after(String html) { addSiblingHtml(siblingIndex()+1, html); return this; } public Node after(Node node) { Validate.notNull(node);"
+      },
+      {
+        "txt": "Validate.notNull(parentNode); parentNode.addChildren(siblingIndex()+1, node); return this; } private void addSiblingHtml(int index, String html) { Validate.notNull(html); Validate.notNull(parentNode); Element context = parent() instanceof Element ? (Element) parent() : null; List<Node> nodes = Parser.parseFragment(html, context, baseUri()); parentNode.addChildren(index, nodes.toArray(new Node[nodes.size()]));"
+      },
+      {
+        "txt": "} Wrap the supplied HTML around this node. @param html HTML to wrap around this element, e.g. {@code <div class=\"head\"></div>}. Can be arbitrarily deep. @return this node, for chaining. public Node wrap(String html) { Validate.notEmpty(html); Element context = parent() instanceof Element ? (Element) parent() : null; List<Node> wrapChildren = Parser.parseFragment(html, context, baseUri()); Node wrapNode = wrapChildren.get(0); if (wrapNode == null || !(wrapNode instanceof Element)) // nothing to wrap with; noop"
+      },
+      {
+        "txt": "return null; Element wrap = (Element) wrapNode; Element deepest = getDeepChild(wrap); parentNode.replaceChild(this, wrap); deepest.addChildren(this); if (wrapChildren.size() > 0) { for (int i = 0; i < wrapChildren.size(); i++) { Node remainder = wrapChildren.get(i); remainder.parentNode.removeChild(remainder); wrap.appendChild(remainder);"
+      },
+      {
+        "txt": "} } return this; } public Node unwrap() { Validate.notNull(parentNode); int index = siblingIndex; Node firstChild = childNodes.size() > 0 ? childNodes.get(0) : null; parentNode.addChildren(index, this.childNodesAsArray()); this.remove();"
+      },
+      {
+        "txt": "return firstChild; } private Element getDeepChild(Element el) { List<Element> children = el.children(); if (children.size() > 0) return getDeepChild(children.get(0)); else return el; } public void replaceWith(Node in) {"
+      },
+      {
+        "txt": "Validate.notNull(in); Validate.notNull(parentNode); parentNode.replaceChild(this, in); } protected void setParentNode(Node parentNode) { if (this.parentNode != null) this.parentNode.removeChild(this); this.parentNode = parentNode; } protected void replaceChild(Node out, Node in) {"
+      },
+      {
+        "txt": "Validate.isTrue(out.parentNode == this); Validate.notNull(in); if (in.parentNode != null) in.parentNode.removeChild(in); Integer index = out.siblingIndex(); childNodes.set(index, in); in.parentNode = this; in.setSiblingIndex(index); out.parentNode = null; }"
+      },
+      {
+        "txt": "protected void removeChild(Node out) { Validate.isTrue(out.parentNode == this); int index = out.siblingIndex(); childNodes.remove(index); reindexChildren(); out.parentNode = null; } protected void addChildren(Node... children) { for (Node child: children) { reparentChild(child);"
+      },
+      {
+        "txt": "childNodes.add(child); child.setSiblingIndex(childNodes.size()-1); } } protected void addChildren(int index, Node... children) { Validate.noNullElements(children); for (int i = children.length - 1; i >= 0; i--) { Node in = children[i]; reparentChild(in); childNodes.add(index, in);"
+      },
+      {
+        "txt": "} reindexChildren(); } private void reparentChild(Node child) { if (child.parentNode != null) child.parentNode.removeChild(child); child.setParentNode(this); } private void reindexChildren() { for (int i = 0; i < childNodes.size(); i++) {"
+      },
+      {
+        "txt": "} } Retrieves this node's sibling nodes. Similar to {@link #childNodes() node.parent.childNodes()}, but does not include this node (a node is not a sibling of itself). @return node siblings. If the node has no parent, returns an empty list. public List<Node> siblingNodes() { <extra_id_0> } Get this node's next sibling. @return next sibling, or null if this is the last sibling public Node nextSibling() { if (parentNode == null) return null; // root"
+      },
+      {
+        "txt": "if (parentNode == null) return null; // root List<Node> siblings = parentNode.childNodes; Integer index = siblingIndex(); Validate.notNull(index); if (siblings.size() > index+1) return siblings.get(index+1); else return null; }"
+      },
+      {
+        "txt": "Get this node's previous sibling. @return the previous sibling, or null if this is the first sibling public Node previousSibling() { List<Node> siblings = parentNode.childNodes; Integer index = siblingIndex(); Validate.notNull(index); if (index > 0) return siblings.get(index-1); else return null;"
+      },
+      {
+        "txt": "} public int siblingIndex() { return siblingIndex; } protected void setSiblingIndex(int siblingIndex) { this.siblingIndex = siblingIndex; } public Node traverse(NodeVisitor nodeVisitor) { Validate.notNull(nodeVisitor); NodeTraversor traversor = new NodeTraversor(nodeVisitor);"
+      },
+      {
+        "txt": "traversor.traverse(this); return this; } Get the outer HTML of this node. @return HTML public String outerHtml() { StringBuilder accum = new StringBuilder(128); outerHtml(accum); return accum.toString(); }"
+      },
+      {
+        "txt": "protected void outerHtml(StringBuilder accum) { new NodeTraversor(new OuterHtmlVisitor(accum, getOutputSettings())).traverse(this); } private Document.OutputSettings getOutputSettings() { return ownerDocument() != null ? ownerDocument().outputSettings() : (new Document(\"\")).outputSettings(); } Get the outer HTML of this node. @param accum accumulator to place HTML into abstract void outerHtmlHead(StringBuilder accum, int depth, Document.OutputSettings out); abstract void outerHtmlTail(StringBuilder accum, int depth, Document.OutputSettings out);"
+      },
+      {
+        "txt": "public String toString() { return outerHtml(); } protected void indent(StringBuilder accum, int depth, Document.OutputSettings out) { accum.append(\"\\n\").append(StringUtil.padding(depth * out.indentAmount())); } @Override public boolean equals(Object o) { if (this == o) return true; return false;"
+      },
+      {
+        "txt": "} @Override public int hashCode() { int result = parentNode != null ? parentNode.hashCode() : 0; result = 31 * result + (attributes != null ? attributes.hashCode() : 0); return result; } @Override public Node clone() { return doClone(null); // splits for orphan"
+      },
+      {
+        "txt": "} protected Node doClone(Node parent) { Node clone; try { clone = (Node) super.clone(); } catch (CloneNotSupportedException e) { throw new RuntimeException(e); } clone.parentNode = parent; // can be null, to create an orphan split clone.siblingIndex = parent == null ? 0 : siblingIndex;"
+      },
+      {
+        "txt": "clone.attributes = attributes != null ? attributes.clone() : null; clone.baseUri = baseUri; clone.childNodes = new ArrayList<Node>(childNodes.size()); for (Node child: childNodes) clone.childNodes.add(child.doClone(clone)); // clone() creates orphans, doClone() keeps parent return clone; } private static class OuterHtmlVisitor implements NodeVisitor { private StringBuilder accum; private Document.OutputSettings out;"
+      },
+      {
+        "txt": "OuterHtmlVisitor(StringBuilder accum, Document.OutputSettings out) { this.accum = accum; this.out = out; } public void head(Node node, int depth) { node.outerHtmlHead(accum, depth, out); } public void tail(Node node, int depth) { if (!node.nodeName().equals(\"#text\")) // saves a void hit. node.outerHtmlTail(accum, depth, out);"
+      },
+      {
+        "txt": "} }"
+      }
+    ]
+  },
+  {
+    "id": 1913,
+    "file_path": "src/main/java/org/jsoup/nodes/Node.java",
+    "start-bug-line": 470,
+    "end-bug-line": 470,
+    "bug": "",
+    "fix": "if (parentNode == null) return null; // root",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.jsoup.nodes; import org.jsoup.helper.StringUtil; import org.jsoup.helper.Validate; import org.jsoup.parser.Parser;"
+      },
+      {
+        "txt": "import org.jsoup.select.NodeTraversor; import org.jsoup.select.NodeVisitor; import java.net.MalformedURLException; import java.net.URL; import java.util.ArrayList; import java.util.Collections; import java.util.List; The base, abstract Node model. Elements, Documents, Comments etc are all Node instances. @author Jonathan Hedley, jonathan@hedley.net */ public abstract class Node implements Cloneable {"
+      },
+      {
+        "txt": "Node parentNode; List<Node> childNodes; Attributes attributes; String baseUri; int siblingIndex; Create a new Node. @param baseUri base URI @param attributes attributes (not null, but may be empty) protected Node(String baseUri, Attributes attributes) { Validate.notNull(baseUri);"
+      },
+      {
+        "txt": "Validate.notNull(attributes); childNodes = new ArrayList<Node>(4); this.baseUri = baseUri.trim(); this.attributes = attributes; } protected Node(String baseUri) { this(baseUri, new Attributes()); } protected Node() { childNodes = Collections.emptyList();"
+      },
+      {
+        "txt": "attributes = null; } Get the node name of this node. Use for debugging purposes and not logic switching (for that, use instanceof). @return node name public abstract String nodeName(); public String attr(String attributeKey) { Validate.notNull(attributeKey); if (attributes.hasKey(attributeKey)) return attributes.get(attributeKey); else if (attributeKey.toLowerCase().startsWith(\"abs:\"))"
+      },
+      {
+        "txt": "return absUrl(attributeKey.substring(\"abs:\".length())); else return \"\"; } public Attributes attributes() { return attributes; } public Node attr(String attributeKey, String attributeValue) { attributes.put(attributeKey, attributeValue); return this; }"
+      },
+      {
+        "txt": "public boolean hasAttr(String attributeKey) { Validate.notNull(attributeKey); if (attributeKey.toLowerCase().startsWith(\"abs:\")) { String key = attributeKey.substring(\"abs:\".length()); if (attributes.hasKey(key) && !absUrl(key).equals(\"\")) return true; } return attributes.hasKey(attributeKey); } public Node removeAttr(String attributeKey) {"
+      },
+      {
+        "txt": "Validate.notNull(attributeKey); attributes.remove(attributeKey); return this; } Get the base URI of this node. @return base URI public String baseUri() { return baseUri; } Update the base URI of this node and all of its descendants."
+      },
+      {
+        "txt": "@param baseUri base URI to set public void setBaseUri(final String baseUri) { Validate.notNull(baseUri); traverse(new NodeVisitor() { public void head(Node node, int depth) { node.baseUri = baseUri; } public void tail(Node node, int depth) { } });"
+      },
+      {
+        "txt": "} public String absUrl(String attributeKey) { Validate.notEmpty(attributeKey); String relUrl = attr(attributeKey); if (!hasAttr(attributeKey)) { return \"\"; // nothing to make absolute with } else { URL base; try { try {"
+      },
+      {
+        "txt": "base = new URL(baseUri); } catch (MalformedURLException e) { URL abs = new URL(relUrl); return abs.toExternalForm(); } if (relUrl.startsWith(\"?\")) relUrl = base.getPath() + relUrl; URL abs = new URL(base, relUrl); return abs.toExternalForm(); } catch (MalformedURLException e) {"
+      },
+      {
+        "txt": "return \"\"; } } } Get a child node by index @param index index of child node @return the child node at this index. public Node childNode(int index) { return childNodes.get(index); }"
+      },
+      {
+        "txt": "Get this node's children. Presented as an unmodifiable list: new children can not be added, but the child nodes themselves can be manipulated. @return list of children. If no children, returns an empty list. public List<Node> childNodes() { return Collections.unmodifiableList(childNodes); } protected Node[] childNodesAsArray() { return childNodes.toArray(new Node[childNodes().size()]); } Gets this node's parent node."
+      },
+      {
+        "txt": "@return parent node; or null if no parent. public Node parent() { return parentNode; } public Document ownerDocument() { if (this instanceof Document) return (Document) this; else if (parentNode == null) return null; else"
+      },
+      {
+        "txt": "return parentNode.ownerDocument(); } public void remove() { Validate.notNull(parentNode); parentNode.removeChild(this); } public Node before(String html) { addSiblingHtml(siblingIndex(), html); return this; }"
+      },
+      {
+        "txt": "public Node before(Node node) { Validate.notNull(node); Validate.notNull(parentNode); parentNode.addChildren(siblingIndex(), node); return this; } public Node after(String html) { addSiblingHtml(siblingIndex()+1, html); return this; }"
+      },
+      {
+        "txt": "public Node after(Node node) { Validate.notNull(node); Validate.notNull(parentNode); parentNode.addChildren(siblingIndex()+1, node); return this; } private void addSiblingHtml(int index, String html) { Validate.notNull(html); Validate.notNull(parentNode); Element context = parent() instanceof Element ? (Element) parent() : null;"
+      },
+      {
+        "txt": "List<Node> nodes = Parser.parseFragment(html, context, baseUri()); parentNode.addChildren(index, nodes.toArray(new Node[nodes.size()])); } Wrap the supplied HTML around this node. @param html HTML to wrap around this element, e.g. {@code <div class=\"head\"></div>}. Can be arbitrarily deep. @return this node, for chaining. public Node wrap(String html) { Validate.notEmpty(html); Element context = parent() instanceof Element ? (Element) parent() : null; List<Node> wrapChildren = Parser.parseFragment(html, context, baseUri());"
+      },
+      {
+        "txt": "Node wrapNode = wrapChildren.get(0); if (wrapNode == null || !(wrapNode instanceof Element)) // nothing to wrap with; noop return null; Element wrap = (Element) wrapNode; Element deepest = getDeepChild(wrap); parentNode.replaceChild(this, wrap); deepest.addChildren(this); if (wrapChildren.size() > 0) { for (int i = 0; i < wrapChildren.size(); i++) { Node remainder = wrapChildren.get(i);"
+      },
+      {
+        "txt": "remainder.parentNode.removeChild(remainder); wrap.appendChild(remainder); } } return this; } public Node unwrap() { Validate.notNull(parentNode); int index = siblingIndex; Node firstChild = childNodes.size() > 0 ? childNodes.get(0) : null;"
+      },
+      {
+        "txt": "parentNode.addChildren(index, this.childNodesAsArray()); this.remove(); return firstChild; } private Element getDeepChild(Element el) { List<Element> children = el.children(); if (children.size() > 0) return getDeepChild(children.get(0)); else return el;"
+      },
+      {
+        "txt": "} public void replaceWith(Node in) { Validate.notNull(in); Validate.notNull(parentNode); parentNode.replaceChild(this, in); } protected void setParentNode(Node parentNode) { if (this.parentNode != null) this.parentNode.removeChild(this); this.parentNode = parentNode;"
+      },
+      {
+        "txt": "} protected void replaceChild(Node out, Node in) { Validate.isTrue(out.parentNode == this); Validate.notNull(in); if (in.parentNode != null) in.parentNode.removeChild(in); Integer index = out.siblingIndex(); childNodes.set(index, in); in.parentNode = this; in.setSiblingIndex(index);"
+      },
+      {
+        "txt": "out.parentNode = null; } protected void removeChild(Node out) { Validate.isTrue(out.parentNode == this); int index = out.siblingIndex(); childNodes.remove(index); reindexChildren(); out.parentNode = null; } protected void addChildren(Node... children) {"
+      },
+      {
+        "txt": "for (Node child: children) { reparentChild(child); childNodes.add(child); child.setSiblingIndex(childNodes.size()-1); } } protected void addChildren(int index, Node... children) { Validate.noNullElements(children); for (int i = children.length - 1; i >= 0; i--) { Node in = children[i];"
+      },
+      {
+        "txt": "reparentChild(in); childNodes.add(index, in); } reindexChildren(); } private void reparentChild(Node child) { if (child.parentNode != null) child.parentNode.removeChild(child); child.setParentNode(this); }"
+      },
+      {
+        "txt": "private void reindexChildren() { for (int i = 0; i < childNodes.size(); i++) { childNodes.get(i).setSiblingIndex(i); } } Retrieves this node's sibling nodes. Similar to {@link #childNodes() node.parent.childNodes()}, but does not include this node (a node is not a sibling of itself). @return node siblings. If the node has no parent, returns an empty list. public List<Node> siblingNodes() { return parent().childNodes();"
+      },
+      {
+        "txt": "} Get this node's next sibling. @return next sibling, or null if this is the last sibling public Node nextSibling() { if (parentNode == null) return null; // root List<Node> siblings = parentNode.childNodes; Integer index = siblingIndex(); Validate.notNull(index); if (siblings.size() > index+1)"
+      },
+      {
+        "txt": "else return null; } Get this node's previous sibling. @return the previous sibling, or null if this is the first sibling public Node previousSibling() { <extra_id_0> List<Node> siblings = parentNode.childNodes; Integer index = siblingIndex(); Validate.notNull(index); if (index > 0) return siblings.get(index-1); else"
+      },
+      {
+        "txt": "return siblings.get(index-1); else return null; } public int siblingIndex() { return siblingIndex; } protected void setSiblingIndex(int siblingIndex) { this.siblingIndex = siblingIndex; }"
+      },
+      {
+        "txt": "public Node traverse(NodeVisitor nodeVisitor) { Validate.notNull(nodeVisitor); NodeTraversor traversor = new NodeTraversor(nodeVisitor); traversor.traverse(this); return this; } Get the outer HTML of this node. @return HTML public String outerHtml() { StringBuilder accum = new StringBuilder(128);"
+      },
+      {
+        "txt": "outerHtml(accum); return accum.toString(); } protected void outerHtml(StringBuilder accum) { new NodeTraversor(new OuterHtmlVisitor(accum, getOutputSettings())).traverse(this); } private Document.OutputSettings getOutputSettings() { return ownerDocument() != null ? ownerDocument().outputSettings() : (new Document(\"\")).outputSettings(); } Get the outer HTML of this node."
+      },
+      {
+        "txt": "@param accum accumulator to place HTML into abstract void outerHtmlHead(StringBuilder accum, int depth, Document.OutputSettings out); abstract void outerHtmlTail(StringBuilder accum, int depth, Document.OutputSettings out); public String toString() { return outerHtml(); } protected void indent(StringBuilder accum, int depth, Document.OutputSettings out) { accum.append(\"\\n\").append(StringUtil.padding(depth * out.indentAmount())); } @Override"
+      },
+      {
+        "txt": "public boolean equals(Object o) { if (this == o) return true; return false; } @Override public int hashCode() { int result = parentNode != null ? parentNode.hashCode() : 0; result = 31 * result + (attributes != null ? attributes.hashCode() : 0); return result; }"
+      },
+      {
+        "txt": "@Override public Node clone() { return doClone(null); // splits for orphan } protected Node doClone(Node parent) { Node clone; try { clone = (Node) super.clone(); } catch (CloneNotSupportedException e) { throw new RuntimeException(e);"
+      },
+      {
+        "txt": "} clone.parentNode = parent; // can be null, to create an orphan split clone.siblingIndex = parent == null ? 0 : siblingIndex; clone.attributes = attributes != null ? attributes.clone() : null; clone.baseUri = baseUri; clone.childNodes = new ArrayList<Node>(childNodes.size()); for (Node child: childNodes) clone.childNodes.add(child.doClone(clone)); // clone() creates orphans, doClone() keeps parent return clone; }"
+      },
+      {
+        "txt": "private static class OuterHtmlVisitor implements NodeVisitor { private StringBuilder accum; private Document.OutputSettings out; OuterHtmlVisitor(StringBuilder accum, Document.OutputSettings out) { this.accum = accum; this.out = out; } public void head(Node node, int depth) { node.outerHtmlHead(accum, depth, out); }"
+      },
+      {
+        "txt": "public void tail(Node node, int depth) { if (!node.nodeName().equals(\"#text\")) // saves a void hit. node.outerHtmlTail(accum, depth, out); } }"
+      }
+    ]
+  },
+  {
+    "id": 1914,
+    "file_path": "src/main/java/org/jsoup/select/Elements.java",
+    "start-bug-line": 22,
+    "end-bug-line": 22,
+    "bug": "",
+    "fix": "public Elements(int initialCapacity) { contents = new ArrayList<Element>(initialCapacity); }",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.jsoup.select; import org.jsoup.helper.Validate; import org.jsoup.nodes.Element; import org.jsoup.nodes.Node; import java.util.*; A list of {@link Element Elements}, with methods that act on every element in the list. <p/>"
+      },
+      {
+        "txt": "@author Jonathan Hedley, jonathan@hedley.net */ public class Elements implements List<Element>, Cloneable { private List<Element> contents; public Elements() { contents = new ArrayList<Element>(); } <extra_id_0> public Elements(Collection<Element> elements) { contents = new ArrayList<Element>(elements); } public Elements(List<Element> elements) { contents = elements; }"
+      },
+      {
+        "txt": "contents = elements; } public Elements(Element... elements) { this(Arrays.asList(elements)); } @Override public Elements clone() { List<Element> elements = new ArrayList<Element>(); for(Element e : contents) elements.add(e.clone());"
+      },
+      {
+        "txt": "return new Elements(elements); } Get an attribute value from the first matched element that has the attribute. @param attributeKey The attribute key. @return The attribute value from the first matched element that has the attribute.. If no elements were matched (isEmpty() == true), or if the no elements have the attribute, returns empty string. @see #hasAttr(String) public String attr(String attributeKey) { for (Element element : contents) { if (element.hasAttr(attributeKey))"
+      },
+      {
+        "txt": "return element.attr(attributeKey); } return \"\"; } Checks if any of the matched elements have this attribute set. @param attributeKey attribute key @return true if any of the elements have the attribute; false if none do. public boolean hasAttr(String attributeKey) { for (Element element : contents) { if (element.hasAttr(attributeKey))"
+      },
+      {
+        "txt": "return true; } return false; } public Elements attr(String attributeKey, String attributeValue) { for (Element element : contents) { element.attr(attributeKey, attributeValue); } return this; }"
+      },
+      {
+        "txt": "public Elements removeAttr(String attributeKey) { for (Element element : contents) { element.removeAttr(attributeKey); } return this; } Add the class name to every matched element's {@code class} attribute. @param className class name to add @return this public Elements addClass(String className) {"
+      },
+      {
+        "txt": "for (Element element : contents) { element.addClass(className); } return this; } Remove the class name from every matched element's {@code class} attribute, if present. @param className class name to remove @return this public Elements removeClass(String className) { for (Element element : contents) {"
+      },
+      {
+        "txt": "element.removeClass(className); } return this; } Toggle the class name on every matched element's {@code class} attribute. @param className class name to add if missing, or remove if present, from every element. @return this public Elements toggleClass(String className) { for (Element element : contents) { element.toggleClass(className);"
+      },
+      {
+        "txt": "} return this; } Determine if any of the matched elements have this class name set in their {@code class} attribute. @param className class name to check for @return true if any do, false if none do public boolean hasClass(String className) { for (Element element : contents) { if (element.hasClass(className)) return true;"
+      },
+      {
+        "txt": "} return false; } public String val() { if (size() > 0) return first().val(); else return \"\"; } public Elements val(String value) {"
+      },
+      {
+        "txt": "for (Element element : contents) element.val(value); return this; } public String text() { StringBuilder sb = new StringBuilder(); for (Element element : contents) { if (sb.length() != 0) sb.append(\" \"); sb.append(element.text());"
+      },
+      {
+        "txt": "} return sb.toString(); } public boolean hasText() { for (Element element: contents) { if (element.hasText()) return true; } return false; }"
+      },
+      {
+        "txt": "public String html() { StringBuilder sb = new StringBuilder(); for (Element element : contents) { if (sb.length() != 0) sb.append(\"\\n\"); sb.append(element.html()); } return sb.toString(); } public String outerHtml() {"
+      },
+      {
+        "txt": "StringBuilder sb = new StringBuilder(); for (Element element : contents) { if (sb.length() != 0) sb.append(\"\\n\"); sb.append(element.outerHtml()); } return sb.toString(); } public String toString() { return outerHtml();"
+      },
+      {
+        "txt": "} public Elements tagName(String tagName) { for (Element element : contents) { element.tagName(tagName); } return this; } public Elements html(String html) { for (Element element : contents) { element.html(html);"
+      },
+      {
+        "txt": "} return this; } public Elements prepend(String html) { for (Element element : contents) { element.prepend(html); } return this; } public Elements append(String html) {"
+      },
+      {
+        "txt": "for (Element element : contents) { element.append(html); } return this; } public Elements before(String html) { for (Element element : contents) { element.before(html); } return this;"
+      },
+      {
+        "txt": "} public Elements after(String html) { for (Element element : contents) { element.after(html); } return this; } Wrap the supplied HTML around each matched elements. For example, with HTML {@code <p><b>This</b> is <b>Jsoup</b></p>}, <code>doc.select(\"b\").wrap(\"&lt;i&gt;&lt;/i&gt;\");</code>"
+      },
+      {
+        "txt": "becomes {@code <p><i><b>This</b></i> is <i><b>jsoup</b></i></p>} @param html HTML to wrap around each element, e.g. {@code <div class=\"head\"></div>}. Can be arbitrarily deep. @return this (for chaining) @see Element#wrap public Elements wrap(String html) { Validate.notEmpty(html); for (Element element : contents) { element.wrap(html); } return this;"
+      },
+      {
+        "txt": "} public Elements unwrap() { for (Element element : contents) { element.unwrap(); } return this; } public Elements empty() { for (Element element : contents) { element.empty();"
+      },
+      {
+        "txt": "} return this; } public Elements remove() { for (Element element : contents) { element.remove(); } return this; } public Elements select(String query) {"
+      },
+      {
+        "txt": "return Selector.select(query, this); } public Elements not(String query) { Elements out = Selector.select(query, this); return Selector.filterOut(this, out); } public Elements eq(int index) { return contents.size() > index ? new Elements(get(index)) : new Elements(); } public boolean is(String query) {"
+      },
+      {
+        "txt": "Elements children = select(query); return !children.isEmpty(); } public Elements parents() { HashSet<Element> combo = new LinkedHashSet<Element>(); for (Element e: contents) { combo.addAll(e.parents()); } return new Elements(combo); }"
+      },
+      {
+        "txt": "Get the first matched element. @return The first matched element, or <code>null</code> if contents is empty; public Element first() { return contents.isEmpty() ? null : contents.get(0); } Get the last matched element. @return The last matched element, or <code>null</code> if contents is empty. public Element last() { return contents.isEmpty() ? null : contents.get(contents.size() - 1); }"
+      },
+      {
+        "txt": "public Elements traverse(NodeVisitor nodeVisitor) { Validate.notNull(nodeVisitor); NodeTraversor traversor = new NodeTraversor(nodeVisitor); for (Element el: contents) { traversor.traverse(el); } return this; } public int size() {return contents.size();} public boolean isEmpty() {return contents.isEmpty();}"
+      },
+      {
+        "txt": "public boolean contains(Object o) {return contents.contains(o);} public Iterator<Element> iterator() {return contents.iterator();} public Object[] toArray() {return contents.toArray();} public <T> T[] toArray(T[] a) {return contents.toArray(a);} public boolean add(Element element) {return contents.add(element);} public boolean remove(Object o) {return contents.remove(o);} public boolean containsAll(Collection<?> c) {return contents.containsAll(c);} public boolean addAll(Collection<? extends Element> c) {return contents.addAll(c);} public boolean addAll(int index, Collection<? extends Element> c) {return contents.addAll(index, c);} public boolean removeAll(Collection<?> c) {return contents.removeAll(c);}"
+      },
+      {
+        "txt": "public boolean retainAll(Collection<?> c) {return contents.retainAll(c);} public void clear() {contents.clear();} public boolean equals(Object o) {return contents.equals(o);} public int hashCode() {return contents.hashCode();} public Element get(int index) {return contents.get(index);} public Element set(int index, Element element) {return contents.set(index, element);} public void add(int index, Element element) {contents.add(index, element);} public Element remove(int index) {return contents.remove(index);} public int indexOf(Object o) {return contents.indexOf(o);} public int lastIndexOf(Object o) {return contents.lastIndexOf(o);}"
+      },
+      {
+        "txt": "public ListIterator<Element> listIterator() {return contents.listIterator();} public ListIterator<Element> listIterator(int index) {return contents.listIterator(index);} public List<Element> subList(int fromIndex, int toIndex) {return contents.subList(fromIndex, toIndex);}"
+      }
+    ]
+  }
+]

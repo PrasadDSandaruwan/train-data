@@ -1,0 +1,173 @@
+[
+  {
+    "id": 1098,
+    "file_path": "src/main/java/org/apache/commons/compress/archivers/tar/TarArchiveEntry.java",
+    "start-bug-line": 859,
+    "end-bug-line": 859,
+    "bug": "if (getName().endsWith(\"/\")) {",
+    "fix": "if (!isPaxHeader() && !isGlobalPaxHeader() && getName().endsWith(\"/\")) {",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.compress.archivers.tar; import java.io.File; import java.io.IOException; import java.util.Date; import java.util.Locale;"
+      },
+      {
+        "txt": "import java.util.Map; import org.apache.commons.compress.archivers.ArchiveEntry; import org.apache.commons.compress.archivers.zip.ZipEncoding; import org.apache.commons.compress.utils.ArchiveUtils; public class TarArchiveEntry implements TarConstants, ArchiveEntry { private static final TarArchiveEntry[] EMPTY_TAR_ARCHIVE_ENTRIES = new TarArchiveEntry[0]; private String name = \"\"; private boolean preserveLeadingSlashes; private int mode; private long userId = 0;"
+      },
+      {
+        "txt": "private long groupId = 0; private long size = 0; private long modTime; private boolean checkSumOK; private byte linkFlag; private String linkName = \"\"; private String magic = MAGIC_POSIX; private String version = VERSION_POSIX; private String userName; private String groupName = \"\";"
+      },
+      {
+        "txt": "private int devMajor = 0; private int devMinor = 0; private boolean isExtended; private long realSize; private boolean paxGNUSparse; private boolean starSparse; private final File file; public static final int MAX_NAMELEN = 31; public static final int DEFAULT_DIR_MODE = 040755; public static final int DEFAULT_FILE_MODE = 0100644;"
+      },
+      {
+        "txt": "public static final int MILLIS_PER_SECOND = 1000; private TarArchiveEntry() { String user = System.getProperty(\"user.name\", \"\"); if (user.length() > MAX_NAMELEN) { user = user.substring(0, MAX_NAMELEN); } this.userName = user; this.file = null; } public TarArchiveEntry(final String name) {"
+      },
+      {
+        "txt": "this(name, false); } public TarArchiveEntry(String name, final boolean preserveLeadingSlashes) { this(); this.preserveLeadingSlashes = preserveLeadingSlashes; name = normalizeFileName(name, preserveLeadingSlashes); final boolean isDir = name.endsWith(\"/\"); this.name = name; this.mode = isDir ? DEFAULT_DIR_MODE : DEFAULT_FILE_MODE; this.linkFlag = isDir ? LF_DIR : LF_NORMAL;"
+      },
+      {
+        "txt": "this.modTime = new Date().getTime() / MILLIS_PER_SECOND; this.userName = \"\"; } public TarArchiveEntry(final String name, final byte linkFlag) { this(name, linkFlag, false); } public TarArchiveEntry(final String name, final byte linkFlag, final boolean preserveLeadingSlashes) { this(name, preserveLeadingSlashes); this.linkFlag = linkFlag; if (linkFlag == LF_GNUTYPE_LONGNAME) {"
+      },
+      {
+        "txt": "magic = MAGIC_GNU; version = VERSION_GNU_SPACE; } } public TarArchiveEntry(final File file) { this(file, file.getPath()); } public TarArchiveEntry(final File file, final String fileName) { final String normalizedName = normalizeFileName(fileName, false); this.file = file;"
+      },
+      {
+        "txt": "if (file.isDirectory()) { this.mode = DEFAULT_DIR_MODE; this.linkFlag = LF_DIR; final int nameLength = normalizedName.length(); if (nameLength == 0 || normalizedName.charAt(nameLength - 1) != '/') { this.name = normalizedName + \"/\"; } else { this.name = normalizedName; } } else {"
+      },
+      {
+        "txt": "this.mode = DEFAULT_FILE_MODE; this.linkFlag = LF_NORMAL; this.size = file.length(); this.name = normalizedName; } this.modTime = file.lastModified() / MILLIS_PER_SECOND; this.userName = \"\"; } public TarArchiveEntry(final byte[] headerBuf) { this();"
+      },
+      {
+        "txt": "parseTarHeader(headerBuf); } public TarArchiveEntry(final byte[] headerBuf, final ZipEncoding encoding) throws IOException { this(); parseTarHeader(headerBuf, encoding); } public boolean equals(final TarArchiveEntry it) { return getName().equals(it.getName()); }"
+      },
+      {
+        "txt": "@Override public boolean equals(final Object it) { if (it == null || getClass() != it.getClass()) { return false; } return equals((TarArchiveEntry) it); } @Override public int hashCode() { return getName().hashCode();"
+      },
+      {
+        "txt": "} public boolean isDescendent(final TarArchiveEntry desc) { return desc.getName().startsWith(getName()); } @Override public String getName() { return name; } public void setName(final String name) { this.name = normalizeFileName(name, this.preserveLeadingSlashes);"
+      },
+      {
+        "txt": "} public void setMode(final int mode) { this.mode = mode; } public String getLinkName() { return linkName; } public void setLinkName(final String link) { this.linkName = link; }"
+      },
+      {
+        "txt": "@Deprecated public int getUserId() { return (int) (userId & 0xffffffff); } public void setUserId(final int userId) { setUserId((long) userId); } public long getLongUserId() { return userId; }"
+      },
+      {
+        "txt": "public void setUserId(final long userId) { this.userId = userId; } @Deprecated public int getGroupId() { return (int) (groupId & 0xffffffff); } public void setGroupId(final int groupId) { setGroupId((long) groupId); }"
+      },
+      {
+        "txt": "public long getLongGroupId() { return groupId; } public void setGroupId(final long groupId) { this.groupId = groupId; } public String getUserName() { return userName; } public void setUserName(final String userName) {"
+      },
+      {
+        "txt": "this.userName = userName; } public String getGroupName() { return groupName; } public void setGroupName(final String groupName) { this.groupName = groupName; } public void setIds(final int userId, final int groupId) { setUserId(userId);"
+      },
+      {
+        "txt": "setGroupId(groupId); } public void setNames(final String userName, final String groupName) { setUserName(userName); setGroupName(groupName); } public void setModTime(final long time) { modTime = time / MILLIS_PER_SECOND; } public void setModTime(final Date time) {"
+      },
+      {
+        "txt": "modTime = time.getTime() / MILLIS_PER_SECOND; } public Date getModTime() { return new Date(modTime * MILLIS_PER_SECOND); } @Override public Date getLastModifiedDate() { return getModTime(); } public boolean isCheckSumOK() {"
+      },
+      {
+        "txt": "return checkSumOK; } public File getFile() { return file; } public int getMode() { return mode; } @Override public long getSize() {"
+      },
+      {
+        "txt": "return size; } public void setSize(final long size) { if (size < 0){ throw new IllegalArgumentException(\"Size is out of range: \"+size); } this.size = size; } public int getDevMajor() { return devMajor;"
+      },
+      {
+        "txt": "} public void setDevMajor(final int devNo) { if (devNo < 0){ throw new IllegalArgumentException(\"Major device number is out of \" + \"range: \" + devNo); } this.devMajor = devNo; } public int getDevMinor() { return devMinor;"
+      },
+      {
+        "txt": "} public void setDevMinor(final int devNo) { if (devNo < 0){ throw new IllegalArgumentException(\"Minor device number is out of \" + \"range: \" + devNo); } this.devMinor = devNo; } public boolean isExtended() { return isExtended;"
+      },
+      {
+        "txt": "} public long getRealSize() { return realSize; } public boolean isGNUSparse() { return isOldGNUSparse() || isPaxGNUSparse(); } public boolean isOldGNUSparse() { return linkFlag == LF_GNUTYPE_SPARSE; }"
+      },
+      {
+        "txt": "public boolean isPaxGNUSparse() { return paxGNUSparse; } public boolean isStarSparse() { return starSparse; } public boolean isGNULongLinkEntry() { return linkFlag == LF_GNUTYPE_LONGLINK; } public boolean isGNULongNameEntry() {"
+      },
+      {
+        "txt": "return linkFlag == LF_GNUTYPE_LONGNAME; } public boolean isPaxHeader(){ return linkFlag == LF_PAX_EXTENDED_HEADER_LC || linkFlag == LF_PAX_EXTENDED_HEADER_UC; } public boolean isGlobalPaxHeader(){ return linkFlag == LF_PAX_GLOBAL_EXTENDED_HEADER; } @Override"
+      },
+      {
+        "txt": "if (file != null) { return file.isDirectory(); } if (linkFlag == LF_DIR) { return true; } <extra_id_0> return true; } return false; } public boolean isFile() { if (file != null) {"
+      },
+      {
+        "txt": "public boolean isFile() { if (file != null) { return file.isFile(); } if (linkFlag == LF_OLDNORM || linkFlag == LF_NORMAL) { return true; } return !getName().endsWith(\"/\"); } public boolean isSymbolicLink() {"
+      },
+      {
+        "txt": "return linkFlag == LF_SYMLINK; } public boolean isLink() { return linkFlag == LF_LINK; } public boolean isCharacterDevice() { return linkFlag == LF_CHR; } public boolean isBlockDevice() { return linkFlag == LF_BLK;"
+      },
+      {
+        "txt": "} public boolean isFIFO() { return linkFlag == LF_FIFO; } public boolean isSparse() { return isGNUSparse() || isStarSparse(); } public TarArchiveEntry[] getDirectoryEntries() { if (file == null || !file.isDirectory()) { return EMPTY_TAR_ARCHIVE_ENTRIES;"
+      },
+      {
+        "txt": "} final String[] list = file.list(); if (list == null) { return EMPTY_TAR_ARCHIVE_ENTRIES; } final TarArchiveEntry[] result = new TarArchiveEntry[list.length]; for (int i = 0; i < result.length; ++i) { result[i] = new TarArchiveEntry(new File(file, list[i])); } return result;"
+      },
+      {
+        "txt": "} public void writeEntryHeader(final byte[] outbuf) { try { writeEntryHeader(outbuf, TarUtils.DEFAULT_ENCODING, false); } catch (final IOException ex) { try { writeEntryHeader(outbuf, TarUtils.FALLBACK_ENCODING, false); } catch (final IOException ex2) { throw new RuntimeException(ex2); }"
+      },
+      {
+        "txt": "} } public void writeEntryHeader(final byte[] outbuf, final ZipEncoding encoding, final boolean starMode) throws IOException { int offset = 0; offset = TarUtils.formatNameBytes(name, outbuf, offset, NAMELEN, encoding); offset = writeEntryHeaderField(mode, outbuf, offset, MODELEN, starMode); offset = writeEntryHeaderField(userId, outbuf, offset, UIDLEN, starMode);"
+      },
+      {
+        "txt": "offset = writeEntryHeaderField(groupId, outbuf, offset, GIDLEN, starMode); offset = writeEntryHeaderField(size, outbuf, offset, SIZELEN, starMode); offset = writeEntryHeaderField(modTime, outbuf, offset, MODTIMELEN, starMode); final int csOffset = offset; for (int c = 0; c < CHKSUMLEN; ++c) { outbuf[offset++] = (byte) ' '; } outbuf[offset++] = linkFlag;"
+      },
+      {
+        "txt": "offset = TarUtils.formatNameBytes(linkName, outbuf, offset, NAMELEN, encoding); offset = TarUtils.formatNameBytes(magic, outbuf, offset, MAGICLEN); offset = TarUtils.formatNameBytes(version, outbuf, offset, VERSIONLEN); offset = TarUtils.formatNameBytes(userName, outbuf, offset, UNAMELEN, encoding); offset = TarUtils.formatNameBytes(groupName, outbuf, offset, GNAMELEN, encoding); offset = writeEntryHeaderField(devMajor, outbuf, offset, DEVLEN, starMode);"
+      },
+      {
+        "txt": "offset = writeEntryHeaderField(devMinor, outbuf, offset, DEVLEN, starMode); while (offset < outbuf.length) { outbuf[offset++] = 0; } final long chk = TarUtils.computeCheckSum(outbuf); TarUtils.formatCheckSumOctalBytes(chk, outbuf, csOffset, CHKSUMLEN); } private int writeEntryHeaderField(final long value, final byte[] outbuf, final int offset, final int length, final boolean starMode) {"
+      },
+      {
+        "txt": "if (!starMode && (value < 0 || value >= 1l << 3 * (length - 1))) { return TarUtils.formatLongOctalBytes(0, outbuf, offset, length); } return TarUtils.formatLongOctalOrBinaryBytes(value, outbuf, offset, length); } public void parseTarHeader(final byte[] header) { try { parseTarHeader(header, TarUtils.DEFAULT_ENCODING);"
+      },
+      {
+        "txt": "} catch (final IOException ex) { try { parseTarHeader(header, TarUtils.DEFAULT_ENCODING, true); } catch (final IOException ex2) { throw new RuntimeException(ex2); } } } public void parseTarHeader(final byte[] header, final ZipEncoding encoding) throws IOException {"
+      },
+      {
+        "txt": "parseTarHeader(header, encoding, false); } private void parseTarHeader(final byte[] header, final ZipEncoding encoding, final boolean oldStyle) throws IOException { int offset = 0; name = oldStyle ? TarUtils.parseName(header, offset, NAMELEN) : TarUtils.parseName(header, offset, NAMELEN, encoding); offset += NAMELEN; mode = (int) TarUtils.parseOctalOrBinary(header, offset, MODELEN);"
+      },
+      {
+        "txt": "offset += MODELEN; userId = (int) TarUtils.parseOctalOrBinary(header, offset, UIDLEN); offset += UIDLEN; groupId = (int) TarUtils.parseOctalOrBinary(header, offset, GIDLEN); offset += GIDLEN; size = TarUtils.parseOctalOrBinary(header, offset, SIZELEN); offset += SIZELEN; modTime = TarUtils.parseOctalOrBinary(header, offset, MODTIMELEN); offset += MODTIMELEN; checkSumOK = TarUtils.verifyCheckSum(header);"
+      },
+      {
+        "txt": "offset += CHKSUMLEN; linkFlag = header[offset++]; linkName = oldStyle ? TarUtils.parseName(header, offset, NAMELEN) : TarUtils.parseName(header, offset, NAMELEN, encoding); offset += NAMELEN; magic = TarUtils.parseName(header, offset, MAGICLEN); offset += MAGICLEN; version = TarUtils.parseName(header, offset, VERSIONLEN); offset += VERSIONLEN; userName = oldStyle ? TarUtils.parseName(header, offset, UNAMELEN)"
+      },
+      {
+        "txt": ": TarUtils.parseName(header, offset, UNAMELEN, encoding); offset += UNAMELEN; groupName = oldStyle ? TarUtils.parseName(header, offset, GNAMELEN) : TarUtils.parseName(header, offset, GNAMELEN, encoding); offset += GNAMELEN; devMajor = (int) TarUtils.parseOctalOrBinary(header, offset, DEVLEN); offset += DEVLEN; devMinor = (int) TarUtils.parseOctalOrBinary(header, offset, DEVLEN); offset += DEVLEN; final int type = evaluateType(header);"
+      },
+      {
+        "txt": "switch (type) { case FORMAT_OLDGNU: { offset += ATIMELEN_GNU; offset += CTIMELEN_GNU; offset += OFFSETLEN_GNU; offset += LONGNAMESLEN_GNU; offset += PAD2LEN_GNU; offset += SPARSELEN_GNU; isExtended = TarUtils.parseBoolean(header, offset); offset += ISEXTENDEDLEN_GNU;"
+      },
+      {
+        "txt": "realSize = TarUtils.parseOctal(header, offset, REALSIZELEN_GNU); offset += REALSIZELEN_GNU; break; } case FORMAT_XSTAR: { final String xstarPrefix = oldStyle ? TarUtils.parseName(header, offset, PREFIXLEN_XSTAR) : TarUtils.parseName(header, offset, PREFIXLEN_XSTAR, encoding); if (xstarPrefix.length() > 0) { name = xstarPrefix + \"/\" + name;"
+      },
+      {
+        "txt": "} break; } case FORMAT_POSIX: default: { final String prefix = oldStyle ? TarUtils.parseName(header, offset, PREFIXLEN) : TarUtils.parseName(header, offset, PREFIXLEN, encoding); if (isDirectory() && !name.endsWith(\"/\")){ name = name + \"/\";"
+      },
+      {
+        "txt": "} if (prefix.length() > 0){ name = prefix + \"/\" + name; } } } } private static String normalizeFileName(String fileName, final boolean preserveLeadingSlashes) { final String osname = System.getProperty(\"os.name\").toLowerCase(Locale.ENGLISH);"
+      },
+      {
+        "txt": "if (osname != null) { if (osname.startsWith(\"windows\")) { if (fileName.length() > 2) { final char ch1 = fileName.charAt(0); final char ch2 = fileName.charAt(1); if (ch2 == ':' && (ch1 >= 'a' && ch1 <= 'z' || ch1 >= 'A' && ch1 <= 'Z')) { fileName = fileName.substring(2); }"
+      },
+      {
+        "txt": "} } else if (osname.contains(\"netware\")) { final int colon = fileName.indexOf(':'); if (colon != -1) { fileName = fileName.substring(colon + 1); } } } fileName = fileName.replace(File.separatorChar, '/'); while (!preserveLeadingSlashes && fileName.startsWith(\"/\")) {"
+      },
+      {
+        "txt": "fileName = fileName.substring(1); } return fileName; } private int evaluateType(final byte[] header) { if (ArchiveUtils.matchAsciiBuffer(MAGIC_GNU, header, MAGIC_OFFSET, MAGICLEN)) { return FORMAT_OLDGNU; } if (ArchiveUtils.matchAsciiBuffer(MAGIC_POSIX, header, MAGIC_OFFSET, MAGICLEN)) { if (ArchiveUtils.matchAsciiBuffer(MAGIC_XSTAR, header, XSTAR_MAGIC_OFFSET,"
+      },
+      {
+        "txt": "XSTAR_MAGIC_LEN)) { return FORMAT_XSTAR; } return FORMAT_POSIX; } return 0; } void fillGNUSparse0xData(final Map<String, String> headers) { paxGNUSparse = true; realSize = Integer.parseInt(headers.get(\"GNU.sparse.size\"));"
+      },
+      {
+        "txt": "if (headers.containsKey(\"GNU.sparse.name\")) { name = headers.get(\"GNU.sparse.name\"); } } void fillGNUSparse1xData(final Map<String, String> headers) { paxGNUSparse = true; realSize = Integer.parseInt(headers.get(\"GNU.sparse.realsize\")); name = headers.get(\"GNU.sparse.name\"); } void fillStarSparseData(final Map<String, String> headers) {"
+      },
+      {
+        "txt": "starSparse = true; if (headers.containsKey(\"SCHILY.realsize\")) { realSize = Long.parseLong(headers.get(\"SCHILY.realsize\")); } }"
+      }
+    ]
+  }
+]

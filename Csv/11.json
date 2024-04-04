@@ -1,0 +1,74 @@
+[
+  {
+    "id": 1139,
+    "file_path": "src/main/java/org/apache/commons/csv/CSVParser.java",
+    "start-bug-line": 384,
+    "end-bug-line": 384,
+    "bug": "final boolean emptyHeader = header.trim().isEmpty();",
+    "fix": "final boolean emptyHeader = header == null || header.trim().isEmpty();",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.csv; import java.io.Closeable; import java.io.File; import java.io.FileInputStream; import java.io.FileReader; import java.io.IOException; import java.io.InputStreamReader;"
+      },
+      {
+        "txt": "import java.io.Reader; import java.io.StringReader; import java.net.URL; import java.nio.charset.Charset; import java.util.ArrayList; import java.util.Arrays; import java.util.Collection; import java.util.Iterator; import java.util.LinkedHashMap; import java.util.List;"
+      },
+      {
+        "txt": "import java.util.Map; import java.util.NoSuchElementException; import static org.apache.commons.csv.Token.Type.*; public final class CSVParser implements Iterable<CSVRecord>, Closeable { public static CSVParser parse(final File file, final Charset charset, final CSVFormat format) throws IOException { Assertions.notNull(file, \"file\"); Assertions.notNull(format, \"format\"); return new CSVParser(new InputStreamReader(new FileInputStream(file), charset), format); } public static CSVParser parse(final String string, final CSVFormat format) throws IOException {"
+      },
+      {
+        "txt": "Assertions.notNull(string, \"string\"); Assertions.notNull(format, \"format\"); return new CSVParser(new StringReader(string), format); } public static CSVParser parse(final URL url, final Charset charset, final CSVFormat format) throws IOException { Assertions.notNull(url, \"url\"); Assertions.notNull(charset, \"charset\"); Assertions.notNull(format, \"format\"); return new CSVParser(new InputStreamReader(url.openStream(), charset), format); }"
+      },
+      {
+        "txt": "private final CSVFormat format; private final Map<String, Integer> headerMap; private final Lexer lexer; private final List<String> record = new ArrayList<String>(); private long recordNumber; private final Token reusableToken = new Token(); public CSVParser(final Reader reader, final CSVFormat format) throws IOException { Assertions.notNull(reader, \"reader\"); Assertions.notNull(format, \"format\"); this.format = format;"
+      },
+      {
+        "txt": "this.lexer = new Lexer(format, new ExtendedBufferedReader(reader)); this.headerMap = this.initializeHeader(); } private void addRecordValue() { final String input = this.reusableToken.content.toString(); final String nullString = this.format.getNullString(); if (nullString == null) { this.record.add(input); } else { this.record.add(input.equalsIgnoreCase(nullString) ? null : input);"
+      },
+      {
+        "txt": "} } public void close() throws IOException { if (this.lexer != null) { this.lexer.close(); } } public long getCurrentLineNumber() { return this.lexer.getCurrentLineNumber(); }"
+      },
+      {
+        "txt": "public Map<String, Integer> getHeaderMap() { return this.headerMap == null ? null : new LinkedHashMap<String, Integer>(this.headerMap); } public long getRecordNumber() { return this.recordNumber; } public List<CSVRecord> getRecords() throws IOException { return getRecords(new ArrayList<CSVRecord>()); } public <T extends Collection<CSVRecord>> T getRecords(final T records) throws IOException {"
+      },
+      {
+        "txt": "CSVRecord rec; while ((rec = this.nextRecord()) != null) { records.add(rec); } return records; } private Map<String, Integer> initializeHeader() throws IOException { Map<String, Integer> hdrMap = null; final String[] formatHeader = this.format.getHeader(); if (formatHeader != null) {"
+      },
+      {
+        "txt": "hdrMap = new LinkedHashMap<String, Integer>(); String[] headerRecord = null; if (formatHeader.length == 0) { final CSVRecord nextRecord = this.nextRecord(); if (nextRecord != null) { headerRecord = nextRecord.values(); } } else { if (this.format.getSkipHeaderRecord()) { this.nextRecord();"
+      },
+      {
+        "txt": "headerRecord = formatHeader; } if (headerRecord != null) { for (int i = 0; i < headerRecord.length; i++) { final String header = headerRecord[i]; final boolean containsHeader = hdrMap.containsKey(header); <extra_id_0> if (containsHeader && (!emptyHeader || (emptyHeader && !this.format.getIgnoreEmptyHeaders()))) { throw new IllegalArgumentException(\"The header contains a duplicate name: \\\"\" + header + \"\\\" in \" + Arrays.toString(headerRecord)); } hdrMap.put(header, Integer.valueOf(i)); }"
+      },
+      {
+        "txt": "hdrMap.put(header, Integer.valueOf(i)); } } } return hdrMap; } public boolean isClosed() { return this.lexer.isClosed(); } public Iterator<CSVRecord> iterator() {"
+      },
+      {
+        "txt": "return new Iterator<CSVRecord>() { private CSVRecord current; private CSVRecord getNextRecord() { try { return CSVParser.this.nextRecord(); } catch (final IOException e) { throw new RuntimeException(e); } } public boolean hasNext() {"
+      },
+      {
+        "txt": "if (CSVParser.this.isClosed()) { return false; } if (this.current == null) { this.current = this.getNextRecord(); } return this.current != null; } public CSVRecord next() { if (CSVParser.this.isClosed()) {"
+      },
+      {
+        "txt": "throw new NoSuchElementException(\"CSVParser has been closed\"); } CSVRecord next = this.current; this.current = null; if (next == null) { next = this.getNextRecord(); if (next == null) { throw new NoSuchElementException(\"No more CSV records available\"); } }"
+      },
+      {
+        "txt": "return next; } public void remove() { throw new UnsupportedOperationException(); } }; } CSVRecord nextRecord() throws IOException { CSVRecord result = null; this.record.clear();"
+      },
+      {
+        "txt": "StringBuilder sb = null; do { this.reusableToken.reset(); this.lexer.nextToken(this.reusableToken); switch (this.reusableToken.type) { case TOKEN: this.addRecordValue(); break; case EORECORD: this.addRecordValue();"
+      },
+      {
+        "txt": "break; case EOF: if (this.reusableToken.isReady) { this.addRecordValue(); } break; case INVALID: throw new IOException(\"(line \" + this.getCurrentLineNumber() + \") invalid parse sequence\"); case COMMENT: // Ignored currently if (sb == null) { // first comment for this record"
+      },
+      {
+        "txt": "sb = new StringBuilder(); } else { sb.append(Constants.LF); } sb.append(this.reusableToken.content); this.reusableToken.type = TOKEN; // Read another token break; default: throw new IllegalStateException(\"Unexpected Token type: \" + this.reusableToken.type); }"
+      },
+      {
+        "txt": "} while (this.reusableToken.type == TOKEN); if (!this.record.isEmpty()) { this.recordNumber++; final String comment = sb == null ? null : sb.toString(); result = new CSVRecord(this.record.toArray(new String[this.record.size()]), this.headerMap, comment, this.recordNumber); } return result; }"
+      }
+    ]
+  }
+]

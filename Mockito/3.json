@@ -1,0 +1,146 @@
+[
+  {
+    "id": 2752,
+    "file_path": "src/org/mockito/internal/invocation/InvocationMatcher.java",
+    "start-bug-line": 127,
+    "end-bug-line": 128,
+    "bug": "for (int position = indexOfVararg; position < matchers.size(); position++) { Matcher m = matchers.get(position);",
+    "fix": "for (Matcher m : uniqueMatcherSet(indexOfVararg)) {",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.mockito.internal.invocation; import java.io.Serializable; import java.lang.reflect.Array; import java.lang.reflect.Method; import java.util.*; import org.hamcrest.Matcher;"
+      },
+      {
+        "txt": "import org.mockito.internal.matchers.CapturesArguments; import org.mockito.internal.matchers.MatcherDecorator; import org.mockito.internal.reporting.PrintSettings; import org.mockito.invocation.DescribedInvocation; import org.mockito.invocation.Invocation; import org.mockito.invocation.Location; @SuppressWarnings(\"unchecked\") public class InvocationMatcher implements DescribedInvocation, CapturesArgumensFromInvocation, Serializable { private static final long serialVersionUID = -3047126096857467610L; private final Invocation invocation;"
+      },
+      {
+        "txt": "private final List<Matcher> matchers; public InvocationMatcher(Invocation invocation, List<Matcher> matchers) { this.invocation = invocation; if (matchers.isEmpty()) { this.matchers = ArgumentsProcessor.argumentsToMatchers(invocation.getArguments()); } else { this.matchers = matchers; } } public InvocationMatcher(Invocation invocation) {"
+      },
+      {
+        "txt": "this(invocation, Collections.<Matcher>emptyList()); } public Method getMethod() { return invocation.getMethod(); } public Invocation getInvocation() { return this.invocation; } public List<Matcher> getMatchers() { return this.matchers;"
+      },
+      {
+        "txt": "} public String toString() { return new PrintSettings().print(matchers, invocation); } public boolean matches(Invocation actual) { return invocation.getMock().equals(actual.getMock()) && hasSameMethod(actual) && new ArgumentsComparator().argumentsMatch(this, actual); } private boolean safelyArgumentsMatch(Object[] actualArgs) {"
+      },
+      {
+        "txt": "try { return new ArgumentsComparator().argumentsMatch(this, actualArgs); } catch (Throwable t) { return false; } } public boolean hasSimilarMethod(Invocation candidate) { String wantedMethodName = getMethod().getName(); String currentMethodName = candidate.getMethod().getName(); final boolean methodNameEquals = wantedMethodName.equals(currentMethodName);"
+      },
+      {
+        "txt": "final boolean isUnverified = !candidate.isVerified(); final boolean mockIsTheSame = getInvocation().getMock() == candidate.getMock(); final boolean methodEquals = hasSameMethod(candidate); if (!methodNameEquals || !isUnverified || !mockIsTheSame) { return false; } final boolean overloadedButSameArgs = !methodEquals && safelyArgumentsMatch(candidate.getArguments()); return !overloadedButSameArgs; } public boolean hasSameMethod(Invocation candidate) {"
+      },
+      {
+        "txt": "Method m1 = invocation.getMethod(); Method m2 = candidate.getMethod(); if (m1.getName() != null && m1.getName().equals(m2.getName())) { Class[] params1 = m1.getParameterTypes(); Class[] params2 = m2.getParameterTypes(); if (params1.length == params2.length) { for (int i = 0; i < params1.length; i++) { if (params1[i] != params2[i]) return false; }"
+      },
+      {
+        "txt": "return true; } } return false; } public Location getLocation() { return invocation.getLocation(); } public void captureArgumentsFrom(Invocation invocation) { if (invocation.getMethod().isVarArgs()) {"
+      },
+      {
+        "txt": "for (int position = 0; position < indexOfVararg; position++) { Matcher m = matchers.get(position); if (m instanceof CapturesArguments) { ((CapturesArguments) m).captureFrom(invocation.getArgumentAt(position, Object.class)); } } <extra_id_0> if (m instanceof CapturesArguments) { ((CapturesArguments) m).captureFrom(invocation.getRawArguments()[position - indexOfVararg]); } } } else { for (int position = 0; position < matchers.size(); position++) {"
+      },
+      {
+        "txt": "} else { for (int position = 0; position < matchers.size(); position++) { Matcher m = matchers.get(position); if (m instanceof CapturesArguments) { ((CapturesArguments) m).captureFrom(invocation.getArgumentAt(position, Object.class)); } } } } public static List<InvocationMatcher> createFrom(List<Invocation> invocations) {"
+      },
+      {
+        "txt": "LinkedList<InvocationMatcher> out = new LinkedList<InvocationMatcher>(); for (Invocation i : invocations) { out.add(new InvocationMatcher(i)); } return out; }"
+      }
+    ]
+  },
+  {
+    "id": 2753,
+    "file_path": "src/org/mockito/internal/invocation/InvocationMatcher.java",
+    "start-bug-line": 130,
+    "end-bug-line": 130,
+    "bug": "((CapturesArguments) m).captureFrom(invocation.getRawArguments()[position - indexOfVararg]);",
+    "fix": "Object rawArgument = invocation.getRawArguments()[indexOfVararg]; for (int i = 0; i < Array.getLength(rawArgument); i++) { ((CapturesArguments) m).captureFrom(Array.get(rawArgument, i)); }",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.mockito.internal.invocation; import java.io.Serializable; import java.lang.reflect.Array; import java.lang.reflect.Method; import java.util.*; import org.hamcrest.Matcher; import org.mockito.internal.matchers.CapturesArguments; import org.mockito.internal.matchers.MatcherDecorator; import org.mockito.internal.reporting.PrintSettings;"
+      },
+      {
+        "txt": "import org.mockito.invocation.DescribedInvocation; import org.mockito.invocation.Invocation; import org.mockito.invocation.Location; @SuppressWarnings(\"unchecked\") public class InvocationMatcher implements DescribedInvocation, CapturesArgumensFromInvocation, Serializable { private static final long serialVersionUID = -3047126096857467610L; private final Invocation invocation; private final List<Matcher> matchers; public InvocationMatcher(Invocation invocation, List<Matcher> matchers) { this.invocation = invocation;"
+      },
+      {
+        "txt": "if (matchers.isEmpty()) { this.matchers = ArgumentsProcessor.argumentsToMatchers(invocation.getArguments()); } else { this.matchers = matchers; } } public InvocationMatcher(Invocation invocation) { this(invocation, Collections.<Matcher>emptyList()); } public Method getMethod() {"
+      },
+      {
+        "txt": "return invocation.getMethod(); } public Invocation getInvocation() { return this.invocation; } public List<Matcher> getMatchers() { return this.matchers; } public String toString() { return new PrintSettings().print(matchers, invocation);"
+      },
+      {
+        "txt": "} public boolean matches(Invocation actual) { return invocation.getMock().equals(actual.getMock()) && hasSameMethod(actual) && new ArgumentsComparator().argumentsMatch(this, actual); } private boolean safelyArgumentsMatch(Object[] actualArgs) { try { return new ArgumentsComparator().argumentsMatch(this, actualArgs); } catch (Throwable t) {"
+      },
+      {
+        "txt": "return false; } } public boolean hasSimilarMethod(Invocation candidate) { String wantedMethodName = getMethod().getName(); String currentMethodName = candidate.getMethod().getName(); final boolean methodNameEquals = wantedMethodName.equals(currentMethodName); final boolean isUnverified = !candidate.isVerified(); final boolean mockIsTheSame = getInvocation().getMock() == candidate.getMock(); final boolean methodEquals = hasSameMethod(candidate);"
+      },
+      {
+        "txt": "if (!methodNameEquals || !isUnverified || !mockIsTheSame) { return false; } final boolean overloadedButSameArgs = !methodEquals && safelyArgumentsMatch(candidate.getArguments()); return !overloadedButSameArgs; } public boolean hasSameMethod(Invocation candidate) { Method m1 = invocation.getMethod(); Method m2 = candidate.getMethod(); if (m1.getName() != null && m1.getName().equals(m2.getName())) {"
+      },
+      {
+        "txt": "Class[] params1 = m1.getParameterTypes(); Class[] params2 = m2.getParameterTypes(); if (params1.length == params2.length) { for (int i = 0; i < params1.length; i++) { if (params1[i] != params2[i]) return false; } return true; } }"
+      },
+      {
+        "txt": "return false; } public Location getLocation() { return invocation.getLocation(); } public void captureArgumentsFrom(Invocation invocation) { if (invocation.getMethod().isVarArgs()) { int indexOfVararg = invocation.getRawArguments().length - 1; for (int position = 0; position < indexOfVararg; position++) { Matcher m = matchers.get(position);"
+      },
+      {
+        "txt": "((CapturesArguments) m).captureFrom(invocation.getArgumentAt(position, Object.class)); } } for (int position = indexOfVararg; position < matchers.size(); position++) { Matcher m = matchers.get(position); if (m instanceof CapturesArguments) { <extra_id_0> } } } else { for (int position = 0; position < matchers.size(); position++) { Matcher m = matchers.get(position); if (m instanceof CapturesArguments) {"
+      },
+      {
+        "txt": "Matcher m = matchers.get(position); if (m instanceof CapturesArguments) { ((CapturesArguments) m).captureFrom(invocation.getArgumentAt(position, Object.class)); } } } } public static List<InvocationMatcher> createFrom(List<Invocation> invocations) { LinkedList<InvocationMatcher> out = new LinkedList<InvocationMatcher>(); for (Invocation i : invocations) {"
+      },
+      {
+        "txt": "out.add(new InvocationMatcher(i)); } return out; }"
+      }
+    ]
+  },
+  {
+    "id": 2754,
+    "file_path": "src/org/mockito/internal/invocation/InvocationMatcher.java",
+    "start-bug-line": 143,
+    "end-bug-line": 143,
+    "bug": "",
+    "fix": "private Set<Matcher> uniqueMatcherSet(int indexOfVararg) { HashSet<Matcher> set = new HashSet<Matcher>(); for (int position = indexOfVararg; position < matchers.size(); position++) { Matcher matcher = matchers.get(position); if(matcher instanceof MatcherDecorator) { set.add(((MatcherDecorator) matcher).getActualMatcher()); } else { set.add(matcher); } } return set; }",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "import java.io.Serializable; import java.lang.reflect.Array; import java.lang.reflect.Method; import java.util.*; import org.hamcrest.Matcher; import org.mockito.internal.matchers.CapturesArguments; import org.mockito.internal.matchers.MatcherDecorator; import org.mockito.internal.reporting.PrintSettings; import org.mockito.invocation.DescribedInvocation; import org.mockito.invocation.Invocation;"
+      },
+      {
+        "txt": "import org.mockito.invocation.Location; @SuppressWarnings(\"unchecked\") public class InvocationMatcher implements DescribedInvocation, CapturesArgumensFromInvocation, Serializable { private static final long serialVersionUID = -3047126096857467610L; private final Invocation invocation; private final List<Matcher> matchers; public InvocationMatcher(Invocation invocation, List<Matcher> matchers) { this.invocation = invocation; if (matchers.isEmpty()) { this.matchers = ArgumentsProcessor.argumentsToMatchers(invocation.getArguments());"
+      },
+      {
+        "txt": "} else { this.matchers = matchers; } } public InvocationMatcher(Invocation invocation) { this(invocation, Collections.<Matcher>emptyList()); } public Method getMethod() { return invocation.getMethod(); }"
+      },
+      {
+        "txt": "public Invocation getInvocation() { return this.invocation; } public List<Matcher> getMatchers() { return this.matchers; } public String toString() { return new PrintSettings().print(matchers, invocation); } public boolean matches(Invocation actual) {"
+      },
+      {
+        "txt": "return invocation.getMock().equals(actual.getMock()) && hasSameMethod(actual) && new ArgumentsComparator().argumentsMatch(this, actual); } private boolean safelyArgumentsMatch(Object[] actualArgs) { try { return new ArgumentsComparator().argumentsMatch(this, actualArgs); } catch (Throwable t) { return false; }"
+      },
+      {
+        "txt": "} public boolean hasSimilarMethod(Invocation candidate) { String wantedMethodName = getMethod().getName(); String currentMethodName = candidate.getMethod().getName(); final boolean methodNameEquals = wantedMethodName.equals(currentMethodName); final boolean isUnverified = !candidate.isVerified(); final boolean mockIsTheSame = getInvocation().getMock() == candidate.getMock(); final boolean methodEquals = hasSameMethod(candidate); if (!methodNameEquals || !isUnverified || !mockIsTheSame) { return false;"
+      },
+      {
+        "txt": "} final boolean overloadedButSameArgs = !methodEquals && safelyArgumentsMatch(candidate.getArguments()); return !overloadedButSameArgs; } public boolean hasSameMethod(Invocation candidate) { Method m1 = invocation.getMethod(); Method m2 = candidate.getMethod(); if (m1.getName() != null && m1.getName().equals(m2.getName())) { Class[] params1 = m1.getParameterTypes(); Class[] params2 = m2.getParameterTypes();"
+      },
+      {
+        "txt": "if (params1.length == params2.length) { for (int i = 0; i < params1.length; i++) { if (params1[i] != params2[i]) return false; } return true; } } return false; }"
+      },
+      {
+        "txt": "public Location getLocation() { return invocation.getLocation(); } public void captureArgumentsFrom(Invocation invocation) { if (invocation.getMethod().isVarArgs()) { int indexOfVararg = invocation.getRawArguments().length - 1; for (int position = 0; position < indexOfVararg; position++) { Matcher m = matchers.get(position); if (m instanceof CapturesArguments) { ((CapturesArguments) m).captureFrom(invocation.getArgumentAt(position, Object.class));"
+      },
+      {
+        "txt": "} } for (int position = indexOfVararg; position < matchers.size(); position++) { Matcher m = matchers.get(position); if (m instanceof CapturesArguments) { ((CapturesArguments) m).captureFrom(invocation.getRawArguments()[position - indexOfVararg]); } } } else { for (int position = 0; position < matchers.size(); position++) {"
+      },
+      {
+        "txt": "if (m instanceof CapturesArguments) { ((CapturesArguments) m).captureFrom(invocation.getArgumentAt(position, Object.class)); } } } } <extra_id_0> public static List<InvocationMatcher> createFrom(List<Invocation> invocations) { LinkedList<InvocationMatcher> out = new LinkedList<InvocationMatcher>(); for (Invocation i : invocations) { out.add(new InvocationMatcher(i)); } return out;"
+      },
+      {
+        "txt": "} return out; }"
+      }
+    ]
+  }
+]

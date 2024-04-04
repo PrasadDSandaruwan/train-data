@@ -1,0 +1,227 @@
+[
+  {
+    "id": 1029,
+    "file_path": "src/main/java/org/apache/commons/compress/archivers/zip/ZipArchiveEntry.java",
+    "start-bug-line": 669,
+    "end-bug-line": 673,
+    "bug": "if (otherComment != null) { return false; } } else if (!myComment.equals(otherComment)) { return false;",
+    "fix": "myComment = \"\"; } if (otherComment == null) { otherComment = \"\";",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.compress.archivers.zip; import java.io.File; import java.util.ArrayList; import java.util.Arrays; import java.util.Date; import java.util.LinkedHashMap; import java.util.List; import java.util.zip.ZipException; import org.apache.commons.compress.archivers.ArchiveEntry;"
+      },
+      {
+        "txt": "public class ZipArchiveEntry extends java.util.zip.ZipEntry implements ArchiveEntry { public static final int PLATFORM_UNIX = 3; public static final int PLATFORM_FAT = 0; private static final int SHORT_MASK = 0xFFFF; private static final int SHORT_SHIFT = 16; private int method = -1; private long size = SIZE_UNKNOWN; private int internalAttributes = 0; private int platform = PLATFORM_FAT;"
+      },
+      {
+        "txt": "private long externalAttributes = 0; private LinkedHashMap<ZipShort, ZipExtraField> extraFields = null; private UnparseableExtraFieldData unparseableExtra = null; private String name = null; private byte[] rawName = null; private GeneralPurposeBit gpb = new GeneralPurposeBit(); public ZipArchiveEntry(String name) { super(name); setName(name); }"
+      },
+      {
+        "txt": "public ZipArchiveEntry(java.util.zip.ZipEntry entry) throws ZipException { super(entry); setName(entry.getName()); byte[] extra = entry.getExtra(); if (extra != null) { setExtraFields(ExtraFieldUtils.parse(extra, true, ExtraFieldUtils .UnparseableExtraField.READ)); } else { setExtra();"
+      },
+      {
+        "txt": "} setMethod(entry.getMethod()); this.size = entry.getSize(); } public ZipArchiveEntry(ZipArchiveEntry entry) throws ZipException { this((java.util.zip.ZipEntry) entry); setInternalAttributes(entry.getInternalAttributes()); setExternalAttributes(entry.getExternalAttributes()); setExtraFields(entry.getExtraFields(true)); }"
+      },
+      {
+        "txt": "protected ZipArchiveEntry() { this(\"\"); } public ZipArchiveEntry(File inputFile, String entryName) { this(inputFile.isDirectory() && !entryName.endsWith(\"/\") ? entryName + \"/\" : entryName); if (inputFile.isFile()){ setSize(inputFile.length()); } setTime(inputFile.lastModified());"
+      },
+      {
+        "txt": "} @Override public Object clone() { ZipArchiveEntry e = (ZipArchiveEntry) super.clone(); e.setInternalAttributes(getInternalAttributes()); e.setExternalAttributes(getExternalAttributes()); e.setExtraFields(getExtraFields(true)); return e; } @Override"
+      },
+      {
+        "txt": "public int getMethod() { return method; } @Override public void setMethod(int method) { if (method < 0) { throw new IllegalArgumentException( \"ZIP compression method can not be negative: \" + method); } this.method = method;"
+      },
+      {
+        "txt": "} public int getInternalAttributes() { return internalAttributes; } public void setInternalAttributes(int value) { internalAttributes = value; } public long getExternalAttributes() { return externalAttributes; }"
+      },
+      {
+        "txt": "public void setExternalAttributes(long value) { externalAttributes = value; } public void setUnixMode(int mode) { setExternalAttributes((mode << SHORT_SHIFT) | ((mode & 0200) == 0 ? 1 : 0) | (isDirectory() ? 0x10 : 0)); platform = PLATFORM_UNIX; } public int getUnixMode() {"
+      },
+      {
+        "txt": "return platform != PLATFORM_UNIX ? 0 : (int) ((getExternalAttributes() >> SHORT_SHIFT) & SHORT_MASK); } public int getPlatform() { return platform; } protected void setPlatform(int platform) { this.platform = platform; } public void setExtraFields(ZipExtraField[] fields) {"
+      },
+      {
+        "txt": "extraFields = new LinkedHashMap<ZipShort, ZipExtraField>(); for (ZipExtraField field : fields) { if (field instanceof UnparseableExtraFieldData) { unparseableExtra = (UnparseableExtraFieldData) field; } else { extraFields.put(field.getHeaderId(), field); } } setExtra(); }"
+      },
+      {
+        "txt": "public ZipExtraField[] getExtraFields() { return getExtraFields(false); } public ZipExtraField[] getExtraFields(boolean includeUnparseable) { if (extraFields == null) { return !includeUnparseable || unparseableExtra == null ? new ZipExtraField[0] : new ZipExtraField[] { unparseableExtra }; } List<ZipExtraField> result ="
+      },
+      {
+        "txt": "new ArrayList<ZipExtraField>(extraFields.values()); if (includeUnparseable && unparseableExtra != null) { result.add(unparseableExtra); } return result.toArray(new ZipExtraField[0]); } public void addExtraField(ZipExtraField ze) { if (ze instanceof UnparseableExtraFieldData) { unparseableExtra = (UnparseableExtraFieldData) ze; } else {"
+      },
+      {
+        "txt": "if (extraFields == null) { extraFields = new LinkedHashMap<ZipShort, ZipExtraField>(); } extraFields.put(ze.getHeaderId(), ze); } setExtra(); } public void addAsFirstExtraField(ZipExtraField ze) { if (ze instanceof UnparseableExtraFieldData) { unparseableExtra = (UnparseableExtraFieldData) ze;"
+      },
+      {
+        "txt": "} else { LinkedHashMap<ZipShort, ZipExtraField> copy = extraFields; extraFields = new LinkedHashMap<ZipShort, ZipExtraField>(); extraFields.put(ze.getHeaderId(), ze); if (copy != null) { copy.remove(ze.getHeaderId()); extraFields.putAll(copy); } } setExtra();"
+      },
+      {
+        "txt": "} public void removeExtraField(ZipShort type) { if (extraFields == null) { throw new java.util.NoSuchElementException(); } if (extraFields.remove(type) == null) { throw new java.util.NoSuchElementException(); } setExtra(); }"
+      },
+      {
+        "txt": "public void removeUnparseableExtraFieldData() { if (unparseableExtra == null) { throw new java.util.NoSuchElementException(); } unparseableExtra = null; setExtra(); } public ZipExtraField getExtraField(ZipShort type) { if (extraFields != null) { return extraFields.get(type);"
+      },
+      {
+        "txt": "} return null; } public UnparseableExtraFieldData getUnparseableExtraFieldData() { return unparseableExtra; } @Override public void setExtra(byte[] extra) throws RuntimeException { try { ZipExtraField[] local ="
+      },
+      {
+        "txt": "ExtraFieldUtils.parse(extra, true, ExtraFieldUtils.UnparseableExtraField.READ); mergeExtraFields(local, true); } catch (ZipException e) { throw new RuntimeException(\"Error parsing extra fields for entry: \" + getName() + \" - \" + e.getMessage(), e); } } protected void setExtra() { super.setExtra(ExtraFieldUtils.mergeLocalFileDataData(getExtraFields(true)));"
+      },
+      {
+        "txt": "} public void setCentralDirectoryExtra(byte[] b) { try { ZipExtraField[] central = ExtraFieldUtils.parse(b, false, ExtraFieldUtils.UnparseableExtraField.READ); mergeExtraFields(central, false); } catch (ZipException e) { throw new RuntimeException(e.getMessage(), e); }"
+      },
+      {
+        "txt": "} public byte[] getLocalFileDataExtra() { byte[] extra = getExtra(); return extra != null ? extra : new byte[0]; } public byte[] getCentralDirectoryExtra() { return ExtraFieldUtils.mergeCentralDirectoryData(getExtraFields(true)); } @Override public String getName() {"
+      },
+      {
+        "txt": "return name == null ? super.getName() : name; } @Override public boolean isDirectory() { return getName().endsWith(\"/\"); } protected void setName(String name) { if (name != null && getPlatform() == PLATFORM_FAT && name.indexOf(\"/\") == -1) { name = name.replace('\\\\', '/');"
+      },
+      {
+        "txt": "} this.name = name; } @Override public long getSize() { return size; } @Override public void setSize(long size) { if (size < 0) {"
+      },
+      {
+        "txt": "throw new IllegalArgumentException(\"invalid entry size\"); } this.size = size; } protected void setName(String name, byte[] rawName) { setName(name); this.rawName = rawName; } public byte[] getRawName() { if (rawName != null) {"
+      },
+      {
+        "txt": "byte[] b = new byte[rawName.length]; System.arraycopy(rawName, 0, b, 0, rawName.length); return b; } return null; } @Override public int hashCode() { return getName().hashCode(); }"
+      },
+      {
+        "txt": "public GeneralPurposeBit getGeneralPurposeBit() { return gpb; } public void setGeneralPurposeBit(GeneralPurposeBit b) { gpb = b; } private void mergeExtraFields(ZipExtraField[] f, boolean local) throws ZipException { if (extraFields == null) { setExtraFields(f);"
+      },
+      {
+        "txt": "} else { for (ZipExtraField element : f) { ZipExtraField existing; if (element instanceof UnparseableExtraFieldData) { existing = unparseableExtra; } else { existing = getExtraField(element.getHeaderId()); } if (existing == null) { addExtraField(element);"
+      },
+      {
+        "txt": "} else { if (local) { byte[] b = element.getLocalFileDataData(); existing.parseFromLocalFileData(b, 0, b.length); } else { byte[] b = element.getCentralDirectoryData(); existing.parseFromCentralDirectoryData(b, 0, b.length); } } }"
+      },
+      {
+        "txt": "setExtra(); } } public Date getLastModifiedDate() { return new Date(getTime()); } @Override public boolean equals(Object obj) { if (this == obj) { return true;"
+      },
+      {
+        "txt": "} if (obj == null || getClass() != obj.getClass()) { return false; } ZipArchiveEntry other = (ZipArchiveEntry) obj; String myName = getName(); String otherName = other.getName(); if (myName == null) { if (otherName != null) { return false;"
+      },
+      {
+        "txt": "} else if (!myName.equals(otherName)) { return false; } String myComment = getComment(); String otherComment = other.getComment(); if (myComment == null) { <extra_id_0> } return getTime() == other.getTime() && getInternalAttributes() == other.getInternalAttributes() && getPlatform() == other.getPlatform() && getExternalAttributes() == other.getExternalAttributes() && getMethod() == other.getMethod()"
+      },
+      {
+        "txt": "&& getExternalAttributes() == other.getExternalAttributes() && getMethod() == other.getMethod() && getSize() == other.getSize() && getCrc() == other.getCrc() && getCompressedSize() == other.getCompressedSize() && Arrays.equals(getCentralDirectoryExtra(), other.getCentralDirectoryExtra()) && Arrays.equals(getLocalFileDataExtra(), other.getLocalFileDataExtra()) && gpb.equals(other.gpb);"
+      }
+    ]
+  },
+  {
+    "id": 1030,
+    "file_path": "src/main/java/org/apache/commons/compress/archivers/zip/ZipArchiveEntry.java",
+    "start-bug-line": 676,
+    "end-bug-line": 676,
+    "bug": "",
+    "fix": "&& myComment.equals(otherComment)",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.compress.archivers.zip; import java.io.File; import java.util.ArrayList; import java.util.Arrays; import java.util.Date; import java.util.LinkedHashMap;"
+      },
+      {
+        "txt": "import java.util.List; import java.util.zip.ZipException; import org.apache.commons.compress.archivers.ArchiveEntry; public class ZipArchiveEntry extends java.util.zip.ZipEntry implements ArchiveEntry { public static final int PLATFORM_UNIX = 3; public static final int PLATFORM_FAT = 0; private static final int SHORT_MASK = 0xFFFF; private static final int SHORT_SHIFT = 16; private int method = -1;"
+      },
+      {
+        "txt": "private long size = SIZE_UNKNOWN; private int internalAttributes = 0; private int platform = PLATFORM_FAT; private long externalAttributes = 0; private LinkedHashMap<ZipShort, ZipExtraField> extraFields = null; private UnparseableExtraFieldData unparseableExtra = null; private String name = null; private byte[] rawName = null; private GeneralPurposeBit gpb = new GeneralPurposeBit(); public ZipArchiveEntry(String name) {"
+      },
+      {
+        "txt": "super(name); setName(name); } public ZipArchiveEntry(java.util.zip.ZipEntry entry) throws ZipException { super(entry); setName(entry.getName()); byte[] extra = entry.getExtra(); if (extra != null) { setExtraFields(ExtraFieldUtils.parse(extra, true, ExtraFieldUtils"
+      },
+      {
+        "txt": ".UnparseableExtraField.READ)); } else { setExtra(); } setMethod(entry.getMethod()); this.size = entry.getSize(); } public ZipArchiveEntry(ZipArchiveEntry entry) throws ZipException { this((java.util.zip.ZipEntry) entry); setInternalAttributes(entry.getInternalAttributes());"
+      },
+      {
+        "txt": "setExternalAttributes(entry.getExternalAttributes()); setExtraFields(entry.getExtraFields(true)); } protected ZipArchiveEntry() { this(\"\"); } public ZipArchiveEntry(File inputFile, String entryName) { this(inputFile.isDirectory() && !entryName.endsWith(\"/\") ? entryName + \"/\" : entryName); if (inputFile.isFile()){"
+      },
+      {
+        "txt": "setSize(inputFile.length()); } setTime(inputFile.lastModified()); } @Override public Object clone() { ZipArchiveEntry e = (ZipArchiveEntry) super.clone(); e.setInternalAttributes(getInternalAttributes()); e.setExternalAttributes(getExternalAttributes()); e.setExtraFields(getExtraFields(true));"
+      },
+      {
+        "txt": "return e; } @Override public int getMethod() { return method; } @Override public void setMethod(int method) { if (method < 0) { throw new IllegalArgumentException("
+      },
+      {
+        "txt": "\"ZIP compression method can not be negative: \" + method); } this.method = method; } public int getInternalAttributes() { return internalAttributes; } public void setInternalAttributes(int value) { internalAttributes = value; }"
+      },
+      {
+        "txt": "public long getExternalAttributes() { return externalAttributes; } public void setExternalAttributes(long value) { externalAttributes = value; } public void setUnixMode(int mode) { setExternalAttributes((mode << SHORT_SHIFT) | ((mode & 0200) == 0 ? 1 : 0) | (isDirectory() ? 0x10 : 0));"
+      },
+      {
+        "txt": "platform = PLATFORM_UNIX; } public int getUnixMode() { return platform != PLATFORM_UNIX ? 0 : (int) ((getExternalAttributes() >> SHORT_SHIFT) & SHORT_MASK); } public int getPlatform() { return platform; } protected void setPlatform(int platform) {"
+      },
+      {
+        "txt": "this.platform = platform; } public void setExtraFields(ZipExtraField[] fields) { extraFields = new LinkedHashMap<ZipShort, ZipExtraField>(); for (ZipExtraField field : fields) { if (field instanceof UnparseableExtraFieldData) { unparseableExtra = (UnparseableExtraFieldData) field; } else { extraFields.put(field.getHeaderId(), field); }"
+      },
+      {
+        "txt": "} setExtra(); } public ZipExtraField[] getExtraFields() { return getExtraFields(false); } public ZipExtraField[] getExtraFields(boolean includeUnparseable) { if (extraFields == null) { return !includeUnparseable || unparseableExtra == null ? new ZipExtraField[0]"
+      },
+      {
+        "txt": ": new ZipExtraField[] { unparseableExtra }; } List<ZipExtraField> result = new ArrayList<ZipExtraField>(extraFields.values()); if (includeUnparseable && unparseableExtra != null) { result.add(unparseableExtra); } return result.toArray(new ZipExtraField[0]); } public void addExtraField(ZipExtraField ze) {"
+      },
+      {
+        "txt": "if (ze instanceof UnparseableExtraFieldData) { unparseableExtra = (UnparseableExtraFieldData) ze; } else { if (extraFields == null) { extraFields = new LinkedHashMap<ZipShort, ZipExtraField>(); } extraFields.put(ze.getHeaderId(), ze); } setExtra(); }"
+      },
+      {
+        "txt": "public void addAsFirstExtraField(ZipExtraField ze) { if (ze instanceof UnparseableExtraFieldData) { unparseableExtra = (UnparseableExtraFieldData) ze; } else { LinkedHashMap<ZipShort, ZipExtraField> copy = extraFields; extraFields = new LinkedHashMap<ZipShort, ZipExtraField>(); extraFields.put(ze.getHeaderId(), ze); if (copy != null) { copy.remove(ze.getHeaderId()); extraFields.putAll(copy);"
+      },
+      {
+        "txt": "} } setExtra(); } public void removeExtraField(ZipShort type) { if (extraFields == null) { throw new java.util.NoSuchElementException(); } if (extraFields.remove(type) == null) { throw new java.util.NoSuchElementException();"
+      },
+      {
+        "txt": "} setExtra(); } public void removeUnparseableExtraFieldData() { if (unparseableExtra == null) { throw new java.util.NoSuchElementException(); } unparseableExtra = null; setExtra(); }"
+      },
+      {
+        "txt": "public ZipExtraField getExtraField(ZipShort type) { if (extraFields != null) { return extraFields.get(type); } return null; } public UnparseableExtraFieldData getUnparseableExtraFieldData() { return unparseableExtra; } @Override"
+      },
+      {
+        "txt": "public void setExtra(byte[] extra) throws RuntimeException { try { ZipExtraField[] local = ExtraFieldUtils.parse(extra, true, ExtraFieldUtils.UnparseableExtraField.READ); mergeExtraFields(local, true); } catch (ZipException e) { throw new RuntimeException(\"Error parsing extra fields for entry: \" + getName() + \" - \" + e.getMessage(), e); }"
+      },
+      {
+        "txt": "} protected void setExtra() { super.setExtra(ExtraFieldUtils.mergeLocalFileDataData(getExtraFields(true))); } public void setCentralDirectoryExtra(byte[] b) { try { ZipExtraField[] central = ExtraFieldUtils.parse(b, false, ExtraFieldUtils.UnparseableExtraField.READ); mergeExtraFields(central, false);"
+      },
+      {
+        "txt": "} catch (ZipException e) { throw new RuntimeException(e.getMessage(), e); } } public byte[] getLocalFileDataExtra() { byte[] extra = getExtra(); return extra != null ? extra : new byte[0]; } public byte[] getCentralDirectoryExtra() { return ExtraFieldUtils.mergeCentralDirectoryData(getExtraFields(true));"
+      },
+      {
+        "txt": "} @Override public String getName() { return name == null ? super.getName() : name; } @Override public boolean isDirectory() { return getName().endsWith(\"/\"); } protected void setName(String name) {"
+      },
+      {
+        "txt": "if (name != null && getPlatform() == PLATFORM_FAT && name.indexOf(\"/\") == -1) { name = name.replace('\\\\', '/'); } this.name = name; } @Override public long getSize() { return size; }"
+      },
+      {
+        "txt": "@Override public void setSize(long size) { if (size < 0) { throw new IllegalArgumentException(\"invalid entry size\"); } this.size = size; } protected void setName(String name, byte[] rawName) { setName(name); this.rawName = rawName;"
+      },
+      {
+        "txt": "} public byte[] getRawName() { if (rawName != null) { byte[] b = new byte[rawName.length]; System.arraycopy(rawName, 0, b, 0, rawName.length); return b; } return null; } @Override"
+      },
+      {
+        "txt": "public int hashCode() { return getName().hashCode(); } public GeneralPurposeBit getGeneralPurposeBit() { return gpb; } public void setGeneralPurposeBit(GeneralPurposeBit b) { gpb = b; } private void mergeExtraFields(ZipExtraField[] f, boolean local)"
+      },
+      {
+        "txt": "throws ZipException { if (extraFields == null) { setExtraFields(f); } else { for (ZipExtraField element : f) { ZipExtraField existing; if (element instanceof UnparseableExtraFieldData) { existing = unparseableExtra; } else { existing = getExtraField(element.getHeaderId());"
+      },
+      {
+        "txt": "} if (existing == null) { addExtraField(element); } else { if (local) { byte[] b = element.getLocalFileDataData(); existing.parseFromLocalFileData(b, 0, b.length); } else { byte[] b = element.getCentralDirectoryData(); existing.parseFromCentralDirectoryData(b, 0, b.length);"
+      },
+      {
+        "txt": "} } } setExtra(); } } public Date getLastModifiedDate() { return new Date(getTime()); } @Override"
+      },
+      {
+        "txt": "public boolean equals(Object obj) { if (this == obj) { return true; } if (obj == null || getClass() != obj.getClass()) { return false; } ZipArchiveEntry other = (ZipArchiveEntry) obj; String myName = getName(); String otherName = other.getName();"
+      },
+      {
+        "txt": "if (myName == null) { if (otherName != null) { return false; } } else if (!myName.equals(otherName)) { return false; } String myComment = getComment(); String otherComment = other.getComment(); if (myComment == null) {"
+      },
+      {
+        "txt": "return false; } } else if (!myComment.equals(otherComment)) { return false; } return getTime() == other.getTime() <extra_id_0> && getPlatform() == other.getPlatform() && getExternalAttributes() == other.getExternalAttributes() && getMethod() == other.getMethod() && getSize() == other.getSize() && getCrc() == other.getCrc() && getCompressedSize() == other.getCompressedSize()"
+      },
+      {
+        "txt": "&& getCrc() == other.getCrc() && getCompressedSize() == other.getCompressedSize() && Arrays.equals(getCentralDirectoryExtra(), other.getCentralDirectoryExtra()) && Arrays.equals(getLocalFileDataExtra(), other.getLocalFileDataExtra()) && gpb.equals(other.gpb); }"
+      }
+    ]
+  }
+]

@@ -1,0 +1,140 @@
+[
+  {
+    "id": 2069,
+    "file_path": "src/main/java/org/jsoup/helper/DataUtil.java",
+    "start-bug-line": 171,
+    "end-bug-line": 171,
+    "bug": "",
+    "fix": "if (!charset.canEncode()) {",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.jsoup.helper; import org.jsoup.UncheckedIOException; import org.jsoup.internal.ConstrainableInputStream; import org.jsoup.nodes.Comment; import org.jsoup.nodes.Document; import org.jsoup.nodes.Element; import org.jsoup.nodes.Node; import org.jsoup.nodes.XmlDeclaration;"
+      },
+      {
+        "txt": "import org.jsoup.parser.Parser; import org.jsoup.select.Elements; import java.io.BufferedReader; import java.io.File; import java.io.FileInputStream; import java.io.IOException; import java.io.InputStream; import java.io.InputStreamReader; import java.io.OutputStream; import java.nio.Buffer;"
+      },
+      {
+        "txt": "import java.nio.ByteBuffer; import java.nio.charset.Charset; import java.nio.charset.IllegalCharsetNameException; import java.util.Locale; import java.util.Random; import java.util.regex.Matcher; import java.util.regex.Pattern; public final class DataUtil { private static final Pattern charsetPattern = Pattern.compile(\"(?i)\\\\bcharset=\\\\s*(?:[\\\"'])?([^\\\\s,;\\\"']*)\"); static final String defaultCharset = \"UTF-8\"; // used if not found in header or meta charset"
+      },
+      {
+        "txt": "private static final int firstReadBufferSize = 1024 * 5; static final int bufferSize = 1024 * 32; private static final char[] mimeBoundaryChars = \"-_1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ\".toCharArray(); static final int boundaryLength = 32; private DataUtil() {} public static Document load(File in, String charsetName, String baseUri) throws IOException { return parseInputStream(new FileInputStream(in), charsetName, baseUri, Parser.htmlParser()); } public static Document load(InputStream in, String charsetName, String baseUri) throws IOException {"
+      },
+      {
+        "txt": "return parseInputStream(in, charsetName, baseUri, Parser.htmlParser()); } public static Document load(InputStream in, String charsetName, String baseUri, Parser parser) throws IOException { return parseInputStream(in, charsetName, baseUri, parser); } static void crossStreams(final InputStream in, final OutputStream out) throws IOException { final byte[] buffer = new byte[bufferSize]; int len; while ((len = in.read(buffer)) != -1) { out.write(buffer, 0, len);"
+      },
+      {
+        "txt": "} } static Document parseInputStream(InputStream input, String charsetName, String baseUri, Parser parser) throws IOException { if (input == null) // empty body return new Document(baseUri); input = ConstrainableInputStream.wrap(input, bufferSize, 0); Document doc = null; boolean fullyRead = false; input.mark(bufferSize); ByteBuffer firstBytes = readToByteBuffer(input, firstReadBufferSize - 1); // -1 because we read one more to see if completed. First read is < buffer size, so can't be invalid."
+      },
+      {
+        "txt": "fullyRead = input.read() == -1; input.reset(); BomCharset bomCharset = detectCharsetFromBom(firstBytes); if (bomCharset != null) charsetName = bomCharset.charset; if (charsetName == null) { // determine from meta. safe first parse as UTF-8 String docData = Charset.forName(defaultCharset).decode(firstBytes).toString(); doc = parser.parseInput(docData, baseUri); Elements metaElements = doc.select(\"meta[http-equiv=content-type], meta[charset]\"); String foundCharset = null; // if not found, will keep utf-8 as best attempt"
+      },
+      {
+        "txt": "for (Element meta : metaElements) { if (meta.hasAttr(\"http-equiv\")) foundCharset = getCharsetFromContentType(meta.attr(\"content\")); if (foundCharset == null && meta.hasAttr(\"charset\")) foundCharset = meta.attr(\"charset\"); if (foundCharset != null) break; } if (foundCharset == null && doc.childNodeSize() > 0) { Node first = doc.childNode(0);"
+      },
+      {
+        "txt": "XmlDeclaration decl = null; if (first instanceof XmlDeclaration) decl = (XmlDeclaration) first; else if (first instanceof Comment) { Comment comment = (Comment) first; if (comment.isXmlDeclaration()) decl = comment.asXmlDeclaration(); } if (decl != null) { if (decl.name().equalsIgnoreCase(\"xml\"))"
+      },
+      {
+        "txt": "foundCharset = decl.attr(\"encoding\"); } } foundCharset = validateCharset(foundCharset); if (foundCharset != null && !foundCharset.equalsIgnoreCase(defaultCharset)) { // need to re-decode. (case insensitive check here to match how validate works) foundCharset = foundCharset.trim().replaceAll(\"[\\\"']\", \"\"); charsetName = foundCharset; doc = null; } else if (!fullyRead) { doc = null;"
+      },
+      {
+        "txt": "} } else { // specified by content type header (or by user on file load) Validate.notEmpty(charsetName, \"Must set charset arg to character set of file to parse. Set to null to attempt to detect from HTML\"); } if (doc == null) { if (charsetName == null) charsetName = defaultCharset; BufferedReader reader = new BufferedReader(new InputStreamReader(input, charsetName), bufferSize); if (bomCharset != null && bomCharset.offset) // creating the buffered reader ignores the input pos, so must skip here reader.skip(1);"
+      },
+      {
+        "txt": "doc = parser.parseInput(reader, baseUri); } catch (UncheckedIOException e) { throw e.ioException(); } Charset charset = Charset.forName(charsetName); doc.outputSettings().charset(charset); <extra_id_0> } input.close(); return doc; } public static ByteBuffer readToByteBuffer(InputStream inStream, int maxSize) throws IOException { Validate.isTrue(maxSize >= 0, \"maxSize must be 0 (unlimited) or larger\");"
+      },
+      {
+        "txt": "public static ByteBuffer readToByteBuffer(InputStream inStream, int maxSize) throws IOException { Validate.isTrue(maxSize >= 0, \"maxSize must be 0 (unlimited) or larger\"); final ConstrainableInputStream input = ConstrainableInputStream.wrap(inStream, bufferSize, maxSize); return input.readToByteBuffer(maxSize); } static ByteBuffer emptyByteBuffer() { return ByteBuffer.allocate(0); } static String getCharsetFromContentType(String contentType) { if (contentType == null) return null;"
+      },
+      {
+        "txt": "Matcher m = charsetPattern.matcher(contentType); if (m.find()) { String charset = m.group(1).trim(); charset = charset.replace(\"charset=\", \"\"); return validateCharset(charset); } return null; } private static String validateCharset(String cs) { if (cs == null || cs.length() == 0) return null;"
+      },
+      {
+        "txt": "cs = cs.trim().replaceAll(\"[\\\"']\", \"\"); try { if (Charset.isSupported(cs)) return cs; cs = cs.toUpperCase(Locale.ENGLISH); if (Charset.isSupported(cs)) return cs; } catch (IllegalCharsetNameException e) { } return null; } static String mimeBoundary() {"
+      },
+      {
+        "txt": "final StringBuilder mime = new StringBuilder(boundaryLength); final Random rand = new Random(); for (int i = 0; i < boundaryLength; i++) { mime.append(mimeBoundaryChars[rand.nextInt(mimeBoundaryChars.length)]); } return mime.toString(); } private static BomCharset detectCharsetFromBom(final ByteBuffer byteData) { final Buffer buffer = byteData; // .mark and rewind used to return Buffer, now ByteBuffer, so cast for backward compat buffer.mark();"
+      },
+      {
+        "txt": "byte[] bom = new byte[4]; if (byteData.remaining() >= bom.length) { byteData.get(bom); buffer.rewind(); } if (bom[0] == 0x00 && bom[1] == 0x00 && bom[2] == (byte) 0xFE && bom[3] == (byte) 0xFF || // BE bom[0] == (byte) 0xFF && bom[1] == (byte) 0xFE && bom[2] == 0x00 && bom[3] == 0x00) { // LE return new BomCharset(\"UTF-32\", false); // and I hope it's on your system } else if (bom[0] == (byte) 0xFE && bom[1] == (byte) 0xFF || // BE bom[0] == (byte) 0xFF && bom[1] == (byte) 0xFE) {"
+      },
+      {
+        "txt": "return new BomCharset(\"UTF-16\", false); // in all Javas } else if (bom[0] == (byte) 0xEF && bom[1] == (byte) 0xBB && bom[2] == (byte) 0xBF) { return new BomCharset(\"UTF-8\", true); // in all Javas } return null; } private static class BomCharset { private final String charset; private final boolean offset; public BomCharset(String charset, boolean offset) {"
+      },
+      {
+        "txt": "this.charset = charset; this.offset = offset; } }"
+      }
+    ]
+  },
+  {
+    "id": 2070,
+    "file_path": "src/main/java/org/jsoup/helper/DataUtil.java",
+    "start-bug-line": 172,
+    "end-bug-line": 172,
+    "bug": "",
+    "fix": "doc.charset(Charset.forName(defaultCharset)); }",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.jsoup.helper; import org.jsoup.UncheckedIOException; import org.jsoup.internal.ConstrainableInputStream; import org.jsoup.nodes.Comment; import org.jsoup.nodes.Document; import org.jsoup.nodes.Element; import org.jsoup.nodes.Node; import org.jsoup.nodes.XmlDeclaration;"
+      },
+      {
+        "txt": "import org.jsoup.parser.Parser; import org.jsoup.select.Elements; import java.io.BufferedReader; import java.io.File; import java.io.FileInputStream; import java.io.IOException; import java.io.InputStream; import java.io.InputStreamReader; import java.io.OutputStream; import java.nio.Buffer;"
+      },
+      {
+        "txt": "import java.nio.ByteBuffer; import java.nio.charset.Charset; import java.nio.charset.IllegalCharsetNameException; import java.util.Locale; import java.util.Random; import java.util.regex.Matcher; import java.util.regex.Pattern; public final class DataUtil { private static final Pattern charsetPattern = Pattern.compile(\"(?i)\\\\bcharset=\\\\s*(?:[\\\"'])?([^\\\\s,;\\\"']*)\"); static final String defaultCharset = \"UTF-8\"; // used if not found in header or meta charset"
+      },
+      {
+        "txt": "private static final int firstReadBufferSize = 1024 * 5; static final int bufferSize = 1024 * 32; private static final char[] mimeBoundaryChars = \"-_1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ\".toCharArray(); static final int boundaryLength = 32; private DataUtil() {} public static Document load(File in, String charsetName, String baseUri) throws IOException { return parseInputStream(new FileInputStream(in), charsetName, baseUri, Parser.htmlParser()); } public static Document load(InputStream in, String charsetName, String baseUri) throws IOException {"
+      },
+      {
+        "txt": "return parseInputStream(in, charsetName, baseUri, Parser.htmlParser()); } public static Document load(InputStream in, String charsetName, String baseUri, Parser parser) throws IOException { return parseInputStream(in, charsetName, baseUri, parser); } static void crossStreams(final InputStream in, final OutputStream out) throws IOException { final byte[] buffer = new byte[bufferSize]; int len; while ((len = in.read(buffer)) != -1) { out.write(buffer, 0, len);"
+      },
+      {
+        "txt": "} } static Document parseInputStream(InputStream input, String charsetName, String baseUri, Parser parser) throws IOException { if (input == null) // empty body return new Document(baseUri); input = ConstrainableInputStream.wrap(input, bufferSize, 0); Document doc = null; boolean fullyRead = false; input.mark(bufferSize); ByteBuffer firstBytes = readToByteBuffer(input, firstReadBufferSize - 1); // -1 because we read one more to see if completed. First read is < buffer size, so can't be invalid."
+      },
+      {
+        "txt": "fullyRead = input.read() == -1; input.reset(); BomCharset bomCharset = detectCharsetFromBom(firstBytes); if (bomCharset != null) charsetName = bomCharset.charset; if (charsetName == null) { // determine from meta. safe first parse as UTF-8 String docData = Charset.forName(defaultCharset).decode(firstBytes).toString(); doc = parser.parseInput(docData, baseUri); Elements metaElements = doc.select(\"meta[http-equiv=content-type], meta[charset]\"); String foundCharset = null; // if not found, will keep utf-8 as best attempt"
+      },
+      {
+        "txt": "for (Element meta : metaElements) { if (meta.hasAttr(\"http-equiv\")) foundCharset = getCharsetFromContentType(meta.attr(\"content\")); if (foundCharset == null && meta.hasAttr(\"charset\")) foundCharset = meta.attr(\"charset\"); if (foundCharset != null) break; } if (foundCharset == null && doc.childNodeSize() > 0) { Node first = doc.childNode(0);"
+      },
+      {
+        "txt": "XmlDeclaration decl = null; if (first instanceof XmlDeclaration) decl = (XmlDeclaration) first; else if (first instanceof Comment) { Comment comment = (Comment) first; if (comment.isXmlDeclaration()) decl = comment.asXmlDeclaration(); } if (decl != null) { if (decl.name().equalsIgnoreCase(\"xml\"))"
+      },
+      {
+        "txt": "foundCharset = decl.attr(\"encoding\"); } } foundCharset = validateCharset(foundCharset); if (foundCharset != null && !foundCharset.equalsIgnoreCase(defaultCharset)) { // need to re-decode. (case insensitive check here to match how validate works) foundCharset = foundCharset.trim().replaceAll(\"[\\\"']\", \"\"); charsetName = foundCharset; doc = null; } else if (!fullyRead) { doc = null;"
+      },
+      {
+        "txt": "} } else { // specified by content type header (or by user on file load) Validate.notEmpty(charsetName, \"Must set charset arg to character set of file to parse. Set to null to attempt to detect from HTML\"); } if (doc == null) { if (charsetName == null) charsetName = defaultCharset; BufferedReader reader = new BufferedReader(new InputStreamReader(input, charsetName), bufferSize); if (bomCharset != null && bomCharset.offset) // creating the buffered reader ignores the input pos, so must skip here reader.skip(1);"
+      },
+      {
+        "txt": "doc = parser.parseInput(reader, baseUri); } catch (UncheckedIOException e) { throw e.ioException(); } Charset charset = Charset.forName(charsetName); doc.outputSettings().charset(charset); <extra_id_0> input.close(); return doc; } public static ByteBuffer readToByteBuffer(InputStream inStream, int maxSize) throws IOException { Validate.isTrue(maxSize >= 0, \"maxSize must be 0 (unlimited) or larger\"); final ConstrainableInputStream input = ConstrainableInputStream.wrap(inStream, bufferSize, maxSize);"
+      },
+      {
+        "txt": "Validate.isTrue(maxSize >= 0, \"maxSize must be 0 (unlimited) or larger\"); final ConstrainableInputStream input = ConstrainableInputStream.wrap(inStream, bufferSize, maxSize); return input.readToByteBuffer(maxSize); } static ByteBuffer emptyByteBuffer() { return ByteBuffer.allocate(0); } static String getCharsetFromContentType(String contentType) { if (contentType == null) return null; Matcher m = charsetPattern.matcher(contentType);"
+      },
+      {
+        "txt": "if (m.find()) { String charset = m.group(1).trim(); charset = charset.replace(\"charset=\", \"\"); return validateCharset(charset); } return null; } private static String validateCharset(String cs) { if (cs == null || cs.length() == 0) return null; cs = cs.trim().replaceAll(\"[\\\"']\", \"\");"
+      },
+      {
+        "txt": "try { if (Charset.isSupported(cs)) return cs; cs = cs.toUpperCase(Locale.ENGLISH); if (Charset.isSupported(cs)) return cs; } catch (IllegalCharsetNameException e) { } return null; } static String mimeBoundary() { final StringBuilder mime = new StringBuilder(boundaryLength);"
+      },
+      {
+        "txt": "final Random rand = new Random(); for (int i = 0; i < boundaryLength; i++) { mime.append(mimeBoundaryChars[rand.nextInt(mimeBoundaryChars.length)]); } return mime.toString(); } private static BomCharset detectCharsetFromBom(final ByteBuffer byteData) { final Buffer buffer = byteData; // .mark and rewind used to return Buffer, now ByteBuffer, so cast for backward compat buffer.mark(); byte[] bom = new byte[4];"
+      },
+      {
+        "txt": "if (byteData.remaining() >= bom.length) { byteData.get(bom); buffer.rewind(); } if (bom[0] == 0x00 && bom[1] == 0x00 && bom[2] == (byte) 0xFE && bom[3] == (byte) 0xFF || // BE bom[0] == (byte) 0xFF && bom[1] == (byte) 0xFE && bom[2] == 0x00 && bom[3] == 0x00) { // LE return new BomCharset(\"UTF-32\", false); // and I hope it's on your system } else if (bom[0] == (byte) 0xFE && bom[1] == (byte) 0xFF || // BE bom[0] == (byte) 0xFF && bom[1] == (byte) 0xFE) { return new BomCharset(\"UTF-16\", false); // in all Javas"
+      },
+      {
+        "txt": "} else if (bom[0] == (byte) 0xEF && bom[1] == (byte) 0xBB && bom[2] == (byte) 0xBF) { return new BomCharset(\"UTF-8\", true); // in all Javas } return null; } private static class BomCharset { private final String charset; private final boolean offset; public BomCharset(String charset, boolean offset) { this.charset = charset;"
+      },
+      {
+        "txt": "this.offset = offset; } }"
+      }
+    ]
+  }
+]

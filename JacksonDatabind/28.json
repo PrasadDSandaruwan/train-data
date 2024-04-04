@@ -1,0 +1,200 @@
+[
+  {
+    "id": 1452,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/deser/std/JsonNodeDeserializer.java",
+    "start-bug-line": 97,
+    "end-bug-line": 98,
+    "bug": "if (p.getCurrentToken() == JsonToken.START_OBJECT) { p.nextToken();",
+    "fix": "if (p.isExpectedStartObjectToken() || p.hasToken(JsonToken.FIELD_NAME)) {",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind.deser.std; import java.io.IOException; import com.fasterxml.jackson.core.*; import com.fasterxml.jackson.databind.*; import com.fasterxml.jackson.databind.jsontype.TypeDeserializer; import com.fasterxml.jackson.databind.node.*; import com.fasterxml.jackson.databind.util.RawValue;"
+      },
+      {
+        "txt": "@SuppressWarnings(\"serial\") public class JsonNodeDeserializer extends BaseNodeDeserializer<JsonNode> { private final static JsonNodeDeserializer instance = new JsonNodeDeserializer(); protected JsonNodeDeserializer() { super(JsonNode.class); } public static JsonDeserializer<? extends JsonNode> getDeserializer(Class<?> nodeClass) { if (nodeClass == ObjectNode.class) { return ObjectDeserializer.getInstance();"
+      },
+      {
+        "txt": "} if (nodeClass == ArrayNode.class) { return ArrayDeserializer.getInstance(); } return instance; } @Override public JsonNode getNullValue(DeserializationContext ctxt) { return NullNode.getInstance(); }"
+      },
+      {
+        "txt": "@Override @Deprecated // since 2.6, remove from 2.7 public JsonNode getNullValue() { return NullNode.getInstance(); } @Override public JsonNode deserialize(JsonParser p, DeserializationContext ctxt) throws IOException { switch (p.getCurrentTokenId()) { case JsonTokenId.ID_START_OBJECT:"
+      },
+      {
+        "txt": "return deserializeObject(p, ctxt, ctxt.getNodeFactory()); case JsonTokenId.ID_START_ARRAY: return deserializeArray(p, ctxt, ctxt.getNodeFactory()); default: return deserializeAny(p, ctxt, ctxt.getNodeFactory()); } } final static class ObjectDeserializer extends BaseNodeDeserializer<ObjectNode> {"
+      },
+      {
+        "txt": "protected final static ObjectDeserializer _instance = new ObjectDeserializer(); protected ObjectDeserializer() { super(ObjectNode.class); } public static ObjectDeserializer getInstance() { return _instance; } @Override public ObjectNode deserialize(JsonParser p, DeserializationContext ctxt) throws IOException { <extra_id_0> return deserializeObject(p, ctxt, ctxt.getNodeFactory()); } if (p.getCurrentToken() == JsonToken.FIELD_NAME) { return deserializeObject(p, ctxt, ctxt.getNodeFactory()); } throw ctxt.mappingException(ObjectNode.class);"
+      },
+      {
+        "txt": "} throw ctxt.mappingException(ObjectNode.class); } } final static class ArrayDeserializer extends BaseNodeDeserializer<ArrayNode> { private static final long serialVersionUID = 1L; protected final static ArrayDeserializer _instance = new ArrayDeserializer(); protected ArrayDeserializer() { super(ArrayNode.class); }"
+      },
+      {
+        "txt": "public static ArrayDeserializer getInstance() { return _instance; } @Override public ArrayNode deserialize(JsonParser p, DeserializationContext ctxt) throws IOException { if (p.isExpectedStartArrayToken()) { return deserializeArray(p, ctxt, ctxt.getNodeFactory()); } throw ctxt.mappingException(ArrayNode.class); } }"
+      },
+      {
+        "txt": "} @SuppressWarnings(\"serial\") abstract class BaseNodeDeserializer<T extends JsonNode> extends StdDeserializer<T> { public BaseNodeDeserializer(Class<T> vc) { super(vc); } @Override public Object deserializeWithType(JsonParser p, DeserializationContext ctxt,"
+      },
+      {
+        "txt": "TypeDeserializer typeDeserializer) throws IOException { return typeDeserializer.deserializeTypedFromAny(p, ctxt); } @Override public boolean isCachable() { return true; } protected void _reportProblem(JsonParser p, String msg) throws JsonMappingException { throw new JsonMappingException(msg, p.getTokenLocation()); }"
+      },
+      {
+        "txt": "protected void _handleDuplicateField(JsonParser p, DeserializationContext ctxt, JsonNodeFactory nodeFactory, String fieldName, ObjectNode objectNode, JsonNode oldValue, JsonNode newValue) throws JsonProcessingException { if (ctxt.isEnabled(DeserializationFeature.FAIL_ON_READING_DUP_TREE_KEY)) { _reportProblem(p, \"Duplicate field '\"+fieldName+\"' for ObjectNode: not allowed when FAIL_ON_READING_DUP_TREE_KEY enabled\"); } }"
+      },
+      {
+        "txt": "protected final ObjectNode deserializeObject(JsonParser p, DeserializationContext ctxt, final JsonNodeFactory nodeFactory) throws IOException { ObjectNode node = nodeFactory.objectNode(); String key; if (p.isExpectedStartObjectToken()) { key = p.nextFieldName(); } else { JsonToken t = p.getCurrentToken(); if (t == JsonToken.END_OBJECT) {"
+      },
+      {
+        "txt": "return node; } if (t != JsonToken.FIELD_NAME) { throw ctxt.mappingException(handledType(), p.getCurrentToken()); } key = p.getCurrentName(); } for (; key != null; key = p.nextFieldName()) { JsonNode value; JsonToken t = p.nextToken();"
+      },
+      {
+        "txt": "switch (t.id()) { case JsonTokenId.ID_START_OBJECT: value = deserializeObject(p, ctxt, nodeFactory); break; case JsonTokenId.ID_START_ARRAY: value = deserializeArray(p, ctxt, nodeFactory); break; case JsonTokenId.ID_EMBEDDED_OBJECT: value = _fromEmbedded(p, ctxt, nodeFactory); break;"
+      },
+      {
+        "txt": "case JsonTokenId.ID_STRING: value = nodeFactory.textNode(p.getText()); break; case JsonTokenId.ID_NUMBER_INT: value = _fromInt(p, ctxt, nodeFactory); break; case JsonTokenId.ID_TRUE: value = nodeFactory.booleanNode(true); break; case JsonTokenId.ID_FALSE:"
+      },
+      {
+        "txt": "value = nodeFactory.booleanNode(false); break; case JsonTokenId.ID_NULL: value = nodeFactory.nullNode(); break; default: value = deserializeAny(p, ctxt, nodeFactory); } JsonNode old = node.replace(key, value); if (old != null) {"
+      },
+      {
+        "txt": "_handleDuplicateField(p, ctxt, nodeFactory, key, node, old, value); } } return node; } protected final ArrayNode deserializeArray(JsonParser p, DeserializationContext ctxt, final JsonNodeFactory nodeFactory) throws IOException { ArrayNode node = nodeFactory.arrayNode();"
+      },
+      {
+        "txt": "while (true) { JsonToken t = p.nextToken(); if (t == null) { throw ctxt.mappingException(\"Unexpected end-of-input when binding data into ArrayNode\"); } switch (t.id()) { case JsonTokenId.ID_START_OBJECT: node.add(deserializeObject(p, ctxt, nodeFactory)); break; case JsonTokenId.ID_START_ARRAY:"
+      },
+      {
+        "txt": "node.add(deserializeArray(p, ctxt, nodeFactory)); break; case JsonTokenId.ID_END_ARRAY: return node; case JsonTokenId.ID_EMBEDDED_OBJECT: node.add(_fromEmbedded(p, ctxt, nodeFactory)); case JsonTokenId.ID_STRING: node.add(nodeFactory.textNode(p.getText())); break; case JsonTokenId.ID_NUMBER_INT:"
+      },
+      {
+        "txt": "node.add(_fromInt(p, ctxt, nodeFactory)); break; case JsonTokenId.ID_TRUE: node.add(nodeFactory.booleanNode(true)); break; case JsonTokenId.ID_FALSE: node.add(nodeFactory.booleanNode(false)); break; case JsonTokenId.ID_NULL: node.add(nodeFactory.nullNode());"
+      },
+      {
+        "txt": "break; default: node.add(deserializeAny(p, ctxt, nodeFactory)); break; } } } protected final JsonNode deserializeAny(JsonParser p, DeserializationContext ctxt, final JsonNodeFactory nodeFactory) throws IOException {"
+      },
+      {
+        "txt": "switch (p.getCurrentTokenId()) { case JsonTokenId.ID_START_OBJECT: case JsonTokenId.ID_END_OBJECT: // for empty JSON Objects we may point to this return deserializeObject(p, ctxt, nodeFactory); case JsonTokenId.ID_START_ARRAY: return deserializeArray(p, ctxt, nodeFactory); case JsonTokenId.ID_FIELD_NAME: return deserializeObject(p, ctxt, nodeFactory); case JsonTokenId.ID_EMBEDDED_OBJECT: return _fromEmbedded(p, ctxt, nodeFactory);"
+      },
+      {
+        "txt": "case JsonTokenId.ID_STRING: return nodeFactory.textNode(p.getText()); case JsonTokenId.ID_NUMBER_INT: return _fromInt(p, ctxt, nodeFactory); case JsonTokenId.ID_NUMBER_FLOAT: return _fromFloat(p, ctxt, nodeFactory); case JsonTokenId.ID_TRUE: return nodeFactory.booleanNode(true); case JsonTokenId.ID_FALSE: return nodeFactory.booleanNode(false);"
+      },
+      {
+        "txt": "case JsonTokenId.ID_NULL: return nodeFactory.nullNode(); default: throw ctxt.mappingException(handledType()); } } protected final JsonNode _fromInt(JsonParser p, DeserializationContext ctxt, JsonNodeFactory nodeFactory) throws IOException { JsonParser.NumberType nt;"
+      },
+      {
+        "txt": "int feats = ctxt.getDeserializationFeatures(); if ((feats & F_MASK_INT_COERCIONS) != 0) { if (DeserializationFeature.USE_BIG_INTEGER_FOR_INTS.enabledIn(feats)) { nt = JsonParser.NumberType.BIG_INTEGER; } else if (DeserializationFeature.USE_LONG_FOR_INTS.enabledIn(feats)) { nt = JsonParser.NumberType.LONG; } else { nt = p.getNumberType(); } } else {"
+      },
+      {
+        "txt": "nt = p.getNumberType(); } if (nt == JsonParser.NumberType.INT) { return nodeFactory.numberNode(p.getIntValue()); } if (nt == JsonParser.NumberType.LONG) { return nodeFactory.numberNode(p.getLongValue()); } return nodeFactory.numberNode(p.getBigIntegerValue()); }"
+      },
+      {
+        "txt": "protected final JsonNode _fromFloat(JsonParser p, DeserializationContext ctxt, final JsonNodeFactory nodeFactory) throws IOException { JsonParser.NumberType nt = p.getNumberType(); if (nt == JsonParser.NumberType.BIG_DECIMAL || ctxt.isEnabled(DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS)) { return nodeFactory.numberNode(p.getDecimalValue()); } return nodeFactory.numberNode(p.getDoubleValue()); }"
+      },
+      {
+        "txt": "protected final JsonNode _fromEmbedded(JsonParser p, DeserializationContext ctxt, JsonNodeFactory nodeFactory) throws IOException { Object ob = p.getEmbeddedObject(); if (ob == null) { // should this occur? return nodeFactory.nullNode(); } Class<?> type = ob.getClass(); if (type == byte[].class) { // most common special case return nodeFactory.binaryNode((byte[]) ob);"
+      },
+      {
+        "txt": "} if (ob instanceof RawValue) { return nodeFactory.rawValueNode((RawValue) ob); } if (ob instanceof JsonNode) { return (JsonNode) ob; } return nodeFactory.pojoNode(ob); }"
+      }
+    ]
+  },
+  {
+    "id": 1453,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/deser/std/JsonNodeDeserializer.java",
+    "start-bug-line": 103,
+    "end-bug-line": 104,
+    "bug": "if (p.getCurrentToken() == JsonToken.FIELD_NAME) { return deserializeObject(p, ctxt, ctxt.getNodeFactory());",
+    "fix": "if (p.hasToken(JsonToken.END_OBJECT)) { return ctxt.getNodeFactory().objectNode();",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "import java.io.IOException; import com.fasterxml.jackson.core.*; import com.fasterxml.jackson.databind.*; import com.fasterxml.jackson.databind.jsontype.TypeDeserializer; import com.fasterxml.jackson.databind.node.*; import com.fasterxml.jackson.databind.util.RawValue; @SuppressWarnings(\"serial\") public class JsonNodeDeserializer extends BaseNodeDeserializer<JsonNode> {"
+      },
+      {
+        "txt": "private final static JsonNodeDeserializer instance = new JsonNodeDeserializer(); protected JsonNodeDeserializer() { super(JsonNode.class); } public static JsonDeserializer<? extends JsonNode> getDeserializer(Class<?> nodeClass) { if (nodeClass == ObjectNode.class) { return ObjectDeserializer.getInstance(); } if (nodeClass == ArrayNode.class) { return ArrayDeserializer.getInstance(); }"
+      },
+      {
+        "txt": "return instance; } @Override public JsonNode getNullValue(DeserializationContext ctxt) { return NullNode.getInstance(); } @Override @Deprecated // since 2.6, remove from 2.7 public JsonNode getNullValue() { return NullNode.getInstance();"
+      },
+      {
+        "txt": "} @Override public JsonNode deserialize(JsonParser p, DeserializationContext ctxt) throws IOException { switch (p.getCurrentTokenId()) { case JsonTokenId.ID_START_OBJECT: return deserializeObject(p, ctxt, ctxt.getNodeFactory()); case JsonTokenId.ID_START_ARRAY: return deserializeArray(p, ctxt, ctxt.getNodeFactory()); default:"
+      },
+      {
+        "txt": "return deserializeAny(p, ctxt, ctxt.getNodeFactory()); } } final static class ObjectDeserializer extends BaseNodeDeserializer<ObjectNode> { private static final long serialVersionUID = 1L; protected final static ObjectDeserializer _instance = new ObjectDeserializer(); protected ObjectDeserializer() { super(ObjectNode.class); } public static ObjectDeserializer getInstance() { return _instance; }"
+      },
+      {
+        "txt": "public ObjectNode deserialize(JsonParser p, DeserializationContext ctxt) throws IOException { if (p.getCurrentToken() == JsonToken.START_OBJECT) { p.nextToken(); return deserializeObject(p, ctxt, ctxt.getNodeFactory()); } <extra_id_0> } throw ctxt.mappingException(ObjectNode.class); } } final static class ArrayDeserializer extends BaseNodeDeserializer<ArrayNode>"
+      },
+      {
+        "txt": "final static class ArrayDeserializer extends BaseNodeDeserializer<ArrayNode> { private static final long serialVersionUID = 1L; protected final static ArrayDeserializer _instance = new ArrayDeserializer(); protected ArrayDeserializer() { super(ArrayNode.class); } public static ArrayDeserializer getInstance() { return _instance; } @Override public ArrayNode deserialize(JsonParser p, DeserializationContext ctxt) throws IOException {"
+      },
+      {
+        "txt": "if (p.isExpectedStartArrayToken()) { return deserializeArray(p, ctxt, ctxt.getNodeFactory()); } throw ctxt.mappingException(ArrayNode.class); } } } @SuppressWarnings(\"serial\") abstract class BaseNodeDeserializer<T extends JsonNode> extends StdDeserializer<T>"
+      },
+      {
+        "txt": "{ public BaseNodeDeserializer(Class<T> vc) { super(vc); } @Override public Object deserializeWithType(JsonParser p, DeserializationContext ctxt, TypeDeserializer typeDeserializer) throws IOException { return typeDeserializer.deserializeTypedFromAny(p, ctxt);"
+      },
+      {
+        "txt": "} @Override public boolean isCachable() { return true; } protected void _reportProblem(JsonParser p, String msg) throws JsonMappingException { throw new JsonMappingException(msg, p.getTokenLocation()); } protected void _handleDuplicateField(JsonParser p, DeserializationContext ctxt, JsonNodeFactory nodeFactory, String fieldName, ObjectNode objectNode, JsonNode oldValue, JsonNode newValue)"
+      },
+      {
+        "txt": "throws JsonProcessingException { if (ctxt.isEnabled(DeserializationFeature.FAIL_ON_READING_DUP_TREE_KEY)) { _reportProblem(p, \"Duplicate field '\"+fieldName+\"' for ObjectNode: not allowed when FAIL_ON_READING_DUP_TREE_KEY enabled\"); } } protected final ObjectNode deserializeObject(JsonParser p, DeserializationContext ctxt, final JsonNodeFactory nodeFactory) throws IOException { ObjectNode node = nodeFactory.objectNode();"
+      },
+      {
+        "txt": "String key; if (p.isExpectedStartObjectToken()) { key = p.nextFieldName(); } else { JsonToken t = p.getCurrentToken(); if (t == JsonToken.END_OBJECT) { return node; } if (t != JsonToken.FIELD_NAME) { throw ctxt.mappingException(handledType(), p.getCurrentToken());"
+      },
+      {
+        "txt": "} key = p.getCurrentName(); } for (; key != null; key = p.nextFieldName()) { JsonNode value; JsonToken t = p.nextToken(); switch (t.id()) { case JsonTokenId.ID_START_OBJECT: value = deserializeObject(p, ctxt, nodeFactory); break;"
+      },
+      {
+        "txt": "case JsonTokenId.ID_START_ARRAY: value = deserializeArray(p, ctxt, nodeFactory); break; case JsonTokenId.ID_EMBEDDED_OBJECT: value = _fromEmbedded(p, ctxt, nodeFactory); break; case JsonTokenId.ID_STRING: value = nodeFactory.textNode(p.getText()); break; case JsonTokenId.ID_NUMBER_INT:"
+      },
+      {
+        "txt": "value = _fromInt(p, ctxt, nodeFactory); break; case JsonTokenId.ID_TRUE: value = nodeFactory.booleanNode(true); break; case JsonTokenId.ID_FALSE: value = nodeFactory.booleanNode(false); break; case JsonTokenId.ID_NULL: value = nodeFactory.nullNode();"
+      },
+      {
+        "txt": "break; default: value = deserializeAny(p, ctxt, nodeFactory); } JsonNode old = node.replace(key, value); if (old != null) { _handleDuplicateField(p, ctxt, nodeFactory, key, node, old, value); } }"
+      },
+      {
+        "txt": "return node; } protected final ArrayNode deserializeArray(JsonParser p, DeserializationContext ctxt, final JsonNodeFactory nodeFactory) throws IOException { ArrayNode node = nodeFactory.arrayNode(); while (true) { JsonToken t = p.nextToken(); if (t == null) { throw ctxt.mappingException(\"Unexpected end-of-input when binding data into ArrayNode\");"
+      },
+      {
+        "txt": "} switch (t.id()) { case JsonTokenId.ID_START_OBJECT: node.add(deserializeObject(p, ctxt, nodeFactory)); break; case JsonTokenId.ID_START_ARRAY: node.add(deserializeArray(p, ctxt, nodeFactory)); break; case JsonTokenId.ID_END_ARRAY: return node;"
+      },
+      {
+        "txt": "case JsonTokenId.ID_EMBEDDED_OBJECT: node.add(_fromEmbedded(p, ctxt, nodeFactory)); case JsonTokenId.ID_STRING: node.add(nodeFactory.textNode(p.getText())); break; case JsonTokenId.ID_NUMBER_INT: node.add(_fromInt(p, ctxt, nodeFactory)); break; case JsonTokenId.ID_TRUE: node.add(nodeFactory.booleanNode(true));"
+      },
+      {
+        "txt": "break; case JsonTokenId.ID_FALSE: node.add(nodeFactory.booleanNode(false)); break; case JsonTokenId.ID_NULL: node.add(nodeFactory.nullNode()); break; default: node.add(deserializeAny(p, ctxt, nodeFactory)); break;"
+      },
+      {
+        "txt": "} } } protected final JsonNode deserializeAny(JsonParser p, DeserializationContext ctxt, final JsonNodeFactory nodeFactory) throws IOException { switch (p.getCurrentTokenId()) { case JsonTokenId.ID_START_OBJECT: case JsonTokenId.ID_END_OBJECT: // for empty JSON Objects we may point to this return deserializeObject(p, ctxt, nodeFactory);"
+      },
+      {
+        "txt": "case JsonTokenId.ID_START_ARRAY: return deserializeArray(p, ctxt, nodeFactory); case JsonTokenId.ID_FIELD_NAME: return deserializeObject(p, ctxt, nodeFactory); case JsonTokenId.ID_EMBEDDED_OBJECT: return _fromEmbedded(p, ctxt, nodeFactory); case JsonTokenId.ID_STRING: return nodeFactory.textNode(p.getText()); case JsonTokenId.ID_NUMBER_INT: return _fromInt(p, ctxt, nodeFactory);"
+      },
+      {
+        "txt": "case JsonTokenId.ID_NUMBER_FLOAT: return _fromFloat(p, ctxt, nodeFactory); case JsonTokenId.ID_TRUE: return nodeFactory.booleanNode(true); case JsonTokenId.ID_FALSE: return nodeFactory.booleanNode(false); case JsonTokenId.ID_NULL: return nodeFactory.nullNode(); default: throw ctxt.mappingException(handledType());"
+      },
+      {
+        "txt": "} } protected final JsonNode _fromInt(JsonParser p, DeserializationContext ctxt, JsonNodeFactory nodeFactory) throws IOException { JsonParser.NumberType nt; int feats = ctxt.getDeserializationFeatures(); if ((feats & F_MASK_INT_COERCIONS) != 0) { if (DeserializationFeature.USE_BIG_INTEGER_FOR_INTS.enabledIn(feats)) { nt = JsonParser.NumberType.BIG_INTEGER;"
+      },
+      {
+        "txt": "} else if (DeserializationFeature.USE_LONG_FOR_INTS.enabledIn(feats)) { nt = JsonParser.NumberType.LONG; } else { nt = p.getNumberType(); } } else { nt = p.getNumberType(); } if (nt == JsonParser.NumberType.INT) { return nodeFactory.numberNode(p.getIntValue());"
+      },
+      {
+        "txt": "} if (nt == JsonParser.NumberType.LONG) { return nodeFactory.numberNode(p.getLongValue()); } return nodeFactory.numberNode(p.getBigIntegerValue()); } protected final JsonNode _fromFloat(JsonParser p, DeserializationContext ctxt, final JsonNodeFactory nodeFactory) throws IOException { JsonParser.NumberType nt = p.getNumberType();"
+      },
+      {
+        "txt": "if (nt == JsonParser.NumberType.BIG_DECIMAL || ctxt.isEnabled(DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS)) { return nodeFactory.numberNode(p.getDecimalValue()); } return nodeFactory.numberNode(p.getDoubleValue()); } protected final JsonNode _fromEmbedded(JsonParser p, DeserializationContext ctxt, JsonNodeFactory nodeFactory) throws IOException { Object ob = p.getEmbeddedObject();"
+      },
+      {
+        "txt": "if (ob == null) { // should this occur? return nodeFactory.nullNode(); } Class<?> type = ob.getClass(); if (type == byte[].class) { // most common special case return nodeFactory.binaryNode((byte[]) ob); } if (ob instanceof RawValue) { return nodeFactory.rawValueNode((RawValue) ob); }"
+      },
+      {
+        "txt": "if (ob instanceof JsonNode) { return (JsonNode) ob; } return nodeFactory.pojoNode(ob); }"
+      }
+    ]
+  }
+]

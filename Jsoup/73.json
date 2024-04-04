@@ -1,0 +1,353 @@
+[
+  {
+    "id": 2045,
+    "file_path": "src/main/java/org/jsoup/helper/W3CDom.java",
+    "start-bug-line": 22,
+    "end-bug-line": 22,
+    "bug": "",
+    "fix": "import java.util.Stack;",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.jsoup.helper; import org.jsoup.nodes.Attribute;"
+      },
+      {
+        "txt": "import org.jsoup.nodes.Attributes; import org.jsoup.select.NodeTraversor; import org.jsoup.select.NodeVisitor; import org.w3c.dom.Comment; import org.w3c.dom.Document; import org.w3c.dom.Element; import org.w3c.dom.Text; import javax.xml.parsers.DocumentBuilder; import javax.xml.parsers.DocumentBuilderFactory; import javax.xml.parsers.ParserConfigurationException;"
+      },
+      {
+        "txt": "import javax.xml.transform.TransformerException; import javax.xml.transform.TransformerFactory; import javax.xml.transform.dom.DOMSource; import javax.xml.transform.stream.StreamResult; import java.io.StringWriter; import java.util.HashMap; <extra_id_0> public class W3CDom { protected DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance(); public Document fromJsoup(org.jsoup.nodes.Document in) { Validate.notNull(in); DocumentBuilder builder; try {"
+      },
+      {
+        "txt": "DocumentBuilder builder; try { factory.setNamespaceAware(true); builder = factory.newDocumentBuilder(); Document out = builder.newDocument(); convert(in, out); return out; } catch (ParserConfigurationException e) { throw new IllegalStateException(e); }"
+      },
+      {
+        "txt": "} public void convert(org.jsoup.nodes.Document in, Document out) { if (!StringUtil.isBlank(in.location())) out.setDocumentURI(in.location()); org.jsoup.nodes.Element rootEl = in.child(0); // skip the #root node NodeTraversor.traverse(new W3CBuilder(out), rootEl); } protected static class W3CBuilder implements NodeVisitor { private static final String xmlnsKey = \"xmlns\"; private static final String xmlnsPrefix = \"xmlns:\";"
+      },
+      {
+        "txt": "private final Document doc; private final HashMap<String, String> namespaces = new HashMap<>(); private Element dest; public W3CBuilder(Document doc) { this.doc = doc; } public void head(org.jsoup.nodes.Node source, int depth) { if (source instanceof org.jsoup.nodes.Element) { org.jsoup.nodes.Element sourceEl = (org.jsoup.nodes.Element) source; String prefix = updateNamespaces(sourceEl);"
+      },
+      {
+        "txt": "String namespace = namespaces.get(prefix); Element el = doc.createElementNS(namespace, sourceEl.tagName()); copyAttributes(sourceEl, el); if (dest == null) { // sets up the root doc.appendChild(el); } else { dest.appendChild(el); } dest = el; // descend } else if (source instanceof org.jsoup.nodes.TextNode) {"
+      },
+      {
+        "txt": "org.jsoup.nodes.TextNode sourceText = (org.jsoup.nodes.TextNode) source; Text text = doc.createTextNode(sourceText.getWholeText()); dest.appendChild(text); } else if (source instanceof org.jsoup.nodes.Comment) { org.jsoup.nodes.Comment sourceComment = (org.jsoup.nodes.Comment) source; Comment comment = doc.createComment(sourceComment.getData()); dest.appendChild(comment); } else if (source instanceof org.jsoup.nodes.DataNode) { org.jsoup.nodes.DataNode sourceData = (org.jsoup.nodes.DataNode) source; Text node = doc.createTextNode(sourceData.getWholeData());"
+      },
+      {
+        "txt": "dest.appendChild(node); } else { } } public void tail(org.jsoup.nodes.Node source, int depth) { if (source instanceof org.jsoup.nodes.Element && dest.getParentNode() instanceof Element) { dest = (Element) dest.getParentNode(); // undescend. cromulent. } } private void copyAttributes(org.jsoup.nodes.Node source, Element el) {"
+      },
+      {
+        "txt": "for (Attribute attribute : source.attributes()) { String key = attribute.getKey().replaceAll(\"[^-a-zA-Z0-9_:.]\", \"\"); if (key.matches(\"[a-zA-Z_:][-a-zA-Z0-9_:.]*\")) el.setAttribute(key, attribute.getValue()); } } private String updateNamespaces(org.jsoup.nodes.Element el) { Attributes attributes = el.attributes(); for (Attribute attr : attributes) { String key = attr.getKey();"
+      },
+      {
+        "txt": "String prefix; if (key.equals(xmlnsKey)) { prefix = \"\"; } else if (key.startsWith(xmlnsPrefix)) { prefix = key.substring(xmlnsPrefix.length()); } else { continue; } namespaces.put(prefix, attr.getValue()); }"
+      },
+      {
+        "txt": "int pos = el.tagName().indexOf(\":\"); return pos > 0 ? el.tagName().substring(0, pos) : \"\"; } } public String asString(Document doc) { try { DOMSource domSource = new DOMSource(doc); StringWriter writer = new StringWriter(); StreamResult result = new StreamResult(writer); TransformerFactory tf = TransformerFactory.newInstance();"
+      },
+      {
+        "txt": "Transformer transformer = tf.newTransformer(); transformer.transform(domSource, result); return writer.toString(); } catch (TransformerException e) { throw new IllegalStateException(e); } }"
+      }
+    ]
+  },
+  {
+    "id": 2046,
+    "file_path": "src/main/java/org/jsoup/helper/W3CDom.java",
+    "start-bug-line": 73,
+    "end-bug-line": 73,
+    "bug": "private final HashMap<String, String> namespaces = new HashMap<>();",
+    "fix": "private final Stack<HashMap<String, String>> namespacesStack = new Stack<>(); // stack of namespaces, prefix => urn",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.jsoup.helper; import org.jsoup.nodes.Attribute; import org.jsoup.nodes.Attributes; import org.jsoup.select.NodeTraversor; import org.jsoup.select.NodeVisitor; import org.w3c.dom.Comment; import org.w3c.dom.Document;"
+      },
+      {
+        "txt": "import org.w3c.dom.Element; import org.w3c.dom.Text; import javax.xml.parsers.DocumentBuilder; import javax.xml.parsers.DocumentBuilderFactory; import javax.xml.parsers.ParserConfigurationException; import javax.xml.transform.Transformer; import javax.xml.transform.TransformerException; import javax.xml.transform.TransformerFactory; import javax.xml.transform.dom.DOMSource; import javax.xml.transform.stream.StreamResult;"
+      },
+      {
+        "txt": "import java.io.StringWriter; import java.util.HashMap; public class W3CDom { protected DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance(); public Document fromJsoup(org.jsoup.nodes.Document in) { Validate.notNull(in); DocumentBuilder builder; try { factory.setNamespaceAware(true); builder = factory.newDocumentBuilder();"
+      },
+      {
+        "txt": "Document out = builder.newDocument(); convert(in, out); return out; } catch (ParserConfigurationException e) { throw new IllegalStateException(e); } } public void convert(org.jsoup.nodes.Document in, Document out) { if (!StringUtil.isBlank(in.location())) out.setDocumentURI(in.location());"
+      },
+      {
+        "txt": "NodeTraversor.traverse(new W3CBuilder(out), rootEl); } protected static class W3CBuilder implements NodeVisitor { private static final String xmlnsKey = \"xmlns\"; private static final String xmlnsPrefix = \"xmlns:\"; private final Document doc; <extra_id_0> private Element dest; public W3CBuilder(Document doc) { this.doc = doc; } public void head(org.jsoup.nodes.Node source, int depth) { if (source instanceof org.jsoup.nodes.Element) {"
+      },
+      {
+        "txt": "public void head(org.jsoup.nodes.Node source, int depth) { if (source instanceof org.jsoup.nodes.Element) { org.jsoup.nodes.Element sourceEl = (org.jsoup.nodes.Element) source; String prefix = updateNamespaces(sourceEl); String namespace = namespaces.get(prefix); Element el = doc.createElementNS(namespace, sourceEl.tagName()); copyAttributes(sourceEl, el); if (dest == null) { // sets up the root doc.appendChild(el); } else {"
+      },
+      {
+        "txt": "dest.appendChild(el); } dest = el; // descend } else if (source instanceof org.jsoup.nodes.TextNode) { org.jsoup.nodes.TextNode sourceText = (org.jsoup.nodes.TextNode) source; Text text = doc.createTextNode(sourceText.getWholeText()); dest.appendChild(text); } else if (source instanceof org.jsoup.nodes.Comment) { org.jsoup.nodes.Comment sourceComment = (org.jsoup.nodes.Comment) source; Comment comment = doc.createComment(sourceComment.getData());"
+      },
+      {
+        "txt": "dest.appendChild(comment); } else if (source instanceof org.jsoup.nodes.DataNode) { org.jsoup.nodes.DataNode sourceData = (org.jsoup.nodes.DataNode) source; Text node = doc.createTextNode(sourceData.getWholeData()); dest.appendChild(node); } else { } } public void tail(org.jsoup.nodes.Node source, int depth) { if (source instanceof org.jsoup.nodes.Element && dest.getParentNode() instanceof Element) {"
+      },
+      {
+        "txt": "dest = (Element) dest.getParentNode(); // undescend. cromulent. } } private void copyAttributes(org.jsoup.nodes.Node source, Element el) { for (Attribute attribute : source.attributes()) { String key = attribute.getKey().replaceAll(\"[^-a-zA-Z0-9_:.]\", \"\"); if (key.matches(\"[a-zA-Z_:][-a-zA-Z0-9_:.]*\")) el.setAttribute(key, attribute.getValue()); } }"
+      },
+      {
+        "txt": "private String updateNamespaces(org.jsoup.nodes.Element el) { Attributes attributes = el.attributes(); for (Attribute attr : attributes) { String key = attr.getKey(); String prefix; if (key.equals(xmlnsKey)) { prefix = \"\"; } else if (key.startsWith(xmlnsPrefix)) { prefix = key.substring(xmlnsPrefix.length()); } else {"
+      },
+      {
+        "txt": "continue; } namespaces.put(prefix, attr.getValue()); } int pos = el.tagName().indexOf(\":\"); return pos > 0 ? el.tagName().substring(0, pos) : \"\"; } } public String asString(Document doc) { try {"
+      },
+      {
+        "txt": "DOMSource domSource = new DOMSource(doc); StringWriter writer = new StringWriter(); StreamResult result = new StreamResult(writer); TransformerFactory tf = TransformerFactory.newInstance(); Transformer transformer = tf.newTransformer(); transformer.transform(domSource, result); return writer.toString(); } catch (TransformerException e) { throw new IllegalStateException(e); }"
+      }
+    ]
+  },
+  {
+    "id": 2047,
+    "file_path": "src/main/java/org/jsoup/helper/W3CDom.java",
+    "start-bug-line": 78,
+    "end-bug-line": 78,
+    "bug": "",
+    "fix": "this.namespacesStack.push(new HashMap<String, String>());",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "import org.jsoup.nodes.Attribute; import org.jsoup.nodes.Attributes; import org.jsoup.select.NodeTraversor; import org.jsoup.select.NodeVisitor; import org.w3c.dom.Comment; import org.w3c.dom.Document; import org.w3c.dom.Element; import org.w3c.dom.Text; import javax.xml.parsers.DocumentBuilder; import javax.xml.parsers.DocumentBuilderFactory;"
+      },
+      {
+        "txt": "import javax.xml.parsers.ParserConfigurationException; import javax.xml.transform.Transformer; import javax.xml.transform.TransformerException; import javax.xml.transform.TransformerFactory; import javax.xml.transform.dom.DOMSource; import javax.xml.transform.stream.StreamResult; import java.io.StringWriter; import java.util.HashMap; public class W3CDom { protected DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();"
+      },
+      {
+        "txt": "public Document fromJsoup(org.jsoup.nodes.Document in) { Validate.notNull(in); DocumentBuilder builder; try { factory.setNamespaceAware(true); builder = factory.newDocumentBuilder(); Document out = builder.newDocument(); convert(in, out); return out; } catch (ParserConfigurationException e) {"
+      },
+      {
+        "txt": "throw new IllegalStateException(e); } } public void convert(org.jsoup.nodes.Document in, Document out) { if (!StringUtil.isBlank(in.location())) out.setDocumentURI(in.location()); org.jsoup.nodes.Element rootEl = in.child(0); // skip the #root node NodeTraversor.traverse(new W3CBuilder(out), rootEl); } protected static class W3CBuilder implements NodeVisitor {"
+      },
+      {
+        "txt": "private static final String xmlnsPrefix = \"xmlns:\"; private final Document doc; private final HashMap<String, String> namespaces = new HashMap<>(); private Element dest; public W3CBuilder(Document doc) { this.doc = doc; <extra_id_0> public void head(org.jsoup.nodes.Node source, int depth) { if (source instanceof org.jsoup.nodes.Element) { org.jsoup.nodes.Element sourceEl = (org.jsoup.nodes.Element) source; String prefix = updateNamespaces(sourceEl); String namespace = namespaces.get(prefix); Element el = doc.createElementNS(namespace, sourceEl.tagName());"
+      },
+      {
+        "txt": "String namespace = namespaces.get(prefix); Element el = doc.createElementNS(namespace, sourceEl.tagName()); copyAttributes(sourceEl, el); if (dest == null) { // sets up the root doc.appendChild(el); } else { dest.appendChild(el); } dest = el; // descend } else if (source instanceof org.jsoup.nodes.TextNode) {"
+      },
+      {
+        "txt": "org.jsoup.nodes.TextNode sourceText = (org.jsoup.nodes.TextNode) source; Text text = doc.createTextNode(sourceText.getWholeText()); dest.appendChild(text); } else if (source instanceof org.jsoup.nodes.Comment) { org.jsoup.nodes.Comment sourceComment = (org.jsoup.nodes.Comment) source; Comment comment = doc.createComment(sourceComment.getData()); dest.appendChild(comment); } else if (source instanceof org.jsoup.nodes.DataNode) { org.jsoup.nodes.DataNode sourceData = (org.jsoup.nodes.DataNode) source; Text node = doc.createTextNode(sourceData.getWholeData());"
+      },
+      {
+        "txt": "dest.appendChild(node); } else { } } public void tail(org.jsoup.nodes.Node source, int depth) { if (source instanceof org.jsoup.nodes.Element && dest.getParentNode() instanceof Element) { dest = (Element) dest.getParentNode(); // undescend. cromulent. } } private void copyAttributes(org.jsoup.nodes.Node source, Element el) {"
+      },
+      {
+        "txt": "for (Attribute attribute : source.attributes()) { String key = attribute.getKey().replaceAll(\"[^-a-zA-Z0-9_:.]\", \"\"); if (key.matches(\"[a-zA-Z_:][-a-zA-Z0-9_:.]*\")) el.setAttribute(key, attribute.getValue()); } } private String updateNamespaces(org.jsoup.nodes.Element el) { Attributes attributes = el.attributes(); for (Attribute attr : attributes) { String key = attr.getKey();"
+      },
+      {
+        "txt": "String prefix; if (key.equals(xmlnsKey)) { prefix = \"\"; } else if (key.startsWith(xmlnsPrefix)) { prefix = key.substring(xmlnsPrefix.length()); } else { continue; } namespaces.put(prefix, attr.getValue()); }"
+      },
+      {
+        "txt": "int pos = el.tagName().indexOf(\":\"); return pos > 0 ? el.tagName().substring(0, pos) : \"\"; } } public String asString(Document doc) { try { DOMSource domSource = new DOMSource(doc); StringWriter writer = new StringWriter(); StreamResult result = new StreamResult(writer); TransformerFactory tf = TransformerFactory.newInstance();"
+      },
+      {
+        "txt": "Transformer transformer = tf.newTransformer(); transformer.transform(domSource, result); return writer.toString(); } catch (TransformerException e) { throw new IllegalStateException(e); } }"
+      }
+    ]
+  },
+  {
+    "id": 2048,
+    "file_path": "src/main/java/org/jsoup/helper/W3CDom.java",
+    "start-bug-line": 81,
+    "end-bug-line": 81,
+    "bug": "",
+    "fix": "namespacesStack.push(new HashMap<>(namespacesStack.peek())); // inherit from above on the stack",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.jsoup.helper; import org.jsoup.nodes.Attribute; import org.jsoup.nodes.Attributes;"
+      },
+      {
+        "txt": "import org.jsoup.select.NodeTraversor; import org.jsoup.select.NodeVisitor; import org.w3c.dom.Comment; import org.w3c.dom.Document; import org.w3c.dom.Element; import org.w3c.dom.Text; import javax.xml.parsers.DocumentBuilder; import javax.xml.parsers.DocumentBuilderFactory; import javax.xml.parsers.ParserConfigurationException; import javax.xml.transform.Transformer;"
+      },
+      {
+        "txt": "import javax.xml.transform.TransformerException; import javax.xml.transform.TransformerFactory; import javax.xml.transform.dom.DOMSource; import javax.xml.transform.stream.StreamResult; import java.io.StringWriter; import java.util.HashMap; public class W3CDom { protected DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance(); public Document fromJsoup(org.jsoup.nodes.Document in) { Validate.notNull(in);"
+      },
+      {
+        "txt": "DocumentBuilder builder; try { factory.setNamespaceAware(true); builder = factory.newDocumentBuilder(); Document out = builder.newDocument(); convert(in, out); return out; } catch (ParserConfigurationException e) { throw new IllegalStateException(e); }"
+      },
+      {
+        "txt": "} public void convert(org.jsoup.nodes.Document in, Document out) { if (!StringUtil.isBlank(in.location())) out.setDocumentURI(in.location()); org.jsoup.nodes.Element rootEl = in.child(0); // skip the #root node NodeTraversor.traverse(new W3CBuilder(out), rootEl); } protected static class W3CBuilder implements NodeVisitor { private static final String xmlnsKey = \"xmlns\"; private static final String xmlnsPrefix = \"xmlns:\";"
+      },
+      {
+        "txt": "private final HashMap<String, String> namespaces = new HashMap<>(); private Element dest; public W3CBuilder(Document doc) { this.doc = doc; } public void head(org.jsoup.nodes.Node source, int depth) { <extra_id_0> org.jsoup.nodes.Element sourceEl = (org.jsoup.nodes.Element) source; String prefix = updateNamespaces(sourceEl); String namespace = namespaces.get(prefix); Element el = doc.createElementNS(namespace, sourceEl.tagName()); copyAttributes(sourceEl, el); if (dest == null) { // sets up the root"
+      },
+      {
+        "txt": "copyAttributes(sourceEl, el); if (dest == null) { // sets up the root doc.appendChild(el); } else { dest.appendChild(el); } dest = el; // descend } else if (source instanceof org.jsoup.nodes.TextNode) { org.jsoup.nodes.TextNode sourceText = (org.jsoup.nodes.TextNode) source; Text text = doc.createTextNode(sourceText.getWholeText());"
+      },
+      {
+        "txt": "dest.appendChild(text); } else if (source instanceof org.jsoup.nodes.Comment) { org.jsoup.nodes.Comment sourceComment = (org.jsoup.nodes.Comment) source; Comment comment = doc.createComment(sourceComment.getData()); dest.appendChild(comment); } else if (source instanceof org.jsoup.nodes.DataNode) { org.jsoup.nodes.DataNode sourceData = (org.jsoup.nodes.DataNode) source; Text node = doc.createTextNode(sourceData.getWholeData()); dest.appendChild(node); } else {"
+      },
+      {
+        "txt": "} } public void tail(org.jsoup.nodes.Node source, int depth) { if (source instanceof org.jsoup.nodes.Element && dest.getParentNode() instanceof Element) { dest = (Element) dest.getParentNode(); // undescend. cromulent. } } private void copyAttributes(org.jsoup.nodes.Node source, Element el) { for (Attribute attribute : source.attributes()) { String key = attribute.getKey().replaceAll(\"[^-a-zA-Z0-9_:.]\", \"\");"
+      },
+      {
+        "txt": "if (key.matches(\"[a-zA-Z_:][-a-zA-Z0-9_:.]*\")) el.setAttribute(key, attribute.getValue()); } } private String updateNamespaces(org.jsoup.nodes.Element el) { Attributes attributes = el.attributes(); for (Attribute attr : attributes) { String key = attr.getKey(); String prefix; if (key.equals(xmlnsKey)) {"
+      },
+      {
+        "txt": "prefix = \"\"; } else if (key.startsWith(xmlnsPrefix)) { prefix = key.substring(xmlnsPrefix.length()); } else { continue; } namespaces.put(prefix, attr.getValue()); } int pos = el.tagName().indexOf(\":\"); return pos > 0 ? el.tagName().substring(0, pos) : \"\";"
+      },
+      {
+        "txt": "} } public String asString(Document doc) { try { DOMSource domSource = new DOMSource(doc); StringWriter writer = new StringWriter(); StreamResult result = new StreamResult(writer); TransformerFactory tf = TransformerFactory.newInstance(); Transformer transformer = tf.newTransformer(); transformer.transform(domSource, result);"
+      },
+      {
+        "txt": "return writer.toString(); } catch (TransformerException e) { throw new IllegalStateException(e); } }"
+      }
+    ]
+  },
+  {
+    "id": 2049,
+    "file_path": "src/main/java/org/jsoup/helper/W3CDom.java",
+    "start-bug-line": 85,
+    "end-bug-line": 85,
+    "bug": "String namespace = namespaces.get(prefix);",
+    "fix": "String namespace = namespacesStack.peek().get(prefix);",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.jsoup.helper; import org.jsoup.nodes.Attribute; import org.jsoup.nodes.Attributes; import org.jsoup.select.NodeTraversor; import org.jsoup.select.NodeVisitor; import org.w3c.dom.Comment;"
+      },
+      {
+        "txt": "import org.w3c.dom.Document; import org.w3c.dom.Element; import org.w3c.dom.Text; import javax.xml.parsers.DocumentBuilder; import javax.xml.parsers.DocumentBuilderFactory; import javax.xml.parsers.ParserConfigurationException; import javax.xml.transform.Transformer; import javax.xml.transform.TransformerException; import javax.xml.transform.TransformerFactory; import javax.xml.transform.dom.DOMSource;"
+      },
+      {
+        "txt": "import javax.xml.transform.stream.StreamResult; import java.io.StringWriter; import java.util.HashMap; public class W3CDom { protected DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance(); public Document fromJsoup(org.jsoup.nodes.Document in) { Validate.notNull(in); DocumentBuilder builder; try { factory.setNamespaceAware(true);"
+      },
+      {
+        "txt": "builder = factory.newDocumentBuilder(); Document out = builder.newDocument(); convert(in, out); return out; } catch (ParserConfigurationException e) { throw new IllegalStateException(e); } } public void convert(org.jsoup.nodes.Document in, Document out) { if (!StringUtil.isBlank(in.location()))"
+      },
+      {
+        "txt": "out.setDocumentURI(in.location()); org.jsoup.nodes.Element rootEl = in.child(0); // skip the #root node NodeTraversor.traverse(new W3CBuilder(out), rootEl); } protected static class W3CBuilder implements NodeVisitor { private static final String xmlnsKey = \"xmlns\"; private static final String xmlnsPrefix = \"xmlns:\"; private final Document doc; private final HashMap<String, String> namespaces = new HashMap<>(); private Element dest;"
+      },
+      {
+        "txt": "this.doc = doc; } public void head(org.jsoup.nodes.Node source, int depth) { if (source instanceof org.jsoup.nodes.Element) { org.jsoup.nodes.Element sourceEl = (org.jsoup.nodes.Element) source; String prefix = updateNamespaces(sourceEl); <extra_id_0> Element el = doc.createElementNS(namespace, sourceEl.tagName()); copyAttributes(sourceEl, el); if (dest == null) { // sets up the root doc.appendChild(el); } else { dest.appendChild(el);"
+      },
+      {
+        "txt": "} else { dest.appendChild(el); } dest = el; // descend } else if (source instanceof org.jsoup.nodes.TextNode) { org.jsoup.nodes.TextNode sourceText = (org.jsoup.nodes.TextNode) source; Text text = doc.createTextNode(sourceText.getWholeText()); dest.appendChild(text); } else if (source instanceof org.jsoup.nodes.Comment) { org.jsoup.nodes.Comment sourceComment = (org.jsoup.nodes.Comment) source;"
+      },
+      {
+        "txt": "Comment comment = doc.createComment(sourceComment.getData()); dest.appendChild(comment); } else if (source instanceof org.jsoup.nodes.DataNode) { org.jsoup.nodes.DataNode sourceData = (org.jsoup.nodes.DataNode) source; Text node = doc.createTextNode(sourceData.getWholeData()); dest.appendChild(node); } else { } } public void tail(org.jsoup.nodes.Node source, int depth) {"
+      },
+      {
+        "txt": "if (source instanceof org.jsoup.nodes.Element && dest.getParentNode() instanceof Element) { dest = (Element) dest.getParentNode(); // undescend. cromulent. } } private void copyAttributes(org.jsoup.nodes.Node source, Element el) { for (Attribute attribute : source.attributes()) { String key = attribute.getKey().replaceAll(\"[^-a-zA-Z0-9_:.]\", \"\"); if (key.matches(\"[a-zA-Z_:][-a-zA-Z0-9_:.]*\")) el.setAttribute(key, attribute.getValue()); }"
+      },
+      {
+        "txt": "} private String updateNamespaces(org.jsoup.nodes.Element el) { Attributes attributes = el.attributes(); for (Attribute attr : attributes) { String key = attr.getKey(); String prefix; if (key.equals(xmlnsKey)) { prefix = \"\"; } else if (key.startsWith(xmlnsPrefix)) { prefix = key.substring(xmlnsPrefix.length());"
+      },
+      {
+        "txt": "} else { continue; } namespaces.put(prefix, attr.getValue()); } int pos = el.tagName().indexOf(\":\"); return pos > 0 ? el.tagName().substring(0, pos) : \"\"; } } public String asString(Document doc) {"
+      },
+      {
+        "txt": "try { DOMSource domSource = new DOMSource(doc); StringWriter writer = new StringWriter(); StreamResult result = new StreamResult(writer); TransformerFactory tf = TransformerFactory.newInstance(); Transformer transformer = tf.newTransformer(); transformer.transform(domSource, result); return writer.toString(); } catch (TransformerException e) { throw new IllegalStateException(e);"
+      },
+      {
+        "txt": "} }"
+      }
+    ]
+  },
+  {
+    "id": 2050,
+    "file_path": "src/main/java/org/jsoup/helper/W3CDom.java",
+    "start-bug-line": 116,
+    "end-bug-line": 116,
+    "bug": "",
+    "fix": "namespacesStack.pop();",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.jsoup.helper; import org.jsoup.nodes.Attribute; import org.jsoup.nodes.Attributes; import org.jsoup.select.NodeTraversor;"
+      },
+      {
+        "txt": "import org.jsoup.select.NodeVisitor; import org.w3c.dom.Comment; import org.w3c.dom.Document; import org.w3c.dom.Element; import org.w3c.dom.Text; import javax.xml.parsers.DocumentBuilder; import javax.xml.parsers.DocumentBuilderFactory; import javax.xml.parsers.ParserConfigurationException; import javax.xml.transform.Transformer; import javax.xml.transform.TransformerException;"
+      },
+      {
+        "txt": "import javax.xml.transform.TransformerFactory; import javax.xml.transform.dom.DOMSource; import javax.xml.transform.stream.StreamResult; import java.io.StringWriter; import java.util.HashMap; public class W3CDom { protected DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance(); public Document fromJsoup(org.jsoup.nodes.Document in) { Validate.notNull(in); DocumentBuilder builder;"
+      },
+      {
+        "txt": "try { factory.setNamespaceAware(true); builder = factory.newDocumentBuilder(); Document out = builder.newDocument(); convert(in, out); return out; } catch (ParserConfigurationException e) { throw new IllegalStateException(e); } }"
+      },
+      {
+        "txt": "public void convert(org.jsoup.nodes.Document in, Document out) { if (!StringUtil.isBlank(in.location())) out.setDocumentURI(in.location()); org.jsoup.nodes.Element rootEl = in.child(0); // skip the #root node NodeTraversor.traverse(new W3CBuilder(out), rootEl); } protected static class W3CBuilder implements NodeVisitor { private static final String xmlnsKey = \"xmlns\"; private static final String xmlnsPrefix = \"xmlns:\"; private final Document doc;"
+      },
+      {
+        "txt": "private final HashMap<String, String> namespaces = new HashMap<>(); private Element dest; public W3CBuilder(Document doc) { this.doc = doc; } public void head(org.jsoup.nodes.Node source, int depth) { if (source instanceof org.jsoup.nodes.Element) { org.jsoup.nodes.Element sourceEl = (org.jsoup.nodes.Element) source; String prefix = updateNamespaces(sourceEl); String namespace = namespaces.get(prefix);"
+      },
+      {
+        "txt": "Element el = doc.createElementNS(namespace, sourceEl.tagName()); copyAttributes(sourceEl, el); if (dest == null) { // sets up the root doc.appendChild(el); } else { dest.appendChild(el); } dest = el; // descend } else if (source instanceof org.jsoup.nodes.TextNode) { org.jsoup.nodes.TextNode sourceText = (org.jsoup.nodes.TextNode) source;"
+      },
+      {
+        "txt": "Text text = doc.createTextNode(sourceText.getWholeText()); dest.appendChild(text); } else if (source instanceof org.jsoup.nodes.Comment) { org.jsoup.nodes.Comment sourceComment = (org.jsoup.nodes.Comment) source; Comment comment = doc.createComment(sourceComment.getData()); dest.appendChild(comment); } else if (source instanceof org.jsoup.nodes.DataNode) { org.jsoup.nodes.DataNode sourceData = (org.jsoup.nodes.DataNode) source; Text node = doc.createTextNode(sourceData.getWholeData()); dest.appendChild(node);"
+      },
+      {
+        "txt": "} } public void tail(org.jsoup.nodes.Node source, int depth) { if (source instanceof org.jsoup.nodes.Element && dest.getParentNode() instanceof Element) { dest = (Element) dest.getParentNode(); // undescend. cromulent. } <extra_id_0> private void copyAttributes(org.jsoup.nodes.Node source, Element el) { for (Attribute attribute : source.attributes()) { String key = attribute.getKey().replaceAll(\"[^-a-zA-Z0-9_:.]\", \"\"); if (key.matches(\"[a-zA-Z_:][-a-zA-Z0-9_:.]*\")) el.setAttribute(key, attribute.getValue()); }"
+      },
+      {
+        "txt": "el.setAttribute(key, attribute.getValue()); } } private String updateNamespaces(org.jsoup.nodes.Element el) { Attributes attributes = el.attributes(); for (Attribute attr : attributes) { String key = attr.getKey(); String prefix; if (key.equals(xmlnsKey)) { prefix = \"\";"
+      },
+      {
+        "txt": "} else if (key.startsWith(xmlnsPrefix)) { prefix = key.substring(xmlnsPrefix.length()); } else { continue; } namespaces.put(prefix, attr.getValue()); } int pos = el.tagName().indexOf(\":\"); return pos > 0 ? el.tagName().substring(0, pos) : \"\"; }"
+      },
+      {
+        "txt": "} public String asString(Document doc) { try { DOMSource domSource = new DOMSource(doc); StringWriter writer = new StringWriter(); StreamResult result = new StreamResult(writer); TransformerFactory tf = TransformerFactory.newInstance(); Transformer transformer = tf.newTransformer(); transformer.transform(domSource, result); return writer.toString();"
+      },
+      {
+        "txt": "} catch (TransformerException e) { throw new IllegalStateException(e); } }"
+      }
+    ]
+  },
+  {
+    "id": 2051,
+    "file_path": "src/main/java/org/jsoup/helper/W3CDom.java",
+    "start-bug-line": 144,
+    "end-bug-line": 144,
+    "bug": "namespaces.put(prefix, attr.getValue());",
+    "fix": "namespacesStack.peek().put(prefix, attr.getValue());",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.jsoup.helper; import org.jsoup.nodes.Attribute; import org.jsoup.nodes.Attributes; import org.jsoup.select.NodeTraversor;"
+      },
+      {
+        "txt": "import org.jsoup.select.NodeVisitor; import org.w3c.dom.Comment; import org.w3c.dom.Document; import org.w3c.dom.Element; import org.w3c.dom.Text; import javax.xml.parsers.DocumentBuilder; import javax.xml.parsers.DocumentBuilderFactory; import javax.xml.parsers.ParserConfigurationException; import javax.xml.transform.Transformer; import javax.xml.transform.TransformerException;"
+      },
+      {
+        "txt": "import javax.xml.transform.TransformerFactory; import javax.xml.transform.dom.DOMSource; import javax.xml.transform.stream.StreamResult; import java.io.StringWriter; import java.util.HashMap; public class W3CDom { protected DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance(); public Document fromJsoup(org.jsoup.nodes.Document in) { Validate.notNull(in); DocumentBuilder builder;"
+      },
+      {
+        "txt": "try { factory.setNamespaceAware(true); builder = factory.newDocumentBuilder(); Document out = builder.newDocument(); convert(in, out); return out; } catch (ParserConfigurationException e) { throw new IllegalStateException(e); } }"
+      },
+      {
+        "txt": "public void convert(org.jsoup.nodes.Document in, Document out) { if (!StringUtil.isBlank(in.location())) out.setDocumentURI(in.location()); org.jsoup.nodes.Element rootEl = in.child(0); // skip the #root node NodeTraversor.traverse(new W3CBuilder(out), rootEl); } protected static class W3CBuilder implements NodeVisitor { private static final String xmlnsKey = \"xmlns\"; private static final String xmlnsPrefix = \"xmlns:\"; private final Document doc;"
+      },
+      {
+        "txt": "private final HashMap<String, String> namespaces = new HashMap<>(); private Element dest; public W3CBuilder(Document doc) { this.doc = doc; } public void head(org.jsoup.nodes.Node source, int depth) { if (source instanceof org.jsoup.nodes.Element) { org.jsoup.nodes.Element sourceEl = (org.jsoup.nodes.Element) source; String prefix = updateNamespaces(sourceEl); String namespace = namespaces.get(prefix);"
+      },
+      {
+        "txt": "Element el = doc.createElementNS(namespace, sourceEl.tagName()); copyAttributes(sourceEl, el); if (dest == null) { // sets up the root doc.appendChild(el); } else { dest.appendChild(el); } dest = el; // descend } else if (source instanceof org.jsoup.nodes.TextNode) { org.jsoup.nodes.TextNode sourceText = (org.jsoup.nodes.TextNode) source;"
+      },
+      {
+        "txt": "Text text = doc.createTextNode(sourceText.getWholeText()); dest.appendChild(text); } else if (source instanceof org.jsoup.nodes.Comment) { org.jsoup.nodes.Comment sourceComment = (org.jsoup.nodes.Comment) source; Comment comment = doc.createComment(sourceComment.getData()); dest.appendChild(comment); } else if (source instanceof org.jsoup.nodes.DataNode) { org.jsoup.nodes.DataNode sourceData = (org.jsoup.nodes.DataNode) source; Text node = doc.createTextNode(sourceData.getWholeData()); dest.appendChild(node);"
+      },
+      {
+        "txt": "} else { } } public void tail(org.jsoup.nodes.Node source, int depth) { if (source instanceof org.jsoup.nodes.Element && dest.getParentNode() instanceof Element) { dest = (Element) dest.getParentNode(); // undescend. cromulent. } } private void copyAttributes(org.jsoup.nodes.Node source, Element el) { for (Attribute attribute : source.attributes()) {"
+      },
+      {
+        "txt": "String key = attribute.getKey().replaceAll(\"[^-a-zA-Z0-9_:.]\", \"\"); if (key.matches(\"[a-zA-Z_:][-a-zA-Z0-9_:.]*\")) el.setAttribute(key, attribute.getValue()); } } private String updateNamespaces(org.jsoup.nodes.Element el) { Attributes attributes = el.attributes(); for (Attribute attr : attributes) { String key = attr.getKey(); String prefix;"
+      },
+      {
+        "txt": "prefix = \"\"; } else if (key.startsWith(xmlnsPrefix)) { prefix = key.substring(xmlnsPrefix.length()); } else { continue; } <extra_id_0> } int pos = el.tagName().indexOf(\":\"); return pos > 0 ? el.tagName().substring(0, pos) : \"\"; } } public String asString(Document doc) {"
+      },
+      {
+        "txt": "} public String asString(Document doc) { try { DOMSource domSource = new DOMSource(doc); StringWriter writer = new StringWriter(); StreamResult result = new StreamResult(writer); TransformerFactory tf = TransformerFactory.newInstance(); Transformer transformer = tf.newTransformer(); transformer.transform(domSource, result); return writer.toString();"
+      },
+      {
+        "txt": "} catch (TransformerException e) { throw new IllegalStateException(e); } }"
+      }
+    ]
+  }
+]

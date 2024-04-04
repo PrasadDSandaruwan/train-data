@@ -1,0 +1,62 @@
+[
+  {
+    "id": 2572,
+    "file_path": "src/main/java/org/apache/commons/math/linear/OpenMapRealMatrix.java",
+    "start-bug-line": 50,
+    "end-bug-line": 50,
+    "bug": "",
+    "fix": "long lRow = (long) rowDimension; long lCol = (long) columnDimension; if (lRow * lCol >= (long) Integer.MAX_VALUE) { throw new NumberIsTooLargeException(lRow * lCol, Integer.MAX_VALUE, false); }",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.math.linear; import java.io.Serializable; import org.apache.commons.math.exception.NumberIsTooLargeException; import org.apache.commons.math.util.OpenIntToDoubleHashMap; public class OpenMapRealMatrix extends AbstractRealMatrix"
+      },
+      {
+        "txt": "private static final long serialVersionUID = -5962461716457143437L; private final int rows; private final int columns; private final OpenIntToDoubleHashMap entries; public OpenMapRealMatrix(int rowDimension, int columnDimension) { super(rowDimension, columnDimension); <extra_id_0> this.columns = columnDimension; this.entries = new OpenIntToDoubleHashMap(0.0); } public OpenMapRealMatrix(OpenMapRealMatrix matrix) { this.rows = matrix.rows; this.columns = matrix.columns;"
+      },
+      {
+        "txt": "this.rows = matrix.rows; this.columns = matrix.columns; this.entries = new OpenIntToDoubleHashMap(matrix.entries); } @Override public OpenMapRealMatrix copy() { return new OpenMapRealMatrix(this); } @Override public OpenMapRealMatrix createMatrix(int rowDimension, int columnDimension) {"
+      },
+      {
+        "txt": "return new OpenMapRealMatrix(rowDimension, columnDimension); } @Override public int getColumnDimension() { return columns; } public OpenMapRealMatrix add(OpenMapRealMatrix m) { MatrixUtils.checkAdditionCompatible(this, m); final OpenMapRealMatrix out = new OpenMapRealMatrix(this); for (OpenIntToDoubleHashMap.Iterator iterator = m.entries.iterator(); iterator.hasNext();) {"
+      },
+      {
+        "txt": "iterator.advance(); final int row = iterator.key() / columns; final int col = iterator.key() - row * columns; out.setEntry(row, col, getEntry(row, col) + iterator.value()); } return out; } @Override public OpenMapRealMatrix subtract(final RealMatrix m) { try {"
+      },
+      {
+        "txt": "return subtract((OpenMapRealMatrix) m); } catch (ClassCastException cce) { return (OpenMapRealMatrix) super.subtract(m); } } public OpenMapRealMatrix subtract(OpenMapRealMatrix m) { MatrixUtils.checkAdditionCompatible(this, m); final OpenMapRealMatrix out = new OpenMapRealMatrix(this); for (OpenIntToDoubleHashMap.Iterator iterator = m.entries.iterator(); iterator.hasNext();) { iterator.advance();"
+      },
+      {
+        "txt": "final int row = iterator.key() / columns; final int col = iterator.key() - row * columns; out.setEntry(row, col, getEntry(row, col) - iterator.value()); } return out; } @Override public RealMatrix multiply(final RealMatrix m) { try { return multiply((OpenMapRealMatrix) m);"
+      },
+      {
+        "txt": "} catch (ClassCastException cce) { MatrixUtils.checkMultiplicationCompatible(this, m); final int outCols = m.getColumnDimension(); final BlockRealMatrix out = new BlockRealMatrix(rows, outCols); for (OpenIntToDoubleHashMap.Iterator iterator = entries.iterator(); iterator.hasNext();) { iterator.advance(); final double value = iterator.value(); final int key = iterator.key(); final int i = key / columns; final int k = key % columns;"
+      },
+      {
+        "txt": "for (int j = 0; j < outCols; ++j) { out.addToEntry(i, j, value * m.getEntry(k, j)); } } return out; } } public OpenMapRealMatrix multiply(OpenMapRealMatrix m) { MatrixUtils.checkMultiplicationCompatible(this, m); final int outCols = m.getColumnDimension();"
+      },
+      {
+        "txt": "OpenMapRealMatrix out = new OpenMapRealMatrix(rows, outCols); for (OpenIntToDoubleHashMap.Iterator iterator = entries.iterator(); iterator.hasNext();) { iterator.advance(); final double value = iterator.value(); final int key = iterator.key(); final int i = key / columns; final int k = key % columns; for (int j = 0; j < outCols; ++j) { final int rightKey = m.computeKey(k, j); if (m.entries.containsKey(rightKey)) {"
+      },
+      {
+        "txt": "final int outKey = out.computeKey(i, j); final double outValue = out.entries.get(outKey) + value * m.entries.get(rightKey); if (outValue == 0.0) { out.entries.remove(outKey); } else { out.entries.put(outKey, outValue); } } }"
+      },
+      {
+        "txt": "} return out; } @Override public double getEntry(int row, int column) { MatrixUtils.checkRowIndex(this, row); MatrixUtils.checkColumnIndex(this, column); return entries.get(computeKey(row, column)); } @Override"
+      },
+      {
+        "txt": "public int getRowDimension() { return rows; } @Override public void setEntry(int row, int column, double value) { MatrixUtils.checkRowIndex(this, row); MatrixUtils.checkColumnIndex(this, column); if (value == 0.0) { entries.remove(computeKey(row, column)); } else {"
+      },
+      {
+        "txt": "entries.put(computeKey(row, column), value); } } @Override public void addToEntry(int row, int column, double increment) { MatrixUtils.checkRowIndex(this, row); MatrixUtils.checkColumnIndex(this, column); final int key = computeKey(row, column); final double value = entries.get(key) + increment; if (value == 0.0) {"
+      },
+      {
+        "txt": "entries.remove(key); } else { entries.put(key, value); } } @Override public void multiplyEntry(int row, int column, double factor) { MatrixUtils.checkRowIndex(this, row); MatrixUtils.checkColumnIndex(this, column); final int key = computeKey(row, column);"
+      },
+      {
+        "txt": "final double value = entries.get(key) * factor; if (value == 0.0) { entries.remove(key); } else { entries.put(key, value); } } private int computeKey(int row, int column) { return row * columns + column; }"
+      }
+    ]
+  }
+]

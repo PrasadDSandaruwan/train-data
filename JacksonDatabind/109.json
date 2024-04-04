@@ -1,0 +1,518 @@
+[
+  {
+    "id": 1793,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/ser/std/NumberSerializer.java",
+    "start-bug-line": 37,
+    "end-bug-line": 37,
+    "bug": "",
+    "fix": "protected final static int MAX_BIG_DECIMAL_SCALE = 9999;",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind.ser.std; import java.io.IOException;"
+      },
+      {
+        "txt": "import java.lang.reflect.Type; import java.math.BigDecimal; import java.math.BigInteger; import com.fasterxml.jackson.annotation.JsonFormat; import com.fasterxml.jackson.core.JsonGenerator; import com.fasterxml.jackson.core.JsonParser; import com.fasterxml.jackson.databind.*; import com.fasterxml.jackson.databind.annotation.JacksonStdImpl; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonFormatVisitorWrapper; import com.fasterxml.jackson.databind.ser.ContextualSerializer;"
+      },
+      {
+        "txt": "@SuppressWarnings(\"serial\") public class NumberSerializer extends StdScalarSerializer<Number> implements ContextualSerializer { public final static NumberSerializer instance = new NumberSerializer(Number.class); <extra_id_0> protected final boolean _isInt; public NumberSerializer(Class<? extends Number> rawType) { super(rawType, false); _isInt = (rawType == BigInteger.class); } @Override"
+      },
+      {
+        "txt": "} @Override public JsonSerializer<?> createContextual(SerializerProvider prov, BeanProperty property) throws JsonMappingException { JsonFormat.Value format = findFormatOverrides(prov, property, handledType()); if (format != null) { switch (format.getShape()) { case STRING: return ToStringSerializer.instance;"
+      },
+      {
+        "txt": "default: } } return this; } @Override public void serialize(Number value, JsonGenerator g, SerializerProvider provider) throws IOException { if (value instanceof BigDecimal) { g.writeNumber((BigDecimal) value);"
+      },
+      {
+        "txt": "} else if (value instanceof BigInteger) { g.writeNumber((BigInteger) value); } else if (value instanceof Long) { g.writeNumber(value.longValue()); } else if (value instanceof Double) { g.writeNumber(value.doubleValue()); } else if (value instanceof Float) { g.writeNumber(value.floatValue()); } else if (value instanceof Integer || value instanceof Byte || value instanceof Short) { g.writeNumber(value.intValue()); // doesn't need to be cast to smaller numbers"
+      },
+      {
+        "txt": "} else { g.writeNumber(value.toString()); } } @Override public JsonNode getSchema(SerializerProvider provider, Type typeHint) { return createSchemaNode(_isInt ? \"integer\" : \"number\", true); } @Override public void acceptJsonFormatVisitor(JsonFormatVisitorWrapper visitor, JavaType typeHint) throws JsonMappingException"
+      },
+      {
+        "txt": "{ if (_isInt) { visitIntFormat(visitor, typeHint, JsonParser.NumberType.BIG_INTEGER); } else { if (((Class<?>) handledType()) == BigDecimal.class) { visitFloatFormat(visitor, typeHint, JsonParser.NumberType.BIG_DECIMAL); } else { } } }"
+      }
+    ]
+  },
+  {
+    "id": 1794,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/ser/std/NumberSerializer.java",
+    "start-bug-line": 58,
+    "end-bug-line": 58,
+    "bug": "",
+    "fix": "if (((Class<?>) handledType()) == BigDecimal.class) { return bigDecimalAsStringSerializer(); }",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind.ser.std; import java.io.IOException; import java.lang.reflect.Type; import java.math.BigDecimal; import java.math.BigInteger;"
+      },
+      {
+        "txt": "import com.fasterxml.jackson.annotation.JsonFormat; import com.fasterxml.jackson.core.JsonGenerator; import com.fasterxml.jackson.core.JsonParser; import com.fasterxml.jackson.databind.*; import com.fasterxml.jackson.databind.annotation.JacksonStdImpl; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonFormatVisitorWrapper; import com.fasterxml.jackson.databind.ser.ContextualSerializer; @JacksonStdImpl @SuppressWarnings(\"serial\") public class NumberSerializer"
+      },
+      {
+        "txt": "extends StdScalarSerializer<Number> implements ContextualSerializer { public final static NumberSerializer instance = new NumberSerializer(Number.class); protected final boolean _isInt; public NumberSerializer(Class<? extends Number> rawType) { super(rawType, false); _isInt = (rawType == BigInteger.class); } @Override"
+      },
+      {
+        "txt": "BeanProperty property) throws JsonMappingException { JsonFormat.Value format = findFormatOverrides(prov, property, handledType()); if (format != null) { switch (format.getShape()) { case STRING: <extra_id_0> default: } } return this; } @Override"
+      },
+      {
+        "txt": "} @Override public void serialize(Number value, JsonGenerator g, SerializerProvider provider) throws IOException { if (value instanceof BigDecimal) { g.writeNumber((BigDecimal) value); } else if (value instanceof BigInteger) { g.writeNumber((BigInteger) value); } else if (value instanceof Long) { g.writeNumber(value.longValue());"
+      },
+      {
+        "txt": "} else if (value instanceof Double) { g.writeNumber(value.doubleValue()); } else if (value instanceof Float) { g.writeNumber(value.floatValue()); } else if (value instanceof Integer || value instanceof Byte || value instanceof Short) { g.writeNumber(value.intValue()); // doesn't need to be cast to smaller numbers } else { g.writeNumber(value.toString()); } }"
+      },
+      {
+        "txt": "@Override public JsonNode getSchema(SerializerProvider provider, Type typeHint) { return createSchemaNode(_isInt ? \"integer\" : \"number\", true); } @Override public void acceptJsonFormatVisitor(JsonFormatVisitorWrapper visitor, JavaType typeHint) throws JsonMappingException { if (_isInt) { visitIntFormat(visitor, typeHint, JsonParser.NumberType.BIG_INTEGER); } else {"
+      },
+      {
+        "txt": "if (((Class<?>) handledType()) == BigDecimal.class) { visitFloatFormat(visitor, typeHint, JsonParser.NumberType.BIG_DECIMAL); } else { } } }"
+      }
+    ]
+  },
+  {
+    "id": 1795,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/ser/std/NumberSerializer.java",
+    "start-bug-line": 113,
+    "end-bug-line": 113,
+    "bug": "",
+    "fix": "public static JsonSerializer<?> bigDecimalAsStringSerializer() { return BigDecimalAsStringSerializer.BD_INSTANCE; }",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind.ser.std; import java.io.IOException; import java.lang.reflect.Type; import java.math.BigDecimal; import java.math.BigInteger; import com.fasterxml.jackson.annotation.JsonFormat;"
+      },
+      {
+        "txt": "import com.fasterxml.jackson.core.JsonGenerator; import com.fasterxml.jackson.core.JsonParser; import com.fasterxml.jackson.databind.*; import com.fasterxml.jackson.databind.annotation.JacksonStdImpl; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonFormatVisitorWrapper; import com.fasterxml.jackson.databind.ser.ContextualSerializer; @JacksonStdImpl @SuppressWarnings(\"serial\") public class NumberSerializer extends StdScalarSerializer<Number>"
+      },
+      {
+        "txt": "implements ContextualSerializer { public final static NumberSerializer instance = new NumberSerializer(Number.class); protected final boolean _isInt; public NumberSerializer(Class<? extends Number> rawType) { super(rawType, false); _isInt = (rawType == BigInteger.class); } @Override public JsonSerializer<?> createContextual(SerializerProvider prov,"
+      },
+      {
+        "txt": "BeanProperty property) throws JsonMappingException { JsonFormat.Value format = findFormatOverrides(prov, property, handledType()); if (format != null) { switch (format.getShape()) { case STRING: return ToStringSerializer.instance; default: } }"
+      },
+      {
+        "txt": "return this; } @Override public void serialize(Number value, JsonGenerator g, SerializerProvider provider) throws IOException { if (value instanceof BigDecimal) { g.writeNumber((BigDecimal) value); } else if (value instanceof BigInteger) { g.writeNumber((BigInteger) value); } else if (value instanceof Long) {"
+      },
+      {
+        "txt": "g.writeNumber(value.longValue()); } else if (value instanceof Double) { g.writeNumber(value.doubleValue()); } else if (value instanceof Float) { g.writeNumber(value.floatValue()); } else if (value instanceof Integer || value instanceof Byte || value instanceof Short) { g.writeNumber(value.intValue()); // doesn't need to be cast to smaller numbers } else { g.writeNumber(value.toString()); }"
+      },
+      {
+        "txt": "} @Override public JsonNode getSchema(SerializerProvider provider, Type typeHint) { return createSchemaNode(_isInt ? \"integer\" : \"number\", true); } @Override public void acceptJsonFormatVisitor(JsonFormatVisitorWrapper visitor, JavaType typeHint) throws JsonMappingException { if (_isInt) { visitIntFormat(visitor, typeHint, JsonParser.NumberType.BIG_INTEGER);"
+      },
+      {
+        "txt": "if (((Class<?>) handledType()) == BigDecimal.class) { visitFloatFormat(visitor, typeHint, JsonParser.NumberType.BIG_DECIMAL); } else { } } } <extra_id_0> }"
+      }
+    ]
+  },
+  {
+    "id": 1796,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/ser/std/NumberSerializer.java",
+    "start-bug-line": 114,
+    "end-bug-line": 114,
+    "bug": "",
+    "fix": "final static class BigDecimalAsStringSerializer extends ToStringSerializerBase { final static BigDecimalAsStringSerializer BD_INSTANCE = new BigDecimalAsStringSerializer();  public BigDecimalAsStringSerializer() { super(BigDecimal.class); }",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind.ser.std; import java.io.IOException; import java.lang.reflect.Type; import java.math.BigDecimal; import java.math.BigInteger; import com.fasterxml.jackson.annotation.JsonFormat;"
+      },
+      {
+        "txt": "import com.fasterxml.jackson.core.JsonGenerator; import com.fasterxml.jackson.core.JsonParser; import com.fasterxml.jackson.databind.*; import com.fasterxml.jackson.databind.annotation.JacksonStdImpl; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonFormatVisitorWrapper; import com.fasterxml.jackson.databind.ser.ContextualSerializer; @JacksonStdImpl @SuppressWarnings(\"serial\") public class NumberSerializer extends StdScalarSerializer<Number>"
+      },
+      {
+        "txt": "implements ContextualSerializer { public final static NumberSerializer instance = new NumberSerializer(Number.class); protected final boolean _isInt; public NumberSerializer(Class<? extends Number> rawType) { super(rawType, false); _isInt = (rawType == BigInteger.class); } @Override public JsonSerializer<?> createContextual(SerializerProvider prov,"
+      },
+      {
+        "txt": "BeanProperty property) throws JsonMappingException { JsonFormat.Value format = findFormatOverrides(prov, property, handledType()); if (format != null) { switch (format.getShape()) { case STRING: return ToStringSerializer.instance; default: } }"
+      },
+      {
+        "txt": "return this; } @Override public void serialize(Number value, JsonGenerator g, SerializerProvider provider) throws IOException { if (value instanceof BigDecimal) { g.writeNumber((BigDecimal) value); } else if (value instanceof BigInteger) { g.writeNumber((BigInteger) value); } else if (value instanceof Long) {"
+      },
+      {
+        "txt": "g.writeNumber(value.longValue()); } else if (value instanceof Double) { g.writeNumber(value.doubleValue()); } else if (value instanceof Float) { g.writeNumber(value.floatValue()); } else if (value instanceof Integer || value instanceof Byte || value instanceof Short) { g.writeNumber(value.intValue()); // doesn't need to be cast to smaller numbers } else { g.writeNumber(value.toString()); }"
+      },
+      {
+        "txt": "} @Override public JsonNode getSchema(SerializerProvider provider, Type typeHint) { return createSchemaNode(_isInt ? \"integer\" : \"number\", true); } @Override public void acceptJsonFormatVisitor(JsonFormatVisitorWrapper visitor, JavaType typeHint) throws JsonMappingException { if (_isInt) { visitIntFormat(visitor, typeHint, JsonParser.NumberType.BIG_INTEGER);"
+      },
+      {
+        "txt": "if (((Class<?>) handledType()) == BigDecimal.class) { visitFloatFormat(visitor, typeHint, JsonParser.NumberType.BIG_DECIMAL); } else { } } } <extra_id_0> }"
+      }
+    ]
+  },
+  {
+    "id": 1797,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/ser/std/NumberSerializer.java",
+    "start-bug-line": 115,
+    "end-bug-line": 115,
+    "bug": "",
+    "fix": "@Override public boolean isEmpty(SerializerProvider prov, Object value) { return valueToString(value).isEmpty(); }",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind.ser.std; import java.io.IOException; import java.lang.reflect.Type; import java.math.BigDecimal; import java.math.BigInteger; import com.fasterxml.jackson.annotation.JsonFormat;"
+      },
+      {
+        "txt": "import com.fasterxml.jackson.core.JsonGenerator; import com.fasterxml.jackson.core.JsonParser; import com.fasterxml.jackson.databind.*; import com.fasterxml.jackson.databind.annotation.JacksonStdImpl; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonFormatVisitorWrapper; import com.fasterxml.jackson.databind.ser.ContextualSerializer; @JacksonStdImpl @SuppressWarnings(\"serial\") public class NumberSerializer extends StdScalarSerializer<Number>"
+      },
+      {
+        "txt": "implements ContextualSerializer { public final static NumberSerializer instance = new NumberSerializer(Number.class); protected final boolean _isInt; public NumberSerializer(Class<? extends Number> rawType) { super(rawType, false); _isInt = (rawType == BigInteger.class); } @Override public JsonSerializer<?> createContextual(SerializerProvider prov,"
+      },
+      {
+        "txt": "BeanProperty property) throws JsonMappingException { JsonFormat.Value format = findFormatOverrides(prov, property, handledType()); if (format != null) { switch (format.getShape()) { case STRING: return ToStringSerializer.instance; default: } }"
+      },
+      {
+        "txt": "return this; } @Override public void serialize(Number value, JsonGenerator g, SerializerProvider provider) throws IOException { if (value instanceof BigDecimal) { g.writeNumber((BigDecimal) value); } else if (value instanceof BigInteger) { g.writeNumber((BigInteger) value); } else if (value instanceof Long) {"
+      },
+      {
+        "txt": "g.writeNumber(value.longValue()); } else if (value instanceof Double) { g.writeNumber(value.doubleValue()); } else if (value instanceof Float) { g.writeNumber(value.floatValue()); } else if (value instanceof Integer || value instanceof Byte || value instanceof Short) { g.writeNumber(value.intValue()); // doesn't need to be cast to smaller numbers } else { g.writeNumber(value.toString()); }"
+      },
+      {
+        "txt": "} @Override public JsonNode getSchema(SerializerProvider provider, Type typeHint) { return createSchemaNode(_isInt ? \"integer\" : \"number\", true); } @Override public void acceptJsonFormatVisitor(JsonFormatVisitorWrapper visitor, JavaType typeHint) throws JsonMappingException { if (_isInt) { visitIntFormat(visitor, typeHint, JsonParser.NumberType.BIG_INTEGER);"
+      },
+      {
+        "txt": "if (((Class<?>) handledType()) == BigDecimal.class) { visitFloatFormat(visitor, typeHint, JsonParser.NumberType.BIG_DECIMAL); } else { } } } <extra_id_0> }"
+      }
+    ]
+  },
+  {
+    "id": 1798,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/ser/std/NumberSerializer.java",
+    "start-bug-line": 116,
+    "end-bug-line": 116,
+    "bug": "",
+    "fix": "@Override public void serialize(Object value, JsonGenerator gen, SerializerProvider provider) throws IOException { final String text; if (gen.isEnabled(JsonGenerator.Feature.WRITE_BIGDECIMAL_AS_PLAIN)) { final BigDecimal bd = (BigDecimal) value;",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind.ser.std; import java.io.IOException; import java.lang.reflect.Type; import java.math.BigDecimal; import java.math.BigInteger; import com.fasterxml.jackson.annotation.JsonFormat;"
+      },
+      {
+        "txt": "import com.fasterxml.jackson.core.JsonGenerator; import com.fasterxml.jackson.core.JsonParser; import com.fasterxml.jackson.databind.*; import com.fasterxml.jackson.databind.annotation.JacksonStdImpl; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonFormatVisitorWrapper; import com.fasterxml.jackson.databind.ser.ContextualSerializer; @JacksonStdImpl @SuppressWarnings(\"serial\") public class NumberSerializer extends StdScalarSerializer<Number>"
+      },
+      {
+        "txt": "implements ContextualSerializer { public final static NumberSerializer instance = new NumberSerializer(Number.class); protected final boolean _isInt; public NumberSerializer(Class<? extends Number> rawType) { super(rawType, false); _isInt = (rawType == BigInteger.class); } @Override public JsonSerializer<?> createContextual(SerializerProvider prov,"
+      },
+      {
+        "txt": "BeanProperty property) throws JsonMappingException { JsonFormat.Value format = findFormatOverrides(prov, property, handledType()); if (format != null) { switch (format.getShape()) { case STRING: return ToStringSerializer.instance; default: } }"
+      },
+      {
+        "txt": "return this; } @Override public void serialize(Number value, JsonGenerator g, SerializerProvider provider) throws IOException { if (value instanceof BigDecimal) { g.writeNumber((BigDecimal) value); } else if (value instanceof BigInteger) { g.writeNumber((BigInteger) value); } else if (value instanceof Long) {"
+      },
+      {
+        "txt": "g.writeNumber(value.longValue()); } else if (value instanceof Double) { g.writeNumber(value.doubleValue()); } else if (value instanceof Float) { g.writeNumber(value.floatValue()); } else if (value instanceof Integer || value instanceof Byte || value instanceof Short) { g.writeNumber(value.intValue()); // doesn't need to be cast to smaller numbers } else { g.writeNumber(value.toString()); }"
+      },
+      {
+        "txt": "} @Override public JsonNode getSchema(SerializerProvider provider, Type typeHint) { return createSchemaNode(_isInt ? \"integer\" : \"number\", true); } @Override public void acceptJsonFormatVisitor(JsonFormatVisitorWrapper visitor, JavaType typeHint) throws JsonMappingException { if (_isInt) { visitIntFormat(visitor, typeHint, JsonParser.NumberType.BIG_INTEGER);"
+      },
+      {
+        "txt": "if (((Class<?>) handledType()) == BigDecimal.class) { visitFloatFormat(visitor, typeHint, JsonParser.NumberType.BIG_DECIMAL); } else { } } } <extra_id_0> }"
+      }
+    ]
+  },
+  {
+    "id": 1799,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/ser/std/NumberSerializer.java",
+    "start-bug-line": 117,
+    "end-bug-line": 117,
+    "bug": "",
+    "fix": "if (!_verifyBigDecimalRange(gen, bd)) {",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind.ser.std; import java.io.IOException; import java.lang.reflect.Type; import java.math.BigDecimal; import java.math.BigInteger; import com.fasterxml.jackson.annotation.JsonFormat;"
+      },
+      {
+        "txt": "import com.fasterxml.jackson.core.JsonGenerator; import com.fasterxml.jackson.core.JsonParser; import com.fasterxml.jackson.databind.*; import com.fasterxml.jackson.databind.annotation.JacksonStdImpl; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonFormatVisitorWrapper; import com.fasterxml.jackson.databind.ser.ContextualSerializer; @JacksonStdImpl @SuppressWarnings(\"serial\") public class NumberSerializer extends StdScalarSerializer<Number>"
+      },
+      {
+        "txt": "implements ContextualSerializer { public final static NumberSerializer instance = new NumberSerializer(Number.class); protected final boolean _isInt; public NumberSerializer(Class<? extends Number> rawType) { super(rawType, false); _isInt = (rawType == BigInteger.class); } @Override public JsonSerializer<?> createContextual(SerializerProvider prov,"
+      },
+      {
+        "txt": "BeanProperty property) throws JsonMappingException { JsonFormat.Value format = findFormatOverrides(prov, property, handledType()); if (format != null) { switch (format.getShape()) { case STRING: return ToStringSerializer.instance; default: } }"
+      },
+      {
+        "txt": "return this; } @Override public void serialize(Number value, JsonGenerator g, SerializerProvider provider) throws IOException { if (value instanceof BigDecimal) { g.writeNumber((BigDecimal) value); } else if (value instanceof BigInteger) { g.writeNumber((BigInteger) value); } else if (value instanceof Long) {"
+      },
+      {
+        "txt": "g.writeNumber(value.longValue()); } else if (value instanceof Double) { g.writeNumber(value.doubleValue()); } else if (value instanceof Float) { g.writeNumber(value.floatValue()); } else if (value instanceof Integer || value instanceof Byte || value instanceof Short) { g.writeNumber(value.intValue()); // doesn't need to be cast to smaller numbers } else { g.writeNumber(value.toString()); }"
+      },
+      {
+        "txt": "} @Override public JsonNode getSchema(SerializerProvider provider, Type typeHint) { return createSchemaNode(_isInt ? \"integer\" : \"number\", true); } @Override public void acceptJsonFormatVisitor(JsonFormatVisitorWrapper visitor, JavaType typeHint) throws JsonMappingException { if (_isInt) { visitIntFormat(visitor, typeHint, JsonParser.NumberType.BIG_INTEGER);"
+      },
+      {
+        "txt": "if (((Class<?>) handledType()) == BigDecimal.class) { visitFloatFormat(visitor, typeHint, JsonParser.NumberType.BIG_DECIMAL); } else { } } } <extra_id_0> }"
+      }
+    ]
+  },
+  {
+    "id": 1800,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/ser/std/NumberSerializer.java",
+    "start-bug-line": 119,
+    "end-bug-line": 119,
+    "bug": "",
+    "fix": "final String errorMsg = String.format( \"Attempt to write plain `java.math.BigDecimal` (see JsonGenerator.Feature.WRITE_BIGDECIMAL_AS_PLAIN) with illegal scale (%d): needs to be between [-%d, %d]\", bd.scale(), MAX_BIG_DECIMAL_SCALE, MAX_BIG_DECIMAL_SCALE); provider.reportMappingProblem(errorMsg); } text = bd.toPlainString(); } else { text = value.toString(); } gen.writeString(text); }",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind.ser.std; import java.io.IOException; import java.lang.reflect.Type; import java.math.BigDecimal; import java.math.BigInteger; import com.fasterxml.jackson.annotation.JsonFormat;"
+      },
+      {
+        "txt": "import com.fasterxml.jackson.core.JsonGenerator; import com.fasterxml.jackson.core.JsonParser; import com.fasterxml.jackson.databind.*; import com.fasterxml.jackson.databind.annotation.JacksonStdImpl; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonFormatVisitorWrapper; import com.fasterxml.jackson.databind.ser.ContextualSerializer; @JacksonStdImpl @SuppressWarnings(\"serial\") public class NumberSerializer extends StdScalarSerializer<Number>"
+      },
+      {
+        "txt": "implements ContextualSerializer { public final static NumberSerializer instance = new NumberSerializer(Number.class); protected final boolean _isInt; public NumberSerializer(Class<? extends Number> rawType) { super(rawType, false); _isInt = (rawType == BigInteger.class); } @Override public JsonSerializer<?> createContextual(SerializerProvider prov,"
+      },
+      {
+        "txt": "BeanProperty property) throws JsonMappingException { JsonFormat.Value format = findFormatOverrides(prov, property, handledType()); if (format != null) { switch (format.getShape()) { case STRING: return ToStringSerializer.instance; default: } }"
+      },
+      {
+        "txt": "return this; } @Override public void serialize(Number value, JsonGenerator g, SerializerProvider provider) throws IOException { if (value instanceof BigDecimal) { g.writeNumber((BigDecimal) value); } else if (value instanceof BigInteger) { g.writeNumber((BigInteger) value); } else if (value instanceof Long) {"
+      },
+      {
+        "txt": "g.writeNumber(value.longValue()); } else if (value instanceof Double) { g.writeNumber(value.doubleValue()); } else if (value instanceof Float) { g.writeNumber(value.floatValue()); } else if (value instanceof Integer || value instanceof Byte || value instanceof Short) { g.writeNumber(value.intValue()); // doesn't need to be cast to smaller numbers } else { g.writeNumber(value.toString()); }"
+      },
+      {
+        "txt": "} @Override public JsonNode getSchema(SerializerProvider provider, Type typeHint) { return createSchemaNode(_isInt ? \"integer\" : \"number\", true); } @Override public void acceptJsonFormatVisitor(JsonFormatVisitorWrapper visitor, JavaType typeHint) throws JsonMappingException { if (_isInt) { visitIntFormat(visitor, typeHint, JsonParser.NumberType.BIG_INTEGER);"
+      },
+      {
+        "txt": "if (((Class<?>) handledType()) == BigDecimal.class) { visitFloatFormat(visitor, typeHint, JsonParser.NumberType.BIG_DECIMAL); } else { } } } <extra_id_0> }"
+      }
+    ]
+  },
+  {
+    "id": 1801,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/ser/std/NumberSerializer.java",
+    "start-bug-line": 120,
+    "end-bug-line": 120,
+    "bug": "",
+    "fix": "@Override public String valueToString(Object value) {",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind.ser.std; import java.io.IOException; import java.lang.reflect.Type; import java.math.BigDecimal; import java.math.BigInteger; import com.fasterxml.jackson.annotation.JsonFormat;"
+      },
+      {
+        "txt": "import com.fasterxml.jackson.core.JsonGenerator; import com.fasterxml.jackson.core.JsonParser; import com.fasterxml.jackson.databind.*; import com.fasterxml.jackson.databind.annotation.JacksonStdImpl; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonFormatVisitorWrapper; import com.fasterxml.jackson.databind.ser.ContextualSerializer; @JacksonStdImpl @SuppressWarnings(\"serial\") public class NumberSerializer extends StdScalarSerializer<Number>"
+      },
+      {
+        "txt": "implements ContextualSerializer { public final static NumberSerializer instance = new NumberSerializer(Number.class); protected final boolean _isInt; public NumberSerializer(Class<? extends Number> rawType) { super(rawType, false); _isInt = (rawType == BigInteger.class); } @Override public JsonSerializer<?> createContextual(SerializerProvider prov,"
+      },
+      {
+        "txt": "BeanProperty property) throws JsonMappingException { JsonFormat.Value format = findFormatOverrides(prov, property, handledType()); if (format != null) { switch (format.getShape()) { case STRING: return ToStringSerializer.instance; default: } }"
+      },
+      {
+        "txt": "return this; } @Override public void serialize(Number value, JsonGenerator g, SerializerProvider provider) throws IOException { if (value instanceof BigDecimal) { g.writeNumber((BigDecimal) value); } else if (value instanceof BigInteger) { g.writeNumber((BigInteger) value); } else if (value instanceof Long) {"
+      },
+      {
+        "txt": "g.writeNumber(value.longValue()); } else if (value instanceof Double) { g.writeNumber(value.doubleValue()); } else if (value instanceof Float) { g.writeNumber(value.floatValue()); } else if (value instanceof Integer || value instanceof Byte || value instanceof Short) { g.writeNumber(value.intValue()); // doesn't need to be cast to smaller numbers } else { g.writeNumber(value.toString()); }"
+      },
+      {
+        "txt": "} @Override public JsonNode getSchema(SerializerProvider provider, Type typeHint) { return createSchemaNode(_isInt ? \"integer\" : \"number\", true); } @Override public void acceptJsonFormatVisitor(JsonFormatVisitorWrapper visitor, JavaType typeHint) throws JsonMappingException { if (_isInt) { visitIntFormat(visitor, typeHint, JsonParser.NumberType.BIG_INTEGER);"
+      },
+      {
+        "txt": "if (((Class<?>) handledType()) == BigDecimal.class) { visitFloatFormat(visitor, typeHint, JsonParser.NumberType.BIG_DECIMAL); } else { } } } <extra_id_0> }"
+      }
+    ]
+  },
+  {
+    "id": 1802,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/ser/std/NumberSerializer.java",
+    "start-bug-line": 121,
+    "end-bug-line": 121,
+    "bug": "",
+    "fix": "throw new IllegalStateException(); }",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind.ser.std; import java.io.IOException; import java.lang.reflect.Type; import java.math.BigDecimal; import java.math.BigInteger; import com.fasterxml.jackson.annotation.JsonFormat;"
+      },
+      {
+        "txt": "import com.fasterxml.jackson.core.JsonGenerator; import com.fasterxml.jackson.core.JsonParser; import com.fasterxml.jackson.databind.*; import com.fasterxml.jackson.databind.annotation.JacksonStdImpl; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonFormatVisitorWrapper; import com.fasterxml.jackson.databind.ser.ContextualSerializer; @JacksonStdImpl @SuppressWarnings(\"serial\") public class NumberSerializer extends StdScalarSerializer<Number>"
+      },
+      {
+        "txt": "implements ContextualSerializer { public final static NumberSerializer instance = new NumberSerializer(Number.class); protected final boolean _isInt; public NumberSerializer(Class<? extends Number> rawType) { super(rawType, false); _isInt = (rawType == BigInteger.class); } @Override public JsonSerializer<?> createContextual(SerializerProvider prov,"
+      },
+      {
+        "txt": "BeanProperty property) throws JsonMappingException { JsonFormat.Value format = findFormatOverrides(prov, property, handledType()); if (format != null) { switch (format.getShape()) { case STRING: return ToStringSerializer.instance; default: } }"
+      },
+      {
+        "txt": "return this; } @Override public void serialize(Number value, JsonGenerator g, SerializerProvider provider) throws IOException { if (value instanceof BigDecimal) { g.writeNumber((BigDecimal) value); } else if (value instanceof BigInteger) { g.writeNumber((BigInteger) value); } else if (value instanceof Long) {"
+      },
+      {
+        "txt": "g.writeNumber(value.longValue()); } else if (value instanceof Double) { g.writeNumber(value.doubleValue()); } else if (value instanceof Float) { g.writeNumber(value.floatValue()); } else if (value instanceof Integer || value instanceof Byte || value instanceof Short) { g.writeNumber(value.intValue()); // doesn't need to be cast to smaller numbers } else { g.writeNumber(value.toString()); }"
+      },
+      {
+        "txt": "} @Override public JsonNode getSchema(SerializerProvider provider, Type typeHint) { return createSchemaNode(_isInt ? \"integer\" : \"number\", true); } @Override public void acceptJsonFormatVisitor(JsonFormatVisitorWrapper visitor, JavaType typeHint) throws JsonMappingException { if (_isInt) { visitIntFormat(visitor, typeHint, JsonParser.NumberType.BIG_INTEGER);"
+      },
+      {
+        "txt": "if (((Class<?>) handledType()) == BigDecimal.class) { visitFloatFormat(visitor, typeHint, JsonParser.NumberType.BIG_DECIMAL); } else { } } } <extra_id_0> }"
+      }
+    ]
+  },
+  {
+    "id": 1803,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/ser/std/NumberSerializer.java",
+    "start-bug-line": 123,
+    "end-bug-line": 123,
+    "bug": "",
+    "fix": "protected boolean _verifyBigDecimalRange(JsonGenerator gen, BigDecimal value) throws IOException { int scale = value.scale(); return ((scale >= -MAX_BIG_DECIMAL_SCALE) && (scale <= MAX_BIG_DECIMAL_SCALE)); } }",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind.ser.std; import java.io.IOException; import java.lang.reflect.Type; import java.math.BigDecimal; import java.math.BigInteger; import com.fasterxml.jackson.annotation.JsonFormat;"
+      },
+      {
+        "txt": "import com.fasterxml.jackson.core.JsonGenerator; import com.fasterxml.jackson.core.JsonParser; import com.fasterxml.jackson.databind.*; import com.fasterxml.jackson.databind.annotation.JacksonStdImpl; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonFormatVisitorWrapper; import com.fasterxml.jackson.databind.ser.ContextualSerializer; @JacksonStdImpl @SuppressWarnings(\"serial\") public class NumberSerializer extends StdScalarSerializer<Number>"
+      },
+      {
+        "txt": "implements ContextualSerializer { public final static NumberSerializer instance = new NumberSerializer(Number.class); protected final boolean _isInt; public NumberSerializer(Class<? extends Number> rawType) { super(rawType, false); _isInt = (rawType == BigInteger.class); } @Override public JsonSerializer<?> createContextual(SerializerProvider prov,"
+      },
+      {
+        "txt": "BeanProperty property) throws JsonMappingException { JsonFormat.Value format = findFormatOverrides(prov, property, handledType()); if (format != null) { switch (format.getShape()) { case STRING: return ToStringSerializer.instance; default: } }"
+      },
+      {
+        "txt": "return this; } @Override public void serialize(Number value, JsonGenerator g, SerializerProvider provider) throws IOException { if (value instanceof BigDecimal) { g.writeNumber((BigDecimal) value); } else if (value instanceof BigInteger) { g.writeNumber((BigInteger) value); } else if (value instanceof Long) {"
+      },
+      {
+        "txt": "g.writeNumber(value.longValue()); } else if (value instanceof Double) { g.writeNumber(value.doubleValue()); } else if (value instanceof Float) { g.writeNumber(value.floatValue()); } else if (value instanceof Integer || value instanceof Byte || value instanceof Short) { g.writeNumber(value.intValue()); // doesn't need to be cast to smaller numbers } else { g.writeNumber(value.toString()); }"
+      },
+      {
+        "txt": "} @Override public JsonNode getSchema(SerializerProvider provider, Type typeHint) { return createSchemaNode(_isInt ? \"integer\" : \"number\", true); } @Override public void acceptJsonFormatVisitor(JsonFormatVisitorWrapper visitor, JavaType typeHint) throws JsonMappingException { if (_isInt) { visitIntFormat(visitor, typeHint, JsonParser.NumberType.BIG_INTEGER);"
+      },
+      {
+        "txt": "if (((Class<?>) handledType()) == BigDecimal.class) { visitFloatFormat(visitor, typeHint, JsonParser.NumberType.BIG_DECIMAL); } else { } } } <extra_id_0>"
+      }
+    ]
+  },
+  {
+    "id": 1804,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/ser/std/NumberSerializers.java",
+    "start-bug-line": 5,
+    "end-bug-line": 5,
+    "bug": "",
+    "fix": "import java.math.BigDecimal;",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind.ser.std; import java.io.IOException; import java.lang.reflect.Type; <extra_id_0> import com.fasterxml.jackson.annotation.JsonFormat; import com.fasterxml.jackson.core.*; import com.fasterxml.jackson.databind.*; import com.fasterxml.jackson.databind.annotation.JacksonStdImpl; import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonFormatVisitorWrapper; import com.fasterxml.jackson.databind.jsontype.TypeSerializer;"
+      },
+      {
+        "txt": "import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonFormatVisitorWrapper; import com.fasterxml.jackson.databind.jsontype.TypeSerializer; import com.fasterxml.jackson.databind.ser.ContextualSerializer; @SuppressWarnings(\"serial\") public class NumberSerializers { protected NumberSerializers() { } public static void addAll(Map<String, JsonSerializer<?>> allDeserializers) { allDeserializers.put(Integer.class.getName(), new IntegerSerializer(Integer.class)); allDeserializers.put(Integer.TYPE.getName(), new IntegerSerializer(Integer.TYPE)); allDeserializers.put(Long.class.getName(), new LongSerializer(Long.class));"
+      },
+      {
+        "txt": "allDeserializers.put(Long.TYPE.getName(), new LongSerializer(Long.TYPE)); allDeserializers.put(Byte.class.getName(), IntLikeSerializer.instance); allDeserializers.put(Byte.TYPE.getName(), IntLikeSerializer.instance); allDeserializers.put(Short.class.getName(), ShortSerializer.instance); allDeserializers.put(Short.TYPE.getName(), ShortSerializer.instance); allDeserializers.put(Double.class.getName(), new DoubleSerializer(Double.class)); allDeserializers.put(Double.TYPE.getName(), new DoubleSerializer(Double.TYPE)); allDeserializers.put(Float.class.getName(), FloatSerializer.instance); allDeserializers.put(Float.TYPE.getName(), FloatSerializer.instance); }"
+      },
+      {
+        "txt": "public abstract static class Base<T> extends StdScalarSerializer<T> implements ContextualSerializer { protected final JsonParser.NumberType _numberType; protected final String _schemaType; protected final boolean _isInt; protected Base(Class<?> cls, JsonParser.NumberType numberType, String schemaType) { super(cls, false); _numberType = numberType;"
+      },
+      {
+        "txt": "_schemaType = schemaType; _isInt = (numberType == JsonParser.NumberType.INT) || (numberType == JsonParser.NumberType.LONG) || (numberType == JsonParser.NumberType.BIG_INTEGER); } @Override public JsonNode getSchema(SerializerProvider provider, Type typeHint) { return createSchemaNode(_schemaType, true); } @Override"
+      },
+      {
+        "txt": "public void acceptJsonFormatVisitor(JsonFormatVisitorWrapper visitor, JavaType typeHint) throws JsonMappingException { if (_isInt) { visitIntFormat(visitor, typeHint, _numberType); } else { visitFloatFormat(visitor, typeHint, _numberType); } } @Override"
+      },
+      {
+        "txt": "public JsonSerializer<?> createContextual(SerializerProvider prov, BeanProperty property) throws JsonMappingException { JsonFormat.Value format = findFormatOverrides(prov, property, handledType()); if (format != null) { switch (format.getShape()) { case STRING: return ToStringSerializer.instance; default: }"
+      },
+      {
+        "txt": "} return this; } } @JacksonStdImpl public static class ShortSerializer extends Base<Object> { final static ShortSerializer instance = new ShortSerializer(); public ShortSerializer() { super(Short.class, JsonParser.NumberType.INT, \"number\"); }"
+      },
+      {
+        "txt": "@Override public void serialize(Object value, JsonGenerator gen, SerializerProvider provider) throws IOException { gen.writeNumber(((Short) value).shortValue()); } } @JacksonStdImpl public static class IntegerSerializer extends Base<Object> { public IntegerSerializer(Class<?> type) { super(type, JsonParser.NumberType.INT, \"integer\");"
+      },
+      {
+        "txt": "} @Override public void serialize(Object value, JsonGenerator gen, SerializerProvider provider) throws IOException { gen.writeNumber(((Integer) value).intValue()); } @Override public void serializeWithType(Object value, JsonGenerator gen, SerializerProvider provider, TypeSerializer typeSer) throws IOException {"
+      },
+      {
+        "txt": "serialize(value, gen, provider); } } @JacksonStdImpl public static class IntLikeSerializer extends Base<Object> { final static IntLikeSerializer instance = new IntLikeSerializer(); public IntLikeSerializer() { super(Number.class, JsonParser.NumberType.INT, \"integer\"); } @Override"
+      },
+      {
+        "txt": "public void serialize(Object value, JsonGenerator gen, SerializerProvider provider) throws IOException { gen.writeNumber(((Number) value).intValue()); } } @JacksonStdImpl public static class LongSerializer extends Base<Object> { public LongSerializer(Class<?> cls) { super(cls, JsonParser.NumberType.LONG, \"number\"); }"
+      },
+      {
+        "txt": "@Override public void serialize(Object value, JsonGenerator gen, SerializerProvider provider) throws IOException { gen.writeNumber(((Long) value).longValue()); } } @JacksonStdImpl public static class FloatSerializer extends Base<Object> { final static FloatSerializer instance = new FloatSerializer(); public FloatSerializer() {"
+      },
+      {
+        "txt": "super(Float.class, JsonParser.NumberType.FLOAT, \"number\"); } @Override public void serialize(Object value, JsonGenerator gen, SerializerProvider provider) throws IOException { gen.writeNumber(((Float) value).floatValue()); } } @JacksonStdImpl public static class DoubleSerializer extends Base<Object> {"
+      },
+      {
+        "txt": "public DoubleSerializer(Class<?> cls) { super(cls, JsonParser.NumberType.DOUBLE, \"number\"); } @Override public void serialize(Object value, JsonGenerator gen, SerializerProvider provider) throws IOException { gen.writeNumber(((Double) value).doubleValue()); } @Override public void serializeWithType(Object value, JsonGenerator gen,"
+      },
+      {
+        "txt": "SerializerProvider provider, TypeSerializer typeSer) throws IOException { serialize(value, gen, provider); } }"
+      }
+    ]
+  },
+  {
+    "id": 1805,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/ser/std/NumberSerializers.java",
+    "start-bug-line": 100,
+    "end-bug-line": 100,
+    "bug": "",
+    "fix": "if (((Class<?>) handledType()) == BigDecimal.class) { return NumberSerializer.bigDecimalAsStringSerializer(); }",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind.ser.std; import java.io.IOException; import java.lang.reflect.Type; import java.util.Map; import com.fasterxml.jackson.annotation.JsonFormat; import com.fasterxml.jackson.core.*; import com.fasterxml.jackson.databind.*; import com.fasterxml.jackson.databind.annotation.JacksonStdImpl;"
+      },
+      {
+        "txt": "import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonFormatVisitorWrapper; import com.fasterxml.jackson.databind.jsontype.TypeSerializer; import com.fasterxml.jackson.databind.ser.ContextualSerializer; @SuppressWarnings(\"serial\") public class NumberSerializers { protected NumberSerializers() { } public static void addAll(Map<String, JsonSerializer<?>> allDeserializers) { allDeserializers.put(Integer.class.getName(), new IntegerSerializer(Integer.class)); allDeserializers.put(Integer.TYPE.getName(), new IntegerSerializer(Integer.TYPE)); allDeserializers.put(Long.class.getName(), new LongSerializer(Long.class));"
+      },
+      {
+        "txt": "allDeserializers.put(Long.TYPE.getName(), new LongSerializer(Long.TYPE)); allDeserializers.put(Byte.class.getName(), IntLikeSerializer.instance); allDeserializers.put(Byte.TYPE.getName(), IntLikeSerializer.instance); allDeserializers.put(Short.class.getName(), ShortSerializer.instance); allDeserializers.put(Short.TYPE.getName(), ShortSerializer.instance); allDeserializers.put(Double.class.getName(), new DoubleSerializer(Double.class)); allDeserializers.put(Double.TYPE.getName(), new DoubleSerializer(Double.TYPE)); allDeserializers.put(Float.class.getName(), FloatSerializer.instance); allDeserializers.put(Float.TYPE.getName(), FloatSerializer.instance); }"
+      },
+      {
+        "txt": "public abstract static class Base<T> extends StdScalarSerializer<T> implements ContextualSerializer { protected final JsonParser.NumberType _numberType; protected final String _schemaType; protected final boolean _isInt; protected Base(Class<?> cls, JsonParser.NumberType numberType, String schemaType) { super(cls, false); _numberType = numberType;"
+      },
+      {
+        "txt": "_schemaType = schemaType; _isInt = (numberType == JsonParser.NumberType.INT) || (numberType == JsonParser.NumberType.LONG) || (numberType == JsonParser.NumberType.BIG_INTEGER); } @Override public JsonNode getSchema(SerializerProvider provider, Type typeHint) { return createSchemaNode(_schemaType, true); } @Override"
+      },
+      {
+        "txt": "public void acceptJsonFormatVisitor(JsonFormatVisitorWrapper visitor, JavaType typeHint) throws JsonMappingException { if (_isInt) { visitIntFormat(visitor, typeHint, _numberType); } else { visitFloatFormat(visitor, typeHint, _numberType); } } @Override"
+      },
+      {
+        "txt": "BeanProperty property) throws JsonMappingException { JsonFormat.Value format = findFormatOverrides(prov, property, handledType()); if (format != null) { switch (format.getShape()) { case STRING: <extra_id_0> default: } } return this; } }"
+      },
+      {
+        "txt": "} } @JacksonStdImpl public static class ShortSerializer extends Base<Object> { final static ShortSerializer instance = new ShortSerializer(); public ShortSerializer() { super(Short.class, JsonParser.NumberType.INT, \"number\"); } @Override public void serialize(Object value, JsonGenerator gen,"
+      },
+      {
+        "txt": "SerializerProvider provider) throws IOException { gen.writeNumber(((Short) value).shortValue()); } } @JacksonStdImpl public static class IntegerSerializer extends Base<Object> { public IntegerSerializer(Class<?> type) { super(type, JsonParser.NumberType.INT, \"integer\"); } @Override"
+      },
+      {
+        "txt": "public void serialize(Object value, JsonGenerator gen, SerializerProvider provider) throws IOException { gen.writeNumber(((Integer) value).intValue()); } @Override public void serializeWithType(Object value, JsonGenerator gen, SerializerProvider provider, TypeSerializer typeSer) throws IOException { serialize(value, gen, provider); }"
+      },
+      {
+        "txt": "} @JacksonStdImpl public static class IntLikeSerializer extends Base<Object> { final static IntLikeSerializer instance = new IntLikeSerializer(); public IntLikeSerializer() { super(Number.class, JsonParser.NumberType.INT, \"integer\"); } @Override public void serialize(Object value, JsonGenerator gen, SerializerProvider provider) throws IOException {"
+      },
+      {
+        "txt": "gen.writeNumber(((Number) value).intValue()); } } @JacksonStdImpl public static class LongSerializer extends Base<Object> { public LongSerializer(Class<?> cls) { super(cls, JsonParser.NumberType.LONG, \"number\"); } @Override public void serialize(Object value, JsonGenerator gen,"
+      },
+      {
+        "txt": "SerializerProvider provider) throws IOException { gen.writeNumber(((Long) value).longValue()); } } @JacksonStdImpl public static class FloatSerializer extends Base<Object> { final static FloatSerializer instance = new FloatSerializer(); public FloatSerializer() { super(Float.class, JsonParser.NumberType.FLOAT, \"number\"); }"
+      },
+      {
+        "txt": "@Override public void serialize(Object value, JsonGenerator gen, SerializerProvider provider) throws IOException { gen.writeNumber(((Float) value).floatValue()); } } @JacksonStdImpl public static class DoubleSerializer extends Base<Object> { public DoubleSerializer(Class<?> cls) { super(cls, JsonParser.NumberType.DOUBLE, \"number\");"
+      },
+      {
+        "txt": "} @Override public void serialize(Object value, JsonGenerator gen, SerializerProvider provider) throws IOException { gen.writeNumber(((Double) value).doubleValue()); } @Override public void serializeWithType(Object value, JsonGenerator gen, SerializerProvider provider, TypeSerializer typeSer) throws IOException {"
+      },
+      {
+        "txt": "serialize(value, gen, provider); } }"
+      }
+    ]
+  }
+]

@@ -1,0 +1,1124 @@
+[
+  {
+    "id": 1891,
+    "file_path": "src/main/java/org/jsoup/parser/Tokeniser.java",
+    "start-bug-line": 197,
+    "end-bug-line": 197,
+    "bug": "",
+    "fix": "String appropriateEndTagName() { return lastStartTag.tagName; }",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.jsoup.parser; import org.jsoup.helper.Validate; import org.jsoup.nodes.Entities; import java.util.ArrayList; import java.util.List; class Tokeniser { static final char replacementChar = '\\uFFFD'; // replaces null character private CharacterReader reader; // html input private boolean trackErrors = true;"
+      },
+      {
+        "txt": "private List<ParseError> errors = new ArrayList<ParseError>(); // errors found while tokenising private TokeniserState state = TokeniserState.Data; // current tokenisation state private Token emitPending; // the token we are about to emit on next read private boolean isEmitPending = false; private StringBuilder charBuffer = new StringBuilder(); // buffers characters to output as one token StringBuilder dataBuffer; // buffers data looking for </script> Token.Tag tagPending; // tag we are building up Token.Doctype doctypePending; // doctype building up Token.Comment commentPending; // comment building up private Token.StartTag lastStartTag; // the last start tag emitted, to test appropriate end tag"
+      },
+      {
+        "txt": "private boolean selfClosingFlagAcknowledged = true; Tokeniser(CharacterReader reader) { this.reader = reader; } Token read() { if (!selfClosingFlagAcknowledged) { error(\"Self closing flag not acknowledged\"); selfClosingFlagAcknowledged = true; } while (!isEmitPending)"
+      },
+      {
+        "txt": "state.read(this, reader); if (charBuffer.length() > 0) { String str = charBuffer.toString(); charBuffer.delete(0, charBuffer.length()); return new Token.Character(str); } else { isEmitPending = false; return emitPending; } }"
+      },
+      {
+        "txt": "void emit(Token token) { Validate.isFalse(isEmitPending, \"There is an unread token pending!\"); emitPending = token; isEmitPending = true; if (token.type == Token.TokenType.StartTag) { Token.StartTag startTag = (Token.StartTag) token; lastStartTag = startTag; if (startTag.selfClosing) selfClosingFlagAcknowledged = false; } else if (token.type == Token.TokenType.EndTag) {"
+      },
+      {
+        "txt": "Token.EndTag endTag = (Token.EndTag) token; if (endTag.attributes.size() > 0) error(\"Attributes incorrectly present on end tag\"); } } void emit(String str) { charBuffer.append(str); } void emit(char c) { charBuffer.append(c);"
+      },
+      {
+        "txt": "} TokeniserState getState() { return state; } void transition(TokeniserState state) { this.state = state; } void advanceTransition(TokeniserState state) { reader.advance(); this.state = state;"
+      },
+      {
+        "txt": "} void acknowledgeSelfClosingFlag() { selfClosingFlagAcknowledged = true; } Character consumeCharacterReference(Character additionalAllowedCharacter, boolean inAttribute) { if (reader.isEmpty()) return null; if (additionalAllowedCharacter != null && additionalAllowedCharacter == reader.current()) return null; if (reader.matchesAny('\\t', '\\n', '\\f', '<', '&'))"
+      },
+      {
+        "txt": "return null; reader.mark(); if (reader.matchConsume(\"#\")) { // numbered boolean isHexMode = reader.matchConsumeIgnoreCase(\"X\"); String numRef = isHexMode ? reader.consumeHexSequence() : reader.consumeDigitSequence(); if (numRef.length() == 0) { // didn't match anything characterReferenceError(); reader.rewindToMark(); return null; }"
+      },
+      {
+        "txt": "if (!reader.matchConsume(\";\")) characterReferenceError(); // missing semi int charval = -1; try { int base = isHexMode ? 16 : 10; charval = Integer.valueOf(numRef, base); } catch (NumberFormatException e) { } // skip if (charval == -1 || (charval >= 0xD800 && charval <= 0xDFFF) || charval > 0x10FFFF) { characterReferenceError();"
+      },
+      {
+        "txt": "return replacementChar; } else { return (char) charval; } } else { // named String nameRef = reader.consumeLetterSequence(); boolean looksLegit = reader.matches(';'); boolean found = false; while (nameRef.length() > 0 && !found) { if (Entities.isNamedEntity(nameRef))"
+      },
+      {
+        "txt": "found = true; else { nameRef = nameRef.substring(0, nameRef.length()-1); reader.unconsume(); } } if (!found) { if (looksLegit) // named with semicolon characterReferenceError(); reader.rewindToMark();"
+      },
+      {
+        "txt": "return null; } if (inAttribute && (reader.matchesLetter() || reader.matchesDigit() || reader.matches('='))) { reader.rewindToMark(); return null; } if (!reader.matchConsume(\";\")) characterReferenceError(); // missing semi return Entities.getCharacterByName(nameRef); }"
+      },
+      {
+        "txt": "} Token.Tag createTagPending(boolean start) { tagPending = start ? new Token.StartTag() : new Token.EndTag(); return tagPending; } void emitTagPending() { tagPending.finaliseTag(); emit(tagPending); } void createCommentPending() {"
+      },
+      {
+        "txt": "commentPending = new Token.Comment(); } void emitCommentPending() { emit(commentPending); } void createDoctypePending() { doctypePending = new Token.Doctype(); } void emitDoctypePending() { emit(doctypePending);"
+      },
+      {
+        "txt": "void createTempBuffer() { dataBuffer = new StringBuilder(); } boolean isAppropriateEndTagToken() { return tagPending.tagName.equals(lastStartTag.tagName); } <extra_id_0> boolean isTrackErrors() { return trackErrors; } void setTrackErrors(boolean trackErrors) { this.trackErrors = trackErrors; }"
+      },
+      {
+        "txt": "this.trackErrors = trackErrors; } void error(TokeniserState state) { if (trackErrors) errors.add(new ParseError(\"Unexpected character in input\", reader.current(), state, reader.pos())); } void eofError(TokeniserState state) { if (trackErrors) errors.add(new ParseError(\"Unexpectedly reached end of file (EOF)\", state, reader.pos())); }"
+      },
+      {
+        "txt": "private void characterReferenceError() { if (trackErrors) errors.add(new ParseError(\"Invalid character reference\", reader.pos())); } private void error(String errorMsg) { if (trackErrors) errors.add(new ParseError(errorMsg, reader.pos())); } boolean currentNodeInHtmlNS() { return true;"
+      }
+    ]
+  },
+  {
+    "id": 1892,
+    "file_path": "src/main/java/org/jsoup/parser/TokeniserState.java",
+    "start-bug-line": 218,
+    "end-bug-line": 218,
+    "bug": "",
+    "fix": "} else if (r.matchesLetter() && !r.containsIgnoreCase(\"</\" + t.appropriateEndTagName())) {",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.jsoup.parser; enum TokeniserState { Data { void read(Tokeniser t, CharacterReader r) { switch (r.current()) { case '&': t.advanceTransition(CharacterReferenceInData);"
+      },
+      {
+        "txt": "break; case '<': t.advanceTransition(TagOpen); break; case nullChar: t.error(this); // NOT replacement character (oddly?) t.emit(r.consume()); break; case eof: t.emit(new Token.EOF());"
+      },
+      {
+        "txt": "break; default: String data = r.consumeToAny('&', '<', nullChar); t.emit(data); break; } } }, CharacterReferenceInData { void read(Tokeniser t, CharacterReader r) {"
+      },
+      {
+        "txt": "Character c = t.consumeCharacterReference(null, false); if (c == null) t.emit('&'); else t.emit(c); t.transition(Data); } }, Rcdata { void read(Tokeniser t, CharacterReader r) {"
+      },
+      {
+        "txt": "switch (r.current()) { case '&': t.advanceTransition(CharacterReferenceInRcdata); break; case '<': t.advanceTransition(RcdataLessthanSign); break; case nullChar: t.error(this); r.advance();"
+      },
+      {
+        "txt": "t.emit(replacementChar); break; case eof: t.emit(new Token.EOF()); break; default: String data = r.consumeToAny('&', '<', nullChar); t.emit(data); break; }"
+      },
+      {
+        "txt": "} }, CharacterReferenceInRcdata { void read(Tokeniser t, CharacterReader r) { Character c = t.consumeCharacterReference(null, false); if (c == null) t.emit('&'); else t.emit(c); t.transition(Rcdata);"
+      },
+      {
+        "txt": "} }, Rawtext { void read(Tokeniser t, CharacterReader r) { switch (r.current()) { case '<': t.advanceTransition(RawtextLessthanSign); break; case nullChar: t.error(this);"
+      },
+      {
+        "txt": "r.advance(); t.emit(replacementChar); break; case eof: t.emit(new Token.EOF()); break; default: String data = r.consumeToAny('<', nullChar); t.emit(data); break;"
+      },
+      {
+        "txt": "} } }, ScriptData { void read(Tokeniser t, CharacterReader r) { switch (r.current()) { case '<': t.advanceTransition(ScriptDataLessthanSign); break; case nullChar:"
+      },
+      {
+        "txt": "t.error(this); r.advance(); t.emit(replacementChar); break; case eof: t.emit(new Token.EOF()); break; default: String data = r.consumeToAny('<', nullChar); t.emit(data);"
+      },
+      {
+        "txt": "break; } } }, PLAINTEXT { void read(Tokeniser t, CharacterReader r) { switch (r.current()) { case nullChar: t.error(this); r.advance();"
+      },
+      {
+        "txt": "t.emit(replacementChar); break; case eof: t.emit(new Token.EOF()); break; default: String data = r.consumeTo(nullChar); t.emit(data); break; }"
+      },
+      {
+        "txt": "} }, TagOpen { void read(Tokeniser t, CharacterReader r) { switch (r.current()) { case '!': t.advanceTransition(MarkupDeclarationOpen); break; case '/': t.advanceTransition(EndTagOpen);"
+      },
+      {
+        "txt": "break; case '?': t.advanceTransition(BogusComment); break; default: if (r.matchesLetter()) { t.createTagPending(true); t.transition(TagName); } else { t.error(this);"
+      },
+      {
+        "txt": "t.emit('<'); // char that got us here t.transition(Data); } break; } } }, EndTagOpen { void read(Tokeniser t, CharacterReader r) { if (r.isEmpty()) {"
+      },
+      {
+        "txt": "t.eofError(this); t.emit(\"</\"); t.transition(Data); } else if (r.matchesLetter()) { t.createTagPending(false); t.transition(TagName); } else if (r.matches('>')) { t.error(this); t.advanceTransition(Data); } else {"
+      },
+      {
+        "txt": "t.error(this); t.advanceTransition(BogusComment); } } }, TagName { void read(Tokeniser t, CharacterReader r) { String tagName = r.consumeToAny('\\t', '\\n', '\\f', ' ', '/', '>', nullChar).toLowerCase(); t.tagPending.appendTagName(tagName); switch (r.consume()) {"
+      },
+      {
+        "txt": "case '\\t': case '\\n': case '\\f': case ' ': t.transition(BeforeAttributeName); break; case '/': t.transition(SelfClosingStartTag); break; case '>':"
+      },
+      {
+        "txt": "t.emitTagPending(); t.transition(Data); break; case nullChar: // replacement t.tagPending.appendTagName(replacementStr); break; case eof: // should emit pending tag? t.eofError(this); t.transition(Data); }"
+      },
+      {
+        "txt": "}, RcdataLessthanSign { void read(Tokeniser t, CharacterReader r) { if (r.matches('/')) { t.createTempBuffer(); t.advanceTransition(RCDATAEndTagOpen); <extra_id_0> } else { t.emit(\"<\"); t.transition(Rcdata); } } },"
+      },
+      {
+        "txt": "} }, RCDATAEndTagOpen { void read(Tokeniser t, CharacterReader r) { if (r.matchesLetter()) { t.createTagPending(false); t.tagPending.appendTagName(Character.toLowerCase(r.current())); t.dataBuffer.append(Character.toLowerCase(r.current())); t.advanceTransition(RCDATAEndTagName); } else {"
+      },
+      {
+        "txt": "t.emit(\"</\"); t.transition(Rcdata); } } }, RCDATAEndTagName { void read(Tokeniser t, CharacterReader r) { if (r.matchesLetter()) { String name = r.consumeLetterSequence(); t.tagPending.appendTagName(name.toLowerCase());"
+      },
+      {
+        "txt": "t.dataBuffer.append(name); return; } char c = r.consume(); switch (c) { case '\\t': case '\\n': case '\\f': case ' ': if (t.isAppropriateEndTagToken())"
+      },
+      {
+        "txt": "t.transition(BeforeAttributeName); else anythingElse(t, r); break; case '/': if (t.isAppropriateEndTagToken()) t.transition(SelfClosingStartTag); else anythingElse(t, r); break;"
+      },
+      {
+        "txt": "case '>': if (t.isAppropriateEndTagToken()) { t.emitTagPending(); t.transition(Data); } else anythingElse(t, r); break; default: anythingElse(t, r);"
+      },
+      {
+        "txt": "} } private void anythingElse(Tokeniser t, CharacterReader r) { t.emit(\"</\" + t.dataBuffer.toString()); t.transition(Rcdata); } }, RawtextLessthanSign { void read(Tokeniser t, CharacterReader r) { if (r.matches('/')) {"
+      },
+      {
+        "txt": "t.createTempBuffer(); t.advanceTransition(RawtextEndTagOpen); } else { t.emit('<'); t.transition(Rawtext); } } }, RawtextEndTagOpen { void read(Tokeniser t, CharacterReader r) {"
+      },
+      {
+        "txt": "if (r.matchesLetter()) { t.createTagPending(false); t.transition(RawtextEndTagName); } else { t.emit(\"</\"); t.transition(Rawtext); } } }, RawtextEndTagName {"
+      },
+      {
+        "txt": "void read(Tokeniser t, CharacterReader r) { if (r.matchesLetter()) { String name = r.consumeLetterSequence(); t.tagPending.appendTagName(name.toLowerCase()); t.dataBuffer.append(name); return; } char c = r.consume(); boolean handled = true; switch (c) {"
+      },
+      {
+        "txt": "case '\\t': case '\\n': case '\\f': case ' ': if (t.isAppropriateEndTagToken()) t.transition(BeforeAttributeName); else handled = false; break; case '/':"
+      },
+      {
+        "txt": "if (t.isAppropriateEndTagToken()) t.transition(SelfClosingStartTag); else handled = false; break; case '>': if (t.isAppropriateEndTagToken()) { t.emitTagPending(); t.transition(Data); }"
+      },
+      {
+        "txt": "else handled = false; break; } if (!handled) { t.emit(\"</\" + t.dataBuffer.toString()); r.unconsume(); t.transition(Rawtext); } }"
+      },
+      {
+        "txt": "}, ScriptDataLessthanSign { void read(Tokeniser t, CharacterReader r) { switch (r.consume()) { case '/': t.createTempBuffer(); t.transition(ScriptDataEndTagOpen); break; case '!': t.emit(\"<!\");"
+      },
+      {
+        "txt": "t.transition(ScriptDataEscapeStart); break; default: t.emit(\"<\"); r.unconsume(); t.transition(ScriptData); } } }, ScriptDataEndTagOpen {"
+      },
+      {
+        "txt": "void read(Tokeniser t, CharacterReader r) { if (r.matchesLetter()) { t.createTagPending(false); t.transition(ScriptDataEndTagName); } else { t.emit(\"</\"); t.transition(ScriptData); } } },"
+      },
+      {
+        "txt": "ScriptDataEndTagName { void read(Tokeniser t, CharacterReader r) { if (r.matchesLetter()) { String name = r.consumeLetterSequence(); t.tagPending.appendTagName(name.toLowerCase()); t.dataBuffer.append(name); return; } char c = r.consume(); boolean handled = true;"
+      },
+      {
+        "txt": "switch (c) { case '\\t': case '\\n': case '\\f': case ' ': if (t.isAppropriateEndTagToken()) t.transition(BeforeAttributeName); else handled = false; break;"
+      },
+      {
+        "txt": "case '/': if (t.isAppropriateEndTagToken()) t.transition(SelfClosingStartTag); else handled = false; break; case '>': if (t.isAppropriateEndTagToken()) { t.emitTagPending(); t.transition(Data);"
+      },
+      {
+        "txt": "} else handled = false; break; } if (!handled) { t.emit(\"</\" + t.dataBuffer.toString()); r.unconsume(); t.transition(ScriptData); }"
+      },
+      {
+        "txt": "} }, ScriptDataEscapeStart { void read(Tokeniser t, CharacterReader r) { if (r.matches('-')) { t.emit('-'); t.advanceTransition(ScriptDataEscapeStartDash); } else { t.transition(ScriptData); }"
+      },
+      {
+        "txt": "} }, ScriptDataEscapeStartDash { void read(Tokeniser t, CharacterReader r) { if (r.matches('-')) { t.emit('-'); t.advanceTransition(ScriptDataEscapedDashDash); } else { t.transition(ScriptData); }"
+      },
+      {
+        "txt": "} }, ScriptDataEscaped { void read(Tokeniser t, CharacterReader r) { if (r.isEmpty()) { t.eofError(this); t.transition(Data); return; } switch (r.current()) {"
+      },
+      {
+        "txt": "case '-': t.emit('-'); t.advanceTransition(ScriptDataEscapedDash); break; case '<': t.advanceTransition(ScriptDataEscapedLessthanSign); break; case nullChar: t.error(this); r.advance();"
+      },
+      {
+        "txt": "t.emit(replacementChar); break; default: String data = r.consumeToAny('-', '<', nullChar); t.emit(data); } } }, ScriptDataEscapedDash { void read(Tokeniser t, CharacterReader r) {"
+      },
+      {
+        "txt": "if (r.isEmpty()) { t.eofError(this); t.transition(Data); return; } char c = r.consume(); switch (c) { case '-': t.emit(c); t.transition(ScriptDataEscapedDashDash);"
+      },
+      {
+        "txt": "break; case '<': t.transition(ScriptDataEscapedLessthanSign); break; case nullChar: t.error(this); t.emit(replacementChar); t.transition(ScriptDataEscaped); break; default:"
+      },
+      {
+        "txt": "t.emit(c); t.transition(ScriptDataEscaped); } } }, ScriptDataEscapedDashDash { void read(Tokeniser t, CharacterReader r) { if (r.isEmpty()) { t.eofError(this); t.transition(Data);"
+      },
+      {
+        "txt": "return; } char c = r.consume(); switch (c) { case '-': t.emit(c); break; case '<': t.transition(ScriptDataEscapedLessthanSign); break;"
+      },
+      {
+        "txt": "case '>': t.emit(c); t.transition(ScriptData); break; case nullChar: t.error(this); t.emit(replacementChar); t.transition(ScriptDataEscaped); break; default:"
+      },
+      {
+        "txt": "t.emit(c); t.transition(ScriptDataEscaped); } } }, ScriptDataEscapedLessthanSign { void read(Tokeniser t, CharacterReader r) { if (r.matchesLetter()) { t.createTempBuffer(); t.dataBuffer.append(Character.toLowerCase(r.current()));"
+      },
+      {
+        "txt": "t.emit(\"<\" + r.current()); t.advanceTransition(ScriptDataDoubleEscapeStart); } else if (r.matches('/')) { t.createTempBuffer(); t.advanceTransition(ScriptDataEscapedEndTagOpen); } else { t.emit('<'); t.transition(ScriptDataEscaped); } }"
+      },
+      {
+        "txt": "}, ScriptDataEscapedEndTagOpen { void read(Tokeniser t, CharacterReader r) { if (r.matchesLetter()) { t.createTagPending(false); t.tagPending.appendTagName(Character.toLowerCase(r.current())); t.dataBuffer.append(r.current()); t.advanceTransition(ScriptDataEscapedEndTagName); } else { t.emit(\"</\");"
+      },
+      {
+        "txt": "t.transition(ScriptDataEscaped); } } }, ScriptDataEscapedEndTagName { void read(Tokeniser t, CharacterReader r) { if (r.matchesLetter()) { String name = r.consumeLetterSequence(); t.tagPending.appendTagName(name.toLowerCase()); t.dataBuffer.append(name);"
+      },
+      {
+        "txt": "r.advance(); return; } char c = r.consume(); boolean handled = true; switch (c) { case '\\t': case '\\n': case '\\f': case ' ':"
+      },
+      {
+        "txt": "if (t.isAppropriateEndTagToken()) t.transition(BeforeAttributeName); else handled = false; break; case '/': if (t.isAppropriateEndTagToken()) t.transition(SelfClosingStartTag); else handled = false;"
+      },
+      {
+        "txt": "break; case '>': if (t.isAppropriateEndTagToken()) { t.emitTagPending(); t.transition(Data); } else handled = false; break; }"
+      },
+      {
+        "txt": "if (!handled) { t.emit(\"</\" + t.dataBuffer.toString()); r.unconsume(); t.transition(ScriptDataEscaped); } } }, ScriptDataDoubleEscapeStart { void read(Tokeniser t, CharacterReader r) { if (r.matchesLetter()) {"
+      },
+      {
+        "txt": "String name = r.consumeLetterSequence(); t.dataBuffer.append(name.toLowerCase()); t.emit(name); return; } char c = r.consume(); switch (c) { case '\\t': case '\\n': case '\\f':"
+      },
+      {
+        "txt": "case ' ': case '/': case '>': if (t.dataBuffer.toString().equals(\"script\")) t.transition(ScriptDataDoubleEscaped); else t.transition(ScriptDataEscaped); t.emit(c); break; default:"
+      },
+      {
+        "txt": "r.unconsume(); t.transition(ScriptDataEscaped); } } }, ScriptDataDoubleEscaped { void read(Tokeniser t, CharacterReader r) { char c = r.current(); switch (c) { case '-':"
+      },
+      {
+        "txt": "t.emit(c); t.advanceTransition(ScriptDataDoubleEscapedDash); break; case '<': t.emit(c); t.advanceTransition(ScriptDataDoubleEscapedLessthanSign); break; case nullChar: t.error(this); r.advance();"
+      },
+      {
+        "txt": "t.emit(replacementChar); break; case eof: t.eofError(this); t.transition(Data); break; default: String data = r.consumeToAny('-', '<', nullChar); t.emit(data); }"
+      },
+      {
+        "txt": "} }, ScriptDataDoubleEscapedDash { void read(Tokeniser t, CharacterReader r) { char c = r.consume(); switch (c) { case '-': t.emit(c); t.transition(ScriptDataDoubleEscapedDashDash); break;"
+      },
+      {
+        "txt": "case '<': t.emit(c); t.transition(ScriptDataDoubleEscapedLessthanSign); break; case nullChar: t.error(this); t.emit(replacementChar); t.transition(ScriptDataDoubleEscaped); break; case eof:"
+      },
+      {
+        "txt": "t.eofError(this); t.transition(Data); break; default: t.emit(c); t.transition(ScriptDataDoubleEscaped); } } }, ScriptDataDoubleEscapedDashDash {"
+      },
+      {
+        "txt": "void read(Tokeniser t, CharacterReader r) { char c = r.consume(); switch (c) { case '-': t.emit(c); break; case '<': t.emit(c); t.transition(ScriptDataDoubleEscapedLessthanSign); break;"
+      },
+      {
+        "txt": "case '>': t.emit(c); t.transition(ScriptData); case nullChar: t.error(this); t.emit(replacementChar); t.transition(ScriptDataDoubleEscaped); break; case eof: t.eofError(this);"
+      },
+      {
+        "txt": "t.transition(Data); break; default: t.emit(c); t.transition(ScriptDataDoubleEscaped); } } }, ScriptDataDoubleEscapedLessthanSign { void read(Tokeniser t, CharacterReader r) {"
+      },
+      {
+        "txt": "if (r.matches('/')) { t.emit('/'); t.createTempBuffer(); t.advanceTransition(ScriptDataDoubleEscapeEnd); } else { t.transition(ScriptDataDoubleEscaped); } } }, ScriptDataDoubleEscapeEnd {"
+      },
+      {
+        "txt": "void read(Tokeniser t, CharacterReader r) { if (r.matchesLetter()) { String name = r.consumeLetterSequence(); t.dataBuffer.append(name.toLowerCase()); t.emit(name); return; } char c = r.consume(); switch (c) { case '\\t':"
+      },
+      {
+        "txt": "case '\\n': case '\\f': case ' ': case '/': case '>': if (t.dataBuffer.toString().equals(\"script\")) t.transition(ScriptDataEscaped); else t.transition(ScriptDataDoubleEscaped); t.emit(c);"
+      },
+      {
+        "txt": "break; default: r.unconsume(); t.transition(ScriptDataDoubleEscaped); } } }, BeforeAttributeName { void read(Tokeniser t, CharacterReader r) { char c = r.consume();"
+      },
+      {
+        "txt": "switch (c) { case '\\t': case '\\n': case '\\f': case ' ': break; // ignore whitespace case '/': t.transition(SelfClosingStartTag); break; case '>':"
+      },
+      {
+        "txt": "t.emitTagPending(); t.transition(Data); break; case nullChar: t.error(this); t.tagPending.newAttribute(); r.unconsume(); t.transition(AttributeName); break; case eof:"
+      },
+      {
+        "txt": "t.eofError(this); t.transition(Data); break; case '\"': case '\\'': case '<': case '=': t.error(this); t.tagPending.newAttribute(); t.tagPending.appendAttributeName(c);"
+      },
+      {
+        "txt": "t.transition(AttributeName); break; default: // A-Z, anything else t.tagPending.newAttribute(); r.unconsume(); t.transition(AttributeName); } } }, AttributeName {"
+      },
+      {
+        "txt": "void read(Tokeniser t, CharacterReader r) { String name = r.consumeToAny('\\t', '\\n', '\\f', ' ', '/', '=', '>', nullChar, '\"', '\\'', '<'); t.tagPending.appendAttributeName(name.toLowerCase()); char c = r.consume(); switch (c) { case '\\t': case '\\n': case '\\f': case ' ': t.transition(AfterAttributeName);"
+      },
+      {
+        "txt": "break; case '/': t.transition(SelfClosingStartTag); break; case '=': t.transition(BeforeAttributeValue); break; case '>': t.emitTagPending(); t.transition(Data);"
+      },
+      {
+        "txt": "break; case nullChar: t.error(this); t.tagPending.appendAttributeName(replacementChar); break; case eof: t.eofError(this); t.transition(Data); break; case '\"':"
+      },
+      {
+        "txt": "case '\\'': case '<': t.error(this); t.tagPending.appendAttributeName(c); } } }, AfterAttributeName { void read(Tokeniser t, CharacterReader r) { char c = r.consume();"
+      },
+      {
+        "txt": "switch (c) { case '\\t': case '\\n': case '\\f': case ' ': break; case '/': t.transition(SelfClosingStartTag); break; case '=':"
+      },
+      {
+        "txt": "t.transition(BeforeAttributeValue); break; case '>': t.emitTagPending(); t.transition(Data); break; case nullChar: t.error(this); t.tagPending.appendAttributeName(replacementChar); t.transition(AttributeName);"
+      },
+      {
+        "txt": "break; case eof: t.eofError(this); t.transition(Data); break; case '\"': case '\\'': case '<': t.error(this); t.tagPending.newAttribute();"
+      },
+      {
+        "txt": "t.tagPending.appendAttributeName(c); t.transition(AttributeName); break; default: // A-Z, anything else t.tagPending.newAttribute(); r.unconsume(); t.transition(AttributeName); } } },"
+      },
+      {
+        "txt": "BeforeAttributeValue { void read(Tokeniser t, CharacterReader r) { char c = r.consume(); switch (c) { case '\\t': case '\\n': case '\\f': case ' ': break; case '\"':"
+      },
+      {
+        "txt": "t.transition(AttributeValue_doubleQuoted); break; case '&': r.unconsume(); t.transition(AttributeValue_unquoted); break; case '\\'': t.transition(AttributeValue_singleQuoted); break; case nullChar:"
+      },
+      {
+        "txt": "t.error(this); t.tagPending.appendAttributeValue(replacementChar); t.transition(AttributeValue_unquoted); break; case eof: t.eofError(this); t.transition(Data); break; case '>': t.error(this);"
+      },
+      {
+        "txt": "t.emitTagPending(); t.transition(Data); break; case '<': case '=': case '`': t.error(this); t.tagPending.appendAttributeValue(c); t.transition(AttributeValue_unquoted); break;"
+      },
+      {
+        "txt": "default: r.unconsume(); t.transition(AttributeValue_unquoted); } } }, AttributeValue_doubleQuoted { void read(Tokeniser t, CharacterReader r) { String value = r.consumeToAny('\"', '&', nullChar); if (value.length() > 0)"
+      },
+      {
+        "txt": "t.tagPending.appendAttributeValue(value); char c = r.consume(); switch (c) { case '\"': t.transition(AfterAttributeValue_quoted); break; case '&': Character ref = t.consumeCharacterReference('\"', true); if (ref != null) t.tagPending.appendAttributeValue(ref);"
+      },
+      {
+        "txt": "else t.tagPending.appendAttributeValue('&'); break; case nullChar: t.error(this); t.tagPending.appendAttributeValue(replacementChar); break; case eof: t.eofError(this); t.transition(Data);"
+      },
+      {
+        "txt": "break; } } }, AttributeValue_singleQuoted { void read(Tokeniser t, CharacterReader r) { String value = r.consumeToAny('\\'', '&', nullChar); if (value.length() > 0) t.tagPending.appendAttributeValue(value); char c = r.consume();"
+      },
+      {
+        "txt": "switch (c) { case '\\'': t.transition(AfterAttributeValue_quoted); break; case '&': Character ref = t.consumeCharacterReference('\\'', true); if (ref != null) t.tagPending.appendAttributeValue(ref); else t.tagPending.appendAttributeValue('&');"
+      },
+      {
+        "txt": "break; case nullChar: t.error(this); t.tagPending.appendAttributeValue(replacementChar); break; case eof: t.eofError(this); t.transition(Data); break; }"
+      },
+      {
+        "txt": "} }, AttributeValue_unquoted { void read(Tokeniser t, CharacterReader r) { String value = r.consumeToAny('\\t', '\\n', '\\f', ' ', '&', '>', nullChar, '\"', '\\'', '<', '=', '`'); if (value.length() > 0) t.tagPending.appendAttributeValue(value); char c = r.consume(); switch (c) { case '\\t':"
+      },
+      {
+        "txt": "case '\\n': case '\\f': case ' ': t.transition(BeforeAttributeName); break; case '&': Character ref = t.consumeCharacterReference('>', true); if (ref != null) t.tagPending.appendAttributeValue(ref); else"
+      },
+      {
+        "txt": "t.tagPending.appendAttributeValue('&'); break; case '>': t.emitTagPending(); t.transition(Data); break; case nullChar: t.error(this); t.tagPending.appendAttributeValue(replacementChar); break;"
+      },
+      {
+        "txt": "case eof: t.eofError(this); t.transition(Data); break; case '\"': case '\\'': case '<': case '=': case '`': t.error(this);"
+      },
+      {
+        "txt": "t.tagPending.appendAttributeValue(c); break; } } }, AfterAttributeValue_quoted { void read(Tokeniser t, CharacterReader r) { char c = r.consume(); switch (c) { case '\\t':"
+      },
+      {
+        "txt": "case '\\n': case '\\f': case ' ': t.transition(BeforeAttributeName); break; case '/': t.transition(SelfClosingStartTag); break; case '>': t.emitTagPending();"
+      },
+      {
+        "txt": "t.transition(Data); break; case eof: t.eofError(this); t.transition(Data); break; default: t.error(this); r.unconsume(); t.transition(BeforeAttributeName);"
+      },
+      {
+        "txt": "} } }, SelfClosingStartTag { void read(Tokeniser t, CharacterReader r) { char c = r.consume(); switch (c) { case '>': t.tagPending.selfClosing = true; t.emitTagPending();"
+      },
+      {
+        "txt": "t.transition(Data); break; case eof: t.eofError(this); t.transition(Data); break; default: t.error(this); t.transition(BeforeAttributeName); }"
+      },
+      {
+        "txt": "} }, BogusComment { void read(Tokeniser t, CharacterReader r) { r.unconsume(); Token.Comment comment = new Token.Comment(); comment.data.append(r.consumeTo('>')); t.emit(comment); t.advanceTransition(Data); }"
+      },
+      {
+        "txt": "}, MarkupDeclarationOpen { void read(Tokeniser t, CharacterReader r) { if (r.matchConsume(\"--\")) { t.createCommentPending(); t.transition(CommentStart); } else if (r.matchConsumeIgnoreCase(\"DOCTYPE\")) { t.transition(Doctype); } else if (r.matchConsume(\"[CDATA[\")) { t.transition(CdataSection);"
+      },
+      {
+        "txt": "} else { t.error(this); t.advanceTransition(BogusComment); // advance so this character gets in bogus comment data's rewind } } }, CommentStart { void read(Tokeniser t, CharacterReader r) { char c = r.consume(); switch (c) {"
+      },
+      {
+        "txt": "case '-': t.transition(CommentStartDash); break; case nullChar: t.error(this); t.commentPending.data.append(replacementChar); t.transition(Comment); break; case '>': t.error(this);"
+      },
+      {
+        "txt": "t.emitCommentPending(); t.transition(Data); break; case eof: t.eofError(this); t.emitCommentPending(); t.transition(Data); break; default: t.commentPending.data.append(c);"
+      },
+      {
+        "txt": "t.transition(Comment); } } }, CommentStartDash { void read(Tokeniser t, CharacterReader r) { char c = r.consume(); switch (c) { case '-': t.transition(CommentStartDash);"
+      },
+      {
+        "txt": "break; case nullChar: t.error(this); t.commentPending.data.append(replacementChar); t.transition(Comment); break; case '>': t.error(this); t.emitCommentPending(); t.transition(Data);"
+      },
+      {
+        "txt": "break; case eof: t.eofError(this); t.emitCommentPending(); t.transition(Data); break; default: t.commentPending.data.append(c); t.transition(Comment); }"
+      },
+      {
+        "txt": "} }, Comment { void read(Tokeniser t, CharacterReader r) { char c = r.current(); switch (c) { case '-': t.advanceTransition(CommentEndDash); break; case nullChar:"
+      },
+      {
+        "txt": "t.error(this); t.commentPending.data.append(replacementChar); break; case eof: t.eofError(this); t.emitCommentPending(); t.transition(Data); break; default: t.commentPending.data.append(r.consumeToAny('-', nullChar));"
+      },
+      {
+        "txt": "} } }, CommentEndDash { void read(Tokeniser t, CharacterReader r) { char c = r.consume(); switch (c) { case '-': t.transition(CommentEnd); break;"
+      },
+      {
+        "txt": "case nullChar: t.error(this); t.commentPending.data.append('-').append(replacementChar); t.transition(Comment); break; case eof: t.eofError(this); t.emitCommentPending(); t.transition(Data); break;"
+      },
+      {
+        "txt": "default: t.commentPending.data.append('-').append(c); t.transition(Comment); } } }, CommentEnd { void read(Tokeniser t, CharacterReader r) { char c = r.consume(); switch (c) {"
+      },
+      {
+        "txt": "case '>': t.emitCommentPending(); t.transition(Data); break; case nullChar: t.error(this); t.commentPending.data.append(\"--\").append(replacementChar); t.transition(Comment); break; case '!':"
+      },
+      {
+        "txt": "t.error(this); t.transition(CommentEndBang); break; case '-': t.error(this); t.commentPending.data.append('-'); break; case eof: t.eofError(this); t.emitCommentPending();"
+      },
+      {
+        "txt": "t.transition(Data); break; default: t.error(this); t.commentPending.data.append(\"--\").append(c); t.transition(Comment); } } }, CommentEndBang {"
+      },
+      {
+        "txt": "void read(Tokeniser t, CharacterReader r) { char c = r.consume(); switch (c) { case '-': t.commentPending.data.append(\"--!\"); t.transition(CommentEndDash); break; case '>': t.emitCommentPending(); t.transition(Data);"
+      },
+      {
+        "txt": "break; case nullChar: t.error(this); t.commentPending.data.append(\"--!\").append(replacementChar); t.transition(Comment); break; case eof: t.eofError(this); t.emitCommentPending(); t.transition(Data);"
+      },
+      {
+        "txt": "break; default: t.commentPending.data.append(\"--!\").append(c); t.transition(Comment); } } }, Doctype { void read(Tokeniser t, CharacterReader r) { char c = r.consume();"
+      },
+      {
+        "txt": "switch (c) { case '\\t': case '\\n': case '\\f': case ' ': t.transition(BeforeDoctypeName); break; case eof: t.eofError(this); t.createDoctypePending();"
+      },
+      {
+        "txt": "t.doctypePending.forceQuirks = true; t.emitDoctypePending(); t.transition(Data); break; default: t.error(this); t.transition(BeforeDoctypeName); } } },"
+      },
+      {
+        "txt": "BeforeDoctypeName { void read(Tokeniser t, CharacterReader r) { if (r.matchesLetter()) { t.createDoctypePending(); t.transition(DoctypeName); return; } char c = r.consume(); switch (c) { case '\\t':"
+      },
+      {
+        "txt": "case '\\n': case '\\f': case ' ': break; // ignore whitespace case nullChar: t.error(this); t.doctypePending.name.append(replacementChar); t.transition(DoctypeName); break; case eof:"
+      },
+      {
+        "txt": "t.eofError(this); t.createDoctypePending(); t.doctypePending.forceQuirks = true; t.emitDoctypePending(); t.transition(Data); break; default: t.createDoctypePending(); t.doctypePending.name.append(c); t.transition(DoctypeName);"
+      },
+      {
+        "txt": "} } }, DoctypeName { void read(Tokeniser t, CharacterReader r) { if (r.matchesLetter()) { String name = r.consumeLetterSequence(); t.doctypePending.name.append(name.toLowerCase()); return; }"
+      },
+      {
+        "txt": "char c = r.consume(); switch (c) { case '>': t.emitDoctypePending(); t.transition(Data); break; case '\\t': case '\\n': case '\\f': case ' ':"
+      },
+      {
+        "txt": "t.transition(AfterDoctypeName); break; case nullChar: t.error(this); t.doctypePending.name.append(replacementChar); break; case eof: t.eofError(this); t.doctypePending.forceQuirks = true; t.emitDoctypePending();"
+      },
+      {
+        "txt": "t.transition(Data); break; default: t.doctypePending.name.append(c); } } }, AfterDoctypeName { void read(Tokeniser t, CharacterReader r) { if (r.isEmpty()) {"
+      },
+      {
+        "txt": "t.eofError(this); t.doctypePending.forceQuirks = true; t.emitDoctypePending(); t.transition(Data); return; } if (r.matches('>')) { t.emitDoctypePending(); t.advanceTransition(Data); } else if (r.matchConsumeIgnoreCase(\"PUBLIC\")) {"
+      },
+      {
+        "txt": "t.transition(AfterDoctypePublicKeyword); } else if (r.matchConsumeIgnoreCase(\"SYSTEM\")) { t.transition(AfterDoctypeSystemKeyword); } else { t.error(this); t.doctypePending.forceQuirks = true; t.advanceTransition(BogusDoctype); } } },"
+      },
+      {
+        "txt": "AfterDoctypePublicKeyword { void read(Tokeniser t, CharacterReader r) { char c = r.consume(); switch (c) { case '\\t': case '\\n': case '\\f': case ' ': t.transition(BeforeDoctypePublicIdentifier); break;"
+      },
+      {
+        "txt": "case '\"': t.error(this); t.transition(DoctypePublicIdentifier_doubleQuoted); break; case '\\'': t.error(this); t.transition(DoctypePublicIdentifier_singleQuoted); break; case '>': t.error(this);"
+      },
+      {
+        "txt": "t.doctypePending.forceQuirks = true; t.emitDoctypePending(); t.transition(Data); break; case eof: t.eofError(this); t.doctypePending.forceQuirks = true; t.emitDoctypePending(); t.transition(Data); break;"
+      },
+      {
+        "txt": "default: t.error(this); t.doctypePending.forceQuirks = true; t.transition(BogusDoctype); } } }, BeforeDoctypePublicIdentifier { void read(Tokeniser t, CharacterReader r) { char c = r.consume();"
+      },
+      {
+        "txt": "switch (c) { case '\\t': case '\\n': case '\\f': case ' ': break; case '\"': t.transition(DoctypePublicIdentifier_doubleQuoted); break; case '\\'':"
+      },
+      {
+        "txt": "t.transition(DoctypePublicIdentifier_singleQuoted); break; case '>': t.error(this); t.doctypePending.forceQuirks = true; t.emitDoctypePending(); t.transition(Data); break; case eof: t.eofError(this);"
+      },
+      {
+        "txt": "t.doctypePending.forceQuirks = true; t.emitDoctypePending(); t.transition(Data); break; default: t.error(this); t.doctypePending.forceQuirks = true; t.transition(BogusDoctype); } }"
+      },
+      {
+        "txt": "}, DoctypePublicIdentifier_doubleQuoted { void read(Tokeniser t, CharacterReader r) { char c = r.consume(); switch (c) { case '\"': t.transition(AfterDoctypePublicIdentifier); break; case nullChar: t.error(this);"
+      },
+      {
+        "txt": "t.doctypePending.publicIdentifier.append(replacementChar); break; case '>': t.error(this); t.doctypePending.forceQuirks = true; t.emitDoctypePending(); t.transition(Data); break; case eof: t.eofError(this);"
+      },
+      {
+        "txt": "t.doctypePending.forceQuirks = true; t.emitDoctypePending(); t.transition(Data); break; default: t.doctypePending.publicIdentifier.append(c); } } }, DoctypePublicIdentifier_singleQuoted {"
+      },
+      {
+        "txt": "void read(Tokeniser t, CharacterReader r) { char c = r.consume(); switch (c) { case '\\'': t.transition(AfterDoctypePublicIdentifier); break; case nullChar: t.error(this); t.doctypePending.publicIdentifier.append(replacementChar); break;"
+      },
+      {
+        "txt": "case '>': t.error(this); t.doctypePending.forceQuirks = true; t.emitDoctypePending(); t.transition(Data); break; case eof: t.eofError(this); t.doctypePending.forceQuirks = true; t.emitDoctypePending();"
+      },
+      {
+        "txt": "t.transition(Data); break; default: t.doctypePending.publicIdentifier.append(c); } } }, AfterDoctypePublicIdentifier { void read(Tokeniser t, CharacterReader r) { char c = r.consume();"
+      },
+      {
+        "txt": "switch (c) { case '\\t': case '\\n': case '\\f': case ' ': t.transition(BetweenDoctypePublicAndSystemIdentifiers); break; case '>': t.emitDoctypePending(); t.transition(Data);"
+      },
+      {
+        "txt": "break; case '\"': t.error(this); t.transition(DoctypeSystemIdentifier_doubleQuoted); break; case '\\'': t.error(this); t.transition(DoctypeSystemIdentifier_singleQuoted); break; case eof:"
+      },
+      {
+        "txt": "t.eofError(this); t.doctypePending.forceQuirks = true; t.emitDoctypePending(); t.transition(Data); break; default: t.error(this); t.doctypePending.forceQuirks = true; t.transition(BogusDoctype); }"
+      },
+      {
+        "txt": "} }, BetweenDoctypePublicAndSystemIdentifiers { void read(Tokeniser t, CharacterReader r) { char c = r.consume(); switch (c) { case '\\t': case '\\n': case '\\f': case ' ':"
+      },
+      {
+        "txt": "break; case '>': t.emitDoctypePending(); t.transition(Data); break; case '\"': t.error(this); t.transition(DoctypeSystemIdentifier_doubleQuoted); break; case '\\'':"
+      },
+      {
+        "txt": "t.error(this); t.transition(DoctypeSystemIdentifier_singleQuoted); break; case eof: t.eofError(this); t.doctypePending.forceQuirks = true; t.emitDoctypePending(); t.transition(Data); break; default:"
+      },
+      {
+        "txt": "t.error(this); t.doctypePending.forceQuirks = true; t.transition(BogusDoctype); } } }, AfterDoctypeSystemKeyword { void read(Tokeniser t, CharacterReader r) { char c = r.consume(); switch (c) {"
+      },
+      {
+        "txt": "case '\\t': case '\\n': case '\\f': case ' ': t.transition(BeforeDoctypeSystemIdentifier); break; case '>': t.error(this); t.doctypePending.forceQuirks = true; t.emitDoctypePending();"
+      },
+      {
+        "txt": "t.transition(Data); break; case '\"': t.error(this); t.transition(DoctypeSystemIdentifier_doubleQuoted); break; case '\\'': t.error(this); t.transition(DoctypeSystemIdentifier_singleQuoted); break;"
+      },
+      {
+        "txt": "case eof: t.eofError(this); t.doctypePending.forceQuirks = true; t.emitDoctypePending(); t.transition(Data); break; default: t.error(this); t.doctypePending.forceQuirks = true; t.emitDoctypePending();"
+      },
+      {
+        "txt": "} } }, BeforeDoctypeSystemIdentifier { void read(Tokeniser t, CharacterReader r) { char c = r.consume(); switch (c) { case '\\t': case '\\n': case '\\f':"
+      },
+      {
+        "txt": "case ' ': break; case '\"': t.transition(DoctypeSystemIdentifier_doubleQuoted); break; case '\\'': t.transition(DoctypeSystemIdentifier_singleQuoted); break; case '>': t.error(this);"
+      },
+      {
+        "txt": "t.doctypePending.forceQuirks = true; t.emitDoctypePending(); t.transition(Data); break; case eof: t.eofError(this); t.doctypePending.forceQuirks = true; t.emitDoctypePending(); t.transition(Data); break;"
+      },
+      {
+        "txt": "default: t.error(this); t.doctypePending.forceQuirks = true; t.transition(BogusDoctype); } } }, DoctypeSystemIdentifier_doubleQuoted { void read(Tokeniser t, CharacterReader r) { char c = r.consume();"
+      },
+      {
+        "txt": "switch (c) { case '\"': t.transition(AfterDoctypeSystemIdentifier); break; case nullChar: t.error(this); t.doctypePending.systemIdentifier.append(replacementChar); break; case '>': t.error(this);"
+      },
+      {
+        "txt": "t.doctypePending.forceQuirks = true; t.emitDoctypePending(); t.transition(Data); break; case eof: t.eofError(this); t.doctypePending.forceQuirks = true; t.emitDoctypePending(); t.transition(Data); break;"
+      },
+      {
+        "txt": "default: t.doctypePending.systemIdentifier.append(c); } } }, DoctypeSystemIdentifier_singleQuoted { void read(Tokeniser t, CharacterReader r) { char c = r.consume(); switch (c) { case '\\'':"
+      },
+      {
+        "txt": "t.transition(AfterDoctypeSystemIdentifier); break; case nullChar: t.error(this); t.doctypePending.systemIdentifier.append(replacementChar); break; case '>': t.error(this); t.doctypePending.forceQuirks = true; t.emitDoctypePending();"
+      },
+      {
+        "txt": "t.transition(Data); break; case eof: t.eofError(this); t.doctypePending.forceQuirks = true; t.emitDoctypePending(); t.transition(Data); break; default: t.doctypePending.systemIdentifier.append(c);"
+      },
+      {
+        "txt": "} } }, AfterDoctypeSystemIdentifier { void read(Tokeniser t, CharacterReader r) { char c = r.consume(); switch (c) { case '\\t': case '\\n': case '\\f':"
+      },
+      {
+        "txt": "case ' ': break; case '>': t.emitDoctypePending(); t.transition(Data); break; case eof: t.eofError(this); t.doctypePending.forceQuirks = true; t.emitDoctypePending();"
+      },
+      {
+        "txt": "t.transition(Data); break; default: t.error(this); t.transition(BogusDoctype); } } }, BogusDoctype { void read(Tokeniser t, CharacterReader r) {"
+      },
+      {
+        "txt": "char c = r.consume(); switch (c) { case '>': t.emitDoctypePending(); t.transition(Data); break; case eof: t.emitDoctypePending(); t.transition(Data); break;"
+      },
+      {
+        "txt": "default: break; } } }, CdataSection { void read(Tokeniser t, CharacterReader r) { String data = r.consumeTo(\"]]>\"); t.emit(data); r.matchConsume(\"]]>\");"
+      },
+      {
+        "txt": "t.transition(Data); } }; abstract void read(Tokeniser t, CharacterReader r); private static final char nullChar = '\\u0000'; private static final char replacementChar = Tokeniser.replacementChar; private static final String replacementStr = String.valueOf(Tokeniser.replacementChar); private static final char eof = CharacterReader.EOF;"
+      }
+    ]
+  },
+  {
+    "id": 1893,
+    "file_path": "src/main/java/org/jsoup/parser/TokeniserState.java",
+    "start-bug-line": 220,
+    "end-bug-line": 220,
+    "bug": "",
+    "fix": "t.tagPending = new Token.EndTag(t.appropriateEndTagName()); t.emitTagPending(); r.unconsume(); // undo \"<\" t.transition(Data);",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.jsoup.parser; enum TokeniserState { Data { void read(Tokeniser t, CharacterReader r) { switch (r.current()) { case '&': t.advanceTransition(CharacterReferenceInData);"
+      },
+      {
+        "txt": "break; case '<': t.advanceTransition(TagOpen); break; case nullChar: t.error(this); // NOT replacement character (oddly?) t.emit(r.consume()); break; case eof: t.emit(new Token.EOF());"
+      },
+      {
+        "txt": "break; default: String data = r.consumeToAny('&', '<', nullChar); t.emit(data); break; } } }, CharacterReferenceInData { void read(Tokeniser t, CharacterReader r) {"
+      },
+      {
+        "txt": "Character c = t.consumeCharacterReference(null, false); if (c == null) t.emit('&'); else t.emit(c); t.transition(Data); } }, Rcdata { void read(Tokeniser t, CharacterReader r) {"
+      },
+      {
+        "txt": "switch (r.current()) { case '&': t.advanceTransition(CharacterReferenceInRcdata); break; case '<': t.advanceTransition(RcdataLessthanSign); break; case nullChar: t.error(this); r.advance();"
+      },
+      {
+        "txt": "t.emit(replacementChar); break; case eof: t.emit(new Token.EOF()); break; default: String data = r.consumeToAny('&', '<', nullChar); t.emit(data); break; }"
+      },
+      {
+        "txt": "} }, CharacterReferenceInRcdata { void read(Tokeniser t, CharacterReader r) { Character c = t.consumeCharacterReference(null, false); if (c == null) t.emit('&'); else t.emit(c); t.transition(Rcdata);"
+      },
+      {
+        "txt": "} }, Rawtext { void read(Tokeniser t, CharacterReader r) { switch (r.current()) { case '<': t.advanceTransition(RawtextLessthanSign); break; case nullChar: t.error(this);"
+      },
+      {
+        "txt": "r.advance(); t.emit(replacementChar); break; case eof: t.emit(new Token.EOF()); break; default: String data = r.consumeToAny('<', nullChar); t.emit(data); break;"
+      },
+      {
+        "txt": "} } }, ScriptData { void read(Tokeniser t, CharacterReader r) { switch (r.current()) { case '<': t.advanceTransition(ScriptDataLessthanSign); break; case nullChar:"
+      },
+      {
+        "txt": "t.error(this); r.advance(); t.emit(replacementChar); break; case eof: t.emit(new Token.EOF()); break; default: String data = r.consumeToAny('<', nullChar); t.emit(data);"
+      },
+      {
+        "txt": "break; } } }, PLAINTEXT { void read(Tokeniser t, CharacterReader r) { switch (r.current()) { case nullChar: t.error(this); r.advance();"
+      },
+      {
+        "txt": "t.emit(replacementChar); break; case eof: t.emit(new Token.EOF()); break; default: String data = r.consumeTo(nullChar); t.emit(data); break; }"
+      },
+      {
+        "txt": "} }, TagOpen { void read(Tokeniser t, CharacterReader r) { switch (r.current()) { case '!': t.advanceTransition(MarkupDeclarationOpen); break; case '/': t.advanceTransition(EndTagOpen);"
+      },
+      {
+        "txt": "break; case '?': t.advanceTransition(BogusComment); break; default: if (r.matchesLetter()) { t.createTagPending(true); t.transition(TagName); } else { t.error(this);"
+      },
+      {
+        "txt": "t.emit('<'); // char that got us here t.transition(Data); } break; } } }, EndTagOpen { void read(Tokeniser t, CharacterReader r) { if (r.isEmpty()) {"
+      },
+      {
+        "txt": "t.eofError(this); t.emit(\"</\"); t.transition(Data); } else if (r.matchesLetter()) { t.createTagPending(false); t.transition(TagName); } else if (r.matches('>')) { t.error(this); t.advanceTransition(Data); } else {"
+      },
+      {
+        "txt": "t.error(this); t.advanceTransition(BogusComment); } } }, TagName { void read(Tokeniser t, CharacterReader r) { String tagName = r.consumeToAny('\\t', '\\n', '\\f', ' ', '/', '>', nullChar).toLowerCase(); t.tagPending.appendTagName(tagName); switch (r.consume()) {"
+      },
+      {
+        "txt": "case '\\t': case '\\n': case '\\f': case ' ': t.transition(BeforeAttributeName); break; case '/': t.transition(SelfClosingStartTag); break; case '>':"
+      },
+      {
+        "txt": "t.emitTagPending(); t.transition(Data); break; case nullChar: // replacement t.tagPending.appendTagName(replacementStr); break; case eof: // should emit pending tag? t.eofError(this); t.transition(Data); }"
+      },
+      {
+        "txt": "}, RcdataLessthanSign { void read(Tokeniser t, CharacterReader r) { if (r.matches('/')) { t.createTempBuffer(); t.advanceTransition(RCDATAEndTagOpen); <extra_id_0> t.emit(\"<\"); t.transition(Rcdata); } } }, RCDATAEndTagOpen {"
+      },
+      {
+        "txt": "}, RCDATAEndTagOpen { void read(Tokeniser t, CharacterReader r) { if (r.matchesLetter()) { t.createTagPending(false); t.tagPending.appendTagName(Character.toLowerCase(r.current())); t.dataBuffer.append(Character.toLowerCase(r.current())); t.advanceTransition(RCDATAEndTagName); } else { t.emit(\"</\");"
+      },
+      {
+        "txt": "t.transition(Rcdata); } } }, RCDATAEndTagName { void read(Tokeniser t, CharacterReader r) { if (r.matchesLetter()) { String name = r.consumeLetterSequence(); t.tagPending.appendTagName(name.toLowerCase()); t.dataBuffer.append(name);"
+      },
+      {
+        "txt": "return; } char c = r.consume(); switch (c) { case '\\t': case '\\n': case '\\f': case ' ': if (t.isAppropriateEndTagToken()) t.transition(BeforeAttributeName);"
+      },
+      {
+        "txt": "else anythingElse(t, r); break; case '/': if (t.isAppropriateEndTagToken()) t.transition(SelfClosingStartTag); else anythingElse(t, r); break; case '>':"
+      },
+      {
+        "txt": "if (t.isAppropriateEndTagToken()) { t.emitTagPending(); t.transition(Data); } else anythingElse(t, r); break; default: anythingElse(t, r); }"
+      },
+      {
+        "txt": "} private void anythingElse(Tokeniser t, CharacterReader r) { t.emit(\"</\" + t.dataBuffer.toString()); t.transition(Rcdata); } }, RawtextLessthanSign { void read(Tokeniser t, CharacterReader r) { if (r.matches('/')) { t.createTempBuffer();"
+      },
+      {
+        "txt": "t.advanceTransition(RawtextEndTagOpen); } else { t.emit('<'); t.transition(Rawtext); } } }, RawtextEndTagOpen { void read(Tokeniser t, CharacterReader r) { if (r.matchesLetter()) {"
+      },
+      {
+        "txt": "t.createTagPending(false); t.transition(RawtextEndTagName); } else { t.emit(\"</\"); t.transition(Rawtext); } } }, RawtextEndTagName { void read(Tokeniser t, CharacterReader r) {"
+      },
+      {
+        "txt": "if (r.matchesLetter()) { String name = r.consumeLetterSequence(); t.tagPending.appendTagName(name.toLowerCase()); t.dataBuffer.append(name); return; } char c = r.consume(); boolean handled = true; switch (c) { case '\\t':"
+      },
+      {
+        "txt": "case '\\n': case '\\f': case ' ': if (t.isAppropriateEndTagToken()) t.transition(BeforeAttributeName); else handled = false; break; case '/': if (t.isAppropriateEndTagToken())"
+      },
+      {
+        "txt": "t.transition(SelfClosingStartTag); else handled = false; break; case '>': if (t.isAppropriateEndTagToken()) { t.emitTagPending(); t.transition(Data); } else"
+      },
+      {
+        "txt": "handled = false; break; } if (!handled) { t.emit(\"</\" + t.dataBuffer.toString()); r.unconsume(); t.transition(Rawtext); } } },"
+      },
+      {
+        "txt": "ScriptDataLessthanSign { void read(Tokeniser t, CharacterReader r) { switch (r.consume()) { case '/': t.createTempBuffer(); t.transition(ScriptDataEndTagOpen); break; case '!': t.emit(\"<!\"); t.transition(ScriptDataEscapeStart);"
+      },
+      {
+        "txt": "break; default: t.emit(\"<\"); r.unconsume(); t.transition(ScriptData); } } }, ScriptDataEndTagOpen { void read(Tokeniser t, CharacterReader r) {"
+      },
+      {
+        "txt": "if (r.matchesLetter()) { t.createTagPending(false); t.transition(ScriptDataEndTagName); } else { t.emit(\"</\"); t.transition(ScriptData); } } }, ScriptDataEndTagName {"
+      },
+      {
+        "txt": "void read(Tokeniser t, CharacterReader r) { if (r.matchesLetter()) { String name = r.consumeLetterSequence(); t.tagPending.appendTagName(name.toLowerCase()); t.dataBuffer.append(name); return; } char c = r.consume(); boolean handled = true; switch (c) {"
+      },
+      {
+        "txt": "case '\\t': case '\\n': case '\\f': case ' ': if (t.isAppropriateEndTagToken()) t.transition(BeforeAttributeName); else handled = false; break; case '/':"
+      },
+      {
+        "txt": "if (t.isAppropriateEndTagToken()) t.transition(SelfClosingStartTag); else handled = false; break; case '>': if (t.isAppropriateEndTagToken()) { t.emitTagPending(); t.transition(Data); }"
+      },
+      {
+        "txt": "else handled = false; break; } if (!handled) { t.emit(\"</\" + t.dataBuffer.toString()); r.unconsume(); t.transition(ScriptData); } }"
+      },
+      {
+        "txt": "}, ScriptDataEscapeStart { void read(Tokeniser t, CharacterReader r) { if (r.matches('-')) { t.emit('-'); t.advanceTransition(ScriptDataEscapeStartDash); } else { t.transition(ScriptData); } }"
+      },
+      {
+        "txt": "}, ScriptDataEscapeStartDash { void read(Tokeniser t, CharacterReader r) { if (r.matches('-')) { t.emit('-'); t.advanceTransition(ScriptDataEscapedDashDash); } else { t.transition(ScriptData); } }"
+      },
+      {
+        "txt": "}, ScriptDataEscaped { void read(Tokeniser t, CharacterReader r) { if (r.isEmpty()) { t.eofError(this); t.transition(Data); return; } switch (r.current()) { case '-':"
+      },
+      {
+        "txt": "t.emit('-'); t.advanceTransition(ScriptDataEscapedDash); break; case '<': t.advanceTransition(ScriptDataEscapedLessthanSign); break; case nullChar: t.error(this); r.advance(); t.emit(replacementChar);"
+      },
+      {
+        "txt": "break; default: String data = r.consumeToAny('-', '<', nullChar); t.emit(data); } } }, ScriptDataEscapedDash { void read(Tokeniser t, CharacterReader r) { if (r.isEmpty()) {"
+      },
+      {
+        "txt": "t.eofError(this); t.transition(Data); return; } char c = r.consume(); switch (c) { case '-': t.emit(c); t.transition(ScriptDataEscapedDashDash); break;"
+      },
+      {
+        "txt": "case '<': t.transition(ScriptDataEscapedLessthanSign); break; case nullChar: t.error(this); t.emit(replacementChar); t.transition(ScriptDataEscaped); break; default: t.emit(c);"
+      },
+      {
+        "txt": "t.transition(ScriptDataEscaped); } } }, ScriptDataEscapedDashDash { void read(Tokeniser t, CharacterReader r) { if (r.isEmpty()) { t.eofError(this); t.transition(Data); return;"
+      },
+      {
+        "txt": "} char c = r.consume(); switch (c) { case '-': t.emit(c); break; case '<': t.transition(ScriptDataEscapedLessthanSign); break; case '>':"
+      },
+      {
+        "txt": "t.emit(c); t.transition(ScriptData); break; case nullChar: t.error(this); t.emit(replacementChar); t.transition(ScriptDataEscaped); break; default: t.emit(c);"
+      },
+      {
+        "txt": "t.transition(ScriptDataEscaped); } } }, ScriptDataEscapedLessthanSign { void read(Tokeniser t, CharacterReader r) { if (r.matchesLetter()) { t.createTempBuffer(); t.dataBuffer.append(Character.toLowerCase(r.current())); t.emit(\"<\" + r.current());"
+      },
+      {
+        "txt": "t.advanceTransition(ScriptDataDoubleEscapeStart); } else if (r.matches('/')) { t.createTempBuffer(); t.advanceTransition(ScriptDataEscapedEndTagOpen); } else { t.emit('<'); t.transition(ScriptDataEscaped); } } },"
+      },
+      {
+        "txt": "ScriptDataEscapedEndTagOpen { void read(Tokeniser t, CharacterReader r) { if (r.matchesLetter()) { t.createTagPending(false); t.tagPending.appendTagName(Character.toLowerCase(r.current())); t.dataBuffer.append(r.current()); t.advanceTransition(ScriptDataEscapedEndTagName); } else { t.emit(\"</\"); t.transition(ScriptDataEscaped);"
+      },
+      {
+        "txt": "} } }, ScriptDataEscapedEndTagName { void read(Tokeniser t, CharacterReader r) { if (r.matchesLetter()) { String name = r.consumeLetterSequence(); t.tagPending.appendTagName(name.toLowerCase()); t.dataBuffer.append(name); r.advance();"
+      },
+      {
+        "txt": "return; } char c = r.consume(); boolean handled = true; switch (c) { case '\\t': case '\\n': case '\\f': case ' ': if (t.isAppropriateEndTagToken())"
+      },
+      {
+        "txt": "t.transition(BeforeAttributeName); else handled = false; break; case '/': if (t.isAppropriateEndTagToken()) t.transition(SelfClosingStartTag); else handled = false; break;"
+      },
+      {
+        "txt": "case '>': if (t.isAppropriateEndTagToken()) { t.emitTagPending(); t.transition(Data); } else handled = false; break; } if (!handled) {"
+      },
+      {
+        "txt": "t.emit(\"</\" + t.dataBuffer.toString()); r.unconsume(); t.transition(ScriptDataEscaped); } } }, ScriptDataDoubleEscapeStart { void read(Tokeniser t, CharacterReader r) { if (r.matchesLetter()) { String name = r.consumeLetterSequence();"
+      },
+      {
+        "txt": "t.dataBuffer.append(name.toLowerCase()); t.emit(name); return; } char c = r.consume(); switch (c) { case '\\t': case '\\n': case '\\f': case ' ':"
+      },
+      {
+        "txt": "case '/': case '>': if (t.dataBuffer.toString().equals(\"script\")) t.transition(ScriptDataDoubleEscaped); else t.transition(ScriptDataEscaped); t.emit(c); break; default: r.unconsume();"
+      },
+      {
+        "txt": "t.transition(ScriptDataEscaped); } } }, ScriptDataDoubleEscaped { void read(Tokeniser t, CharacterReader r) { char c = r.current(); switch (c) { case '-': t.emit(c);"
+      },
+      {
+        "txt": "t.advanceTransition(ScriptDataDoubleEscapedDash); break; case '<': t.emit(c); t.advanceTransition(ScriptDataDoubleEscapedLessthanSign); break; case nullChar: t.error(this); r.advance(); t.emit(replacementChar);"
+      },
+      {
+        "txt": "break; case eof: t.eofError(this); t.transition(Data); break; default: String data = r.consumeToAny('-', '<', nullChar); t.emit(data); } }"
+      },
+      {
+        "txt": "}, ScriptDataDoubleEscapedDash { void read(Tokeniser t, CharacterReader r) { char c = r.consume(); switch (c) { case '-': t.emit(c); t.transition(ScriptDataDoubleEscapedDashDash); break; case '<':"
+      },
+      {
+        "txt": "t.emit(c); t.transition(ScriptDataDoubleEscapedLessthanSign); break; case nullChar: t.error(this); t.emit(replacementChar); t.transition(ScriptDataDoubleEscaped); break; case eof: t.eofError(this);"
+      },
+      {
+        "txt": "t.transition(Data); break; default: t.emit(c); t.transition(ScriptDataDoubleEscaped); } } }, ScriptDataDoubleEscapedDashDash { void read(Tokeniser t, CharacterReader r) {"
+      },
+      {
+        "txt": "char c = r.consume(); switch (c) { case '-': t.emit(c); break; case '<': t.emit(c); t.transition(ScriptDataDoubleEscapedLessthanSign); break; case '>':"
+      },
+      {
+        "txt": "t.emit(c); t.transition(ScriptData); case nullChar: t.error(this); t.emit(replacementChar); t.transition(ScriptDataDoubleEscaped); break; case eof: t.eofError(this); t.transition(Data);"
+      },
+      {
+        "txt": "break; default: t.emit(c); t.transition(ScriptDataDoubleEscaped); } } }, ScriptDataDoubleEscapedLessthanSign { void read(Tokeniser t, CharacterReader r) { if (r.matches('/')) {"
+      },
+      {
+        "txt": "t.emit('/'); t.createTempBuffer(); t.advanceTransition(ScriptDataDoubleEscapeEnd); } else { t.transition(ScriptDataDoubleEscaped); } } }, ScriptDataDoubleEscapeEnd { void read(Tokeniser t, CharacterReader r) {"
+      },
+      {
+        "txt": "if (r.matchesLetter()) { String name = r.consumeLetterSequence(); t.dataBuffer.append(name.toLowerCase()); t.emit(name); return; } char c = r.consume(); switch (c) { case '\\t': case '\\n':"
+      },
+      {
+        "txt": "case '\\f': case ' ': case '/': case '>': if (t.dataBuffer.toString().equals(\"script\")) t.transition(ScriptDataEscaped); else t.transition(ScriptDataDoubleEscaped); t.emit(c); break;"
+      },
+      {
+        "txt": "default: r.unconsume(); t.transition(ScriptDataDoubleEscaped); } } }, BeforeAttributeName { void read(Tokeniser t, CharacterReader r) { char c = r.consume(); switch (c) {"
+      },
+      {
+        "txt": "case '\\t': case '\\n': case '\\f': case ' ': break; // ignore whitespace case '/': t.transition(SelfClosingStartTag); break; case '>': t.emitTagPending();"
+      },
+      {
+        "txt": "t.transition(Data); break; case nullChar: t.error(this); t.tagPending.newAttribute(); r.unconsume(); t.transition(AttributeName); break; case eof: t.eofError(this);"
+      },
+      {
+        "txt": "t.transition(Data); break; case '\"': case '\\'': case '<': case '=': t.error(this); t.tagPending.newAttribute(); t.tagPending.appendAttributeName(c); t.transition(AttributeName);"
+      },
+      {
+        "txt": "break; default: // A-Z, anything else t.tagPending.newAttribute(); r.unconsume(); t.transition(AttributeName); } } }, AttributeName { void read(Tokeniser t, CharacterReader r) {"
+      },
+      {
+        "txt": "String name = r.consumeToAny('\\t', '\\n', '\\f', ' ', '/', '=', '>', nullChar, '\"', '\\'', '<'); t.tagPending.appendAttributeName(name.toLowerCase()); char c = r.consume(); switch (c) { case '\\t': case '\\n': case '\\f': case ' ': t.transition(AfterAttributeName); break;"
+      },
+      {
+        "txt": "case '/': t.transition(SelfClosingStartTag); break; case '=': t.transition(BeforeAttributeValue); break; case '>': t.emitTagPending(); t.transition(Data); break;"
+      },
+      {
+        "txt": "case nullChar: t.error(this); t.tagPending.appendAttributeName(replacementChar); break; case eof: t.eofError(this); t.transition(Data); break; case '\"': case '\\'':"
+      },
+      {
+        "txt": "case '<': t.error(this); t.tagPending.appendAttributeName(c); } } }, AfterAttributeName { void read(Tokeniser t, CharacterReader r) { char c = r.consume(); switch (c) {"
+      },
+      {
+        "txt": "case '\\t': case '\\n': case '\\f': case ' ': break; case '/': t.transition(SelfClosingStartTag); break; case '=': t.transition(BeforeAttributeValue);"
+      },
+      {
+        "txt": "break; case '>': t.emitTagPending(); t.transition(Data); break; case nullChar: t.error(this); t.tagPending.appendAttributeName(replacementChar); t.transition(AttributeName); break;"
+      },
+      {
+        "txt": "case eof: t.eofError(this); t.transition(Data); break; case '\"': case '\\'': case '<': t.error(this); t.tagPending.newAttribute(); t.tagPending.appendAttributeName(c);"
+      },
+      {
+        "txt": "t.transition(AttributeName); break; default: // A-Z, anything else t.tagPending.newAttribute(); r.unconsume(); t.transition(AttributeName); } } }, BeforeAttributeValue {"
+      },
+      {
+        "txt": "void read(Tokeniser t, CharacterReader r) { char c = r.consume(); switch (c) { case '\\t': case '\\n': case '\\f': case ' ': break; case '\"': t.transition(AttributeValue_doubleQuoted);"
+      },
+      {
+        "txt": "break; case '&': r.unconsume(); t.transition(AttributeValue_unquoted); break; case '\\'': t.transition(AttributeValue_singleQuoted); break; case nullChar: t.error(this);"
+      },
+      {
+        "txt": "t.tagPending.appendAttributeValue(replacementChar); t.transition(AttributeValue_unquoted); break; case eof: t.eofError(this); t.transition(Data); break; case '>': t.error(this); t.emitTagPending();"
+      },
+      {
+        "txt": "t.transition(Data); break; case '<': case '=': case '`': t.error(this); t.tagPending.appendAttributeValue(c); t.transition(AttributeValue_unquoted); break; default:"
+      },
+      {
+        "txt": "r.unconsume(); t.transition(AttributeValue_unquoted); } } }, AttributeValue_doubleQuoted { void read(Tokeniser t, CharacterReader r) { String value = r.consumeToAny('\"', '&', nullChar); if (value.length() > 0) t.tagPending.appendAttributeValue(value);"
+      },
+      {
+        "txt": "char c = r.consume(); switch (c) { case '\"': t.transition(AfterAttributeValue_quoted); break; case '&': Character ref = t.consumeCharacterReference('\"', true); if (ref != null) t.tagPending.appendAttributeValue(ref); else"
+      },
+      {
+        "txt": "t.tagPending.appendAttributeValue('&'); break; case nullChar: t.error(this); t.tagPending.appendAttributeValue(replacementChar); break; case eof: t.eofError(this); t.transition(Data); break;"
+      },
+      {
+        "txt": "} } }, AttributeValue_singleQuoted { void read(Tokeniser t, CharacterReader r) { String value = r.consumeToAny('\\'', '&', nullChar); if (value.length() > 0) t.tagPending.appendAttributeValue(value); char c = r.consume(); switch (c) {"
+      },
+      {
+        "txt": "case '\\'': t.transition(AfterAttributeValue_quoted); break; case '&': Character ref = t.consumeCharacterReference('\\'', true); if (ref != null) t.tagPending.appendAttributeValue(ref); else t.tagPending.appendAttributeValue('&'); break;"
+      },
+      {
+        "txt": "case nullChar: t.error(this); t.tagPending.appendAttributeValue(replacementChar); break; case eof: t.eofError(this); t.transition(Data); break; } }"
+      },
+      {
+        "txt": "}, AttributeValue_unquoted { void read(Tokeniser t, CharacterReader r) { String value = r.consumeToAny('\\t', '\\n', '\\f', ' ', '&', '>', nullChar, '\"', '\\'', '<', '=', '`'); if (value.length() > 0) t.tagPending.appendAttributeValue(value); char c = r.consume(); switch (c) { case '\\t': case '\\n':"
+      },
+      {
+        "txt": "case '\\f': case ' ': t.transition(BeforeAttributeName); break; case '&': Character ref = t.consumeCharacterReference('>', true); if (ref != null) t.tagPending.appendAttributeValue(ref); else t.tagPending.appendAttributeValue('&');"
+      },
+      {
+        "txt": "break; case '>': t.emitTagPending(); t.transition(Data); break; case nullChar: t.error(this); t.tagPending.appendAttributeValue(replacementChar); break; case eof:"
+      },
+      {
+        "txt": "t.eofError(this); t.transition(Data); break; case '\"': case '\\'': case '<': case '=': case '`': t.error(this); t.tagPending.appendAttributeValue(c);"
+      },
+      {
+        "txt": "break; } } }, AfterAttributeValue_quoted { void read(Tokeniser t, CharacterReader r) { char c = r.consume(); switch (c) { case '\\t': case '\\n':"
+      },
+      {
+        "txt": "case '\\f': case ' ': t.transition(BeforeAttributeName); break; case '/': t.transition(SelfClosingStartTag); break; case '>': t.emitTagPending(); t.transition(Data);"
+      },
+      {
+        "txt": "break; case eof: t.eofError(this); t.transition(Data); break; default: t.error(this); r.unconsume(); t.transition(BeforeAttributeName); }"
+      },
+      {
+        "txt": "} }, SelfClosingStartTag { void read(Tokeniser t, CharacterReader r) { char c = r.consume(); switch (c) { case '>': t.tagPending.selfClosing = true; t.emitTagPending(); t.transition(Data);"
+      },
+      {
+        "txt": "break; case eof: t.eofError(this); t.transition(Data); break; default: t.error(this); t.transition(BeforeAttributeName); } }"
+      },
+      {
+        "txt": "}, BogusComment { void read(Tokeniser t, CharacterReader r) { r.unconsume(); Token.Comment comment = new Token.Comment(); comment.data.append(r.consumeTo('>')); t.emit(comment); t.advanceTransition(Data); } },"
+      },
+      {
+        "txt": "MarkupDeclarationOpen { void read(Tokeniser t, CharacterReader r) { if (r.matchConsume(\"--\")) { t.createCommentPending(); t.transition(CommentStart); } else if (r.matchConsumeIgnoreCase(\"DOCTYPE\")) { t.transition(Doctype); } else if (r.matchConsume(\"[CDATA[\")) { t.transition(CdataSection); } else {"
+      },
+      {
+        "txt": "t.error(this); t.advanceTransition(BogusComment); // advance so this character gets in bogus comment data's rewind } } }, CommentStart { void read(Tokeniser t, CharacterReader r) { char c = r.consume(); switch (c) { case '-':"
+      },
+      {
+        "txt": "t.transition(CommentStartDash); break; case nullChar: t.error(this); t.commentPending.data.append(replacementChar); t.transition(Comment); break; case '>': t.error(this); t.emitCommentPending();"
+      },
+      {
+        "txt": "t.transition(Data); break; case eof: t.eofError(this); t.emitCommentPending(); t.transition(Data); break; default: t.commentPending.data.append(c); t.transition(Comment);"
+      },
+      {
+        "txt": "} } }, CommentStartDash { void read(Tokeniser t, CharacterReader r) { char c = r.consume(); switch (c) { case '-': t.transition(CommentStartDash); break;"
+      },
+      {
+        "txt": "case nullChar: t.error(this); t.commentPending.data.append(replacementChar); t.transition(Comment); break; case '>': t.error(this); t.emitCommentPending(); t.transition(Data); break;"
+      },
+      {
+        "txt": "case eof: t.eofError(this); t.emitCommentPending(); t.transition(Data); break; default: t.commentPending.data.append(c); t.transition(Comment); } }"
+      },
+      {
+        "txt": "}, Comment { void read(Tokeniser t, CharacterReader r) { char c = r.current(); switch (c) { case '-': t.advanceTransition(CommentEndDash); break; case nullChar: t.error(this);"
+      },
+      {
+        "txt": "t.commentPending.data.append(replacementChar); break; case eof: t.eofError(this); t.emitCommentPending(); t.transition(Data); break; default: t.commentPending.data.append(r.consumeToAny('-', nullChar)); }"
+      },
+      {
+        "txt": "} }, CommentEndDash { void read(Tokeniser t, CharacterReader r) { char c = r.consume(); switch (c) { case '-': t.transition(CommentEnd); break; case nullChar:"
+      },
+      {
+        "txt": "t.error(this); t.commentPending.data.append('-').append(replacementChar); t.transition(Comment); break; case eof: t.eofError(this); t.emitCommentPending(); t.transition(Data); break; default:"
+      },
+      {
+        "txt": "t.commentPending.data.append('-').append(c); t.transition(Comment); } } }, CommentEnd { void read(Tokeniser t, CharacterReader r) { char c = r.consume(); switch (c) { case '>':"
+      },
+      {
+        "txt": "t.emitCommentPending(); t.transition(Data); break; case nullChar: t.error(this); t.commentPending.data.append(\"--\").append(replacementChar); t.transition(Comment); break; case '!': t.error(this);"
+      },
+      {
+        "txt": "t.transition(CommentEndBang); break; case '-': t.error(this); t.commentPending.data.append('-'); break; case eof: t.eofError(this); t.emitCommentPending(); t.transition(Data);"
+      },
+      {
+        "txt": "break; default: t.error(this); t.commentPending.data.append(\"--\").append(c); t.transition(Comment); } } }, CommentEndBang { void read(Tokeniser t, CharacterReader r) {"
+      },
+      {
+        "txt": "char c = r.consume(); switch (c) { case '-': t.commentPending.data.append(\"--!\"); t.transition(CommentEndDash); break; case '>': t.emitCommentPending(); t.transition(Data); break;"
+      },
+      {
+        "txt": "case nullChar: t.error(this); t.commentPending.data.append(\"--!\").append(replacementChar); t.transition(Comment); break; case eof: t.eofError(this); t.emitCommentPending(); t.transition(Data); break;"
+      },
+      {
+        "txt": "default: t.commentPending.data.append(\"--!\").append(c); t.transition(Comment); } } }, Doctype { void read(Tokeniser t, CharacterReader r) { char c = r.consume(); switch (c) {"
+      },
+      {
+        "txt": "case '\\t': case '\\n': case '\\f': case ' ': t.transition(BeforeDoctypeName); break; case eof: t.eofError(this); t.createDoctypePending(); t.doctypePending.forceQuirks = true;"
+      },
+      {
+        "txt": "t.emitDoctypePending(); t.transition(Data); break; default: t.error(this); t.transition(BeforeDoctypeName); } } }, BeforeDoctypeName {"
+      },
+      {
+        "txt": "void read(Tokeniser t, CharacterReader r) { if (r.matchesLetter()) { t.createDoctypePending(); t.transition(DoctypeName); return; } char c = r.consume(); switch (c) { case '\\t': case '\\n':"
+      },
+      {
+        "txt": "case '\\f': case ' ': break; // ignore whitespace case nullChar: t.error(this); t.doctypePending.name.append(replacementChar); t.transition(DoctypeName); break; case eof: t.eofError(this);"
+      },
+      {
+        "txt": "t.createDoctypePending(); t.doctypePending.forceQuirks = true; t.emitDoctypePending(); t.transition(Data); break; default: t.createDoctypePending(); t.doctypePending.name.append(c); t.transition(DoctypeName); }"
+      },
+      {
+        "txt": "} }, DoctypeName { void read(Tokeniser t, CharacterReader r) { if (r.matchesLetter()) { String name = r.consumeLetterSequence(); t.doctypePending.name.append(name.toLowerCase()); return; } char c = r.consume();"
+      },
+      {
+        "txt": "switch (c) { case '>': t.emitDoctypePending(); t.transition(Data); break; case '\\t': case '\\n': case '\\f': case ' ': t.transition(AfterDoctypeName);"
+      },
+      {
+        "txt": "break; case nullChar: t.error(this); t.doctypePending.name.append(replacementChar); break; case eof: t.eofError(this); t.doctypePending.forceQuirks = true; t.emitDoctypePending(); t.transition(Data);"
+      },
+      {
+        "txt": "break; default: t.doctypePending.name.append(c); } } }, AfterDoctypeName { void read(Tokeniser t, CharacterReader r) { if (r.isEmpty()) { t.eofError(this);"
+      },
+      {
+        "txt": "t.doctypePending.forceQuirks = true; t.emitDoctypePending(); t.transition(Data); return; } if (r.matches('>')) { t.emitDoctypePending(); t.advanceTransition(Data); } else if (r.matchConsumeIgnoreCase(\"PUBLIC\")) { t.transition(AfterDoctypePublicKeyword);"
+      },
+      {
+        "txt": "} else if (r.matchConsumeIgnoreCase(\"SYSTEM\")) { t.transition(AfterDoctypeSystemKeyword); } else { t.error(this); t.doctypePending.forceQuirks = true; t.advanceTransition(BogusDoctype); } } }, AfterDoctypePublicKeyword {"
+      },
+      {
+        "txt": "void read(Tokeniser t, CharacterReader r) { char c = r.consume(); switch (c) { case '\\t': case '\\n': case '\\f': case ' ': t.transition(BeforeDoctypePublicIdentifier); break; case '\"':"
+      },
+      {
+        "txt": "t.error(this); t.transition(DoctypePublicIdentifier_doubleQuoted); break; case '\\'': t.error(this); t.transition(DoctypePublicIdentifier_singleQuoted); break; case '>': t.error(this); t.doctypePending.forceQuirks = true;"
+      },
+      {
+        "txt": "t.emitDoctypePending(); t.transition(Data); break; case eof: t.eofError(this); t.doctypePending.forceQuirks = true; t.emitDoctypePending(); t.transition(Data); break; default:"
+      },
+      {
+        "txt": "t.error(this); t.doctypePending.forceQuirks = true; t.transition(BogusDoctype); } } }, BeforeDoctypePublicIdentifier { void read(Tokeniser t, CharacterReader r) { char c = r.consume(); switch (c) {"
+      },
+      {
+        "txt": "case '\\t': case '\\n': case '\\f': case ' ': break; case '\"': t.transition(DoctypePublicIdentifier_doubleQuoted); break; case '\\'': t.transition(DoctypePublicIdentifier_singleQuoted);"
+      },
+      {
+        "txt": "break; case '>': t.error(this); t.doctypePending.forceQuirks = true; t.emitDoctypePending(); t.transition(Data); break; case eof: t.eofError(this); t.doctypePending.forceQuirks = true;"
+      },
+      {
+        "txt": "t.emitDoctypePending(); t.transition(Data); break; default: t.error(this); t.doctypePending.forceQuirks = true; t.transition(BogusDoctype); } } },"
+      },
+      {
+        "txt": "DoctypePublicIdentifier_doubleQuoted { void read(Tokeniser t, CharacterReader r) { char c = r.consume(); switch (c) { case '\"': t.transition(AfterDoctypePublicIdentifier); break; case nullChar: t.error(this); t.doctypePending.publicIdentifier.append(replacementChar);"
+      },
+      {
+        "txt": "break; case '>': t.error(this); t.doctypePending.forceQuirks = true; t.emitDoctypePending(); t.transition(Data); break; case eof: t.eofError(this); t.doctypePending.forceQuirks = true;"
+      },
+      {
+        "txt": "t.emitDoctypePending(); t.transition(Data); break; default: t.doctypePending.publicIdentifier.append(c); } } }, DoctypePublicIdentifier_singleQuoted { void read(Tokeniser t, CharacterReader r) {"
+      },
+      {
+        "txt": "char c = r.consume(); switch (c) { case '\\'': t.transition(AfterDoctypePublicIdentifier); break; case nullChar: t.error(this); t.doctypePending.publicIdentifier.append(replacementChar); break; case '>':"
+      },
+      {
+        "txt": "t.error(this); t.doctypePending.forceQuirks = true; t.emitDoctypePending(); t.transition(Data); break; case eof: t.eofError(this); t.doctypePending.forceQuirks = true; t.emitDoctypePending(); t.transition(Data);"
+      },
+      {
+        "txt": "break; default: t.doctypePending.publicIdentifier.append(c); } } }, AfterDoctypePublicIdentifier { void read(Tokeniser t, CharacterReader r) { char c = r.consume(); switch (c) {"
+      },
+      {
+        "txt": "case '\\t': case '\\n': case '\\f': case ' ': t.transition(BetweenDoctypePublicAndSystemIdentifiers); break; case '>': t.emitDoctypePending(); t.transition(Data); break;"
+      },
+      {
+        "txt": "case '\"': t.error(this); t.transition(DoctypeSystemIdentifier_doubleQuoted); break; case '\\'': t.error(this); t.transition(DoctypeSystemIdentifier_singleQuoted); break; case eof: t.eofError(this);"
+      },
+      {
+        "txt": "t.doctypePending.forceQuirks = true; t.emitDoctypePending(); t.transition(Data); break; default: t.error(this); t.doctypePending.forceQuirks = true; t.transition(BogusDoctype); } }"
+      },
+      {
+        "txt": "}, BetweenDoctypePublicAndSystemIdentifiers { void read(Tokeniser t, CharacterReader r) { char c = r.consume(); switch (c) { case '\\t': case '\\n': case '\\f': case ' ': break;"
+      },
+      {
+        "txt": "case '>': t.emitDoctypePending(); t.transition(Data); break; case '\"': t.error(this); t.transition(DoctypeSystemIdentifier_doubleQuoted); break; case '\\'': t.error(this);"
+      },
+      {
+        "txt": "t.transition(DoctypeSystemIdentifier_singleQuoted); break; case eof: t.eofError(this); t.doctypePending.forceQuirks = true; t.emitDoctypePending(); t.transition(Data); break; default: t.error(this);"
+      },
+      {
+        "txt": "t.doctypePending.forceQuirks = true; t.transition(BogusDoctype); } } }, AfterDoctypeSystemKeyword { void read(Tokeniser t, CharacterReader r) { char c = r.consume(); switch (c) { case '\\t':"
+      },
+      {
+        "txt": "case '\\n': case '\\f': case ' ': t.transition(BeforeDoctypeSystemIdentifier); break; case '>': t.error(this); t.doctypePending.forceQuirks = true; t.emitDoctypePending(); t.transition(Data);"
+      },
+      {
+        "txt": "break; case '\"': t.error(this); t.transition(DoctypeSystemIdentifier_doubleQuoted); break; case '\\'': t.error(this); t.transition(DoctypeSystemIdentifier_singleQuoted); break; case eof:"
+      },
+      {
+        "txt": "t.eofError(this); t.doctypePending.forceQuirks = true; t.emitDoctypePending(); t.transition(Data); break; default: t.error(this); t.doctypePending.forceQuirks = true; t.emitDoctypePending(); }"
+      },
+      {
+        "txt": "} }, BeforeDoctypeSystemIdentifier { void read(Tokeniser t, CharacterReader r) { char c = r.consume(); switch (c) { case '\\t': case '\\n': case '\\f': case ' ':"
+      },
+      {
+        "txt": "break; case '\"': t.transition(DoctypeSystemIdentifier_doubleQuoted); break; case '\\'': t.transition(DoctypeSystemIdentifier_singleQuoted); break; case '>': t.error(this); t.doctypePending.forceQuirks = true;"
+      },
+      {
+        "txt": "t.emitDoctypePending(); t.transition(Data); break; case eof: t.eofError(this); t.doctypePending.forceQuirks = true; t.emitDoctypePending(); t.transition(Data); break; default:"
+      },
+      {
+        "txt": "t.error(this); t.doctypePending.forceQuirks = true; t.transition(BogusDoctype); } } }, DoctypeSystemIdentifier_doubleQuoted { void read(Tokeniser t, CharacterReader r) { char c = r.consume(); switch (c) {"
+      },
+      {
+        "txt": "case '\"': t.transition(AfterDoctypeSystemIdentifier); break; case nullChar: t.error(this); t.doctypePending.systemIdentifier.append(replacementChar); break; case '>': t.error(this); t.doctypePending.forceQuirks = true;"
+      },
+      {
+        "txt": "t.emitDoctypePending(); t.transition(Data); break; case eof: t.eofError(this); t.doctypePending.forceQuirks = true; t.emitDoctypePending(); t.transition(Data); break; default:"
+      },
+      {
+        "txt": "t.doctypePending.systemIdentifier.append(c); } } }, DoctypeSystemIdentifier_singleQuoted { void read(Tokeniser t, CharacterReader r) { char c = r.consume(); switch (c) { case '\\'': t.transition(AfterDoctypeSystemIdentifier);"
+      },
+      {
+        "txt": "break; case nullChar: t.error(this); t.doctypePending.systemIdentifier.append(replacementChar); break; case '>': t.error(this); t.doctypePending.forceQuirks = true; t.emitDoctypePending(); t.transition(Data);"
+      },
+      {
+        "txt": "break; case eof: t.eofError(this); t.doctypePending.forceQuirks = true; t.emitDoctypePending(); t.transition(Data); break; default: t.doctypePending.systemIdentifier.append(c); }"
+      },
+      {
+        "txt": "} }, AfterDoctypeSystemIdentifier { void read(Tokeniser t, CharacterReader r) { char c = r.consume(); switch (c) { case '\\t': case '\\n': case '\\f': case ' ':"
+      },
+      {
+        "txt": "break; case '>': t.emitDoctypePending(); t.transition(Data); break; case eof: t.eofError(this); t.doctypePending.forceQuirks = true; t.emitDoctypePending(); t.transition(Data);"
+      },
+      {
+        "txt": "break; default: t.error(this); t.transition(BogusDoctype); } } }, BogusDoctype { void read(Tokeniser t, CharacterReader r) { char c = r.consume();"
+      },
+      {
+        "txt": "switch (c) { case '>': t.emitDoctypePending(); t.transition(Data); break; case eof: t.emitDoctypePending(); t.transition(Data); break; default:"
+      },
+      {
+        "txt": "break; } } }, CdataSection { void read(Tokeniser t, CharacterReader r) { String data = r.consumeTo(\"]]>\"); t.emit(data); r.matchConsume(\"]]>\"); t.transition(Data);"
+      },
+      {
+        "txt": "} }; abstract void read(Tokeniser t, CharacterReader r); private static final char nullChar = '\\u0000'; private static final char replacementChar = Tokeniser.replacementChar; private static final String replacementStr = String.valueOf(Tokeniser.replacementChar); private static final char eof = CharacterReader.EOF;"
+      }
+    ]
+  }
+]

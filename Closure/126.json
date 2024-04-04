@@ -1,0 +1,62 @@
+[
+  {
+    "id": 483,
+    "file_path": "src/com/google/javascript/jscomp/MinimizeExitPoints.java",
+    "start-bug-line": 141,
+    "end-bug-line": 144,
+    "bug": "if (NodeUtil.hasFinally(n)) { Node finallyBlock = n.getLastChild(); tryMinimizeExits(finallyBlock, exitType, labelName); }",
+    "fix": "[Delete]",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.google.javascript.jscomp; import com.google.common.base.Preconditions; import com.google.javascript.jscomp.NodeTraversal.AbstractPostOrderCallback; import com.google.javascript.rhino.IR; import com.google.javascript.rhino.Node; import com.google.javascript.rhino.Token; import com.google.javascript.rhino.jstype.TernaryValue; class MinimizeExitPoints extends AbstractPostOrderCallback"
+      },
+      {
+        "txt": "implements CompilerPass { AbstractCompiler compiler; MinimizeExitPoints(AbstractCompiler compiler) { this.compiler = compiler; } @Override public void process(Node externs, Node root) { NodeTraversal.traverse(compiler, root, this); } @Override"
+      },
+      {
+        "txt": "public void visit(NodeTraversal t, Node n, Node parent) { switch (n.getType()) { case Token.LABEL: tryMinimizeExits( n.getLastChild(), Token.BREAK, n.getFirstChild().getString()); break; case Token.FOR: case Token.WHILE: tryMinimizeExits(NodeUtil.getLoopCodeBlock(n), Token.CONTINUE, null); break;"
+      },
+      {
+        "txt": "case Token.DO: tryMinimizeExits(NodeUtil.getLoopCodeBlock(n), Token.CONTINUE, null); Node cond = NodeUtil.getConditionExpression(n); if (NodeUtil.getImpureBooleanValue(cond) == TernaryValue.FALSE) { tryMinimizeExits(n.getFirstChild(), Token.BREAK, null); } break; case Token.FUNCTION: tryMinimizeExits(n.getLastChild(), Token.RETURN, null); break;"
+      },
+      {
+        "txt": "} } void tryMinimizeExits(Node n, int exitType, String labelName) { if (matchingExitNode(n, exitType, labelName)) { NodeUtil.removeChild(n.getParent(), n); compiler.reportCodeChange(); return; } if (n.isIf()) { Node ifBlock = n.getFirstChild().getNext();"
+      },
+      {
+        "txt": "tryMinimizeExits(ifBlock, exitType, labelName); Node elseBlock = ifBlock.getNext(); if (elseBlock != null) { tryMinimizeExits(elseBlock, exitType, labelName); } return; } if (n.isTry()) { Node tryBlock = n.getFirstChild(); tryMinimizeExits(tryBlock, exitType, labelName);"
+      },
+      {
+        "txt": "if (NodeUtil.hasCatchHandler(allCatchNodes)) { Preconditions.checkState(allCatchNodes.hasOneChild()); Node catchNode = allCatchNodes.getFirstChild(); Node catchCodeBlock = catchNode.getLastChild(); tryMinimizeExits(catchCodeBlock, exitType, labelName); } <extra_id_0> } if (n.isLabel()) { Node labelBlock = n.getLastChild(); tryMinimizeExits(labelBlock, exitType, labelName); } if (!n.isBlock() || n.getLastChild() == null) {"
+      },
+      {
+        "txt": "} if (!n.isBlock() || n.getLastChild() == null) { return; } for (Node c : n.children()) { if (c.isIf()) { Node ifTree = c; Node trueBlock, falseBlock; trueBlock = ifTree.getFirstChild().getNext(); falseBlock = trueBlock.getNext();"
+      },
+      {
+        "txt": "tryMinimizeIfBlockExits(trueBlock, falseBlock, ifTree, exitType, labelName); trueBlock = ifTree.getFirstChild().getNext(); falseBlock = trueBlock.getNext(); if (falseBlock != null) { tryMinimizeIfBlockExits(falseBlock, trueBlock, ifTree, exitType, labelName); } } if (c == n.getLastChild()) {"
+      },
+      {
+        "txt": "break; } } for (Node c = n.getLastChild(); c != null; c = n.getLastChild()) { tryMinimizeExits(c, exitType, labelName); if (c == n.getLastChild()) { break; } } }"
+      },
+      {
+        "txt": "private void tryMinimizeIfBlockExits(Node srcBlock, Node destBlock, Node ifNode, int exitType, String labelName) { Node exitNodeParent = null; Node exitNode = null; if (srcBlock.isBlock()) { if (!srcBlock.hasChildren()) { return; } exitNodeParent = srcBlock; exitNode = exitNodeParent.getLastChild();"
+      },
+      {
+        "txt": "} else { exitNodeParent = ifNode; exitNode = srcBlock; } if (!matchingExitNode(exitNode, exitType, labelName)) { return; } if (ifNode.getNext() != null) { Node newDestBlock = IR.block().srcref(ifNode); if (destBlock == null) {"
+      },
+      {
+        "txt": "ifNode.addChildToBack(newDestBlock); } else if (destBlock.isEmpty()) { ifNode.replaceChild(destBlock, newDestBlock); } else if (destBlock.isBlock()) { newDestBlock = destBlock; } else { ifNode.replaceChild(destBlock, newDestBlock); newDestBlock.addChildToBack(destBlock); } moveAllFollowing(ifNode, ifNode.getParent(), newDestBlock);"
+      },
+      {
+        "txt": "compiler.reportCodeChange(); } } private static boolean matchingExitNode(Node n, int type, String labelName) { if (n.getType() == type) { if (type == Token.RETURN) { return !n.hasChildren(); } else { if (labelName == null) { return !n.hasChildren();"
+      },
+      {
+        "txt": "} else { return n.hasChildren() && labelName.equals(n.getFirstChild().getString()); } } } return false; } private static void moveAllFollowing( Node start, Node srcParent, Node destParent) {"
+      },
+      {
+        "txt": "for (Node n = start.getNext(); n != null; n = start.getNext()) { boolean isFunctionDeclaration = NodeUtil.isFunctionDeclaration(n); srcParent.removeChild(n); if (isFunctionDeclaration) { destParent.addChildToFront(n); } else { destParent.addChildToBack(n); } } }"
+      }
+    ]
+  }
+]

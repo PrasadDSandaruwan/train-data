@@ -1,0 +1,254 @@
+[
+  {
+    "id": 2221,
+    "file_path": "src/java/org/apache/commons/jxpath/ri/model/dom/DOMAttributeIterator.java",
+    "start-bug-line": 22,
+    "end-bug-line": 22,
+    "bug": "",
+    "fix": "import org.apache.commons.jxpath.ri.NamespaceResolver;",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.jxpath.ri.model.dom; import java.util.ArrayList; import java.util.List; <extra_id_0> import org.apache.commons.jxpath.ri.model.NodeIterator; import org.apache.commons.jxpath.ri.model.NodePointer; import org.w3c.dom.Attr; import org.w3c.dom.Element; import org.w3c.dom.NamedNodeMap; import org.w3c.dom.Node;"
+      },
+      {
+        "txt": "import org.w3c.dom.NamedNodeMap; import org.w3c.dom.Node; public class DOMAttributeIterator implements NodeIterator { private NodePointer parent; private QName name; private List attributes; private int position = 0; public DOMAttributeIterator(NodePointer parent, QName name) { this.parent = parent; this.name = name;"
+      },
+      {
+        "txt": "attributes = new ArrayList(); Node node = (Node) parent.getNode(); if (node.getNodeType() == Node.ELEMENT_NODE) { String lname = name.getName(); if (!lname.equals(\"*\")) { Attr attr = getAttribute((Element) node, name); if (attr != null) { attributes.add(attr); } }"
+      },
+      {
+        "txt": "else { NamedNodeMap map = node.getAttributes(); int count = map.getLength(); for (int i = 0; i < count; i++) { Attr attr = (Attr) map.item(i); if (testAttr(attr, name)) { attributes.add(attr); } } }"
+      },
+      {
+        "txt": "} } private boolean testAttr(Attr attr, QName testName) { String nodePrefix = DOMNodePointer.getPrefix(attr); String nodeLocalName = DOMNodePointer.getLocalName(attr); if (nodePrefix != null && nodePrefix.equals(\"xmlns\")) { return false; } if (nodePrefix == null && nodeLocalName.equals(\"xmlns\")) { return false;"
+      },
+      {
+        "txt": "} String testLocalName = name.getName(); if (testLocalName.equals(\"*\") || testLocalName.equals(nodeLocalName)) { String testPrefix = testName.getPrefix(); if (equalStrings(testPrefix, nodePrefix)) { return true; } String testNS = null; if (testPrefix != null) { testNS = parent.getNamespaceURI(testPrefix);"
+      },
+      {
+        "txt": "} String nodeNS = null; if (nodePrefix != null) { nodeNS = parent.getNamespaceURI(nodePrefix); } return equalStrings(testNS, nodeNS); } return false; } private static boolean equalStrings(String s1, String s2) {"
+      },
+      {
+        "txt": "return s1 == s2 || s1 != null && s1.equals(s2); } private Attr getAttribute(Element element, QName name) { String testPrefix = name.getPrefix(); String testNS = null; if (testPrefix != null) { testNS = parent.getNamespaceURI(testPrefix); } if (testNS != null) { Attr attr = element.getAttributeNodeNS(testNS, name.getName());"
+      },
+      {
+        "txt": "if (attr != null) { return attr; } NamedNodeMap nnm = element.getAttributes(); for (int i = 0; i < nnm.getLength(); i++) { attr = (Attr) nnm.item(i); if (testAttr(attr, name)) { return attr; } }"
+      },
+      {
+        "txt": "return null; } return element.getAttributeNode(name.getName()); } public NodePointer getNodePointer() { if (position == 0) { if (!setPosition(1)) { return null; } position = 0;"
+      },
+      {
+        "txt": "} int index = position - 1; if (index < 0) { index = 0; } return new DOMAttributePointer(parent, (Attr) attributes.get(index)); } public int getPosition() { return position; }"
+      },
+      {
+        "txt": "public boolean setPosition(int position) { this.position = position; return position >= 1 && position <= attributes.size(); }"
+      }
+    ]
+  },
+  {
+    "id": 2222,
+    "file_path": "src/java/org/apache/commons/jxpath/ri/model/dom/DOMAttributeIterator.java",
+    "start-bug-line": 111,
+    "end-bug-line": 111,
+    "bug": "testNS = parent.getNamespaceURI(testPrefix);",
+    "fix": "NamespaceResolver nsr = parent.getNamespaceResolver(); testNS = nsr == null ? null : nsr.getNamespaceURI(testPrefix); testNS = testNS == null ? parent.getNamespaceURI(testPrefix) : testNS;",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.jxpath.ri.model.dom; import java.util.ArrayList; import java.util.List; import org.apache.commons.jxpath.ri.QName; import org.apache.commons.jxpath.ri.model.NodeIterator; import org.apache.commons.jxpath.ri.model.NodePointer; import org.w3c.dom.Attr;"
+      },
+      {
+        "txt": "import org.w3c.dom.Element; import org.w3c.dom.NamedNodeMap; import org.w3c.dom.Node; public class DOMAttributeIterator implements NodeIterator { private NodePointer parent; private QName name; private List attributes; private int position = 0; public DOMAttributeIterator(NodePointer parent, QName name) { this.parent = parent;"
+      },
+      {
+        "txt": "this.name = name; attributes = new ArrayList(); Node node = (Node) parent.getNode(); if (node.getNodeType() == Node.ELEMENT_NODE) { String lname = name.getName(); if (!lname.equals(\"*\")) { Attr attr = getAttribute((Element) node, name); if (attr != null) { attributes.add(attr); }"
+      },
+      {
+        "txt": "} else { NamedNodeMap map = node.getAttributes(); int count = map.getLength(); for (int i = 0; i < count; i++) { Attr attr = (Attr) map.item(i); if (testAttr(attr, name)) { attributes.add(attr); } }"
+      },
+      {
+        "txt": "} } } private boolean testAttr(Attr attr, QName testName) { String nodePrefix = DOMNodePointer.getPrefix(attr); String nodeLocalName = DOMNodePointer.getLocalName(attr); if (nodePrefix != null && nodePrefix.equals(\"xmlns\")) { return false; } if (nodePrefix == null && nodeLocalName.equals(\"xmlns\")) {"
+      },
+      {
+        "txt": "return false; } String testLocalName = name.getName(); if (testLocalName.equals(\"*\") || testLocalName.equals(nodeLocalName)) { String testPrefix = testName.getPrefix(); if (equalStrings(testPrefix, nodePrefix)) { return true; } String testNS = null; if (testPrefix != null) {"
+      },
+      {
+        "txt": "testNS = parent.getNamespaceURI(testPrefix); } String nodeNS = null; if (nodePrefix != null) { nodeNS = parent.getNamespaceURI(nodePrefix); } return equalStrings(testNS, nodeNS); } return false; }"
+      },
+      {
+        "txt": "return s1 == s2 || s1 != null && s1.equals(s2); } private Attr getAttribute(Element element, QName name) { String testPrefix = name.getPrefix(); String testNS = null; if (testPrefix != null) { <extra_id_0> } if (testNS != null) { Attr attr = element.getAttributeNodeNS(testNS, name.getName()); if (attr != null) { return attr; }"
+      },
+      {
+        "txt": "return attr; } NamedNodeMap nnm = element.getAttributes(); for (int i = 0; i < nnm.getLength(); i++) { attr = (Attr) nnm.item(i); if (testAttr(attr, name)) { return attr; } } return null;"
+      },
+      {
+        "txt": "} return element.getAttributeNode(name.getName()); } public NodePointer getNodePointer() { if (position == 0) { if (!setPosition(1)) { return null; } position = 0; }"
+      },
+      {
+        "txt": "int index = position - 1; if (index < 0) { index = 0; } return new DOMAttributePointer(parent, (Attr) attributes.get(index)); } public int getPosition() { return position; } public boolean setPosition(int position) {"
+      },
+      {
+        "txt": "this.position = position; return position >= 1 && position <= attributes.size(); }"
+      }
+    ]
+  },
+  {
+    "id": 2223,
+    "file_path": "src/java/org/apache/commons/jxpath/ri/model/jdom/JDOMAttributeIterator.java",
+    "start-bug-line": 23,
+    "end-bug-line": 23,
+    "bug": "",
+    "fix": "import org.apache.commons.jxpath.ri.NamespaceResolver;",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.jxpath.ri.model.jdom; import java.util.ArrayList; import java.util.Collections; import java.util.List; <extra_id_0> import org.apache.commons.jxpath.ri.model.NodeIterator; import org.apache.commons.jxpath.ri.model.NodePointer; import org.jdom.Attribute; import org.jdom.Element; import org.jdom.Namespace; public class JDOMAttributeIterator implements NodeIterator {"
+      },
+      {
+        "txt": "import org.jdom.Namespace; public class JDOMAttributeIterator implements NodeIterator { private NodePointer parent; private List attributes; private int position = 0; public JDOMAttributeIterator(NodePointer parent, QName name) { this.parent = parent; if (parent.getNode() instanceof Element) { Element element = (Element) parent.getNode(); String prefix = name.getPrefix();"
+      },
+      {
+        "txt": "Namespace ns = null; if (prefix != null) { if (prefix.equals(\"xml\")) { ns = Namespace.XML_NAMESPACE; } else { ns = element.getNamespace(prefix); if (ns == null) { attributes = Collections.EMPTY_LIST; return;"
+      },
+      {
+        "txt": "} } } else { ns = Namespace.NO_NAMESPACE; } String lname = name.getName(); if (!lname.equals(\"*\")) { attributes = new ArrayList(); if (ns != null) {"
+      },
+      {
+        "txt": "Attribute attr = element.getAttribute(lname, ns); if (attr != null) { attributes.add(attr); } } } else { attributes = new ArrayList(); List allAttributes = element.getAttributes(); for (int i = 0; i < allAttributes.size(); i++) {"
+      },
+      {
+        "txt": "Attribute attr = (Attribute) allAttributes.get(i); if (attr.getNamespace().equals(ns)) { attributes.add(attr); } } } } } public NodePointer getNodePointer() { if (position == 0) {"
+      },
+      {
+        "txt": "if (!setPosition(1)) { return null; } position = 0; } int index = position - 1; if (index < 0) { index = 0; } return new JDOMAttributePointer("
+      },
+      {
+        "txt": "parent, (Attribute) attributes.get(index)); } public int getPosition() { return position; } public boolean setPosition(int position) { if (attributes == null) { return false; }"
+      },
+      {
+        "txt": "this.position = position; return position >= 1 && position <= attributes.size(); }"
+      }
+    ]
+  },
+  {
+    "id": 2224,
+    "file_path": "src/java/org/apache/commons/jxpath/ri/model/jdom/JDOMAttributeIterator.java",
+    "start-bug-line": 52,
+    "end-bug-line": 52,
+    "bug": "",
+    "fix": "NamespaceResolver nsr = parent.getNamespaceResolver(); if (nsr != null) { String uri = nsr.getNamespaceURI(prefix); if (uri != null) { ns = Namespace.getNamespace(prefix, uri); } } if (ns == null) {",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.jxpath.ri.model.jdom; import java.util.ArrayList; import java.util.Collections; import java.util.List; import org.apache.commons.jxpath.ri.QName; import org.apache.commons.jxpath.ri.model.NodeIterator; import org.apache.commons.jxpath.ri.model.NodePointer; import org.jdom.Attribute;"
+      },
+      {
+        "txt": "import org.jdom.Element; import org.jdom.Namespace; public class JDOMAttributeIterator implements NodeIterator { private NodePointer parent; private List attributes; private int position = 0; public JDOMAttributeIterator(NodePointer parent, QName name) { this.parent = parent; if (parent.getNode() instanceof Element) { Element element = (Element) parent.getNode();"
+      },
+      {
+        "txt": "Namespace ns = null; if (prefix != null) { if (prefix.equals(\"xml\")) { ns = Namespace.XML_NAMESPACE; } else { <extra_id_0> if (ns == null) { attributes = Collections.EMPTY_LIST; return; } } }"
+      },
+      {
+        "txt": "} } else { ns = Namespace.NO_NAMESPACE; } String lname = name.getName(); if (!lname.equals(\"*\")) { attributes = new ArrayList(); if (ns != null) { Attribute attr = element.getAttribute(lname, ns);"
+      },
+      {
+        "txt": "if (attr != null) { attributes.add(attr); } } } else { attributes = new ArrayList(); List allAttributes = element.getAttributes(); for (int i = 0; i < allAttributes.size(); i++) { Attribute attr = (Attribute) allAttributes.get(i);"
+      },
+      {
+        "txt": "if (attr.getNamespace().equals(ns)) { attributes.add(attr); } } } } } public NodePointer getNodePointer() { if (position == 0) { if (!setPosition(1)) {"
+      },
+      {
+        "txt": "return null; } position = 0; } int index = position - 1; if (index < 0) { index = 0; } return new JDOMAttributePointer( parent,"
+      },
+      {
+        "txt": "(Attribute) attributes.get(index)); } public int getPosition() { return position; } public boolean setPosition(int position) { if (attributes == null) { return false; } this.position = position;"
+      },
+      {
+        "txt": "return position >= 1 && position <= attributes.size(); }"
+      }
+    ]
+  },
+  {
+    "id": 2225,
+    "file_path": "src/java/org/apache/commons/jxpath/ri/model/jdom/JDOMAttributeIterator.java",
+    "start-bug-line": 58,
+    "end-bug-line": 58,
+    "bug": "",
+    "fix": "}",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.jxpath.ri.model.jdom; import java.util.ArrayList; import java.util.Collections;"
+      },
+      {
+        "txt": "import java.util.List; import org.apache.commons.jxpath.ri.QName; import org.apache.commons.jxpath.ri.model.NodeIterator; import org.apache.commons.jxpath.ri.model.NodePointer; import org.jdom.Attribute; import org.jdom.Element; import org.jdom.Namespace; public class JDOMAttributeIterator implements NodeIterator { private NodePointer parent; private List attributes;"
+      },
+      {
+        "txt": "private int position = 0; public JDOMAttributeIterator(NodePointer parent, QName name) { this.parent = parent; if (parent.getNode() instanceof Element) { Element element = (Element) parent.getNode(); String prefix = name.getPrefix(); Namespace ns = null; if (prefix != null) { if (prefix.equals(\"xml\")) { ns = Namespace.XML_NAMESPACE;"
+      },
+      {
+        "txt": "else { ns = element.getNamespace(prefix); if (ns == null) { attributes = Collections.EMPTY_LIST; return; } <extra_id_0> } else { ns = Namespace.NO_NAMESPACE; } String lname = name.getName(); if (!lname.equals(\"*\")) {"
+      },
+      {
+        "txt": "String lname = name.getName(); if (!lname.equals(\"*\")) { attributes = new ArrayList(); if (ns != null) { Attribute attr = element.getAttribute(lname, ns); if (attr != null) { attributes.add(attr); } } }"
+      },
+      {
+        "txt": "else { attributes = new ArrayList(); List allAttributes = element.getAttributes(); for (int i = 0; i < allAttributes.size(); i++) { Attribute attr = (Attribute) allAttributes.get(i); if (attr.getNamespace().equals(ns)) { attributes.add(attr); } } }"
+      },
+      {
+        "txt": "} } public NodePointer getNodePointer() { if (position == 0) { if (!setPosition(1)) { return null; } position = 0; } int index = position - 1;"
+      },
+      {
+        "txt": "if (index < 0) { index = 0; } return new JDOMAttributePointer( parent, (Attribute) attributes.get(index)); } public int getPosition() { return position; }"
+      },
+      {
+        "txt": "public boolean setPosition(int position) { if (attributes == null) { return false; } this.position = position; return position >= 1 && position <= attributes.size(); }"
+      }
+    ]
+  },
+  {
+    "id": 2226,
+    "file_path": "src/java/org/apache/commons/jxpath/ri/model/jdom/JDOMAttributeIterator.java",
+    "start-bug-line": 114,
+    "end-bug-line": 114,
+    "bug": "",
+    "fix": "}",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.jxpath.ri.model.jdom; import java.util.ArrayList; import java.util.Collections; import java.util.List; import org.apache.commons.jxpath.ri.QName;"
+      },
+      {
+        "txt": "import org.apache.commons.jxpath.ri.model.NodeIterator; import org.apache.commons.jxpath.ri.model.NodePointer; import org.jdom.Attribute; import org.jdom.Element; import org.jdom.Namespace; public class JDOMAttributeIterator implements NodeIterator { private NodePointer parent; private List attributes; private int position = 0; public JDOMAttributeIterator(NodePointer parent, QName name) {"
+      },
+      {
+        "txt": "this.parent = parent; if (parent.getNode() instanceof Element) { Element element = (Element) parent.getNode(); String prefix = name.getPrefix(); Namespace ns = null; if (prefix != null) { if (prefix.equals(\"xml\")) { ns = Namespace.XML_NAMESPACE; } else {"
+      },
+      {
+        "txt": "ns = element.getNamespace(prefix); if (ns == null) { attributes = Collections.EMPTY_LIST; return; } } } else { ns = Namespace.NO_NAMESPACE; }"
+      },
+      {
+        "txt": "String lname = name.getName(); if (!lname.equals(\"*\")) { attributes = new ArrayList(); if (ns != null) { Attribute attr = element.getAttribute(lname, ns); if (attr != null) { attributes.add(attr); } } }"
+      },
+      {
+        "txt": "else { attributes = new ArrayList(); List allAttributes = element.getAttributes(); for (int i = 0; i < allAttributes.size(); i++) { Attribute attr = (Attribute) allAttributes.get(i); if (attr.getNamespace().equals(ns)) { attributes.add(attr); } } }"
+      },
+      {
+        "txt": "} } public NodePointer getNodePointer() { if (position == 0) { if (!setPosition(1)) { return null; } position = 0; } int index = position - 1;"
+      },
+      {
+        "txt": "if (index < 0) { index = 0; } return new JDOMAttributePointer( parent, (Attribute) attributes.get(index)); } public int getPosition() { return position; }"
+      },
+      {
+        "txt": "if (attributes == null) { return false; } this.position = position; return position >= 1 && position <= attributes.size(); } <extra_id_0>"
+      }
+    ]
+  }
+]

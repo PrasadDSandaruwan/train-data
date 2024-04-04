@@ -1,0 +1,158 @@
+[
+  {
+    "id": 422,
+    "file_path": "src/com/google/javascript/jscomp/CheckGlobalThis.java",
+    "start-bug-line": 92,
+    "end-bug-line": 92,
+    "bug": "",
+    "fix": "jsDoc.isInterface() ||",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.google.javascript.jscomp; import com.google.javascript.jscomp.CheckLevel; import com.google.javascript.jscomp.NodeTraversal.Callback; import com.google.javascript.rhino.JSDocInfo; import com.google.javascript.rhino.Node;"
+      },
+      {
+        "txt": "import com.google.javascript.rhino.Token; final class CheckGlobalThis implements Callback { static final DiagnosticType GLOBAL_THIS = DiagnosticType.warning( \"JSC_USED_GLOBAL_THIS\", \"dangerous use of the global 'this' object\"); private final AbstractCompiler compiler; private final CheckLevel level; private Node assignLhsChild = null; CheckGlobalThis(AbstractCompiler compiler, CheckLevel level) { this.compiler = compiler;"
+      },
+      {
+        "txt": "} public boolean shouldTraverse(NodeTraversal t, Node n, Node parent) { if (n.getType() == Token.FUNCTION) { JSDocInfo jsDoc = getFunctionJsDocInfo(n); if (jsDoc != null && (jsDoc.isConstructor() || <extra_id_0> jsDoc.isOverride())) { return false; } int pType = parent.getType(); if (!(pType == Token.BLOCK || pType == Token.SCRIPT ||"
+      },
+      {
+        "txt": "if (!(pType == Token.BLOCK || pType == Token.SCRIPT || pType == Token.NAME || pType == Token.ASSIGN)) { return false; } } if (parent != null && parent.getType() == Token.ASSIGN) { Node lhs = parent.getFirstChild(); Node rhs = lhs.getNext();"
+      },
+      {
+        "txt": "if (n == lhs) { if (assignLhsChild == null) { assignLhsChild = lhs; } } else { if (lhs.getType() == Token.GETPROP && lhs.getLastChild().getString().equals(\"prototype\")) { return false; } if (lhs.getQualifiedName() != null && lhs.getQualifiedName().contains(\".prototype.\")) {"
+      },
+      {
+        "txt": "return false; } } } return true; } public void visit(NodeTraversal t, Node n, Node parent) { if (n.getType() == Token.THIS && shouldReportThis(n, parent)) { compiler.report(t.makeError(n, level, GLOBAL_THIS)); }"
+      },
+      {
+        "txt": "if (n == assignLhsChild) { assignLhsChild = null; } } private boolean shouldReportThis(Node n, Node parent) { if (assignLhsChild != null) { return true; } return parent != null && NodeUtil.isGet(parent); }"
+      },
+      {
+        "txt": "private JSDocInfo getFunctionJsDocInfo(Node n) { JSDocInfo jsDoc = n.getJSDocInfo(); Node parent = n.getParent(); if (jsDoc == null) { int parentType = parent.getType(); if (parentType == Token.NAME || parentType == Token.ASSIGN) { jsDoc = parent.getJSDocInfo(); if (jsDoc == null && parentType == Token.NAME) { Node gramps = parent.getParent(); if (gramps.getType() == Token.VAR) {"
+      },
+      {
+        "txt": "jsDoc = gramps.getJSDocInfo(); } } } } return jsDoc; }"
+      }
+    ]
+  },
+  {
+    "id": 423,
+    "file_path": "src/com/google/javascript/jscomp/CheckGlobalThis.java",
+    "start-bug-line": 125,
+    "end-bug-line": 125,
+    "bug": "",
+    "fix": "if (NodeUtil.isGet(lhs)) {",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.google.javascript.jscomp; import com.google.javascript.jscomp.CheckLevel; import com.google.javascript.jscomp.NodeTraversal.Callback; import com.google.javascript.rhino.JSDocInfo; import com.google.javascript.rhino.Node;"
+      },
+      {
+        "txt": "import com.google.javascript.rhino.Token; final class CheckGlobalThis implements Callback { static final DiagnosticType GLOBAL_THIS = DiagnosticType.warning( \"JSC_USED_GLOBAL_THIS\", \"dangerous use of the global 'this' object\"); private final AbstractCompiler compiler; private final CheckLevel level; private Node assignLhsChild = null; CheckGlobalThis(AbstractCompiler compiler, CheckLevel level) { this.compiler = compiler;"
+      },
+      {
+        "txt": "this.level = level; } public boolean shouldTraverse(NodeTraversal t, Node n, Node parent) { if (n.getType() == Token.FUNCTION) { JSDocInfo jsDoc = getFunctionJsDocInfo(n); if (jsDoc != null && (jsDoc.isConstructor() || jsDoc.hasThisType() || jsDoc.isOverride())) { return false;"
+      },
+      {
+        "txt": "} int pType = parent.getType(); if (!(pType == Token.BLOCK || pType == Token.SCRIPT || pType == Token.NAME || pType == Token.ASSIGN)) { return false; } } if (parent != null && parent.getType() == Token.ASSIGN) {"
+      },
+      {
+        "txt": "Node rhs = lhs.getNext(); if (n == lhs) { if (assignLhsChild == null) { assignLhsChild = lhs; } } else { <extra_id_0> lhs.getLastChild().getString().equals(\"prototype\")) { return false; } if (lhs.getQualifiedName() != null && lhs.getQualifiedName().contains(\".prototype.\")) { return false; }"
+      },
+      {
+        "txt": "return false; } } } return true; } public void visit(NodeTraversal t, Node n, Node parent) { if (n.getType() == Token.THIS && shouldReportThis(n, parent)) { compiler.report(t.makeError(n, level, GLOBAL_THIS)); }"
+      },
+      {
+        "txt": "if (n == assignLhsChild) { assignLhsChild = null; } } private boolean shouldReportThis(Node n, Node parent) { if (assignLhsChild != null) { return true; } return parent != null && NodeUtil.isGet(parent); }"
+      },
+      {
+        "txt": "private JSDocInfo getFunctionJsDocInfo(Node n) { JSDocInfo jsDoc = n.getJSDocInfo(); Node parent = n.getParent(); if (jsDoc == null) { int parentType = parent.getType(); if (parentType == Token.NAME || parentType == Token.ASSIGN) { jsDoc = parent.getJSDocInfo(); if (jsDoc == null && parentType == Token.NAME) { Node gramps = parent.getParent(); if (gramps.getType() == Token.VAR) {"
+      },
+      {
+        "txt": "jsDoc = gramps.getJSDocInfo(); } } } } return jsDoc; }"
+      }
+    ]
+  },
+  {
+    "id": 424,
+    "file_path": "src/com/google/javascript/jscomp/CheckGlobalThis.java",
+    "start-bug-line": 129,
+    "end-bug-line": 129,
+    "bug": "if (lhs.getQualifiedName() != null && lhs.getQualifiedName().contains(\".prototype.\")) {",
+    "fix": "Node llhs = lhs.getFirstChild(); if (llhs.getType() == Token.GETPROP && llhs.getLastChild().getString().equals(\"prototype\")) {",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.google.javascript.jscomp; import com.google.javascript.jscomp.CheckLevel; import com.google.javascript.jscomp.NodeTraversal.Callback; import com.google.javascript.rhino.JSDocInfo; import com.google.javascript.rhino.Node; import com.google.javascript.rhino.Token; final class CheckGlobalThis implements Callback { static final DiagnosticType GLOBAL_THIS = DiagnosticType.warning( \"JSC_USED_GLOBAL_THIS\","
+      },
+      {
+        "txt": "\"dangerous use of the global 'this' object\"); private final AbstractCompiler compiler; private final CheckLevel level; private Node assignLhsChild = null; CheckGlobalThis(AbstractCompiler compiler, CheckLevel level) { this.compiler = compiler; this.level = level; } public boolean shouldTraverse(NodeTraversal t, Node n, Node parent) { if (n.getType() == Token.FUNCTION) {"
+      },
+      {
+        "txt": "JSDocInfo jsDoc = getFunctionJsDocInfo(n); if (jsDoc != null && (jsDoc.isConstructor() || jsDoc.hasThisType() || jsDoc.isOverride())) { return false; } int pType = parent.getType(); if (!(pType == Token.BLOCK || pType == Token.SCRIPT ||"
+      },
+      {
+        "txt": "pType == Token.NAME || pType == Token.ASSIGN)) { return false; } } if (parent != null && parent.getType() == Token.ASSIGN) { Node lhs = parent.getFirstChild(); Node rhs = lhs.getNext(); if (n == lhs) { if (assignLhsChild == null) {"
+      },
+      {
+        "txt": "} } else { if (lhs.getType() == Token.GETPROP && lhs.getLastChild().getString().equals(\"prototype\")) { return false; } <extra_id_0> return false; } } } return true; }"
+      },
+      {
+        "txt": "return true; } public void visit(NodeTraversal t, Node n, Node parent) { if (n.getType() == Token.THIS && shouldReportThis(n, parent)) { compiler.report(t.makeError(n, level, GLOBAL_THIS)); } if (n == assignLhsChild) { assignLhsChild = null; } }"
+      },
+      {
+        "txt": "private boolean shouldReportThis(Node n, Node parent) { if (assignLhsChild != null) { return true; } return parent != null && NodeUtil.isGet(parent); } private JSDocInfo getFunctionJsDocInfo(Node n) { JSDocInfo jsDoc = n.getJSDocInfo(); Node parent = n.getParent(); if (jsDoc == null) {"
+      },
+      {
+        "txt": "int parentType = parent.getType(); if (parentType == Token.NAME || parentType == Token.ASSIGN) { jsDoc = parent.getJSDocInfo(); if (jsDoc == null && parentType == Token.NAME) { Node gramps = parent.getParent(); if (gramps.getType() == Token.VAR) { jsDoc = gramps.getJSDocInfo(); } } }"
+      },
+      {
+        "txt": "} return jsDoc; }"
+      }
+    ]
+  },
+  {
+    "id": 425,
+    "file_path": "src/com/google/javascript/jscomp/CheckGlobalThis.java",
+    "start-bug-line": 132,
+    "end-bug-line": 132,
+    "bug": "",
+    "fix": "}",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.google.javascript.jscomp; import com.google.javascript.jscomp.CheckLevel;"
+      },
+      {
+        "txt": "import com.google.javascript.jscomp.NodeTraversal.Callback; import com.google.javascript.rhino.JSDocInfo; import com.google.javascript.rhino.Node; import com.google.javascript.rhino.Token; final class CheckGlobalThis implements Callback { static final DiagnosticType GLOBAL_THIS = DiagnosticType.warning( \"JSC_USED_GLOBAL_THIS\", \"dangerous use of the global 'this' object\"); private final AbstractCompiler compiler; private final CheckLevel level;"
+      },
+      {
+        "txt": "private Node assignLhsChild = null; CheckGlobalThis(AbstractCompiler compiler, CheckLevel level) { this.compiler = compiler; this.level = level; } public boolean shouldTraverse(NodeTraversal t, Node n, Node parent) { if (n.getType() == Token.FUNCTION) { JSDocInfo jsDoc = getFunctionJsDocInfo(n); if (jsDoc != null && (jsDoc.isConstructor() ||"
+      },
+      {
+        "txt": "jsDoc.hasThisType() || jsDoc.isOverride())) { return false; } int pType = parent.getType(); if (!(pType == Token.BLOCK || pType == Token.SCRIPT || pType == Token.NAME || pType == Token.ASSIGN)) { return false;"
+      },
+      {
+        "txt": "} } if (parent != null && parent.getType() == Token.ASSIGN) { Node lhs = parent.getFirstChild(); Node rhs = lhs.getNext(); if (n == lhs) { if (assignLhsChild == null) { assignLhsChild = lhs; } } else {"
+      },
+      {
+        "txt": "lhs.getLastChild().getString().equals(\"prototype\")) { return false; } if (lhs.getQualifiedName() != null && lhs.getQualifiedName().contains(\".prototype.\")) { return false; } <extra_id_0> } return true; } public void visit(NodeTraversal t, Node n, Node parent) { if (n.getType() == Token.THIS && shouldReportThis(n, parent)) { compiler.report(t.makeError(n, level, GLOBAL_THIS));"
+      },
+      {
+        "txt": "if (n.getType() == Token.THIS && shouldReportThis(n, parent)) { compiler.report(t.makeError(n, level, GLOBAL_THIS)); } if (n == assignLhsChild) { assignLhsChild = null; } } private boolean shouldReportThis(Node n, Node parent) { if (assignLhsChild != null) { return true;"
+      },
+      {
+        "txt": "} return parent != null && NodeUtil.isGet(parent); } private JSDocInfo getFunctionJsDocInfo(Node n) { JSDocInfo jsDoc = n.getJSDocInfo(); Node parent = n.getParent(); if (jsDoc == null) { int parentType = parent.getType(); if (parentType == Token.NAME || parentType == Token.ASSIGN) { jsDoc = parent.getJSDocInfo();"
+      },
+      {
+        "txt": "if (jsDoc == null && parentType == Token.NAME) { Node gramps = parent.getParent(); if (gramps.getType() == Token.VAR) { jsDoc = gramps.getJSDocInfo(); } } } } return jsDoc; }"
+      }
+    ]
+  }
+]

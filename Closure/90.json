@@ -1,0 +1,359 @@
+[
+  {
+    "id": 404,
+    "file_path": "src/com/google/javascript/jscomp/FunctionTypeBuilder.java",
+    "start-bug-line": 184,
+    "end-bug-line": 184,
+    "bug": "if (!type.isSubtype(",
+    "fix": "if (!type.restrictByNotNullOrUndefined().isSubtype(",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.google.javascript.jscomp; import static com.google.javascript.jscomp.TypeCheck.BAD_IMPLEMENTED_TYPE; import static com.google.javascript.rhino.jstype.JSTypeNative.FUNCTION_FUNCTION_TYPE; import static com.google.javascript.rhino.jstype.JSTypeNative.OBJECT_TYPE; import static com.google.javascript.rhino.jstype.JSTypeNative.UNKNOWN_TYPE; import static com.google.javascript.rhino.jstype.JSTypeNative.VOID_TYPE; import com.google.common.base.Preconditions; import com.google.common.base.Predicate; import com.google.common.collect.Iterables; import com.google.common.collect.Lists;"
+      },
+      {
+        "txt": "import com.google.common.collect.Sets; import com.google.javascript.rhino.JSDocInfo; import com.google.javascript.rhino.JSTypeExpression; import com.google.javascript.rhino.Node; import com.google.javascript.rhino.Token; import com.google.javascript.rhino.jstype.FunctionBuilder; import com.google.javascript.rhino.jstype.FunctionParamBuilder; import com.google.javascript.rhino.jstype.FunctionType; import com.google.javascript.rhino.jstype.InstanceObjectType; import com.google.javascript.rhino.jstype.JSType;"
+      },
+      {
+        "txt": "import com.google.javascript.rhino.jstype.JSTypeRegistry; import com.google.javascript.rhino.jstype.ObjectType; import java.util.Iterator; import java.util.List; import java.util.Set; import javax.annotation.Nullable; final class FunctionTypeBuilder { private final String fnName; private final AbstractCompiler compiler; private final CodingConvention codingConvention;"
+      },
+      {
+        "txt": "private final JSTypeRegistry typeRegistry; private final Node errorRoot; private final String sourceName; private final Scope scope; private JSType returnType = null; private boolean returnTypeInferred = false; private List<ObjectType> implementedInterfaces = null; private ObjectType baseType = null; private ObjectType thisType = null; private boolean isConstructor = false;"
+      },
+      {
+        "txt": "private boolean isInterface = false; private Node parametersNode = null; private Node sourceNode = null; private String templateTypeName = null; static final DiagnosticType EXTENDS_WITHOUT_TYPEDEF = DiagnosticType.warning( \"JSC_EXTENDS_WITHOUT_TYPEDEF\", \"@extends used without @constructor or @interface for {0}\"); static final DiagnosticType EXTENDS_NON_OBJECT = DiagnosticType.warning( \"JSC_EXTENDS_NON_OBJECT\", \"{0} @extends non-object type {1}\");"
+      },
+      {
+        "txt": "static final DiagnosticType RESOLVED_TAG_EMPTY = DiagnosticType.warning( \"JSC_RESOLVED_TAG_EMPTY\", \"Could not resolve type in {0} tag of {1}\"); static final DiagnosticType IMPLEMENTS_WITHOUT_CONSTRUCTOR = DiagnosticType.warning( \"JSC_IMPLEMENTS_WITHOUT_CONSTRUCTOR\", \"@implements used without @constructor or @interface for {0}\"); static final DiagnosticType VAR_ARGS_MUST_BE_LAST = DiagnosticType.warning( \"JSC_VAR_ARGS_MUST_BE_LAST\", \"variable length argument must be last\");"
+      },
+      {
+        "txt": "static final DiagnosticType OPTIONAL_ARG_AT_END = DiagnosticType.warning( \"JSC_OPTIONAL_ARG_AT_END\", \"optional arguments must be at the end\"); static final DiagnosticType INEXISTANT_PARAM = DiagnosticType.warning( \"JSC_INEXISTANT_PARAM\", \"parameter {0} does not appear in {1}''s parameter list\"); static final DiagnosticType TYPE_REDEFINITION = DiagnosticType.warning( \"JSC_TYPE_REDEFINITION\", \"attempted re-definition of type {0}\\n\" + \"found : {1}\\n\""
+      },
+      {
+        "txt": "+ \"expected: {2}\"); static final DiagnosticType TEMPLATE_TYPE_DUPLICATED = DiagnosticType.error( \"JSC_TEMPLATE_TYPE_DUPLICATED\", \"Only one parameter type must be the template type\"); static final DiagnosticType TEMPLATE_TYPE_EXPECTED = DiagnosticType.error( \"JSC_TEMPLATE_TYPE_EXPECTED\", \"The template type must be a parameter type\"); static final DiagnosticType THIS_TYPE_NON_OBJECT = DiagnosticType.warning( \"JSC_THIS_TYPE_NON_OBJECT\","
+      },
+      {
+        "txt": "\"@this type of a function must be an object\\n\" + \"Actual type: {0}\"); private class ExtendedTypeValidator implements Predicate<JSType> { @Override public boolean apply(JSType type) { ObjectType objectType = ObjectType.cast(type); if (objectType == null) { reportWarning(EXTENDS_NON_OBJECT, fnName, type.toString()); } else if (objectType.isUnknownType() && (objectType.getImplicitPrototype() == null ||"
+      },
+      {
+        "txt": "objectType.getImplicitPrototype().isResolved())) { reportWarning(RESOLVED_TAG_EMPTY, \"@extends\", fnName); } else { return true; } return false; } }; private class ImplementedTypeValidator implements Predicate<JSType> { @Override"
+      },
+      {
+        "txt": "public boolean apply(JSType type) { ObjectType objectType = ObjectType.cast(type); if (objectType == null) { reportError(BAD_IMPLEMENTED_TYPE, fnName); } else if (objectType.isUnknownType() && (objectType.getImplicitPrototype() == null || objectType.getImplicitPrototype().isResolved())) { reportWarning(RESOLVED_TAG_EMPTY, \"@implements\", fnName); } else { return true;"
+      },
+      {
+        "txt": "return false; } }; private class ThisTypeValidator implements Predicate<JSType> { @Override public boolean apply(JSType type) { <extra_id_0> typeRegistry.getNativeType(OBJECT_TYPE))) { reportWarning(THIS_TYPE_NON_OBJECT, type.toString()); return false; } return true; }"
+      },
+      {
+        "txt": "return true; } }; FunctionTypeBuilder(String fnName, AbstractCompiler compiler, Node errorRoot, String sourceName, Scope scope) { Preconditions.checkNotNull(errorRoot); this.fnName = fnName == null ? \"\" : fnName; this.codingConvention = compiler.getCodingConvention(); this.typeRegistry = compiler.getTypeRegistry(); this.errorRoot = errorRoot;"
+      },
+      {
+        "txt": "this.sourceName = sourceName; this.compiler = compiler; this.scope = scope; } FunctionTypeBuilder setSourceNode(@Nullable Node sourceNode) { this.sourceNode = sourceNode; return this; } FunctionTypeBuilder inferFromOverriddenFunction( @Nullable FunctionType oldType, @Nullable Node paramsParent) {"
+      },
+      {
+        "txt": "if (oldType == null) { return this; } returnType = oldType.getReturnType(); returnTypeInferred = oldType.isReturnTypeInferred(); if (paramsParent == null) { parametersNode = oldType.getParametersNode(); if (parametersNode == null) { parametersNode = new FunctionParamBuilder(typeRegistry).build(); }"
+      },
+      {
+        "txt": "} else { FunctionParamBuilder paramBuilder = new FunctionParamBuilder(typeRegistry); Iterator<Node> oldParams = oldType.getParameters().iterator(); boolean warnedAboutArgList = false; boolean oldParamsListHitOptArgs = false; for (Node currentParam = paramsParent.getFirstChild(); currentParam != null; currentParam = currentParam.getNext()) { if (oldParams.hasNext()) { Node oldParam = oldParams.next();"
+      },
+      {
+        "txt": "Node newParam = paramBuilder.newParameterFromNode(oldParam); oldParamsListHitOptArgs = oldParamsListHitOptArgs || oldParam.isVarArgs() || oldParam.isOptionalArg(); if (currentParam.getNext() != null && newParam.isVarArgs()) { newParam.setVarArgs(false); newParam.setOptionalArg(true); } } else { warnedAboutArgList |= addParameter("
+      },
+      {
+        "txt": "paramBuilder, typeRegistry.getNativeType(UNKNOWN_TYPE), warnedAboutArgList, codingConvention.isOptionalParameter(currentParam) || oldParamsListHitOptArgs, codingConvention.isVarArgsParameter(currentParam)); } } parametersNode = paramBuilder.build(); }"
+      },
+      {
+        "txt": "return this; } FunctionTypeBuilder inferReturnType(@Nullable JSDocInfo info) { if (info != null && info.hasReturnType()) { returnType = info.getReturnType().evaluate(scope, typeRegistry); returnTypeInferred = false; } if (templateTypeName != null && returnType != null && returnType.restrictByNotNullOrUndefined().isTemplateType()) {"
+      },
+      {
+        "txt": "reportError(TEMPLATE_TYPE_EXPECTED, fnName); } return this; } FunctionTypeBuilder inferReturnStatementsAsLastResort( @Nullable Node functionBlock) { if (functionBlock == null || compiler.getInput(sourceName).isExtern()) { return this; } Preconditions.checkArgument(functionBlock.getType() == Token.BLOCK);"
+      },
+      {
+        "txt": "if (returnType == null) { boolean hasNonEmptyReturns = false; List<Node> worklist = Lists.newArrayList(functionBlock); while (!worklist.isEmpty()) { Node current = worklist.remove(worklist.size() - 1); int cType = current.getType(); if (cType == Token.RETURN && current.getFirstChild() != null || cType == Token.THROW) { hasNonEmptyReturns = true; break;"
+      },
+      {
+        "txt": "} else if (NodeUtil.isStatementBlock(current) || NodeUtil.isControlStructure(current)) { for (Node child = current.getFirstChild(); child != null; child = child.getNext()) { worklist.add(child); } } } if (!hasNonEmptyReturns) { returnType = typeRegistry.getNativeType(VOID_TYPE);"
+      },
+      {
+        "txt": "returnTypeInferred = true; } } return this; } FunctionTypeBuilder inferInheritance(@Nullable JSDocInfo info) { if (info != null) { isConstructor = info.isConstructor(); isInterface = info.isInterface(); if (info.hasBaseType()) {"
+      },
+      {
+        "txt": "if (isConstructor || isInterface) { JSType maybeBaseType = info.getBaseType().evaluate(scope, typeRegistry); if (maybeBaseType != null && maybeBaseType.setValidator(new ExtendedTypeValidator())) { baseType = (ObjectType) maybeBaseType; } } else { reportWarning(EXTENDS_WITHOUT_TYPEDEF, fnName); }"
+      },
+      {
+        "txt": "} if (isConstructor || isInterface) { implementedInterfaces = Lists.newArrayList(); for (JSTypeExpression t : info.getImplementedInterfaces()) { JSType maybeInterType = t.evaluate(scope, typeRegistry); if (maybeInterType != null && maybeInterType.setValidator(new ImplementedTypeValidator())) { implementedInterfaces.add((ObjectType) maybeInterType); } }"
+      },
+      {
+        "txt": "if (baseType != null) { JSType maybeFunctionType = baseType.getConstructor(); if (maybeFunctionType instanceof FunctionType) { FunctionType functionType = baseType.getConstructor(); Iterables.addAll( implementedInterfaces, functionType.getImplementedInterfaces()); } } } else if (info.getImplementedInterfaceCount() > 0) {"
+      },
+      {
+        "txt": "reportWarning(IMPLEMENTS_WITHOUT_CONSTRUCTOR, fnName); } } return this; } FunctionTypeBuilder inferThisType(JSDocInfo info, JSType type) { ObjectType objType = ObjectType.cast(type); if (objType != null && (info == null || !info.hasType())) { thisType = objType; }"
+      },
+      {
+        "txt": "return this; } FunctionTypeBuilder inferThisType(JSDocInfo info, @Nullable Node owner) { ObjectType maybeThisType = null; if (info != null && info.hasThisType()) { maybeThisType = ObjectType.cast( info.getThisType().evaluate(scope, typeRegistry)); } if (maybeThisType != null) {"
+      },
+      {
+        "txt": "thisType = maybeThisType; thisType.setValidator(new ThisTypeValidator()); } else if (owner != null && (info == null || !info.hasType())) { String ownerTypeName = owner.getQualifiedName(); ObjectType ownerType = ObjectType.cast( typeRegistry.getForgivingType( scope, ownerTypeName, sourceName, owner.getLineno(), owner.getCharno())); if (ownerType != null) {"
+      },
+      {
+        "txt": "thisType = ownerType; } } return this; } FunctionTypeBuilder inferParameterTypes(JSDocInfo info) { Node lp = new Node(Token.LP); for (String name : info.getParameterNames()) { lp.addChildToBack(Node.newString(Token.NAME, name)); }"
+      },
+      {
+        "txt": "return inferParameterTypes(lp, info); } FunctionTypeBuilder inferParameterTypes(@Nullable Node argsParent, @Nullable JSDocInfo info) { if (argsParent == null) { if (info == null) { return this; } else { return inferParameterTypes(info); }"
+      },
+      {
+        "txt": "} Node oldParameterType = null; if (parametersNode != null) { oldParameterType = parametersNode.getFirstChild(); } FunctionParamBuilder builder = new FunctionParamBuilder(typeRegistry); boolean warnedAboutArgList = false; Set<String> allJsDocParams = (info == null) ? Sets.<String>newHashSet() : Sets.newHashSet(info.getParameterNames());"
+      },
+      {
+        "txt": "boolean foundTemplateType = false; for (Node arg : argsParent.children()) { String argumentName = arg.getString(); allJsDocParams.remove(argumentName); JSType parameterType = null; boolean isOptionalParam = isOptionalParameter(arg, info); boolean isVarArgs = isVarArgsParameter(arg, info); if (info != null && info.hasParameterType(argumentName)) { parameterType = info.getParameterType(argumentName).evaluate(scope, typeRegistry);"
+      },
+      {
+        "txt": "} else if (oldParameterType != null && oldParameterType.getJSType() != null) { parameterType = oldParameterType.getJSType(); isOptionalParam = oldParameterType.isOptionalArg(); isVarArgs = oldParameterType.isVarArgs(); } else { parameterType = typeRegistry.getNativeType(UNKNOWN_TYPE); } if (templateTypeName != null && parameterType.restrictByNotNullOrUndefined().isTemplateType()) {"
+      },
+      {
+        "txt": "if (foundTemplateType) { reportError(TEMPLATE_TYPE_DUPLICATED, fnName); } foundTemplateType = true; } warnedAboutArgList |= addParameter( builder, parameterType, warnedAboutArgList, isOptionalParam, isVarArgs); if (oldParameterType != null) {"
+      },
+      {
+        "txt": "oldParameterType = oldParameterType.getNext(); } } if (templateTypeName != null && !foundTemplateType) { reportError(TEMPLATE_TYPE_EXPECTED, fnName); } for (String inexistentName : allJsDocParams) { reportWarning(INEXISTANT_PARAM, inexistentName, fnName); } parametersNode = builder.build();"
+      },
+      {
+        "txt": "return this; } private boolean isOptionalParameter( Node param, @Nullable JSDocInfo info) { if (codingConvention.isOptionalParameter(param)) { return true; } String paramName = param.getString(); return info != null && info.hasParameterType(paramName) && info.getParameterType(paramName).isOptionalArg();"
+      },
+      {
+        "txt": "} private boolean isVarArgsParameter( Node param, @Nullable JSDocInfo info) { if (codingConvention.isVarArgsParameter(param)) { return true; } String paramName = param.getString(); return info != null && info.hasParameterType(paramName) && info.getParameterType(paramName).isVarArgs(); }"
+      },
+      {
+        "txt": "FunctionTypeBuilder inferTemplateTypeName(@Nullable JSDocInfo info) { if (info != null) { templateTypeName = info.getTemplateTypeName(); typeRegistry.setTemplateTypeName(templateTypeName); } return this; } private boolean addParameter(FunctionParamBuilder builder, JSType paramType, boolean warnedAboutArgList, boolean isOptional, boolean isVarArgs) {"
+      },
+      {
+        "txt": "boolean emittedWarning = false; if (isOptional) { if (!builder.addOptionalParams(paramType) && !warnedAboutArgList) { reportWarning(VAR_ARGS_MUST_BE_LAST); emittedWarning = true; } } else if (isVarArgs) { if (!builder.addVarArgs(paramType) && !warnedAboutArgList) { reportWarning(VAR_ARGS_MUST_BE_LAST); emittedWarning = true;"
+      },
+      {
+        "txt": "} } else { if (!builder.addRequiredParams(paramType) && !warnedAboutArgList) { if (builder.hasVarArgs()) { reportWarning(VAR_ARGS_MUST_BE_LAST); } else { reportWarning(OPTIONAL_ARG_AT_END); } emittedWarning = true; }"
+      },
+      {
+        "txt": "} return emittedWarning; } FunctionType buildAndRegister() { if (returnType == null) { returnType = typeRegistry.getNativeType(UNKNOWN_TYPE); } if (parametersNode == null) { throw new IllegalStateException( \"All Function types must have params and a return type\");"
+      },
+      {
+        "txt": "} FunctionType fnType; if (isConstructor) { fnType = getOrCreateConstructor(); } else if (isInterface) { fnType = typeRegistry.createInterfaceType(fnName, sourceNode); if (scope.isGlobal() && !fnName.isEmpty()) { typeRegistry.declareType(fnName, fnType.getInstanceType()); } maybeSetBaseType(fnType);"
+      },
+      {
+        "txt": "} else { fnType = new FunctionBuilder(typeRegistry) .withName(fnName) .withSourceNode(sourceNode) .withParamsNode(parametersNode) .withReturnType(returnType, returnTypeInferred) .withTypeOfThis(thisType) .withTemplateName(templateTypeName) .build(); maybeSetBaseType(fnType);"
+      },
+      {
+        "txt": "} if (implementedInterfaces != null) { fnType.setImplementedInterfaces(implementedInterfaces); } typeRegistry.clearTemplateTypeName(); return fnType; } private void maybeSetBaseType(FunctionType fnType) { if (baseType != null) { fnType.setPrototypeBasedOn(baseType);"
+      },
+      {
+        "txt": "} } private FunctionType getOrCreateConstructor() { FunctionType fnType = typeRegistry.createConstructorType( fnName, sourceNode, parametersNode, returnType); JSType existingType = typeRegistry.getType(fnName); if (existingType != null) { boolean isInstanceObject = existingType instanceof InstanceObjectType; if (isInstanceObject || fnName.equals(\"Function\")) { FunctionType existingFn ="
+      },
+      {
+        "txt": "isInstanceObject ? ((InstanceObjectType) existingType).getConstructor() : typeRegistry.getNativeFunctionType(FUNCTION_FUNCTION_TYPE); if (existingFn.getSource() == null) { existingFn.setSource(sourceNode); } if (!existingFn.hasEqualCallType(fnType)) { reportWarning(TYPE_REDEFINITION, fnName, fnType.toString(), existingFn.toString()); }"
+      },
+      {
+        "txt": "return existingFn; } else { } } maybeSetBaseType(fnType); if (scope.isGlobal() && !fnName.isEmpty()) { typeRegistry.declareType(fnName, fnType.getInstanceType()); } return fnType; }"
+      },
+      {
+        "txt": "private void reportWarning(DiagnosticType warning, String ... args) { compiler.report(JSError.make(sourceName, errorRoot, warning, args)); } private void reportError(DiagnosticType error, String ... args) { compiler.report(JSError.make(sourceName, errorRoot, error, args)); } static boolean isFunctionTypeDeclaration(JSDocInfo info) { return info.getParameterCount() > 0 || info.hasReturnType() || info.hasThisType() ||"
+      },
+      {
+        "txt": "info.isConstructor() || info.isInterface(); }"
+      }
+    ]
+  },
+  {
+    "id": 405,
+    "file_path": "src/com/google/javascript/rhino/jstype/FunctionType.java",
+    "start-bug-line": 880,
+    "end-bug-line": 880,
+    "bug": "",
+    "fix": "if (maybeTypeOfThis != null) { maybeTypeOfThis = maybeTypeOfThis.restrictByNotNullOrUndefined(); }",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.google.javascript.rhino.jstype; import static com.google.javascript.rhino.jstype.JSTypeNative.U2U_CONSTRUCTOR_TYPE; import com.google.common.base.Preconditions; import com.google.common.collect.ImmutableList;"
+      },
+      {
+        "txt": "import com.google.common.collect.Iterables; import com.google.common.collect.Lists; import com.google.common.collect.Sets; import com.google.javascript.rhino.ErrorReporter; import com.google.javascript.rhino.Node; import com.google.javascript.rhino.Token; import java.util.Collections; import java.util.List; import java.util.Set; public class FunctionType extends PrototypeObjectType {"
+      },
+      {
+        "txt": "private static final long serialVersionUID = 1L; private enum Kind { ORDINARY, CONSTRUCTOR, INTERFACE } private ArrowType call; private FunctionPrototypeType prototype; private final Kind kind; private ObjectType typeOfThis;"
+      },
+      {
+        "txt": "private Node source; private List<ObjectType> implementedInterfaces = ImmutableList.of(); private List<FunctionType> subTypes; private String templateTypeName; FunctionType(JSTypeRegistry registry, String name, Node source, ArrowType arrowType, ObjectType typeOfThis, String templateTypeName, boolean isConstructor, boolean nativeType) { super(registry, name, registry.getNativeObjectType(JSTypeNative.FUNCTION_INSTANCE_TYPE), nativeType);"
+      },
+      {
+        "txt": "Preconditions.checkArgument(source == null || Token.FUNCTION == source.getType()); Preconditions.checkNotNull(arrowType); this.source = source; this.kind = isConstructor ? Kind.CONSTRUCTOR : Kind.ORDINARY; if (isConstructor) { this.typeOfThis = typeOfThis != null && typeOfThis.isNoObjectType() ? typeOfThis : new InstanceObjectType(registry, this, nativeType); } else { this.typeOfThis = typeOfThis != null ?"
+      },
+      {
+        "txt": "typeOfThis : registry.getNativeObjectType(JSTypeNative.UNKNOWN_TYPE); } this.call = arrowType; this.templateTypeName = templateTypeName; } private FunctionType(JSTypeRegistry registry, String name, Node source) { super(registry, name, registry.getNativeObjectType(JSTypeNative.FUNCTION_INSTANCE_TYPE)); Preconditions.checkArgument(source == null ||"
+      },
+      {
+        "txt": "Token.FUNCTION == source.getType()); Preconditions.checkArgument(name != null); this.source = source; this.call = new ArrowType(registry, new Node(Token.LP), null); this.kind = Kind.INTERFACE; this.typeOfThis = new InstanceObjectType(registry, this); } static FunctionType forInterface( JSTypeRegistry registry, String name, Node source) { return new FunctionType(registry, name, source);"
+      },
+      {
+        "txt": "} @Override public boolean isInstanceType() { return isEquivalentTo(registry.getNativeType(U2U_CONSTRUCTOR_TYPE)); } @Override public boolean isConstructor() { return kind == Kind.CONSTRUCTOR; } @Override"
+      },
+      {
+        "txt": "public boolean isInterface() { return kind == Kind.INTERFACE; } @Override public boolean isOrdinaryFunction() { return kind == Kind.ORDINARY; } @Override public boolean isFunctionType() { return true;"
+      },
+      {
+        "txt": "} @Override public boolean canBeCalled() { return true; } public Iterable<Node> getParameters() { Node n = getParametersNode(); if (n != null) { return n.children(); } else {"
+      },
+      {
+        "txt": "return Collections.emptySet(); } } public Node getParametersNode() { return call.parameters; } public int getMinArguments() { int i = 0; int min = 0; for (Node n : getParameters()) {"
+      },
+      {
+        "txt": "i++; if (!n.isOptionalArg() && !n.isVarArgs()) { min = i; } } return min; } public int getMaxArguments() { Node params = getParametersNode(); if (params != null) {"
+      },
+      {
+        "txt": "Node lastParam = params.getLastChild(); if (lastParam == null || !lastParam.isVarArgs()) { return params.getChildCount(); } } return Integer.MAX_VALUE; } public JSType getReturnType() { return call.returnType; }"
+      },
+      {
+        "txt": "public boolean isReturnTypeInferred() { return call.returnTypeInferred; } ArrowType getInternalArrowType() { return call; } public FunctionPrototypeType getPrototype() { if (prototype == null) { setPrototype(new FunctionPrototypeType(registry, this, null)); }"
+      },
+      {
+        "txt": "return prototype; } public void setPrototypeBasedOn(ObjectType baseType) { if (prototype == null) { setPrototype( new FunctionPrototypeType( registry, this, baseType, isNativeObjectType())); } else { prototype.setImplicitPrototype(baseType); }"
+      },
+      {
+        "txt": "} public boolean setPrototype(FunctionPrototypeType prototype) { if (prototype == null) { return false; } if (isConstructor() && prototype == getInstanceType()) { return false; } this.prototype = prototype; if (isConstructor() || isInterface()) {"
+      },
+      {
+        "txt": "FunctionType superClass = getSuperClassConstructor(); if (superClass != null) { superClass.addSubType(this); } } return true; } public Iterable<ObjectType> getAllImplementedInterfaces() { Set<ObjectType> interfaces = Sets.newLinkedHashSet(); for (ObjectType type : getImplementedInterfaces()) {"
+      },
+      {
+        "txt": "addRelatedInterfaces(type, interfaces); } return interfaces; } private void addRelatedInterfaces(ObjectType instance, Set<ObjectType> set) { FunctionType constructor = instance.getConstructor(); if (constructor != null) { if (!constructor.isInterface()) { return; }"
+      },
+      {
+        "txt": "set.add(instance); if (constructor.getSuperClassConstructor() != null) { addRelatedInterfaces( constructor.getSuperClassConstructor().getInstanceType(), set); } } } public Iterable<ObjectType> getImplementedInterfaces() { FunctionType superCtor = isConstructor() ? getSuperClassConstructor() : null;"
+      },
+      {
+        "txt": "if (superCtor == null) { return implementedInterfaces; } else { return Iterables.concat( implementedInterfaces, superCtor.getImplementedInterfaces()); } } public void setImplementedInterfaces(List<ObjectType> implementedInterfaces) { for (ObjectType type : implementedInterfaces) { registry.registerTypeImplementingInterface(this, type);"
+      },
+      {
+        "txt": "} this.implementedInterfaces = ImmutableList.copyOf(implementedInterfaces); } @Override public boolean hasProperty(String name) { return super.hasProperty(name) || \"prototype\".equals(name); } @Override public boolean hasOwnProperty(String name) { return super.hasOwnProperty(name) || \"prototype\".equals(name);"
+      },
+      {
+        "txt": "} @Override public JSType getPropertyType(String name) { if (\"prototype\".equals(name)) { return getPrototype(); } else { if (!hasOwnProperty(name)) { if (\"call\".equals(name)) { Node params = getParametersNode(); if (params == null) {"
+      },
+      {
+        "txt": "defineDeclaredProperty(name, new FunctionBuilder(registry) .withReturnType(getReturnType()) .build(), false); } else { params = params.cloneTree(); Node thisTypeNode = Node.newString(Token.NAME, \"thisType\"); thisTypeNode.setJSType( registry.createOptionalNullableType(getTypeOfThis()));"
+      },
+      {
+        "txt": "params.addChildToFront(thisTypeNode); thisTypeNode.setOptionalArg(true); defineDeclaredProperty(name, new FunctionBuilder(registry) .withParamsNode(params) .withReturnType(getReturnType()) .build(), false); } } else if (\"apply\".equals(name)) {"
+      },
+      {
+        "txt": "FunctionParamBuilder builder = new FunctionParamBuilder(registry); builder.addOptionalParams( registry.createNullableType(getTypeOfThis()), registry.createNullableType( registry.getNativeType(JSTypeNative.OBJECT_TYPE))); defineDeclaredProperty(name, new FunctionBuilder(registry) .withParams(builder) .withReturnType(getReturnType()) .build(),"
+      },
+      {
+        "txt": "false); } } return super.getPropertyType(name); } } @Override boolean defineProperty(String name, JSType type, boolean inferred, boolean inExterns) { if (\"prototype\".equals(name)) {"
+      },
+      {
+        "txt": "ObjectType objType = type.toObjectType(); if (objType != null) { if (objType.isEquivalentTo(prototype)) { return true; } return setPrototype( new FunctionPrototypeType( registry, this, objType, isNativeObjectType())); } else { return false;"
+      },
+      {
+        "txt": "} } return super.defineProperty(name, type, inferred, inExterns); } @Override public boolean isPropertyTypeInferred(String property) { return \"prototype\".equals(property) || super.isPropertyTypeInferred(property); } @Override"
+      },
+      {
+        "txt": "public JSType getLeastSupertype(JSType that) { return supAndInfHelper(that, true); } @Override public JSType getGreatestSubtype(JSType that) { return supAndInfHelper(that, false); } private JSType supAndInfHelper(JSType that, boolean leastSuper) { if (isFunctionType() && that.isFunctionType()) { if (isEquivalentTo(that)) {"
+      },
+      {
+        "txt": "return this; } FunctionType other = null; if (that instanceof FunctionType) { other = (FunctionType) that; } if (other != null && isOrdinaryFunction() && that.isOrdinaryFunction() && !this.call.hasUnknownParamsOrReturn() && !other.call.hasUnknownParamsOrReturn()) {"
+      },
+      {
+        "txt": "boolean isSubtypeOfThat = this.isSubtype(that); boolean isSubtypeOfThis = that.isSubtype(this); if (isSubtypeOfThat && !isSubtypeOfThis) { return leastSuper ? that : this; } else if (isSubtypeOfThis && !isSubtypeOfThat) { return leastSuper ? this : that; } FunctionType merged = tryMergeFunctionPiecewise(other, leastSuper); if (merged != null) { return merged;"
+      },
+      {
+        "txt": "} } JSType functionInstance = registry.getNativeType( JSTypeNative.FUNCTION_INSTANCE_TYPE); if (functionInstance.isEquivalentTo(that)) { return leastSuper ? that : this; } else if (functionInstance.isEquivalentTo(this)) { return leastSuper ? this : that; } FunctionType greatestFn ="
+      },
+      {
+        "txt": "registry.getNativeFunctionType(JSTypeNative.U2U_CONSTRUCTOR_TYPE); FunctionType leastFn = registry.getNativeFunctionType(JSTypeNative.LEAST_FUNCTION_TYPE); return leastSuper ? greatestFn : leastFn; } return leastSuper ? super.getLeastSupertype(that) : super.getGreatestSubtype(that); } private FunctionType tryMergeFunctionPiecewise("
+      },
+      {
+        "txt": "FunctionType other, boolean leastSuper) { Node newParamsNode = null; if (call.hasEqualParameters(other.call)) { newParamsNode = call.parameters; } else { return null; } JSType newReturnType = leastSuper ? call.returnType.getLeastSupertype(other.call.returnType) : call.returnType.getGreatestSubtype(other.call.returnType);"
+      },
+      {
+        "txt": "ObjectType newTypeOfThis = null; if (isEquivalent(typeOfThis, other.typeOfThis)) { newTypeOfThis = typeOfThis; } else { JSType maybeNewTypeOfThis = leastSuper ? typeOfThis.getLeastSupertype(other.typeOfThis) : typeOfThis.getGreatestSubtype(other.typeOfThis); if (maybeNewTypeOfThis instanceof ObjectType) { newTypeOfThis = (ObjectType) maybeNewTypeOfThis; } else {"
+      },
+      {
+        "txt": "newTypeOfThis = leastSuper ? registry.getNativeObjectType(JSTypeNative.OBJECT_TYPE) : registry.getNativeObjectType(JSTypeNative.NO_OBJECT_TYPE); } } boolean newReturnTypeInferred = call.returnTypeInferred || other.call.returnTypeInferred; return new FunctionType( registry, null, null, new ArrowType("
+      },
+      {
+        "txt": "registry, newParamsNode, newReturnType, newReturnTypeInferred), newTypeOfThis, null, false, false); } public FunctionType getSuperClassConstructor() { Preconditions.checkArgument(isConstructor() || isInterface()); ObjectType maybeSuperInstanceType = getPrototype().getImplicitPrototype(); if (maybeSuperInstanceType == null) { return null; } return maybeSuperInstanceType.getConstructor();"
+      },
+      {
+        "txt": "} public boolean hasUnknownSupertype() { Preconditions.checkArgument(isConstructor() || isInterface()); Preconditions.checkArgument(!this.isUnknownType()); FunctionType ctor = this; while (true) { ObjectType maybeSuperInstanceType = ctor.getPrototype().getImplicitPrototype(); if (maybeSuperInstanceType == null) { return false;"
+      },
+      {
+        "txt": "} if (maybeSuperInstanceType.isUnknownType()) { return true; } ctor = maybeSuperInstanceType.getConstructor(); if (ctor == null) { return false; } Preconditions.checkState(ctor.isConstructor() || ctor.isInterface()); }"
+      },
+      {
+        "txt": "} public JSType getTopMostDefiningType(String propertyName) { Preconditions.checkState(isConstructor() || isInterface()); Preconditions.checkArgument(getPrototype().hasProperty(propertyName)); FunctionType ctor = this; JSType topInstanceType; do { topInstanceType = ctor.getInstanceType(); ctor = ctor.getSuperClassConstructor(); } while (ctor != null && ctor.getPrototype().hasProperty(propertyName));"
+      },
+      {
+        "txt": "return topInstanceType; } @Override public boolean isEquivalentTo(JSType otherType) { if (!(otherType instanceof FunctionType)) { return false; } FunctionType that = (FunctionType) otherType; if (!that.isFunctionType()) { return false;"
+      },
+      {
+        "txt": "} if (this.isConstructor()) { if (that.isConstructor()) { return this == that; } return false; } if (this.isInterface()) { if (that.isInterface()) { return this.getReferenceName().equals(that.getReferenceName());"
+      },
+      {
+        "txt": "} return false; } if (that.isInterface()) { return false; } return this.typeOfThis.isEquivalentTo(that.typeOfThis) && this.call.isEquivalentTo(that.call); } @Override"
+      },
+      {
+        "txt": "public int hashCode() { return isInterface() ? getReferenceName().hashCode() : call.hashCode(); } public boolean hasEqualCallType(FunctionType otherType) { return this.call.isEquivalentTo(otherType.call); } @Override public String toString() { if (this == registry.getNativeType(JSTypeNative.FUNCTION_INSTANCE_TYPE)) { return \"Function\";"
+      },
+      {
+        "txt": "} StringBuilder b = new StringBuilder(32); b.append(\"function (\"); int paramNum = call.parameters.getChildCount(); boolean hasKnownTypeOfThis = !typeOfThis.isUnknownType(); if (hasKnownTypeOfThis) { b.append(\"this:\"); b.append(typeOfThis.toString()); } if (paramNum > 0) {"
+      },
+      {
+        "txt": "if (hasKnownTypeOfThis) { b.append(\", \"); } Node p = call.parameters.getFirstChild(); if (p.isVarArgs()) { appendVarArgsString(b, p.getJSType()); } else { b.append(p.getJSType().toString()); } p = p.getNext();"
+      },
+      {
+        "txt": "while (p != null) { b.append(\", \"); if (p.isVarArgs()) { appendVarArgsString(b, p.getJSType()); } else { b.append(p.getJSType().toString()); } p = p.getNext(); } }"
+      },
+      {
+        "txt": "b.append(\"): \"); b.append(call.returnType); return b.toString(); } private void appendVarArgsString(StringBuilder builder, JSType paramType) { if (paramType.isUnionType()) { paramType = ((UnionType) paramType).getRestrictedUnion( registry.getNativeType(JSTypeNative.VOID_TYPE)); } builder.append(\"...[\").append(paramType.toString()).append(\"]\");"
+      },
+      {
+        "txt": "} @Override public boolean isSubtype(JSType that) { if (JSType.isSubtype(this, that)) { return true; } if (that.isFunctionType()) { if (((FunctionType) that).isInterface()) { return true; }"
+      },
+      {
+        "txt": "if (this.isInterface()) { return false; } FunctionType other = (FunctionType) that; return (this.isConstructor() || other.isConstructor() || other.typeOfThis.isSubtype(this.typeOfThis) || this.typeOfThis.isSubtype(other.typeOfThis)) && this.call.isSubtype(other.call); } return getNativeType(JSTypeNative.FUNCTION_PROTOTYPE).isSubtype(that);"
+      },
+      {
+        "txt": "} @Override public <T> T visit(Visitor<T> visitor) { return visitor.caseFunctionType(this); } public ObjectType getInstanceType() { Preconditions.checkState(hasInstanceType()); return typeOfThis; } void setInstanceType(ObjectType instanceType) {"
+      },
+      {
+        "txt": "typeOfThis = instanceType; } public boolean hasInstanceType() { return isConstructor() || isInterface(); } public ObjectType getTypeOfThis() { return typeOfThis.isNoObjectType() ? registry.getNativeObjectType(JSTypeNative.OBJECT_TYPE) : typeOfThis; } public Node getSource() {"
+      },
+      {
+        "txt": "return source; } public void setSource(Node source) { this.source = source; } private void addSubType(FunctionType subType) { if (subTypes == null) { subTypes = Lists.newArrayList(); } subTypes.add(subType);"
+      },
+      {
+        "txt": "} public List<FunctionType> getSubTypes() { return subTypes; } @Override public boolean hasCachedValues() { return prototype != null || super.hasCachedValues(); } public String getTemplateTypeName() { return templateTypeName;"
+      },
+      {
+        "txt": "@Override JSType resolveInternal(ErrorReporter t, StaticScope<JSType> scope) { setResolvedTypeInternal(this); call = (ArrowType) safeResolve(call, t, scope); prototype = (FunctionPrototypeType) safeResolve(prototype, t, scope); JSType maybeTypeOfThis = safeResolve(typeOfThis, t, scope); <extra_id_0> typeOfThis = (ObjectType) maybeTypeOfThis; } boolean changed = false; ImmutableList.Builder<ObjectType> resolvedInterfaces = ImmutableList.builder(); for (ObjectType iface : implementedInterfaces) {"
+      },
+      {
+        "txt": "ImmutableList.builder(); for (ObjectType iface : implementedInterfaces) { ObjectType resolvedIface = (ObjectType) iface.resolve(t, scope); resolvedInterfaces.add(resolvedIface); changed |= (resolvedIface != iface); } if (changed) { implementedInterfaces = resolvedInterfaces.build(); } if (subTypes != null) {"
+      },
+      {
+        "txt": "for (int i = 0; i < subTypes.size(); i++) { subTypes.set(i, (FunctionType) subTypes.get(i).resolve(t, scope)); } } return super.resolveInternal(t, scope); } @Override public String toDebugHashCodeString() { if (this == registry.getNativeType(JSTypeNative.FUNCTION_INSTANCE_TYPE)) { return super.toDebugHashCodeString();"
+      },
+      {
+        "txt": "} StringBuilder b = new StringBuilder(32); b.append(\"function (\"); int paramNum = call.parameters.getChildCount(); boolean hasKnownTypeOfThis = !typeOfThis.isUnknownType(); if (hasKnownTypeOfThis) { b.append(\"this:\"); b.append(getDebugHashCodeStringOf(typeOfThis)); } if (paramNum > 0) {"
+      },
+      {
+        "txt": "if (hasKnownTypeOfThis) { b.append(\", \"); } Node p = call.parameters.getFirstChild(); b.append(getDebugHashCodeStringOf(p.getJSType())); p = p.getNext(); while (p != null) { b.append(\", \"); b.append(getDebugHashCodeStringOf(p.getJSType())); p = p.getNext();"
+      },
+      {
+        "txt": "} } b.append(\")\"); b.append(\": \"); b.append(getDebugHashCodeStringOf(call.returnType)); return b.toString(); } private String getDebugHashCodeStringOf(JSType type) { if (type == this) { return \"me\";"
+      },
+      {
+        "txt": "} else { return type.toDebugHashCodeString(); } }"
+      }
+    ]
+  }
+]

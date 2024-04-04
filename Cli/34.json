@@ -1,0 +1,161 @@
+[
+  {
+    "id": 182,
+    "file_path": "src/main/java/org/apache/commons/cli/Option.java",
+    "start-bug-line": 72,
+    "end-bug-line": 72,
+    "bug": "private Class type;",
+    "fix": "private Class type = String.class;",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.cli; import java.io.Serializable; import java.util.ArrayList; import java.util.List; public class Option implements Cloneable, Serializable { private static final long serialVersionUID = 1L; public static final int UNINITIALIZED = -1; public static final int UNLIMITED_VALUES = -2;"
+      },
+      {
+        "txt": "private String longOpt; private String argName; private String description; private boolean required; private boolean optionalArg; private int numberOfArgs = UNINITIALIZED; <extra_id_0> private List values = new ArrayList(); private char valuesep; public Option(String opt, String description) throws IllegalArgumentException { this(opt, null, false, description); }"
+      },
+      {
+        "txt": "this(opt, null, false, description); } public Option(String opt, boolean hasArg, String description) throws IllegalArgumentException { this(opt, null, hasArg, description); } public Option(String opt, String longOpt, boolean hasArg, String description) throws IllegalArgumentException { OptionValidator.validateOption(opt);"
+      },
+      {
+        "txt": "this.opt = opt; this.longOpt = longOpt; if (hasArg) { this.numberOfArgs = 1; } this.description = description; } public int getId() {"
+      },
+      {
+        "txt": "return getKey().charAt(0); } String getKey() { if (opt == null) { return longOpt; } return opt; }"
+      },
+      {
+        "txt": "public String getOpt() { return opt; } public Object getType() { return type; } public void setType(Class type) {"
+      },
+      {
+        "txt": "this.type = type; } public String getLongOpt() { return longOpt; } public void setLongOpt(String longOpt) { this.longOpt = longOpt; }"
+      },
+      {
+        "txt": "public void setOptionalArg(boolean optionalArg) { this.optionalArg = optionalArg; } public boolean hasOptionalArg() { return optionalArg; } public boolean hasLongOpt() {"
+      },
+      {
+        "txt": "return longOpt != null; } public boolean hasArg() { return numberOfArgs > 0 || numberOfArgs == UNLIMITED_VALUES; } public String getDescription() { return description; }"
+      },
+      {
+        "txt": "public void setDescription(String description) { this.description = description; } public boolean isRequired() { return required; } public void setRequired(boolean required) {"
+      },
+      {
+        "txt": "this.required = required; } public void setArgName(String argName) { this.argName = argName; } public String getArgName() { return argName; }"
+      },
+      {
+        "txt": "public boolean hasArgName() { return argName != null && argName.length() > 0; } public boolean hasArgs() { return numberOfArgs > 1 || numberOfArgs == UNLIMITED_VALUES; } public void setArgs(int num) {"
+      },
+      {
+        "txt": "this.numberOfArgs = num; } public void setValueSeparator(char sep) { this.valuesep = sep; } public char getValueSeparator() { return valuesep; }"
+      },
+      {
+        "txt": "public boolean hasValueSeparator() { return valuesep > 0; } public int getArgs() { return numberOfArgs; } void addValueForProcessing(String value) {"
+      },
+      {
+        "txt": "switch (numberOfArgs) { case UNINITIALIZED: throw new RuntimeException(\"NO_ARGS_ALLOWED\"); default: processValue(value); } } private void processValue(String value) {"
+      },
+      {
+        "txt": "if (hasValueSeparator()) { char sep = getValueSeparator(); int index = value.indexOf(sep); while (index != -1) { if (values.size() == (numberOfArgs - 1)) { break; }"
+      },
+      {
+        "txt": "add(value.substring(0, index)); value = value.substring(index + 1); index = value.indexOf(sep); } } add(value); } private void add(String value) { if (!acceptsArg())"
+      },
+      {
+        "txt": "{ throw new RuntimeException(\"Cannot add value, list full.\"); } values.add(value); } public String getValue() { return hasNoValues() ? null : (String) values.get(0); } public String getValue(int index) throws IndexOutOfBoundsException"
+      },
+      {
+        "txt": "{ return hasNoValues() ? null : (String) values.get(index); } public String getValue(String defaultValue) { String value = getValue(); return (value != null) ? value : defaultValue; } public String[] getValues() {"
+      },
+      {
+        "txt": "return hasNoValues() ? null : (String[]) values.toArray(new String[values.size()]); } public List getValuesList() { return values; } public String toString() { StringBuffer buf = new StringBuffer().append(\"[ option: \"); buf.append(opt);"
+      },
+      {
+        "txt": "if (longOpt != null) { buf.append(\" \").append(longOpt); } buf.append(\" \"); if (hasArgs()) { buf.append(\"[ARG...]\"); } else if (hasArg())"
+      },
+      {
+        "txt": "{ buf.append(\" [ARG]\"); } buf.append(\" :: \").append(description); if (type != null) { buf.append(\" :: \").append(type); } buf.append(\" ]\"); return buf.toString();"
+      },
+      {
+        "txt": "} private boolean hasNoValues() { return values.isEmpty(); } public boolean equals(Object o) { if (this == o) { return true;"
+      },
+      {
+        "txt": "} if (o == null || getClass() != o.getClass()) { return false; } Option option = (Option) o; if (opt != null ? !opt.equals(option.opt) : option.opt != null) { return false; }"
+      },
+      {
+        "txt": "if (longOpt != null ? !longOpt.equals(option.longOpt) : option.longOpt != null) { return false; } return true; } public int hashCode() { int result; result = opt != null ? opt.hashCode() : 0;"
+      },
+      {
+        "txt": "result = 31 * result + (longOpt != null ? longOpt.hashCode() : 0); return result; } public Object clone() { try { Option option = (Option) super.clone(); option.values = new ArrayList(values); return option;"
+      },
+      {
+        "txt": "} catch (CloneNotSupportedException cnse) { throw new RuntimeException(\"A CloneNotSupportedException was thrown: \" + cnse.getMessage()); } } void clearValues() { values.clear(); }"
+      },
+      {
+        "txt": "public boolean addValue(String value) { throw new UnsupportedOperationException(\"The addValue method is not intended for client use. \" + \"Subclasses should use the addValueForProcessing method instead. \"); } boolean acceptsArg() { return (hasArg() || hasArgs() || hasOptionalArg()) && (numberOfArgs <= 0 || values.size() < numberOfArgs); } boolean requiresArg()"
+      },
+      {
+        "txt": "{ if (optionalArg) { return false; } if (numberOfArgs == UNLIMITED_VALUES) { return values.size() < 1; } else"
+      },
+      {
+        "txt": "{ return acceptsArg(); } }"
+      }
+    ]
+  },
+  {
+    "id": 183,
+    "file_path": "src/main/java/org/apache/commons/cli/OptionBuilder.java",
+    "start-bug-line": 84,
+    "end-bug-line": 84,
+    "bug": "type = null;",
+    "fix": "type = String.class;",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.cli; public final class OptionBuilder { private static String longopt; private static String description; private static String argName; private static boolean required;"
+      },
+      {
+        "txt": "private static int numberOfArgs = Option.UNINITIALIZED; private static Class type; private static boolean optionalArg; private static char valuesep; private static OptionBuilder instance = new OptionBuilder(); static { reset(); } private OptionBuilder()"
+      },
+      {
+        "txt": "} private static void reset() { description = null; argName = null; longopt = null; <extra_id_0> required = false; numberOfArgs = Option.UNINITIALIZED; optionalArg = false; valuesep = (char) 0; } public static OptionBuilder withLongOpt(String newLongopt)"
+      },
+      {
+        "txt": "} public static OptionBuilder withLongOpt(String newLongopt) { OptionBuilder.longopt = newLongopt; return instance; } public static OptionBuilder hasArg() { OptionBuilder.numberOfArgs = 1; return instance;"
+      },
+      {
+        "txt": "} public static OptionBuilder hasArg(boolean hasArg) { OptionBuilder.numberOfArgs = hasArg ? 1 : Option.UNINITIALIZED; return instance; } public static OptionBuilder withArgName(String name) { OptionBuilder.argName = name; return instance;"
+      },
+      {
+        "txt": "} public static OptionBuilder isRequired() { OptionBuilder.required = true; return instance; } public static OptionBuilder withValueSeparator(char sep) { OptionBuilder.valuesep = sep; return instance;"
+      },
+      {
+        "txt": "} public static OptionBuilder withValueSeparator() { OptionBuilder.valuesep = '='; return instance; } public static OptionBuilder isRequired(boolean newRequired) { OptionBuilder.required = newRequired; return instance;"
+      },
+      {
+        "txt": "} public static OptionBuilder hasArgs() { OptionBuilder.numberOfArgs = Option.UNLIMITED_VALUES; return instance; } public static OptionBuilder hasArgs(int num) { OptionBuilder.numberOfArgs = num; return instance;"
+      },
+      {
+        "txt": "} public static OptionBuilder hasOptionalArg() { OptionBuilder.numberOfArgs = 1; OptionBuilder.optionalArg = true; return instance; } public static OptionBuilder hasOptionalArgs() { OptionBuilder.numberOfArgs = Option.UNLIMITED_VALUES;"
+      },
+      {
+        "txt": "OptionBuilder.optionalArg = true; return instance; } public static OptionBuilder hasOptionalArgs(int numArgs) { OptionBuilder.numberOfArgs = numArgs; OptionBuilder.optionalArg = true; return instance; } public static OptionBuilder withType(Class newType)"
+      },
+      {
+        "txt": "{ OptionBuilder.type = newType; return instance; } public static OptionBuilder withDescription(String newDescription) { OptionBuilder.description = newDescription; return instance; } public static Option create(char opt) throws IllegalArgumentException"
+      },
+      {
+        "txt": "{ return create(String.valueOf(opt)); } public static Option create() throws IllegalArgumentException { if (longopt == null) { OptionBuilder.reset(); throw new IllegalArgumentException(\"must specify longopt\"); }"
+      },
+      {
+        "txt": "return create(null); } public static Option create(String opt) throws IllegalArgumentException { Option option = null; try { option = new Option(opt, description); option.setLongOpt(longopt); option.setRequired(required);"
+      },
+      {
+        "txt": "option.setOptionalArg(optionalArg); option.setArgs(numberOfArgs); option.setType(type); option.setValueSeparator(valuesep); option.setArgName(argName); } finally { OptionBuilder.reset(); }"
+      },
+      {
+        "txt": "return option; }"
+      }
+    ]
+  }
+]

@@ -1,0 +1,326 @@
+[
+  {
+    "id": 1561,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/ser/std/StdKeySerializers.java",
+    "start-bug-line": 10,
+    "end-bug-line": 10,
+    "bug": "",
+    "fix": "import com.fasterxml.jackson.databind.util.EnumValues;",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "import java.io.IOException; import java.util.Calendar; import java.util.Date; import com.fasterxml.jackson.core.*; import com.fasterxml.jackson.databind.*; import com.fasterxml.jackson.databind.ser.impl.PropertySerializerMap; <extra_id_0> @SuppressWarnings(\"serial\") public class StdKeySerializers { protected final static JsonSerializer<Object> DEFAULT_KEY_SERIALIZER = new StdKeySerializer(); protected final static JsonSerializer<Object> DEFAULT_STRING_SERIALIZER = new StringKeySerializer(); private StdKeySerializers() { }"
+      },
+      {
+        "txt": "protected final static JsonSerializer<Object> DEFAULT_STRING_SERIALIZER = new StringKeySerializer(); private StdKeySerializers() { } public static JsonSerializer<Object> getStdKeySerializer(SerializationConfig config, Class<?> rawKeyType, boolean useDefault) { if ((rawKeyType == null) || (rawKeyType == Object.class)) { return new Dynamic(); } if (rawKeyType == String.class) { return DEFAULT_STRING_SERIALIZER;"
+      },
+      {
+        "txt": "} if (rawKeyType.isPrimitive() || Number.class.isAssignableFrom(rawKeyType)) { return DEFAULT_KEY_SERIALIZER; } if (rawKeyType == Class.class) { return new Default(Default.TYPE_CLASS, rawKeyType); } if (Date.class.isAssignableFrom(rawKeyType)) { return new Default(Default.TYPE_DATE, rawKeyType); }"
+      },
+      {
+        "txt": "if (Calendar.class.isAssignableFrom(rawKeyType)) { return new Default(Default.TYPE_CALENDAR, rawKeyType); } if (rawKeyType == java.util.UUID.class) { return new Default(Default.TYPE_TO_STRING, rawKeyType); } return useDefault ? DEFAULT_KEY_SERIALIZER : null; } @SuppressWarnings(\"unchecked\") public static JsonSerializer<Object> getFallbackKeySerializer(SerializationConfig config,"
+      },
+      {
+        "txt": "Class<?> rawKeyType) { if (rawKeyType != null) { if (rawKeyType == Enum.class) { return new Dynamic(); } if (rawKeyType.isEnum()) { return new Default(Default.TYPE_ENUM, rawKeyType); } }"
+      },
+      {
+        "txt": "return DEFAULT_KEY_SERIALIZER; } @Deprecated public static JsonSerializer<Object> getDefault() { return DEFAULT_KEY_SERIALIZER; } public static class Default extends StdSerializer<Object> { final static int TYPE_DATE = 1; final static int TYPE_CALENDAR = 2; final static int TYPE_CLASS = 3;"
+      },
+      {
+        "txt": "final static int TYPE_ENUM = 4; final static int TYPE_TO_STRING = 5; protected final int _typeId; public Default(int typeId, Class<?> type) { super(type, false); _typeId = typeId; } @Override public void serialize(Object value, JsonGenerator g, SerializerProvider provider) throws IOException { switch (_typeId) {"
+      },
+      {
+        "txt": "case TYPE_DATE: provider.defaultSerializeDateKey((Date)value, g); break; case TYPE_CALENDAR: provider.defaultSerializeDateKey(((Calendar) value).getTimeInMillis(), g); break; case TYPE_CLASS: g.writeFieldName(((Class<?>)value).getName()); break; case TYPE_ENUM:"
+      },
+      {
+        "txt": "{ String str = provider.isEnabled(SerializationFeature.WRITE_ENUMS_USING_TO_STRING) ? value.toString() : ((Enum<?>) value).name(); g.writeFieldName(str); } break; case TYPE_TO_STRING: default: g.writeFieldName(value.toString()); }"
+      },
+      {
+        "txt": "} } public static class Dynamic extends StdSerializer<Object> { protected transient PropertySerializerMap _dynamicSerializers; public Dynamic() { super(String.class, false); _dynamicSerializers = PropertySerializerMap.emptyForProperties(); } Object readResolve() {"
+      },
+      {
+        "txt": "_dynamicSerializers = PropertySerializerMap.emptyForProperties(); return this; } @Override public void serialize(Object value, JsonGenerator g, SerializerProvider provider) throws IOException { Class<?> cls = value.getClass(); PropertySerializerMap m = _dynamicSerializers; JsonSerializer<Object> ser = m.serializerFor(cls);"
+      },
+      {
+        "txt": "if (ser == null) { ser = _findAndAddDynamic(m, cls, provider); } ser.serialize(value, g, provider); } protected JsonSerializer<Object> _findAndAddDynamic(PropertySerializerMap map, Class<?> type, SerializerProvider provider) throws JsonMappingException { PropertySerializerMap.SerializerAndMapResult result = map.findAndAddKeySerializer(type, provider, null);"
+      },
+      {
+        "txt": "if (map != result.map) { _dynamicSerializers = result.map; } return result.serializer; } } public static class StringKeySerializer extends StdSerializer<Object> { public StringKeySerializer() { super(String.class, false); } @Override"
+      },
+      {
+        "txt": "public void serialize(Object value, JsonGenerator g, SerializerProvider provider) throws IOException { g.writeFieldName((String) value); } }"
+      }
+    ]
+  },
+  {
+    "id": 1562,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/ser/std/StdKeySerializers.java",
+    "start-bug-line": 82,
+    "end-bug-line": 82,
+    "bug": "return new Default(Default.TYPE_ENUM, rawKeyType);",
+    "fix": "return EnumKeySerializer.construct(rawKeyType, EnumValues.constructFromName(config, (Class<Enum<?>>) rawKeyType));",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "import java.io.IOException; import java.util.Calendar; import java.util.Date; import com.fasterxml.jackson.core.*; import com.fasterxml.jackson.databind.*; import com.fasterxml.jackson.databind.ser.impl.PropertySerializerMap; @SuppressWarnings(\"serial\") public class StdKeySerializers { protected final static JsonSerializer<Object> DEFAULT_KEY_SERIALIZER = new StdKeySerializer();"
+      },
+      {
+        "txt": "protected final static JsonSerializer<Object> DEFAULT_STRING_SERIALIZER = new StringKeySerializer(); private StdKeySerializers() { } public static JsonSerializer<Object> getStdKeySerializer(SerializationConfig config, Class<?> rawKeyType, boolean useDefault) { if ((rawKeyType == null) || (rawKeyType == Object.class)) { return new Dynamic(); } if (rawKeyType == String.class) { return DEFAULT_STRING_SERIALIZER;"
+      },
+      {
+        "txt": "} if (rawKeyType.isPrimitive() || Number.class.isAssignableFrom(rawKeyType)) { return DEFAULT_KEY_SERIALIZER; } if (rawKeyType == Class.class) { return new Default(Default.TYPE_CLASS, rawKeyType); } if (Date.class.isAssignableFrom(rawKeyType)) { return new Default(Default.TYPE_DATE, rawKeyType); }"
+      },
+      {
+        "txt": "if (Calendar.class.isAssignableFrom(rawKeyType)) { return new Default(Default.TYPE_CALENDAR, rawKeyType); } if (rawKeyType == java.util.UUID.class) { return new Default(Default.TYPE_TO_STRING, rawKeyType); } return useDefault ? DEFAULT_KEY_SERIALIZER : null; } @SuppressWarnings(\"unchecked\") public static JsonSerializer<Object> getFallbackKeySerializer(SerializationConfig config,"
+      },
+      {
+        "txt": "{ if (rawKeyType != null) { if (rawKeyType == Enum.class) { return new Dynamic(); } if (rawKeyType.isEnum()) { <extra_id_0> } } return DEFAULT_KEY_SERIALIZER; } @Deprecated public static JsonSerializer<Object> getDefault() {"
+      },
+      {
+        "txt": "@Deprecated public static JsonSerializer<Object> getDefault() { return DEFAULT_KEY_SERIALIZER; } public static class Default extends StdSerializer<Object> { final static int TYPE_DATE = 1; final static int TYPE_CALENDAR = 2; final static int TYPE_CLASS = 3; final static int TYPE_ENUM = 4; final static int TYPE_TO_STRING = 5;"
+      },
+      {
+        "txt": "protected final int _typeId; public Default(int typeId, Class<?> type) { super(type, false); _typeId = typeId; } @Override public void serialize(Object value, JsonGenerator g, SerializerProvider provider) throws IOException { switch (_typeId) { case TYPE_DATE: provider.defaultSerializeDateKey((Date)value, g);"
+      },
+      {
+        "txt": "break; case TYPE_CALENDAR: provider.defaultSerializeDateKey(((Calendar) value).getTimeInMillis(), g); break; case TYPE_CLASS: g.writeFieldName(((Class<?>)value).getName()); break; case TYPE_ENUM: { String str = provider.isEnabled(SerializationFeature.WRITE_ENUMS_USING_TO_STRING)"
+      },
+      {
+        "txt": "? value.toString() : ((Enum<?>) value).name(); g.writeFieldName(str); } break; case TYPE_TO_STRING: default: g.writeFieldName(value.toString()); } } }"
+      },
+      {
+        "txt": "public static class Dynamic extends StdSerializer<Object> { protected transient PropertySerializerMap _dynamicSerializers; public Dynamic() { super(String.class, false); _dynamicSerializers = PropertySerializerMap.emptyForProperties(); } Object readResolve() { _dynamicSerializers = PropertySerializerMap.emptyForProperties(); return this;"
+      },
+      {
+        "txt": "} @Override public void serialize(Object value, JsonGenerator g, SerializerProvider provider) throws IOException { Class<?> cls = value.getClass(); PropertySerializerMap m = _dynamicSerializers; JsonSerializer<Object> ser = m.serializerFor(cls); if (ser == null) { ser = _findAndAddDynamic(m, cls, provider);"
+      },
+      {
+        "txt": "} ser.serialize(value, g, provider); } protected JsonSerializer<Object> _findAndAddDynamic(PropertySerializerMap map, Class<?> type, SerializerProvider provider) throws JsonMappingException { PropertySerializerMap.SerializerAndMapResult result = map.findAndAddKeySerializer(type, provider, null); if (map != result.map) { _dynamicSerializers = result.map;"
+      },
+      {
+        "txt": "} return result.serializer; } } public static class StringKeySerializer extends StdSerializer<Object> { public StringKeySerializer() { super(String.class, false); } @Override public void serialize(Object value, JsonGenerator g, SerializerProvider provider) throws IOException { g.writeFieldName((String) value);"
+      },
+      {
+        "txt": "} }"
+      }
+    ]
+  },
+  {
+    "id": 1563,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/ser/std/StdKeySerializers.java",
+    "start-bug-line": 215,
+    "end-bug-line": 215,
+    "bug": "",
+    "fix": "public static class EnumKeySerializer extends StdSerializer<Object> { protected final EnumValues _values;",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind.ser.std; import java.io.IOException; import java.util.Calendar; import java.util.Date; import com.fasterxml.jackson.core.*; import com.fasterxml.jackson.databind.*; import com.fasterxml.jackson.databind.ser.impl.PropertySerializerMap; @SuppressWarnings(\"serial\")"
+      },
+      {
+        "txt": "public class StdKeySerializers { protected final static JsonSerializer<Object> DEFAULT_KEY_SERIALIZER = new StdKeySerializer(); protected final static JsonSerializer<Object> DEFAULT_STRING_SERIALIZER = new StringKeySerializer(); private StdKeySerializers() { } public static JsonSerializer<Object> getStdKeySerializer(SerializationConfig config, Class<?> rawKeyType, boolean useDefault) { if ((rawKeyType == null) || (rawKeyType == Object.class)) { return new Dynamic();"
+      },
+      {
+        "txt": "} if (rawKeyType == String.class) { return DEFAULT_STRING_SERIALIZER; } if (rawKeyType.isPrimitive() || Number.class.isAssignableFrom(rawKeyType)) { return DEFAULT_KEY_SERIALIZER; } if (rawKeyType == Class.class) { return new Default(Default.TYPE_CLASS, rawKeyType); }"
+      },
+      {
+        "txt": "if (Date.class.isAssignableFrom(rawKeyType)) { return new Default(Default.TYPE_DATE, rawKeyType); } if (Calendar.class.isAssignableFrom(rawKeyType)) { return new Default(Default.TYPE_CALENDAR, rawKeyType); } if (rawKeyType == java.util.UUID.class) { return new Default(Default.TYPE_TO_STRING, rawKeyType); } return useDefault ? DEFAULT_KEY_SERIALIZER : null;"
+      },
+      {
+        "txt": "} @SuppressWarnings(\"unchecked\") public static JsonSerializer<Object> getFallbackKeySerializer(SerializationConfig config, Class<?> rawKeyType) { if (rawKeyType != null) { if (rawKeyType == Enum.class) { return new Dynamic(); } if (rawKeyType.isEnum()) {"
+      },
+      {
+        "txt": "return new Default(Default.TYPE_ENUM, rawKeyType); } } return DEFAULT_KEY_SERIALIZER; } @Deprecated public static JsonSerializer<Object> getDefault() { return DEFAULT_KEY_SERIALIZER; } public static class Default extends StdSerializer<Object> {"
+      },
+      {
+        "txt": "final static int TYPE_DATE = 1; final static int TYPE_CALENDAR = 2; final static int TYPE_CLASS = 3; final static int TYPE_ENUM = 4; final static int TYPE_TO_STRING = 5; protected final int _typeId; public Default(int typeId, Class<?> type) { super(type, false); _typeId = typeId; }"
+      },
+      {
+        "txt": "@Override public void serialize(Object value, JsonGenerator g, SerializerProvider provider) throws IOException { switch (_typeId) { case TYPE_DATE: provider.defaultSerializeDateKey((Date)value, g); break; case TYPE_CALENDAR: provider.defaultSerializeDateKey(((Calendar) value).getTimeInMillis(), g); break; case TYPE_CLASS:"
+      },
+      {
+        "txt": "g.writeFieldName(((Class<?>)value).getName()); break; case TYPE_ENUM: { String str = provider.isEnabled(SerializationFeature.WRITE_ENUMS_USING_TO_STRING) ? value.toString() : ((Enum<?>) value).name(); g.writeFieldName(str); } break; case TYPE_TO_STRING:"
+      },
+      {
+        "txt": "default: g.writeFieldName(value.toString()); } } } public static class Dynamic extends StdSerializer<Object> { protected transient PropertySerializerMap _dynamicSerializers; public Dynamic() { super(String.class, false);"
+      },
+      {
+        "txt": "_dynamicSerializers = PropertySerializerMap.emptyForProperties(); } Object readResolve() { _dynamicSerializers = PropertySerializerMap.emptyForProperties(); return this; } @Override public void serialize(Object value, JsonGenerator g, SerializerProvider provider) throws IOException {"
+      },
+      {
+        "txt": "Class<?> cls = value.getClass(); PropertySerializerMap m = _dynamicSerializers; JsonSerializer<Object> ser = m.serializerFor(cls); if (ser == null) { ser = _findAndAddDynamic(m, cls, provider); } ser.serialize(value, g, provider); } protected JsonSerializer<Object> _findAndAddDynamic(PropertySerializerMap map, Class<?> type, SerializerProvider provider) throws JsonMappingException"
+      },
+      {
+        "txt": "{ PropertySerializerMap.SerializerAndMapResult result = map.findAndAddKeySerializer(type, provider, null); if (map != result.map) { _dynamicSerializers = result.map; } return result.serializer; } } public static class StringKeySerializer extends StdSerializer<Object>"
+      },
+      {
+        "txt": "public StringKeySerializer() { super(String.class, false); } @Override public void serialize(Object value, JsonGenerator g, SerializerProvider provider) throws IOException { g.writeFieldName((String) value); } } <extra_id_0> }"
+      }
+    ]
+  },
+  {
+    "id": 1564,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/ser/std/StdKeySerializers.java",
+    "start-bug-line": 216,
+    "end-bug-line": 216,
+    "bug": "",
+    "fix": "protected EnumKeySerializer(Class<?> enumType, EnumValues values) { super(enumType, false); _values = values; }",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind.ser.std; import java.io.IOException; import java.util.Calendar; import java.util.Date; import com.fasterxml.jackson.core.*; import com.fasterxml.jackson.databind.*; import com.fasterxml.jackson.databind.ser.impl.PropertySerializerMap; @SuppressWarnings(\"serial\")"
+      },
+      {
+        "txt": "public class StdKeySerializers { protected final static JsonSerializer<Object> DEFAULT_KEY_SERIALIZER = new StdKeySerializer(); protected final static JsonSerializer<Object> DEFAULT_STRING_SERIALIZER = new StringKeySerializer(); private StdKeySerializers() { } public static JsonSerializer<Object> getStdKeySerializer(SerializationConfig config, Class<?> rawKeyType, boolean useDefault) { if ((rawKeyType == null) || (rawKeyType == Object.class)) { return new Dynamic();"
+      },
+      {
+        "txt": "} if (rawKeyType == String.class) { return DEFAULT_STRING_SERIALIZER; } if (rawKeyType.isPrimitive() || Number.class.isAssignableFrom(rawKeyType)) { return DEFAULT_KEY_SERIALIZER; } if (rawKeyType == Class.class) { return new Default(Default.TYPE_CLASS, rawKeyType); }"
+      },
+      {
+        "txt": "if (Date.class.isAssignableFrom(rawKeyType)) { return new Default(Default.TYPE_DATE, rawKeyType); } if (Calendar.class.isAssignableFrom(rawKeyType)) { return new Default(Default.TYPE_CALENDAR, rawKeyType); } if (rawKeyType == java.util.UUID.class) { return new Default(Default.TYPE_TO_STRING, rawKeyType); } return useDefault ? DEFAULT_KEY_SERIALIZER : null;"
+      },
+      {
+        "txt": "} @SuppressWarnings(\"unchecked\") public static JsonSerializer<Object> getFallbackKeySerializer(SerializationConfig config, Class<?> rawKeyType) { if (rawKeyType != null) { if (rawKeyType == Enum.class) { return new Dynamic(); } if (rawKeyType.isEnum()) {"
+      },
+      {
+        "txt": "return new Default(Default.TYPE_ENUM, rawKeyType); } } return DEFAULT_KEY_SERIALIZER; } @Deprecated public static JsonSerializer<Object> getDefault() { return DEFAULT_KEY_SERIALIZER; } public static class Default extends StdSerializer<Object> {"
+      },
+      {
+        "txt": "final static int TYPE_DATE = 1; final static int TYPE_CALENDAR = 2; final static int TYPE_CLASS = 3; final static int TYPE_ENUM = 4; final static int TYPE_TO_STRING = 5; protected final int _typeId; public Default(int typeId, Class<?> type) { super(type, false); _typeId = typeId; }"
+      },
+      {
+        "txt": "@Override public void serialize(Object value, JsonGenerator g, SerializerProvider provider) throws IOException { switch (_typeId) { case TYPE_DATE: provider.defaultSerializeDateKey((Date)value, g); break; case TYPE_CALENDAR: provider.defaultSerializeDateKey(((Calendar) value).getTimeInMillis(), g); break; case TYPE_CLASS:"
+      },
+      {
+        "txt": "g.writeFieldName(((Class<?>)value).getName()); break; case TYPE_ENUM: { String str = provider.isEnabled(SerializationFeature.WRITE_ENUMS_USING_TO_STRING) ? value.toString() : ((Enum<?>) value).name(); g.writeFieldName(str); } break; case TYPE_TO_STRING:"
+      },
+      {
+        "txt": "default: g.writeFieldName(value.toString()); } } } public static class Dynamic extends StdSerializer<Object> { protected transient PropertySerializerMap _dynamicSerializers; public Dynamic() { super(String.class, false);"
+      },
+      {
+        "txt": "_dynamicSerializers = PropertySerializerMap.emptyForProperties(); } Object readResolve() { _dynamicSerializers = PropertySerializerMap.emptyForProperties(); return this; } @Override public void serialize(Object value, JsonGenerator g, SerializerProvider provider) throws IOException {"
+      },
+      {
+        "txt": "Class<?> cls = value.getClass(); PropertySerializerMap m = _dynamicSerializers; JsonSerializer<Object> ser = m.serializerFor(cls); if (ser == null) { ser = _findAndAddDynamic(m, cls, provider); } ser.serialize(value, g, provider); } protected JsonSerializer<Object> _findAndAddDynamic(PropertySerializerMap map, Class<?> type, SerializerProvider provider) throws JsonMappingException"
+      },
+      {
+        "txt": "{ PropertySerializerMap.SerializerAndMapResult result = map.findAndAddKeySerializer(type, provider, null); if (map != result.map) { _dynamicSerializers = result.map; } return result.serializer; } } public static class StringKeySerializer extends StdSerializer<Object>"
+      },
+      {
+        "txt": "public StringKeySerializer() { super(String.class, false); } @Override public void serialize(Object value, JsonGenerator g, SerializerProvider provider) throws IOException { g.writeFieldName((String) value); } } <extra_id_0> }"
+      }
+    ]
+  },
+  {
+    "id": 1565,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/ser/std/StdKeySerializers.java",
+    "start-bug-line": 217,
+    "end-bug-line": 217,
+    "bug": "",
+    "fix": "public static EnumKeySerializer construct(Class<?> enumType, EnumValues enumValues) { return new EnumKeySerializer(enumType, enumValues); }",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind.ser.std; import java.io.IOException; import java.util.Calendar; import java.util.Date; import com.fasterxml.jackson.core.*; import com.fasterxml.jackson.databind.*; import com.fasterxml.jackson.databind.ser.impl.PropertySerializerMap; @SuppressWarnings(\"serial\")"
+      },
+      {
+        "txt": "public class StdKeySerializers { protected final static JsonSerializer<Object> DEFAULT_KEY_SERIALIZER = new StdKeySerializer(); protected final static JsonSerializer<Object> DEFAULT_STRING_SERIALIZER = new StringKeySerializer(); private StdKeySerializers() { } public static JsonSerializer<Object> getStdKeySerializer(SerializationConfig config, Class<?> rawKeyType, boolean useDefault) { if ((rawKeyType == null) || (rawKeyType == Object.class)) { return new Dynamic();"
+      },
+      {
+        "txt": "} if (rawKeyType == String.class) { return DEFAULT_STRING_SERIALIZER; } if (rawKeyType.isPrimitive() || Number.class.isAssignableFrom(rawKeyType)) { return DEFAULT_KEY_SERIALIZER; } if (rawKeyType == Class.class) { return new Default(Default.TYPE_CLASS, rawKeyType); }"
+      },
+      {
+        "txt": "if (Date.class.isAssignableFrom(rawKeyType)) { return new Default(Default.TYPE_DATE, rawKeyType); } if (Calendar.class.isAssignableFrom(rawKeyType)) { return new Default(Default.TYPE_CALENDAR, rawKeyType); } if (rawKeyType == java.util.UUID.class) { return new Default(Default.TYPE_TO_STRING, rawKeyType); } return useDefault ? DEFAULT_KEY_SERIALIZER : null;"
+      },
+      {
+        "txt": "} @SuppressWarnings(\"unchecked\") public static JsonSerializer<Object> getFallbackKeySerializer(SerializationConfig config, Class<?> rawKeyType) { if (rawKeyType != null) { if (rawKeyType == Enum.class) { return new Dynamic(); } if (rawKeyType.isEnum()) {"
+      },
+      {
+        "txt": "return new Default(Default.TYPE_ENUM, rawKeyType); } } return DEFAULT_KEY_SERIALIZER; } @Deprecated public static JsonSerializer<Object> getDefault() { return DEFAULT_KEY_SERIALIZER; } public static class Default extends StdSerializer<Object> {"
+      },
+      {
+        "txt": "final static int TYPE_DATE = 1; final static int TYPE_CALENDAR = 2; final static int TYPE_CLASS = 3; final static int TYPE_ENUM = 4; final static int TYPE_TO_STRING = 5; protected final int _typeId; public Default(int typeId, Class<?> type) { super(type, false); _typeId = typeId; }"
+      },
+      {
+        "txt": "@Override public void serialize(Object value, JsonGenerator g, SerializerProvider provider) throws IOException { switch (_typeId) { case TYPE_DATE: provider.defaultSerializeDateKey((Date)value, g); break; case TYPE_CALENDAR: provider.defaultSerializeDateKey(((Calendar) value).getTimeInMillis(), g); break; case TYPE_CLASS:"
+      },
+      {
+        "txt": "g.writeFieldName(((Class<?>)value).getName()); break; case TYPE_ENUM: { String str = provider.isEnabled(SerializationFeature.WRITE_ENUMS_USING_TO_STRING) ? value.toString() : ((Enum<?>) value).name(); g.writeFieldName(str); } break; case TYPE_TO_STRING:"
+      },
+      {
+        "txt": "default: g.writeFieldName(value.toString()); } } } public static class Dynamic extends StdSerializer<Object> { protected transient PropertySerializerMap _dynamicSerializers; public Dynamic() { super(String.class, false);"
+      },
+      {
+        "txt": "_dynamicSerializers = PropertySerializerMap.emptyForProperties(); } Object readResolve() { _dynamicSerializers = PropertySerializerMap.emptyForProperties(); return this; } @Override public void serialize(Object value, JsonGenerator g, SerializerProvider provider) throws IOException {"
+      },
+      {
+        "txt": "Class<?> cls = value.getClass(); PropertySerializerMap m = _dynamicSerializers; JsonSerializer<Object> ser = m.serializerFor(cls); if (ser == null) { ser = _findAndAddDynamic(m, cls, provider); } ser.serialize(value, g, provider); } protected JsonSerializer<Object> _findAndAddDynamic(PropertySerializerMap map, Class<?> type, SerializerProvider provider) throws JsonMappingException"
+      },
+      {
+        "txt": "{ PropertySerializerMap.SerializerAndMapResult result = map.findAndAddKeySerializer(type, provider, null); if (map != result.map) { _dynamicSerializers = result.map; } return result.serializer; } } public static class StringKeySerializer extends StdSerializer<Object>"
+      },
+      {
+        "txt": "public StringKeySerializer() { super(String.class, false); } @Override public void serialize(Object value, JsonGenerator g, SerializerProvider provider) throws IOException { g.writeFieldName((String) value); } } <extra_id_0> }"
+      }
+    ]
+  },
+  {
+    "id": 1566,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/ser/std/StdKeySerializers.java",
+    "start-bug-line": 218,
+    "end-bug-line": 218,
+    "bug": "",
+    "fix": "@Override public void serialize(Object value, JsonGenerator g, SerializerProvider serializers) throws IOException { if (serializers.isEnabled(SerializationFeature.WRITE_ENUMS_USING_TO_STRING)) { g.writeFieldName(value.toString()); return; } Enum<?> en = (Enum<?>) value; g.writeFieldName(_values.serializedValueFor(en)); } }",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind.ser.std; import java.io.IOException; import java.util.Calendar; import java.util.Date; import com.fasterxml.jackson.core.*; import com.fasterxml.jackson.databind.*; import com.fasterxml.jackson.databind.ser.impl.PropertySerializerMap; @SuppressWarnings(\"serial\")"
+      },
+      {
+        "txt": "public class StdKeySerializers { protected final static JsonSerializer<Object> DEFAULT_KEY_SERIALIZER = new StdKeySerializer(); protected final static JsonSerializer<Object> DEFAULT_STRING_SERIALIZER = new StringKeySerializer(); private StdKeySerializers() { } public static JsonSerializer<Object> getStdKeySerializer(SerializationConfig config, Class<?> rawKeyType, boolean useDefault) { if ((rawKeyType == null) || (rawKeyType == Object.class)) { return new Dynamic();"
+      },
+      {
+        "txt": "} if (rawKeyType == String.class) { return DEFAULT_STRING_SERIALIZER; } if (rawKeyType.isPrimitive() || Number.class.isAssignableFrom(rawKeyType)) { return DEFAULT_KEY_SERIALIZER; } if (rawKeyType == Class.class) { return new Default(Default.TYPE_CLASS, rawKeyType); }"
+      },
+      {
+        "txt": "if (Date.class.isAssignableFrom(rawKeyType)) { return new Default(Default.TYPE_DATE, rawKeyType); } if (Calendar.class.isAssignableFrom(rawKeyType)) { return new Default(Default.TYPE_CALENDAR, rawKeyType); } if (rawKeyType == java.util.UUID.class) { return new Default(Default.TYPE_TO_STRING, rawKeyType); } return useDefault ? DEFAULT_KEY_SERIALIZER : null;"
+      },
+      {
+        "txt": "} @SuppressWarnings(\"unchecked\") public static JsonSerializer<Object> getFallbackKeySerializer(SerializationConfig config, Class<?> rawKeyType) { if (rawKeyType != null) { if (rawKeyType == Enum.class) { return new Dynamic(); } if (rawKeyType.isEnum()) {"
+      },
+      {
+        "txt": "return new Default(Default.TYPE_ENUM, rawKeyType); } } return DEFAULT_KEY_SERIALIZER; } @Deprecated public static JsonSerializer<Object> getDefault() { return DEFAULT_KEY_SERIALIZER; } public static class Default extends StdSerializer<Object> {"
+      },
+      {
+        "txt": "final static int TYPE_DATE = 1; final static int TYPE_CALENDAR = 2; final static int TYPE_CLASS = 3; final static int TYPE_ENUM = 4; final static int TYPE_TO_STRING = 5; protected final int _typeId; public Default(int typeId, Class<?> type) { super(type, false); _typeId = typeId; }"
+      },
+      {
+        "txt": "@Override public void serialize(Object value, JsonGenerator g, SerializerProvider provider) throws IOException { switch (_typeId) { case TYPE_DATE: provider.defaultSerializeDateKey((Date)value, g); break; case TYPE_CALENDAR: provider.defaultSerializeDateKey(((Calendar) value).getTimeInMillis(), g); break; case TYPE_CLASS:"
+      },
+      {
+        "txt": "g.writeFieldName(((Class<?>)value).getName()); break; case TYPE_ENUM: { String str = provider.isEnabled(SerializationFeature.WRITE_ENUMS_USING_TO_STRING) ? value.toString() : ((Enum<?>) value).name(); g.writeFieldName(str); } break; case TYPE_TO_STRING:"
+      },
+      {
+        "txt": "default: g.writeFieldName(value.toString()); } } } public static class Dynamic extends StdSerializer<Object> { protected transient PropertySerializerMap _dynamicSerializers; public Dynamic() { super(String.class, false);"
+      },
+      {
+        "txt": "_dynamicSerializers = PropertySerializerMap.emptyForProperties(); } Object readResolve() { _dynamicSerializers = PropertySerializerMap.emptyForProperties(); return this; } @Override public void serialize(Object value, JsonGenerator g, SerializerProvider provider) throws IOException {"
+      },
+      {
+        "txt": "Class<?> cls = value.getClass(); PropertySerializerMap m = _dynamicSerializers; JsonSerializer<Object> ser = m.serializerFor(cls); if (ser == null) { ser = _findAndAddDynamic(m, cls, provider); } ser.serialize(value, g, provider); } protected JsonSerializer<Object> _findAndAddDynamic(PropertySerializerMap map, Class<?> type, SerializerProvider provider) throws JsonMappingException"
+      },
+      {
+        "txt": "{ PropertySerializerMap.SerializerAndMapResult result = map.findAndAddKeySerializer(type, provider, null); if (map != result.map) { _dynamicSerializers = result.map; } return result.serializer; } } public static class StringKeySerializer extends StdSerializer<Object>"
+      },
+      {
+        "txt": "public StringKeySerializer() { super(String.class, false); } @Override public void serialize(Object value, JsonGenerator g, SerializerProvider provider) throws IOException { g.writeFieldName((String) value); } } <extra_id_0>"
+      }
+    ]
+  }
+]

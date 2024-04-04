@@ -1,0 +1,263 @@
+[
+  {
+    "id": 2002,
+    "file_path": "src/main/java/org/jsoup/Jsoup.java",
+    "start-bug-line": 250,
+    "end-bug-line": 250,
+    "bug": "return new Cleaner(whitelist).isValid(parseBodyFragment(bodyHtml, \"\"));",
+    "fix": "return new Cleaner(whitelist).isValidBodyHtml(bodyHtml);",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.jsoup; import org.jsoup.nodes.Document; import org.jsoup.parser.Parser; import org.jsoup.safety.Cleaner; import org.jsoup.safety.Whitelist; import org.jsoup.helper.DataUtil; import org.jsoup.helper.HttpConnection; import java.io.File;"
+      },
+      {
+        "txt": "import java.io.IOException; import java.io.InputStream; import java.net.URL; The core public access point to the jsoup functionality. @author Jonathan Hedley */ public class Jsoup { private Jsoup() {} Parse HTML into a Document. The parser will make a sensible, balanced document tree out of any HTML. @param html HTML to parse @param baseUri The URL where the HTML was retrieved from. Used to resolve relative URLs to absolute URLs, that occur"
+      },
+      {
+        "txt": "before the HTML declares a {@code <base href>} tag. @return sane HTML public static Document parse(String html, String baseUri) { return Parser.parse(html, baseUri); } Parse HTML into a Document, using the provided Parser. You can provide an alternate parser, such as a simple XML (non-HTML) parser. @param html HTML to parse @param baseUri The URL where the HTML was retrieved from. Used to resolve relative URLs to absolute URLs, that occur before the HTML declares a {@code <base href>} tag."
+      },
+      {
+        "txt": "@param parser alternate {@link Parser#xmlParser() parser} to use. @return sane HTML public static Document parse(String html, String baseUri, Parser parser) { return parser.parseInput(html, baseUri); } Parse HTML into a Document. As no base URI is specified, absolute URL detection relies on the HTML including a {@code <base href>} tag. @param html HTML to parse @return sane HTML @see #parse(String, String)"
+      },
+      {
+        "txt": "public static Document parse(String html) { return Parser.parse(html, \"\"); } public static Connection connect(String url) { return HttpConnection.connect(url); } Parse the contents of a file as HTML. @param in file to load HTML from @param charsetName (optional) character set of file contents. Set to {@code null} to determine from {@code http-equiv} meta tag, if present, or fall back to {@code UTF-8} (which is often safe to do)."
+      },
+      {
+        "txt": "@param baseUri The URL where the HTML was retrieved from, to resolve relative links against. @return sane HTML @throws IOException if the file could not be found, or read, or if the charsetName is invalid. public static Document parse(File in, String charsetName, String baseUri) throws IOException { return DataUtil.load(in, charsetName, baseUri); } Parse the contents of a file as HTML. The location of the file is used as the base URI to qualify relative URLs. @param in file to load HTML from @param charsetName (optional) character set of file contents. Set to {@code null} to determine from {@code http-equiv} meta tag, if present, or fall back to {@code UTF-8} (which is often safe to do)."
+      },
+      {
+        "txt": "@return sane HTML @throws IOException if the file could not be found, or read, or if the charsetName is invalid. @see #parse(File, String, String) public static Document parse(File in, String charsetName) throws IOException { return DataUtil.load(in, charsetName, in.getAbsolutePath()); } Read an input stream, and parse it to a Document. @param in input stream to read. Make sure to close it after parsing. @param charsetName (optional) character set of file contents. Set to {@code null} to determine from {@code http-equiv} meta tag, if present, or fall back to {@code UTF-8} (which is often safe to do)."
+      },
+      {
+        "txt": "@param baseUri The URL where the HTML was retrieved from, to resolve relative links against. @return sane HTML @throws IOException if the file could not be found, or read, or if the charsetName is invalid. public static Document parse(InputStream in, String charsetName, String baseUri) throws IOException { return DataUtil.load(in, charsetName, baseUri); } Read an input stream, and parse it to a Document. You can provide an alternate parser, such as a simple XML (non-HTML) parser. @param in input stream to read. Make sure to close it after parsing. @param charsetName (optional) character set of file contents. Set to {@code null} to determine from {@code http-equiv} meta tag, if"
+      },
+      {
+        "txt": "present, or fall back to {@code UTF-8} (which is often safe to do). @param baseUri The URL where the HTML was retrieved from, to resolve relative links against. @param parser alternate {@link Parser#xmlParser() parser} to use. @return sane HTML @throws IOException if the file could not be found, or read, or if the charsetName is invalid. public static Document parse(InputStream in, String charsetName, String baseUri, Parser parser) throws IOException { return DataUtil.load(in, charsetName, baseUri, parser); } Parse a fragment of HTML, with the assumption that it forms the {@code body} of the HTML. @param bodyHtml body HTML fragment"
+      },
+      {
+        "txt": "@param baseUri URL to resolve relative URLs against. @return sane HTML document @see Document#body() public static Document parseBodyFragment(String bodyHtml, String baseUri) { return Parser.parseBodyFragment(bodyHtml, baseUri); } Parse a fragment of HTML, with the assumption that it forms the {@code body} of the HTML. @param bodyHtml body HTML fragment @return sane HTML document @see Document#body()"
+      },
+      {
+        "txt": "public static Document parseBodyFragment(String bodyHtml) { return Parser.parseBodyFragment(bodyHtml, \"\"); } Fetch a URL, and parse it as HTML. Provided for compatibility; in most cases use {@link #connect(String)} instead. <p> The encoding character set is determined by the content-type header or http-equiv meta tag, or falls back to {@code UTF-8}. @param url URL to fetch (with a GET). The protocol must be {@code http} or {@code https}. @param timeoutMillis Connection and read timeout, in milliseconds. If exceeded, IOException is thrown. @return The parsed HTML. @throws java.net.MalformedURLException if the request URL is not a HTTP or HTTPS URL, or is otherwise malformed"
+      },
+      {
+        "txt": "@throws HttpStatusException if the response is not OK and HTTP response errors are not ignored @throws UnsupportedMimeTypeException if the response mime type is not supported and those errors are not ignored @throws java.net.SocketTimeoutException if the connection times out @throws IOException if a connection or read error occurs @see #connect(String) public static Document parse(URL url, int timeoutMillis) throws IOException { Connection con = HttpConnection.connect(url); con.timeout(timeoutMillis); return con.get(); }"
+      },
+      {
+        "txt": "Get safe HTML from untrusted input HTML, by parsing input HTML and filtering it through a white-list of permitted tags and attributes. @param bodyHtml input untrusted HTML (body fragment) @param baseUri URL to resolve relative URLs against @param whitelist white-list of permitted HTML elements @return safe HTML (body fragment) @see Cleaner#clean(Document) public static String clean(String bodyHtml, String baseUri, Whitelist whitelist) { Document dirty = parseBodyFragment(bodyHtml, baseUri); Cleaner cleaner = new Cleaner(whitelist);"
+      },
+      {
+        "txt": "Document clean = cleaner.clean(dirty); return clean.body().html(); } Get safe HTML from untrusted input HTML, by parsing input HTML and filtering it through a white-list of permitted tags and attributes. @param bodyHtml input untrusted HTML (body fragment) @param whitelist white-list of permitted HTML elements @return safe HTML (body fragment) @see Cleaner#clean(Document) public static String clean(String bodyHtml, Whitelist whitelist) {"
+      },
+      {
+        "txt": "return clean(bodyHtml, \"\", whitelist); } public static String clean(String bodyHtml, String baseUri, Whitelist whitelist, Document.OutputSettings outputSettings) { Document dirty = parseBodyFragment(bodyHtml, baseUri); Cleaner cleaner = new Cleaner(whitelist); Document clean = cleaner.clean(dirty); clean.outputSettings(outputSettings); return clean.body().html(); } Test if the input body HTML has only tags and attributes allowed by the Whitelist. Useful for form validation."
+      },
+      {
+        "txt": "<p>Assumes the HTML is a body fragment (i.e. will be used in an existing HTML document body.) @param bodyHtml HTML to test @param whitelist whitelist to test against @return true if no tags or attributes were removed; false otherwise @see #clean(String, org.jsoup.safety.Whitelist) public static boolean isValid(String bodyHtml, Whitelist whitelist) { <extra_id_0> } }"
+      }
+    ]
+  },
+  {
+    "id": 2003,
+    "file_path": "src/main/java/org/jsoup/parser/Parser.java",
+    "start-bug-line": 129,
+    "end-bug-line": 129,
+    "bug": "",
+    "fix": "public static List<Node> parseFragment(String fragmentHtml, Element context, String baseUri, ParseErrorList errorList) { HtmlTreeBuilder treeBuilder = new HtmlTreeBuilder(); return treeBuilder.parseFragment(fragmentHtml, context, baseUri, errorList, treeBuilder.defaultSettings()); }",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.jsoup.parser; import org.jsoup.nodes.Document; import org.jsoup.nodes.Element; import org.jsoup.nodes.Node;"
+      },
+      {
+        "txt": "import java.util.List; public class Parser { private static final int DEFAULT_MAX_ERRORS = 0; // by default, error tracking is disabled. private TreeBuilder treeBuilder; private int maxErrors = DEFAULT_MAX_ERRORS; private ParseErrorList errors; private ParseSettings settings; public Parser(TreeBuilder treeBuilder) { this.treeBuilder = treeBuilder; settings = treeBuilder.defaultSettings();"
+      },
+      {
+        "txt": "} public Document parseInput(String html, String baseUri) { errors = isTrackErrors() ? ParseErrorList.tracking(maxErrors) : ParseErrorList.noTracking(); return treeBuilder.parse(html, baseUri, errors, settings); } public TreeBuilder getTreeBuilder() { return treeBuilder; } public Parser setTreeBuilder(TreeBuilder treeBuilder) { this.treeBuilder = treeBuilder;"
+      },
+      {
+        "txt": "return this; } public boolean isTrackErrors() { return maxErrors > 0; } public Parser setTrackErrors(int maxErrors) { this.maxErrors = maxErrors; return this; } public List<ParseError> getErrors() {"
+      },
+      {
+        "txt": "return errors; } public Parser settings(ParseSettings settings) { this.settings = settings; return this; } public ParseSettings settings() { return settings; } public static Document parse(String html, String baseUri) {"
+      },
+      {
+        "txt": "return treeBuilder.parse(html, baseUri, ParseErrorList.noTracking(), treeBuilder.defaultSettings()); } public static List<Node> parseFragment(String fragmentHtml, Element context, String baseUri) { HtmlTreeBuilder treeBuilder = new HtmlTreeBuilder(); return treeBuilder.parseFragment(fragmentHtml, context, baseUri, ParseErrorList.noTracking(), treeBuilder.defaultSettings()); } <extra_id_0> public static List<Node> parseXmlFragment(String fragmentXml, String baseUri) { XmlTreeBuilder treeBuilder = new XmlTreeBuilder(); return treeBuilder.parseFragment(fragmentXml, baseUri, ParseErrorList.noTracking(), treeBuilder.defaultSettings()); } public static Document parseBodyFragment(String bodyHtml, String baseUri) { Document doc = Document.createShell(baseUri);"
+      },
+      {
+        "txt": "public static Document parseBodyFragment(String bodyHtml, String baseUri) { Document doc = Document.createShell(baseUri); Element body = doc.body(); List<Node> nodeList = parseFragment(bodyHtml, body, baseUri); Node[] nodes = nodeList.toArray(new Node[nodeList.size()]); // the node list gets modified when re-parented for (int i = nodes.length - 1; i > 0; i--) { nodes[i].remove(); } for (Node node : nodes) { body.appendChild(node);"
+      },
+      {
+        "txt": "} return doc; } public static String unescapeEntities(String string, boolean inAttribute) { Tokeniser tokeniser = new Tokeniser(new CharacterReader(string), ParseErrorList.noTracking()); return tokeniser.unescapeEntities(inAttribute); } public static Document parseBodyFragmentRelaxed(String bodyHtml, String baseUri) { return parse(bodyHtml, baseUri); }"
+      },
+      {
+        "txt": "public static Parser htmlParser() { return new Parser(new HtmlTreeBuilder()); } public static Parser xmlParser() { return new Parser(new XmlTreeBuilder()); }"
+      }
+    ]
+  },
+  {
+    "id": 2004,
+    "file_path": "src/main/java/org/jsoup/safety/Cleaner.java",
+    "start-bug-line": 17,
+    "end-bug-line": 17,
+    "bug": "",
+    "fix": "import java.util.List;",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.jsoup.safety; import org.jsoup.helper.Validate; import org.jsoup.nodes.Attribute; import org.jsoup.nodes.Attributes; import org.jsoup.nodes.DataNode; import org.jsoup.nodes.Document; import org.jsoup.nodes.Element;"
+      },
+      {
+        "txt": "import org.jsoup.nodes.TextNode; import org.jsoup.parser.ParseErrorList; import org.jsoup.parser.Parser; import org.jsoup.parser.Tag; import org.jsoup.select.NodeTraversor; import org.jsoup.select.NodeVisitor; <extra_id_0> The whitelist based HTML cleaner. Use to ensure that end-user provided HTML contains only the elements and attributes that you are expecting; no junk, and no cross-site scripting attacks! <p> The HTML cleaner parses the input as HTML and then runs it through a white-list, so the output HTML can only contain HTML that is allowed by the whitelist. </p>"
+      },
+      {
+        "txt": "HTML that is allowed by the whitelist. </p> <p> It is assumed that the input HTML is a body fragment; the clean methods only pull from the source's body, and the canned white-lists only allow body contained tags. </p> <p> Rather than interacting directly with a Cleaner object, generally see the {@code clean} methods in {@link org.jsoup.Jsoup}. </p> public class Cleaner {"
+      },
+      {
+        "txt": "private Whitelist whitelist; Create a new cleaner, that sanitizes documents using the supplied whitelist. @param whitelist white-list to clean with public Cleaner(Whitelist whitelist) { Validate.notNull(whitelist); this.whitelist = whitelist; } Creates a new, clean document, from the original dirty document, containing only elements allowed by the whitelist. The original document is not modified. Only elements from the dirt document's <code>body</code> are used. @param dirtyDocument Untrusted base document to clean."
+      },
+      {
+        "txt": "@return cleaned document. public Document clean(Document dirtyDocument) { Validate.notNull(dirtyDocument); Document clean = Document.createShell(dirtyDocument.baseUri()); if (dirtyDocument.body() != null) // frameset documents won't have a body. the clean doc will have empty body. copySafeNodes(dirtyDocument.body(), clean.body()); return clean; } Determines if the input document <b>body</b>is valid, against the whitelist. It is considered valid if all the tags and attributes in the input HTML are allowed by the whitelist, and that there is no content in the <code>head</code>."
+      },
+      {
+        "txt": "<p> This method can be used as a validator for user input. An invalid document will still be cleaned successfully using the {@link #clean(Document)} document. If using as a validator, it is recommended to still clean the document to ensure enforced attributes are set correctly, and that the output is tidied. </p> @param dirtyDocument document to test @return true if no tags or attributes need to be removed; false if they do public boolean isValid(Document dirtyDocument) { Validate.notNull(dirtyDocument); Document clean = Document.createShell(dirtyDocument.baseUri());"
+      },
+      {
+        "txt": "int numDiscarded = copySafeNodes(dirtyDocument.body(), clean.body()); return numDiscarded == 0; } Iterates the input and copies trusted nodes (tags, attributes, text) into the destination. private final class CleaningVisitor implements NodeVisitor { private int numDiscarded = 0; private final Element root; private Element destination; // current element to append nodes to private CleaningVisitor(Element root, Element destination) { this.root = root;"
+      },
+      {
+        "txt": "this.destination = destination; } public void head(Node source, int depth) { if (source instanceof Element) { Element sourceEl = (Element) source; if (whitelist.isSafeTag(sourceEl.tagName())) { // safe, clone and copy safe attrs ElementMeta meta = createSafeElement(sourceEl); Element destChild = meta.el; destination.appendChild(destChild); numDiscarded += meta.numAttribsDiscarded;"
+      },
+      {
+        "txt": "destination = destChild; } else if (source != root) { // not a safe tag, so don't add. don't count root against discarded. numDiscarded++; } } else if (source instanceof TextNode) { TextNode sourceText = (TextNode) source; TextNode destText = new TextNode(sourceText.getWholeText(), source.baseUri()); destination.appendChild(destText); } else if (source instanceof DataNode && whitelist.isSafeTag(source.parent().nodeName())) { DataNode sourceData = (DataNode) source;"
+      },
+      {
+        "txt": "DataNode destData = new DataNode(sourceData.getWholeData(), source.baseUri()); destination.appendChild(destData); } else { // else, we don't care about comments, xml proc instructions, etc numDiscarded++; } } public void tail(Node source, int depth) { if (source instanceof Element && whitelist.isSafeTag(source.nodeName())) { destination = destination.parent(); // would have descended, so pop destination stack }"
+      },
+      {
+        "txt": "} } private int copySafeNodes(Element source, Element dest) { CleaningVisitor cleaningVisitor = new CleaningVisitor(source, dest); NodeTraversor traversor = new NodeTraversor(cleaningVisitor); traversor.traverse(source); return cleaningVisitor.numDiscarded; } private ElementMeta createSafeElement(Element sourceEl) { String sourceTag = sourceEl.tagName();"
+      },
+      {
+        "txt": "Attributes destAttrs = new Attributes(); Element dest = new Element(Tag.valueOf(sourceTag), sourceEl.baseUri(), destAttrs); int numDiscarded = 0; Attributes sourceAttrs = sourceEl.attributes(); for (Attribute sourceAttr : sourceAttrs) { if (whitelist.isSafeAttribute(sourceTag, sourceEl, sourceAttr)) destAttrs.put(sourceAttr); else numDiscarded++; }"
+      },
+      {
+        "txt": "Attributes enforcedAttrs = whitelist.getEnforcedAttributes(sourceTag); destAttrs.addAll(enforcedAttrs); return new ElementMeta(dest, numDiscarded); } private static class ElementMeta { Element el; int numAttribsDiscarded; ElementMeta(Element el, int numAttribsDiscarded) { this.el = el; this.numAttribsDiscarded = numAttribsDiscarded;"
+      },
+      {
+        "txt": "} }"
+      }
+    ]
+  },
+  {
+    "id": 2005,
+    "file_path": "src/main/java/org/jsoup/safety/Cleaner.java",
+    "start-bug-line": 78,
+    "end-bug-line": 78,
+    "bug": "return numDiscarded == 0;",
+    "fix": "return numDiscarded == 0 && dirtyDocument.head().childNodes().size() == 0; // because we only look at the body, but we start from a shell, make sure there's nothing in the head",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.jsoup.safety; import org.jsoup.helper.Validate;"
+      },
+      {
+        "txt": "import org.jsoup.nodes.Attribute; import org.jsoup.nodes.Attributes; import org.jsoup.nodes.DataNode; import org.jsoup.nodes.Document; import org.jsoup.nodes.Element; import org.jsoup.nodes.Node; import org.jsoup.nodes.TextNode; import org.jsoup.parser.ParseErrorList; import org.jsoup.parser.Parser; import org.jsoup.parser.Tag;"
+      },
+      {
+        "txt": "import org.jsoup.select.NodeTraversor; import org.jsoup.select.NodeVisitor; The whitelist based HTML cleaner. Use to ensure that end-user provided HTML contains only the elements and attributes that you are expecting; no junk, and no cross-site scripting attacks! <p> The HTML cleaner parses the input as HTML and then runs it through a white-list, so the output HTML can only contain HTML that is allowed by the whitelist. </p> <p> It is assumed that the input HTML is a body fragment; the clean methods only pull from the source's body, and the"
+      },
+      {
+        "txt": "canned white-lists only allow body contained tags. </p> <p> Rather than interacting directly with a Cleaner object, generally see the {@code clean} methods in {@link org.jsoup.Jsoup}. </p> public class Cleaner { private Whitelist whitelist; Create a new cleaner, that sanitizes documents using the supplied whitelist. @param whitelist white-list to clean with public Cleaner(Whitelist whitelist) {"
+      },
+      {
+        "txt": "Validate.notNull(whitelist); this.whitelist = whitelist; } Creates a new, clean document, from the original dirty document, containing only elements allowed by the whitelist. The original document is not modified. Only elements from the dirt document's <code>body</code> are used. @param dirtyDocument Untrusted base document to clean. @return cleaned document. public Document clean(Document dirtyDocument) { Validate.notNull(dirtyDocument); Document clean = Document.createShell(dirtyDocument.baseUri());"
+      },
+      {
+        "txt": "if (dirtyDocument.body() != null) // frameset documents won't have a body. the clean doc will have empty body. copySafeNodes(dirtyDocument.body(), clean.body()); return clean; } Determines if the input document <b>body</b>is valid, against the whitelist. It is considered valid if all the tags and attributes in the input HTML are allowed by the whitelist, and that there is no content in the <code>head</code>. <p> This method can be used as a validator for user input. An invalid document will still be cleaned successfully using the {@link #clean(Document)} document. If using as a validator, it is recommended to still clean the document to ensure enforced attributes are set correctly, and that the output is tidied."
+      },
+      {
+        "txt": "@param dirtyDocument document to test @return true if no tags or attributes need to be removed; false if they do public boolean isValid(Document dirtyDocument) { Validate.notNull(dirtyDocument); Document clean = Document.createShell(dirtyDocument.baseUri()); int numDiscarded = copySafeNodes(dirtyDocument.body(), clean.body()); <extra_id_0> } Iterates the input and copies trusted nodes (tags, attributes, text) into the destination. private final class CleaningVisitor implements NodeVisitor { private int numDiscarded = 0; private final Element root; private Element destination; // current element to append nodes to"
+      },
+      {
+        "txt": "private final Element root; private Element destination; // current element to append nodes to private CleaningVisitor(Element root, Element destination) { this.root = root; this.destination = destination; } public void head(Node source, int depth) { if (source instanceof Element) { Element sourceEl = (Element) source; if (whitelist.isSafeTag(sourceEl.tagName())) { // safe, clone and copy safe attrs"
+      },
+      {
+        "txt": "ElementMeta meta = createSafeElement(sourceEl); Element destChild = meta.el; destination.appendChild(destChild); numDiscarded += meta.numAttribsDiscarded; destination = destChild; } else if (source != root) { // not a safe tag, so don't add. don't count root against discarded. numDiscarded++; } } else if (source instanceof TextNode) { TextNode sourceText = (TextNode) source;"
+      },
+      {
+        "txt": "TextNode destText = new TextNode(sourceText.getWholeText(), source.baseUri()); destination.appendChild(destText); } else if (source instanceof DataNode && whitelist.isSafeTag(source.parent().nodeName())) { DataNode sourceData = (DataNode) source; DataNode destData = new DataNode(sourceData.getWholeData(), source.baseUri()); destination.appendChild(destData); } else { // else, we don't care about comments, xml proc instructions, etc numDiscarded++; } }"
+      },
+      {
+        "txt": "public void tail(Node source, int depth) { if (source instanceof Element && whitelist.isSafeTag(source.nodeName())) { destination = destination.parent(); // would have descended, so pop destination stack } } } private int copySafeNodes(Element source, Element dest) { CleaningVisitor cleaningVisitor = new CleaningVisitor(source, dest); NodeTraversor traversor = new NodeTraversor(cleaningVisitor); traversor.traverse(source);"
+      },
+      {
+        "txt": "return cleaningVisitor.numDiscarded; } private ElementMeta createSafeElement(Element sourceEl) { String sourceTag = sourceEl.tagName(); Attributes destAttrs = new Attributes(); Element dest = new Element(Tag.valueOf(sourceTag), sourceEl.baseUri(), destAttrs); int numDiscarded = 0; Attributes sourceAttrs = sourceEl.attributes(); for (Attribute sourceAttr : sourceAttrs) { if (whitelist.isSafeAttribute(sourceTag, sourceEl, sourceAttr))"
+      },
+      {
+        "txt": "destAttrs.put(sourceAttr); else numDiscarded++; } Attributes enforcedAttrs = whitelist.getEnforcedAttributes(sourceTag); destAttrs.addAll(enforcedAttrs); return new ElementMeta(dest, numDiscarded); } private static class ElementMeta { Element el;"
+      },
+      {
+        "txt": "int numAttribsDiscarded; ElementMeta(Element el, int numAttribsDiscarded) { this.el = el; this.numAttribsDiscarded = numAttribsDiscarded; } }"
+      }
+    ]
+  },
+  {
+    "id": 2006,
+    "file_path": "src/main/java/org/jsoup/safety/Cleaner.java",
+    "start-bug-line": 81,
+    "end-bug-line": 81,
+    "bug": "",
+    "fix": "public boolean isValidBodyHtml(String bodyHtml) { Document clean = Document.createShell(\"\"); Document dirty = Document.createShell(\"\"); ParseErrorList errorList = ParseErrorList.tracking(1); List<Node> nodes = Parser.parseFragment(bodyHtml, dirty.body(), \"\", errorList); dirty.body().insertChildren(0, nodes); int numDiscarded = copySafeNodes(dirty.body(), clean.body()); return numDiscarded == 0 && errorList.size() == 0; }",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.jsoup.safety; import org.jsoup.helper.Validate; import org.jsoup.nodes.Attribute; import org.jsoup.nodes.Attributes;"
+      },
+      {
+        "txt": "import org.jsoup.nodes.DataNode; import org.jsoup.nodes.Document; import org.jsoup.nodes.Element; import org.jsoup.nodes.Node; import org.jsoup.nodes.TextNode; import org.jsoup.parser.ParseErrorList; import org.jsoup.parser.Parser; import org.jsoup.parser.Tag; import org.jsoup.select.NodeTraversor; import org.jsoup.select.NodeVisitor;"
+      },
+      {
+        "txt": "The whitelist based HTML cleaner. Use to ensure that end-user provided HTML contains only the elements and attributes that you are expecting; no junk, and no cross-site scripting attacks! <p> The HTML cleaner parses the input as HTML and then runs it through a white-list, so the output HTML can only contain HTML that is allowed by the whitelist. </p> <p> It is assumed that the input HTML is a body fragment; the clean methods only pull from the source's body, and the canned white-lists only allow body contained tags. </p>"
+      },
+      {
+        "txt": "<p> Rather than interacting directly with a Cleaner object, generally see the {@code clean} methods in {@link org.jsoup.Jsoup}. </p> public class Cleaner { private Whitelist whitelist; Create a new cleaner, that sanitizes documents using the supplied whitelist. @param whitelist white-list to clean with public Cleaner(Whitelist whitelist) { Validate.notNull(whitelist); this.whitelist = whitelist;"
+      },
+      {
+        "txt": "} Creates a new, clean document, from the original dirty document, containing only elements allowed by the whitelist. The original document is not modified. Only elements from the dirt document's <code>body</code> are used. @param dirtyDocument Untrusted base document to clean. @return cleaned document. public Document clean(Document dirtyDocument) { Validate.notNull(dirtyDocument); Document clean = Document.createShell(dirtyDocument.baseUri()); if (dirtyDocument.body() != null) // frameset documents won't have a body. the clean doc will have empty body. copySafeNodes(dirtyDocument.body(), clean.body());"
+      },
+      {
+        "txt": "return clean; } Determines if the input document <b>body</b>is valid, against the whitelist. It is considered valid if all the tags and attributes in the input HTML are allowed by the whitelist, and that there is no content in the <code>head</code>. <p> This method can be used as a validator for user input. An invalid document will still be cleaned successfully using the {@link #clean(Document)} document. If using as a validator, it is recommended to still clean the document to ensure enforced attributes are set correctly, and that the output is tidied. </p> @param dirtyDocument document to test"
+      },
+      {
+        "txt": "public boolean isValid(Document dirtyDocument) { Validate.notNull(dirtyDocument); Document clean = Document.createShell(dirtyDocument.baseUri()); int numDiscarded = copySafeNodes(dirtyDocument.body(), clean.body()); return numDiscarded == 0; } <extra_id_0> Iterates the input and copies trusted nodes (tags, attributes, text) into the destination. private final class CleaningVisitor implements NodeVisitor { private int numDiscarded = 0; private final Element root; private Element destination; // current element to append nodes to private CleaningVisitor(Element root, Element destination) {"
+      },
+      {
+        "txt": "private Element destination; // current element to append nodes to private CleaningVisitor(Element root, Element destination) { this.root = root; this.destination = destination; } public void head(Node source, int depth) { if (source instanceof Element) { Element sourceEl = (Element) source; if (whitelist.isSafeTag(sourceEl.tagName())) { // safe, clone and copy safe attrs ElementMeta meta = createSafeElement(sourceEl);"
+      },
+      {
+        "txt": "Element destChild = meta.el; destination.appendChild(destChild); numDiscarded += meta.numAttribsDiscarded; destination = destChild; } else if (source != root) { // not a safe tag, so don't add. don't count root against discarded. numDiscarded++; } } else if (source instanceof TextNode) { TextNode sourceText = (TextNode) source; TextNode destText = new TextNode(sourceText.getWholeText(), source.baseUri());"
+      },
+      {
+        "txt": "destination.appendChild(destText); } else if (source instanceof DataNode && whitelist.isSafeTag(source.parent().nodeName())) { DataNode sourceData = (DataNode) source; DataNode destData = new DataNode(sourceData.getWholeData(), source.baseUri()); destination.appendChild(destData); } else { // else, we don't care about comments, xml proc instructions, etc numDiscarded++; } } public void tail(Node source, int depth) {"
+      },
+      {
+        "txt": "if (source instanceof Element && whitelist.isSafeTag(source.nodeName())) { destination = destination.parent(); // would have descended, so pop destination stack } } } private int copySafeNodes(Element source, Element dest) { CleaningVisitor cleaningVisitor = new CleaningVisitor(source, dest); NodeTraversor traversor = new NodeTraversor(cleaningVisitor); traversor.traverse(source); return cleaningVisitor.numDiscarded;"
+      },
+      {
+        "txt": "} private ElementMeta createSafeElement(Element sourceEl) { String sourceTag = sourceEl.tagName(); Attributes destAttrs = new Attributes(); Element dest = new Element(Tag.valueOf(sourceTag), sourceEl.baseUri(), destAttrs); int numDiscarded = 0; Attributes sourceAttrs = sourceEl.attributes(); for (Attribute sourceAttr : sourceAttrs) { if (whitelist.isSafeAttribute(sourceTag, sourceEl, sourceAttr)) destAttrs.put(sourceAttr);"
+      },
+      {
+        "txt": "else numDiscarded++; } Attributes enforcedAttrs = whitelist.getEnforcedAttributes(sourceTag); destAttrs.addAll(enforcedAttrs); return new ElementMeta(dest, numDiscarded); } private static class ElementMeta { Element el; int numAttribsDiscarded;"
+      },
+      {
+        "txt": "ElementMeta(Element el, int numAttribsDiscarded) { this.el = el; this.numAttribsDiscarded = numAttribsDiscarded; } }"
+      }
+    ]
+  }
+]

@@ -1,0 +1,911 @@
+[
+  {
+    "id": 2147,
+    "file_path": "src/main/java/org/jsoup/nodes/Attributes.java",
+    "start-bug-line": 6,
+    "end-bug-line": 6,
+    "bug": "",
+    "fix": "import org.jsoup.parser.ParseSettings;",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.jsoup.nodes; import org.jsoup.SerializationException; import org.jsoup.helper.Validate; import org.jsoup.internal.StringUtil; <extra_id_0> import java.io.IOException; import java.util.AbstractMap; import java.util.AbstractSet; import java.util.ArrayList; import java.util.Arrays; import java.util.Collections;"
+      },
+      {
+        "txt": "import java.util.Arrays; import java.util.Collections; import java.util.Iterator; import java.util.List; import java.util.Map; import java.util.Set; import static org.jsoup.internal.Normalizer.lowerCase; public class Attributes implements Iterable<Attribute>, Cloneable { protected static final String dataPrefix = \"data-\"; private static final int InitialCapacity = 4; // todo - analyze Alexa 1MM sites, determine best setting"
+      },
+      {
+        "txt": "private static final int GrowthFactor = 2; private static final String[] Empty = {}; static final int NotFound = -1; private static final String EmptyString = \"\"; private int size = 0; // number of slots used (not capacity, which is keys.length String[] keys = Empty; String[] vals = Empty; private void checkCapacity(int minNewSize) { Validate.isTrue(minNewSize >= size); int curSize = keys.length;"
+      },
+      {
+        "txt": "if (curSize >= minNewSize) return; int newSize = curSize >= InitialCapacity ? size * GrowthFactor : InitialCapacity; if (minNewSize > newSize) newSize = minNewSize; keys = copyOf(keys, newSize); vals = copyOf(vals, newSize); } private static String[] copyOf(String[] orig, int size) { final String[] copy = new String[size];"
+      },
+      {
+        "txt": "System.arraycopy(orig, 0, copy, 0, Math.min(orig.length, size)); return copy; } int indexOfKey(String key) { Validate.notNull(key); for (int i = 0; i < size; i++) { if (key.equals(keys[i])) return i; }"
+      },
+      {
+        "txt": "return NotFound; } private int indexOfKeyIgnoreCase(String key) { Validate.notNull(key); for (int i = 0; i < size; i++) { if (key.equalsIgnoreCase(keys[i])) return i; } return NotFound; }"
+      },
+      {
+        "txt": "static String checkNotNull(String val) { return val == null ? EmptyString : val; } Get an attribute value by key. @param key the (case-sensitive) attribute key @return the attribute value if set; or empty string if not set (or a boolean attribute). @see #hasKey(String) public String get(String key) { int i = indexOfKey(key); return i == NotFound ? EmptyString : checkNotNull(vals[i]);"
+      },
+      {
+        "txt": "} public String getIgnoreCase(String key) { int i = indexOfKeyIgnoreCase(key); return i == NotFound ? EmptyString : checkNotNull(vals[i]); } private void add(String key, String value) { checkCapacity(size + 1); keys[size] = key; vals[size] = value; size++;"
+      },
+      {
+        "txt": "} public Attributes put(String key, String value) { int i = indexOfKey(key); if (i != NotFound) vals[i] = value; else add(key, value); return this; } void putIgnoreCase(String key, String value) {"
+      },
+      {
+        "txt": "int i = indexOfKeyIgnoreCase(key); if (i != NotFound) { vals[i] = value; if (!keys[i].equals(key)) // case changed, update keys[i] = key; } else add(key, value); } public Attributes put(String key, boolean value) {"
+      },
+      {
+        "txt": "if (value) putIgnoreCase(key, null); else remove(key); return this; } Set a new attribute, or replace an existing one by key. @param attribute attribute with case sensitive key @return these attributes, for chaining public Attributes put(Attribute attribute) {"
+      },
+      {
+        "txt": "Validate.notNull(attribute); put(attribute.getKey(), attribute.getValue()); attribute.parent = this; return this; } private void remove(int index) { Validate.isFalse(index >= size); int shifted = size - index - 1; if (shifted > 0) { System.arraycopy(keys, index + 1, keys, index, shifted);"
+      },
+      {
+        "txt": "System.arraycopy(vals, index + 1, vals, index, shifted); } size--; keys[size] = null; // release hold vals[size] = null; } Remove an attribute by key. <b>Case sensitive.</b> @param key attribute key to remove public void remove(String key) { int i = indexOfKey(key);"
+      },
+      {
+        "txt": "if (i != NotFound) remove(i); } Remove an attribute by key. <b>Case insensitive.</b> @param key attribute key to remove public void removeIgnoreCase(String key) { int i = indexOfKeyIgnoreCase(key); if (i != NotFound) remove(i); }"
+      },
+      {
+        "txt": "Tests if these attributes contain an attribute with this key. @param key case-sensitive key to check for @return true if key exists, false otherwise public boolean hasKey(String key) { return indexOfKey(key) != NotFound; } Tests if these attributes contain an attribute with this key. @param key key to check for @return true if key exists, false otherwise public boolean hasKeyIgnoreCase(String key) {"
+      },
+      {
+        "txt": "return indexOfKeyIgnoreCase(key) != NotFound; } Get the number of attributes in this set. @return size public int size() { return size; } Add all the attributes from the incoming set to this set. @param incoming attributes to add to these attributes. public void addAll(Attributes incoming) {"
+      },
+      {
+        "txt": "if (incoming.size() == 0) return; checkCapacity(size + incoming.size); for (Attribute attr : incoming) { put(attr); } } public Iterator<Attribute> iterator() { return new Iterator<Attribute>() { int i = 0;"
+      },
+      {
+        "txt": "@Override public boolean hasNext() { return i < size; } @Override public Attribute next() { final Attribute attr = new Attribute(keys[i], vals[i], Attributes.this); i++; return attr; }"
+      },
+      {
+        "txt": "@Override public void remove() { Attributes.this.remove(--i); // next() advanced, so rewind } }; } Get the attributes as a List, for iteration. @return an view of the attributes as an unmodifialbe List. public List<Attribute> asList() { ArrayList<Attribute> list = new ArrayList<>(size);"
+      },
+      {
+        "txt": "for (int i = 0; i < size; i++) { Attribute attr = vals[i] == null ? new BooleanAttribute(keys[i]) : // deprecated class, but maybe someone still wants it new Attribute(keys[i], vals[i], Attributes.this); list.add(attr); } return Collections.unmodifiableList(list); } public Map<String, String> dataset() { return new Dataset(this);"
+      },
+      {
+        "txt": "} Get the HTML representation of these attributes. @return HTML @throws SerializationException if the HTML representation of the attributes cannot be constructed. public String html() { StringBuilder sb = StringUtil.borrowBuilder(); try { html(sb, (new Document(\"\")).outputSettings()); // output settings a bit funky, but this html() seldom used } catch (IOException e) { // ought never happen throw new SerializationException(e);"
+      },
+      {
+        "txt": "} return StringUtil.releaseBuilder(sb); } final void html(final Appendable accum, final Document.OutputSettings out) throws IOException { final int sz = size; for (int i = 0; i < sz; i++) { final String key = keys[i]; final String val = vals[i]; accum.append(' ').append(key); if (!Attribute.shouldCollapseAttribute(key, val, out)) {"
+      },
+      {
+        "txt": "accum.append(\"=\\\"\"); Entities.escape(accum, val == null ? EmptyString : val, out, true, false, false); accum.append('\"'); } } } @Override public String toString() { return html(); }"
+      },
+      {
+        "txt": "@Override public boolean equals(Object o) { if (this == o) return true; if (o == null || getClass() != o.getClass()) return false; Attributes that = (Attributes) o; if (size != that.size) return false; if (!Arrays.equals(keys, that.keys)) return false; return Arrays.equals(vals, that.vals); } @Override"
+      },
+      {
+        "txt": "public int hashCode() { int result = size; result = 31 * result + Arrays.hashCode(keys); result = 31 * result + Arrays.hashCode(vals); return result; } @Override public Attributes clone() { Attributes clone; try {"
+      },
+      {
+        "txt": "clone = (Attributes) super.clone(); } catch (CloneNotSupportedException e) { throw new RuntimeException(e); } clone.size = size; keys = copyOf(keys, size); vals = copyOf(vals, size); return clone; } public void normalize() {"
+      },
+      {
+        "txt": "for (int i = 0; i < size; i++) { keys[i] = lowerCase(keys[i]); } } private static class Dataset extends AbstractMap<String, String> { private final Attributes attributes; private Dataset(Attributes attributes) { this.attributes = attributes; } @Override"
+      },
+      {
+        "txt": "public Set<Entry<String, String>> entrySet() { return new EntrySet(); } @Override public String put(String key, String value) { String dataKey = dataKey(key); String oldValue = attributes.hasKey(dataKey) ? attributes.get(dataKey) : null; attributes.put(dataKey, value); return oldValue; }"
+      },
+      {
+        "txt": "private class EntrySet extends AbstractSet<Map.Entry<String, String>> { @Override public Iterator<Map.Entry<String, String>> iterator() { return new DatasetIterator(); } @Override public int size() { int count = 0; Iterator iter = new DatasetIterator(); while (iter.hasNext())"
+      },
+      {
+        "txt": "count++; return count; } } private class DatasetIterator implements Iterator<Map.Entry<String, String>> { private Iterator<Attribute> attrIter = attributes.iterator(); private Attribute attr; public boolean hasNext() { while (attrIter.hasNext()) { attr = attrIter.next();"
+      },
+      {
+        "txt": "if (attr.isDataAttribute()) return true; } return false; } public Entry<String, String> next() { return new Attribute(attr.getKey().substring(dataPrefix.length()), attr.getValue()); } public void remove() { attributes.remove(attr.getKey()); }"
+      },
+      {
+        "txt": "} } private static String dataKey(String key) { return dataPrefix + key; }"
+      }
+    ]
+  },
+  {
+    "id": 2148,
+    "file_path": "src/main/java/org/jsoup/nodes/Attributes.java",
+    "start-bug-line": 118,
+    "end-bug-line": 118,
+    "bug": "private void add(String key, String value) {",
+    "fix": "public Attributes add(String key, String value) {",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.jsoup.nodes; import org.jsoup.SerializationException; import org.jsoup.helper.Validate; import org.jsoup.internal.StringUtil; import java.io.IOException; import java.util.AbstractMap;"
+      },
+      {
+        "txt": "import java.util.AbstractSet; import java.util.ArrayList; import java.util.Arrays; import java.util.Collections; import java.util.Iterator; import java.util.List; import java.util.Map; import java.util.Set; import static org.jsoup.internal.Normalizer.lowerCase; public class Attributes implements Iterable<Attribute>, Cloneable {"
+      },
+      {
+        "txt": "protected static final String dataPrefix = \"data-\"; private static final int InitialCapacity = 4; // todo - analyze Alexa 1MM sites, determine best setting private static final int GrowthFactor = 2; private static final String[] Empty = {}; static final int NotFound = -1; private static final String EmptyString = \"\"; private int size = 0; // number of slots used (not capacity, which is keys.length String[] keys = Empty; String[] vals = Empty; private void checkCapacity(int minNewSize) {"
+      },
+      {
+        "txt": "Validate.isTrue(minNewSize >= size); int curSize = keys.length; if (curSize >= minNewSize) return; int newSize = curSize >= InitialCapacity ? size * GrowthFactor : InitialCapacity; if (minNewSize > newSize) newSize = minNewSize; keys = copyOf(keys, newSize); vals = copyOf(vals, newSize); }"
+      },
+      {
+        "txt": "private static String[] copyOf(String[] orig, int size) { final String[] copy = new String[size]; System.arraycopy(orig, 0, copy, 0, Math.min(orig.length, size)); return copy; } int indexOfKey(String key) { Validate.notNull(key); for (int i = 0; i < size; i++) { if (key.equals(keys[i]))"
+      },
+      {
+        "txt": "return i; } return NotFound; } private int indexOfKeyIgnoreCase(String key) { Validate.notNull(key); for (int i = 0; i < size; i++) { if (key.equalsIgnoreCase(keys[i])) return i; }"
+      },
+      {
+        "txt": "return NotFound; } static String checkNotNull(String val) { return val == null ? EmptyString : val; } Get an attribute value by key. @param key the (case-sensitive) attribute key @return the attribute value if set; or empty string if not set (or a boolean attribute). @see #hasKey(String) public String get(String key) {"
+      },
+      {
+        "txt": "return i == NotFound ? EmptyString : checkNotNull(vals[i]); } public String getIgnoreCase(String key) { int i = indexOfKeyIgnoreCase(key); return i == NotFound ? EmptyString : checkNotNull(vals[i]); } <extra_id_0> checkCapacity(size + 1); keys[size] = key; vals[size] = value; size++; } public Attributes put(String key, String value) {"
+      },
+      {
+        "txt": "} public Attributes put(String key, String value) { int i = indexOfKey(key); if (i != NotFound) vals[i] = value; else add(key, value); return this; } void putIgnoreCase(String key, String value) {"
+      },
+      {
+        "txt": "int i = indexOfKeyIgnoreCase(key); if (i != NotFound) { vals[i] = value; if (!keys[i].equals(key)) // case changed, update keys[i] = key; } else add(key, value); } public Attributes put(String key, boolean value) {"
+      },
+      {
+        "txt": "if (value) putIgnoreCase(key, null); else remove(key); return this; } Set a new attribute, or replace an existing one by key. @param attribute attribute with case sensitive key @return these attributes, for chaining public Attributes put(Attribute attribute) {"
+      },
+      {
+        "txt": "Validate.notNull(attribute); put(attribute.getKey(), attribute.getValue()); attribute.parent = this; return this; } private void remove(int index) { Validate.isFalse(index >= size); int shifted = size - index - 1; if (shifted > 0) { System.arraycopy(keys, index + 1, keys, index, shifted);"
+      },
+      {
+        "txt": "System.arraycopy(vals, index + 1, vals, index, shifted); } size--; keys[size] = null; // release hold vals[size] = null; } Remove an attribute by key. <b>Case sensitive.</b> @param key attribute key to remove public void remove(String key) { int i = indexOfKey(key);"
+      },
+      {
+        "txt": "if (i != NotFound) remove(i); } Remove an attribute by key. <b>Case insensitive.</b> @param key attribute key to remove public void removeIgnoreCase(String key) { int i = indexOfKeyIgnoreCase(key); if (i != NotFound) remove(i); }"
+      },
+      {
+        "txt": "Tests if these attributes contain an attribute with this key. @param key case-sensitive key to check for @return true if key exists, false otherwise public boolean hasKey(String key) { return indexOfKey(key) != NotFound; } Tests if these attributes contain an attribute with this key. @param key key to check for @return true if key exists, false otherwise public boolean hasKeyIgnoreCase(String key) {"
+      },
+      {
+        "txt": "return indexOfKeyIgnoreCase(key) != NotFound; } Get the number of attributes in this set. @return size public int size() { return size; } Add all the attributes from the incoming set to this set. @param incoming attributes to add to these attributes. public void addAll(Attributes incoming) {"
+      },
+      {
+        "txt": "if (incoming.size() == 0) return; checkCapacity(size + incoming.size); for (Attribute attr : incoming) { put(attr); } } public Iterator<Attribute> iterator() { return new Iterator<Attribute>() { int i = 0;"
+      },
+      {
+        "txt": "@Override public boolean hasNext() { return i < size; } @Override public Attribute next() { final Attribute attr = new Attribute(keys[i], vals[i], Attributes.this); i++; return attr; }"
+      },
+      {
+        "txt": "@Override public void remove() { Attributes.this.remove(--i); // next() advanced, so rewind } }; } Get the attributes as a List, for iteration. @return an view of the attributes as an unmodifialbe List. public List<Attribute> asList() { ArrayList<Attribute> list = new ArrayList<>(size);"
+      },
+      {
+        "txt": "for (int i = 0; i < size; i++) { Attribute attr = vals[i] == null ? new BooleanAttribute(keys[i]) : // deprecated class, but maybe someone still wants it new Attribute(keys[i], vals[i], Attributes.this); list.add(attr); } return Collections.unmodifiableList(list); } public Map<String, String> dataset() { return new Dataset(this);"
+      },
+      {
+        "txt": "} Get the HTML representation of these attributes. @return HTML @throws SerializationException if the HTML representation of the attributes cannot be constructed. public String html() { StringBuilder sb = StringUtil.borrowBuilder(); try { html(sb, (new Document(\"\")).outputSettings()); // output settings a bit funky, but this html() seldom used } catch (IOException e) { // ought never happen throw new SerializationException(e);"
+      },
+      {
+        "txt": "} return StringUtil.releaseBuilder(sb); } final void html(final Appendable accum, final Document.OutputSettings out) throws IOException { final int sz = size; for (int i = 0; i < sz; i++) { final String key = keys[i]; final String val = vals[i]; accum.append(' ').append(key); if (!Attribute.shouldCollapseAttribute(key, val, out)) {"
+      },
+      {
+        "txt": "accum.append(\"=\\\"\"); Entities.escape(accum, val == null ? EmptyString : val, out, true, false, false); accum.append('\"'); } } } @Override public String toString() { return html(); }"
+      },
+      {
+        "txt": "@Override public boolean equals(Object o) { if (this == o) return true; if (o == null || getClass() != o.getClass()) return false; Attributes that = (Attributes) o; if (size != that.size) return false; if (!Arrays.equals(keys, that.keys)) return false; return Arrays.equals(vals, that.vals); } @Override"
+      },
+      {
+        "txt": "public int hashCode() { int result = size; result = 31 * result + Arrays.hashCode(keys); result = 31 * result + Arrays.hashCode(vals); return result; } @Override public Attributes clone() { Attributes clone; try {"
+      },
+      {
+        "txt": "clone = (Attributes) super.clone(); } catch (CloneNotSupportedException e) { throw new RuntimeException(e); } clone.size = size; keys = copyOf(keys, size); vals = copyOf(vals, size); return clone; } public void normalize() {"
+      },
+      {
+        "txt": "for (int i = 0; i < size; i++) { keys[i] = lowerCase(keys[i]); } } private static class Dataset extends AbstractMap<String, String> { private final Attributes attributes; private Dataset(Attributes attributes) { this.attributes = attributes; } @Override"
+      },
+      {
+        "txt": "public Set<Entry<String, String>> entrySet() { return new EntrySet(); } @Override public String put(String key, String value) { String dataKey = dataKey(key); String oldValue = attributes.hasKey(dataKey) ? attributes.get(dataKey) : null; attributes.put(dataKey, value); return oldValue; }"
+      },
+      {
+        "txt": "private class EntrySet extends AbstractSet<Map.Entry<String, String>> { @Override public Iterator<Map.Entry<String, String>> iterator() { return new DatasetIterator(); } @Override public int size() { int count = 0; Iterator iter = new DatasetIterator(); while (iter.hasNext())"
+      },
+      {
+        "txt": "count++; return count; } } private class DatasetIterator implements Iterator<Map.Entry<String, String>> { private Iterator<Attribute> attrIter = attributes.iterator(); private Attribute attr; public boolean hasNext() { while (attrIter.hasNext()) { attr = attrIter.next();"
+      },
+      {
+        "txt": "if (attr.isDataAttribute()) return true; } return false; } public Entry<String, String> next() { return new Attribute(attr.getKey().substring(dataPrefix.length()), attr.getValue()); } public void remove() { attributes.remove(attr.getKey()); }"
+      },
+      {
+        "txt": "} } private static String dataKey(String key) { return dataPrefix + key; }"
+      }
+    ]
+  },
+  {
+    "id": 2149,
+    "file_path": "src/main/java/org/jsoup/nodes/Attributes.java",
+    "start-bug-line": 123,
+    "end-bug-line": 123,
+    "bug": "",
+    "fix": "return this;",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "import org.jsoup.SerializationException; import org.jsoup.helper.Validate; import org.jsoup.internal.StringUtil; import java.io.IOException; import java.util.AbstractMap; import java.util.AbstractSet; import java.util.ArrayList; import java.util.Arrays; import java.util.Collections; import java.util.Iterator;"
+      },
+      {
+        "txt": "import java.util.List; import java.util.Map; import java.util.Set; import static org.jsoup.internal.Normalizer.lowerCase; public class Attributes implements Iterable<Attribute>, Cloneable { protected static final String dataPrefix = \"data-\"; private static final int InitialCapacity = 4; // todo - analyze Alexa 1MM sites, determine best setting private static final int GrowthFactor = 2; private static final String[] Empty = {}; static final int NotFound = -1;"
+      },
+      {
+        "txt": "private static final String EmptyString = \"\"; private int size = 0; // number of slots used (not capacity, which is keys.length String[] keys = Empty; String[] vals = Empty; private void checkCapacity(int minNewSize) { Validate.isTrue(minNewSize >= size); int curSize = keys.length; if (curSize >= minNewSize) return; int newSize = curSize >= InitialCapacity ? size * GrowthFactor : InitialCapacity;"
+      },
+      {
+        "txt": "if (minNewSize > newSize) newSize = minNewSize; keys = copyOf(keys, newSize); vals = copyOf(vals, newSize); } private static String[] copyOf(String[] orig, int size) { final String[] copy = new String[size]; System.arraycopy(orig, 0, copy, 0, Math.min(orig.length, size)); return copy;"
+      },
+      {
+        "txt": "} int indexOfKey(String key) { Validate.notNull(key); for (int i = 0; i < size; i++) { if (key.equals(keys[i])) return i; } return NotFound; } private int indexOfKeyIgnoreCase(String key) {"
+      },
+      {
+        "txt": "Validate.notNull(key); for (int i = 0; i < size; i++) { if (key.equalsIgnoreCase(keys[i])) return i; } return NotFound; } static String checkNotNull(String val) { return val == null ? EmptyString : val; }"
+      },
+      {
+        "txt": "Get an attribute value by key. @param key the (case-sensitive) attribute key @return the attribute value if set; or empty string if not set (or a boolean attribute). @see #hasKey(String) public String get(String key) { int i = indexOfKey(key); return i == NotFound ? EmptyString : checkNotNull(vals[i]); } public String getIgnoreCase(String key) { int i = indexOfKeyIgnoreCase(key);"
+      },
+      {
+        "txt": "} private void add(String key, String value) { checkCapacity(size + 1); keys[size] = key; vals[size] = value; size++; <extra_id_0> public Attributes put(String key, String value) { int i = indexOfKey(key); if (i != NotFound) vals[i] = value; else add(key, value);"
+      },
+      {
+        "txt": "else add(key, value); return this; } void putIgnoreCase(String key, String value) { int i = indexOfKeyIgnoreCase(key); if (i != NotFound) { vals[i] = value; if (!keys[i].equals(key)) // case changed, update keys[i] = key;"
+      },
+      {
+        "txt": "} else add(key, value); } public Attributes put(String key, boolean value) { if (value) putIgnoreCase(key, null); else remove(key); return this;"
+      },
+      {
+        "txt": "} Set a new attribute, or replace an existing one by key. @param attribute attribute with case sensitive key @return these attributes, for chaining public Attributes put(Attribute attribute) { Validate.notNull(attribute); put(attribute.getKey(), attribute.getValue()); attribute.parent = this; return this; }"
+      },
+      {
+        "txt": "private void remove(int index) { Validate.isFalse(index >= size); int shifted = size - index - 1; if (shifted > 0) { System.arraycopy(keys, index + 1, keys, index, shifted); System.arraycopy(vals, index + 1, vals, index, shifted); } size--; keys[size] = null; // release hold vals[size] = null;"
+      },
+      {
+        "txt": "} Remove an attribute by key. <b>Case sensitive.</b> @param key attribute key to remove public void remove(String key) { int i = indexOfKey(key); if (i != NotFound) remove(i); } Remove an attribute by key. <b>Case insensitive.</b> @param key attribute key to remove"
+      },
+      {
+        "txt": "public void removeIgnoreCase(String key) { int i = indexOfKeyIgnoreCase(key); if (i != NotFound) remove(i); } Tests if these attributes contain an attribute with this key. @param key case-sensitive key to check for @return true if key exists, false otherwise public boolean hasKey(String key) { return indexOfKey(key) != NotFound;"
+      },
+      {
+        "txt": "} Tests if these attributes contain an attribute with this key. @param key key to check for @return true if key exists, false otherwise public boolean hasKeyIgnoreCase(String key) { return indexOfKeyIgnoreCase(key) != NotFound; } Get the number of attributes in this set. @return size public int size() {"
+      },
+      {
+        "txt": "return size; } Add all the attributes from the incoming set to this set. @param incoming attributes to add to these attributes. public void addAll(Attributes incoming) { if (incoming.size() == 0) return; checkCapacity(size + incoming.size); for (Attribute attr : incoming) { put(attr);"
+      },
+      {
+        "txt": "} } public Iterator<Attribute> iterator() { return new Iterator<Attribute>() { int i = 0; @Override public boolean hasNext() { return i < size; } @Override"
+      },
+      {
+        "txt": "public Attribute next() { final Attribute attr = new Attribute(keys[i], vals[i], Attributes.this); i++; return attr; } @Override public void remove() { Attributes.this.remove(--i); // next() advanced, so rewind } };"
+      },
+      {
+        "txt": "} Get the attributes as a List, for iteration. @return an view of the attributes as an unmodifialbe List. public List<Attribute> asList() { ArrayList<Attribute> list = new ArrayList<>(size); for (int i = 0; i < size; i++) { Attribute attr = vals[i] == null ? new BooleanAttribute(keys[i]) : // deprecated class, but maybe someone still wants it new Attribute(keys[i], vals[i], Attributes.this); list.add(attr);"
+      },
+      {
+        "txt": "} return Collections.unmodifiableList(list); } public Map<String, String> dataset() { return new Dataset(this); } Get the HTML representation of these attributes. @return HTML @throws SerializationException if the HTML representation of the attributes cannot be constructed. public String html() {"
+      },
+      {
+        "txt": "StringBuilder sb = StringUtil.borrowBuilder(); try { html(sb, (new Document(\"\")).outputSettings()); // output settings a bit funky, but this html() seldom used } catch (IOException e) { // ought never happen throw new SerializationException(e); } return StringUtil.releaseBuilder(sb); } final void html(final Appendable accum, final Document.OutputSettings out) throws IOException { final int sz = size;"
+      },
+      {
+        "txt": "for (int i = 0; i < sz; i++) { final String key = keys[i]; final String val = vals[i]; accum.append(' ').append(key); if (!Attribute.shouldCollapseAttribute(key, val, out)) { accum.append(\"=\\\"\"); Entities.escape(accum, val == null ? EmptyString : val, out, true, false, false); accum.append('\"'); } }"
+      },
+      {
+        "txt": "} @Override public String toString() { return html(); } @Override public boolean equals(Object o) { if (this == o) return true; if (o == null || getClass() != o.getClass()) return false; Attributes that = (Attributes) o;"
+      },
+      {
+        "txt": "if (size != that.size) return false; if (!Arrays.equals(keys, that.keys)) return false; return Arrays.equals(vals, that.vals); } @Override public int hashCode() { int result = size; result = 31 * result + Arrays.hashCode(keys); result = 31 * result + Arrays.hashCode(vals); return result;"
+      },
+      {
+        "txt": "} @Override public Attributes clone() { Attributes clone; try { clone = (Attributes) super.clone(); } catch (CloneNotSupportedException e) { throw new RuntimeException(e); } clone.size = size;"
+      },
+      {
+        "txt": "keys = copyOf(keys, size); vals = copyOf(vals, size); return clone; } public void normalize() { for (int i = 0; i < size; i++) { keys[i] = lowerCase(keys[i]); } } private static class Dataset extends AbstractMap<String, String> {"
+      },
+      {
+        "txt": "private final Attributes attributes; private Dataset(Attributes attributes) { this.attributes = attributes; } @Override public Set<Entry<String, String>> entrySet() { return new EntrySet(); } @Override public String put(String key, String value) {"
+      },
+      {
+        "txt": "String dataKey = dataKey(key); String oldValue = attributes.hasKey(dataKey) ? attributes.get(dataKey) : null; attributes.put(dataKey, value); return oldValue; } private class EntrySet extends AbstractSet<Map.Entry<String, String>> { @Override public Iterator<Map.Entry<String, String>> iterator() { return new DatasetIterator(); }"
+      },
+      {
+        "txt": "@Override public int size() { int count = 0; Iterator iter = new DatasetIterator(); while (iter.hasNext()) count++; return count; } } private class DatasetIterator implements Iterator<Map.Entry<String, String>> {"
+      },
+      {
+        "txt": "private Iterator<Attribute> attrIter = attributes.iterator(); private Attribute attr; public boolean hasNext() { while (attrIter.hasNext()) { attr = attrIter.next(); if (attr.isDataAttribute()) return true; } return false; } public Entry<String, String> next() {"
+      },
+      {
+        "txt": "return new Attribute(attr.getKey().substring(dataPrefix.length()), attr.getValue()); } public void remove() { attributes.remove(attr.getKey()); } } } private static String dataKey(String key) { return dataPrefix + key; }"
+      }
+    ]
+  },
+  {
+    "id": 2150,
+    "file_path": "src/main/java/org/jsoup/nodes/Attributes.java",
+    "start-bug-line": 239,
+    "end-bug-line": 239,
+    "bug": "",
+    "fix": "public boolean isEmpty() { return size == 0; }",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.jsoup.nodes; import org.jsoup.SerializationException; import org.jsoup.helper.Validate; import org.jsoup.internal.StringUtil; import java.io.IOException; import java.util.AbstractMap; import java.util.AbstractSet; import java.util.ArrayList;"
+      },
+      {
+        "txt": "import java.util.Arrays; import java.util.Collections; import java.util.Iterator; import java.util.List; import java.util.Map; import java.util.Set; import static org.jsoup.internal.Normalizer.lowerCase; public class Attributes implements Iterable<Attribute>, Cloneable { protected static final String dataPrefix = \"data-\"; private static final int InitialCapacity = 4; // todo - analyze Alexa 1MM sites, determine best setting"
+      },
+      {
+        "txt": "private static final int GrowthFactor = 2; private static final String[] Empty = {}; static final int NotFound = -1; private static final String EmptyString = \"\"; private int size = 0; // number of slots used (not capacity, which is keys.length String[] keys = Empty; String[] vals = Empty; private void checkCapacity(int minNewSize) { Validate.isTrue(minNewSize >= size); int curSize = keys.length;"
+      },
+      {
+        "txt": "if (curSize >= minNewSize) return; int newSize = curSize >= InitialCapacity ? size * GrowthFactor : InitialCapacity; if (minNewSize > newSize) newSize = minNewSize; keys = copyOf(keys, newSize); vals = copyOf(vals, newSize); } private static String[] copyOf(String[] orig, int size) { final String[] copy = new String[size];"
+      },
+      {
+        "txt": "System.arraycopy(orig, 0, copy, 0, Math.min(orig.length, size)); return copy; } int indexOfKey(String key) { Validate.notNull(key); for (int i = 0; i < size; i++) { if (key.equals(keys[i])) return i; }"
+      },
+      {
+        "txt": "return NotFound; } private int indexOfKeyIgnoreCase(String key) { Validate.notNull(key); for (int i = 0; i < size; i++) { if (key.equalsIgnoreCase(keys[i])) return i; } return NotFound; }"
+      },
+      {
+        "txt": "static String checkNotNull(String val) { return val == null ? EmptyString : val; } Get an attribute value by key. @param key the (case-sensitive) attribute key @return the attribute value if set; or empty string if not set (or a boolean attribute). @see #hasKey(String) public String get(String key) { int i = indexOfKey(key); return i == NotFound ? EmptyString : checkNotNull(vals[i]);"
+      },
+      {
+        "txt": "} public String getIgnoreCase(String key) { int i = indexOfKeyIgnoreCase(key); return i == NotFound ? EmptyString : checkNotNull(vals[i]); } private void add(String key, String value) { checkCapacity(size + 1); keys[size] = key; vals[size] = value; size++;"
+      },
+      {
+        "txt": "} public Attributes put(String key, String value) { int i = indexOfKey(key); if (i != NotFound) vals[i] = value; else add(key, value); return this; } void putIgnoreCase(String key, String value) {"
+      },
+      {
+        "txt": "int i = indexOfKeyIgnoreCase(key); if (i != NotFound) { vals[i] = value; if (!keys[i].equals(key)) // case changed, update keys[i] = key; } else add(key, value); } public Attributes put(String key, boolean value) {"
+      },
+      {
+        "txt": "if (value) putIgnoreCase(key, null); else remove(key); return this; } Set a new attribute, or replace an existing one by key. @param attribute attribute with case sensitive key @return these attributes, for chaining public Attributes put(Attribute attribute) {"
+      },
+      {
+        "txt": "Validate.notNull(attribute); put(attribute.getKey(), attribute.getValue()); attribute.parent = this; return this; } private void remove(int index) { Validate.isFalse(index >= size); int shifted = size - index - 1; if (shifted > 0) { System.arraycopy(keys, index + 1, keys, index, shifted);"
+      },
+      {
+        "txt": "System.arraycopy(vals, index + 1, vals, index, shifted); } size--; keys[size] = null; // release hold vals[size] = null; } Remove an attribute by key. <b>Case sensitive.</b> @param key attribute key to remove public void remove(String key) { int i = indexOfKey(key);"
+      },
+      {
+        "txt": "if (i != NotFound) remove(i); } Remove an attribute by key. <b>Case insensitive.</b> @param key attribute key to remove public void removeIgnoreCase(String key) { int i = indexOfKeyIgnoreCase(key); if (i != NotFound) remove(i); }"
+      },
+      {
+        "txt": "Tests if these attributes contain an attribute with this key. @param key case-sensitive key to check for @return true if key exists, false otherwise public boolean hasKey(String key) { return indexOfKey(key) != NotFound; } Tests if these attributes contain an attribute with this key. @param key key to check for @return true if key exists, false otherwise public boolean hasKeyIgnoreCase(String key) {"
+      },
+      {
+        "txt": "} Get the number of attributes in this set. @return size public int size() { return size; } <extra_id_0> Add all the attributes from the incoming set to this set. @param incoming attributes to add to these attributes. public void addAll(Attributes incoming) { if (incoming.size() == 0) return; checkCapacity(size + incoming.size);"
+      },
+      {
+        "txt": "return; checkCapacity(size + incoming.size); for (Attribute attr : incoming) { put(attr); } } public Iterator<Attribute> iterator() { return new Iterator<Attribute>() { int i = 0; @Override"
+      },
+      {
+        "txt": "public boolean hasNext() { return i < size; } @Override public Attribute next() { final Attribute attr = new Attribute(keys[i], vals[i], Attributes.this); i++; return attr; } @Override"
+      },
+      {
+        "txt": "public void remove() { Attributes.this.remove(--i); // next() advanced, so rewind } }; } Get the attributes as a List, for iteration. @return an view of the attributes as an unmodifialbe List. public List<Attribute> asList() { ArrayList<Attribute> list = new ArrayList<>(size); for (int i = 0; i < size; i++) {"
+      },
+      {
+        "txt": "Attribute attr = vals[i] == null ? new BooleanAttribute(keys[i]) : // deprecated class, but maybe someone still wants it new Attribute(keys[i], vals[i], Attributes.this); list.add(attr); } return Collections.unmodifiableList(list); } public Map<String, String> dataset() { return new Dataset(this); }"
+      },
+      {
+        "txt": "Get the HTML representation of these attributes. @return HTML @throws SerializationException if the HTML representation of the attributes cannot be constructed. public String html() { StringBuilder sb = StringUtil.borrowBuilder(); try { html(sb, (new Document(\"\")).outputSettings()); // output settings a bit funky, but this html() seldom used } catch (IOException e) { // ought never happen throw new SerializationException(e); }"
+      },
+      {
+        "txt": "return StringUtil.releaseBuilder(sb); } final void html(final Appendable accum, final Document.OutputSettings out) throws IOException { final int sz = size; for (int i = 0; i < sz; i++) { final String key = keys[i]; final String val = vals[i]; accum.append(' ').append(key); if (!Attribute.shouldCollapseAttribute(key, val, out)) { accum.append(\"=\\\"\");"
+      },
+      {
+        "txt": "Entities.escape(accum, val == null ? EmptyString : val, out, true, false, false); accum.append('\"'); } } } @Override public String toString() { return html(); } @Override"
+      },
+      {
+        "txt": "public boolean equals(Object o) { if (this == o) return true; if (o == null || getClass() != o.getClass()) return false; Attributes that = (Attributes) o; if (size != that.size) return false; if (!Arrays.equals(keys, that.keys)) return false; return Arrays.equals(vals, that.vals); } @Override public int hashCode() {"
+      },
+      {
+        "txt": "int result = size; result = 31 * result + Arrays.hashCode(keys); result = 31 * result + Arrays.hashCode(vals); return result; } @Override public Attributes clone() { Attributes clone; try { clone = (Attributes) super.clone();"
+      },
+      {
+        "txt": "} catch (CloneNotSupportedException e) { throw new RuntimeException(e); } clone.size = size; keys = copyOf(keys, size); vals = copyOf(vals, size); return clone; } public void normalize() { for (int i = 0; i < size; i++) {"
+      },
+      {
+        "txt": "keys[i] = lowerCase(keys[i]); } } private static class Dataset extends AbstractMap<String, String> { private final Attributes attributes; private Dataset(Attributes attributes) { this.attributes = attributes; } @Override public Set<Entry<String, String>> entrySet() {"
+      },
+      {
+        "txt": "return new EntrySet(); } @Override public String put(String key, String value) { String dataKey = dataKey(key); String oldValue = attributes.hasKey(dataKey) ? attributes.get(dataKey) : null; attributes.put(dataKey, value); return oldValue; } private class EntrySet extends AbstractSet<Map.Entry<String, String>> {"
+      },
+      {
+        "txt": "@Override public Iterator<Map.Entry<String, String>> iterator() { return new DatasetIterator(); } @Override public int size() { int count = 0; Iterator iter = new DatasetIterator(); while (iter.hasNext()) count++;"
+      },
+      {
+        "txt": "return count; } } private class DatasetIterator implements Iterator<Map.Entry<String, String>> { private Iterator<Attribute> attrIter = attributes.iterator(); private Attribute attr; public boolean hasNext() { while (attrIter.hasNext()) { attr = attrIter.next(); if (attr.isDataAttribute()) return true;"
+      },
+      {
+        "txt": "} return false; } public Entry<String, String> next() { return new Attribute(attr.getKey().substring(dataPrefix.length()), attr.getValue()); } public void remove() { attributes.remove(attr.getKey()); } }"
+      },
+      {
+        "txt": "} private static String dataKey(String key) { return dataPrefix + key; }"
+      }
+    ]
+  },
+  {
+    "id": 2151,
+    "file_path": "src/main/java/org/jsoup/nodes/Attributes.java",
+    "start-bug-line": 397,
+    "end-bug-line": 397,
+    "bug": "",
+    "fix": "public int deduplicate(ParseSettings settings) { if (isEmpty()) return 0; boolean preserve = settings.preserveAttributeCase(); int dupes = 0; OUTER: for (int i = 0; i < keys.length; i++) { for (int j = i + 1; j < keys.length; j++) { if (keys[j] == null) continue OUTER; // keys.length doesn't shrink when removing, so re-test if ((preserve && keys[i].equals(keys[j])) || (!preserve && keys[i].equalsIgnoreCase(keys[j]))) { dupes++; remove(j); j--; } } } return dupes; }",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.jsoup.nodes; import org.jsoup.SerializationException; import org.jsoup.helper.Validate; import org.jsoup.internal.StringUtil; import java.io.IOException;"
+      },
+      {
+        "txt": "import java.util.AbstractMap; import java.util.AbstractSet; import java.util.ArrayList; import java.util.Arrays; import java.util.Collections; import java.util.Iterator; import java.util.List; import java.util.Map; import java.util.Set; import static org.jsoup.internal.Normalizer.lowerCase;"
+      },
+      {
+        "txt": "public class Attributes implements Iterable<Attribute>, Cloneable { protected static final String dataPrefix = \"data-\"; private static final int InitialCapacity = 4; // todo - analyze Alexa 1MM sites, determine best setting private static final int GrowthFactor = 2; private static final String[] Empty = {}; static final int NotFound = -1; private static final String EmptyString = \"\"; private int size = 0; // number of slots used (not capacity, which is keys.length String[] keys = Empty; String[] vals = Empty;"
+      },
+      {
+        "txt": "private void checkCapacity(int minNewSize) { Validate.isTrue(minNewSize >= size); int curSize = keys.length; if (curSize >= minNewSize) return; int newSize = curSize >= InitialCapacity ? size * GrowthFactor : InitialCapacity; if (minNewSize > newSize) newSize = minNewSize; keys = copyOf(keys, newSize); vals = copyOf(vals, newSize);"
+      },
+      {
+        "txt": "} private static String[] copyOf(String[] orig, int size) { final String[] copy = new String[size]; System.arraycopy(orig, 0, copy, 0, Math.min(orig.length, size)); return copy; } int indexOfKey(String key) { Validate.notNull(key); for (int i = 0; i < size; i++) {"
+      },
+      {
+        "txt": "if (key.equals(keys[i])) return i; } return NotFound; } private int indexOfKeyIgnoreCase(String key) { Validate.notNull(key); for (int i = 0; i < size; i++) { if (key.equalsIgnoreCase(keys[i])) return i;"
+      },
+      {
+        "txt": "} return NotFound; } static String checkNotNull(String val) { return val == null ? EmptyString : val; } Get an attribute value by key. @param key the (case-sensitive) attribute key @return the attribute value if set; or empty string if not set (or a boolean attribute). @see #hasKey(String)"
+      },
+      {
+        "txt": "public String get(String key) { int i = indexOfKey(key); return i == NotFound ? EmptyString : checkNotNull(vals[i]); } public String getIgnoreCase(String key) { int i = indexOfKeyIgnoreCase(key); return i == NotFound ? EmptyString : checkNotNull(vals[i]); } private void add(String key, String value) { checkCapacity(size + 1);"
+      },
+      {
+        "txt": "keys[size] = key; vals[size] = value; size++; } public Attributes put(String key, String value) { int i = indexOfKey(key); if (i != NotFound) vals[i] = value; else add(key, value);"
+      },
+      {
+        "txt": "return this; } void putIgnoreCase(String key, String value) { int i = indexOfKeyIgnoreCase(key); if (i != NotFound) { vals[i] = value; if (!keys[i].equals(key)) // case changed, update keys[i] = key; } else"
+      },
+      {
+        "txt": "add(key, value); } public Attributes put(String key, boolean value) { if (value) putIgnoreCase(key, null); else remove(key); return this; } Set a new attribute, or replace an existing one by key."
+      },
+      {
+        "txt": "@param attribute attribute with case sensitive key @return these attributes, for chaining public Attributes put(Attribute attribute) { Validate.notNull(attribute); put(attribute.getKey(), attribute.getValue()); attribute.parent = this; return this; } private void remove(int index) { Validate.isFalse(index >= size);"
+      },
+      {
+        "txt": "int shifted = size - index - 1; if (shifted > 0) { System.arraycopy(keys, index + 1, keys, index, shifted); System.arraycopy(vals, index + 1, vals, index, shifted); } size--; keys[size] = null; // release hold vals[size] = null; } Remove an attribute by key. <b>Case sensitive.</b>"
+      },
+      {
+        "txt": "@param key attribute key to remove public void remove(String key) { int i = indexOfKey(key); if (i != NotFound) remove(i); } Remove an attribute by key. <b>Case insensitive.</b> @param key attribute key to remove public void removeIgnoreCase(String key) { int i = indexOfKeyIgnoreCase(key);"
+      },
+      {
+        "txt": "if (i != NotFound) remove(i); } Tests if these attributes contain an attribute with this key. @param key case-sensitive key to check for @return true if key exists, false otherwise public boolean hasKey(String key) { return indexOfKey(key) != NotFound; } Tests if these attributes contain an attribute with this key."
+      },
+      {
+        "txt": "@param key key to check for @return true if key exists, false otherwise public boolean hasKeyIgnoreCase(String key) { return indexOfKeyIgnoreCase(key) != NotFound; } Get the number of attributes in this set. @return size public int size() { return size; }"
+      },
+      {
+        "txt": "Add all the attributes from the incoming set to this set. @param incoming attributes to add to these attributes. public void addAll(Attributes incoming) { if (incoming.size() == 0) return; checkCapacity(size + incoming.size); for (Attribute attr : incoming) { put(attr); } }"
+      },
+      {
+        "txt": "public Iterator<Attribute> iterator() { return new Iterator<Attribute>() { int i = 0; @Override public boolean hasNext() { return i < size; } @Override public Attribute next() { final Attribute attr = new Attribute(keys[i], vals[i], Attributes.this);"
+      },
+      {
+        "txt": "i++; return attr; } @Override public void remove() { Attributes.this.remove(--i); // next() advanced, so rewind } }; } Get the attributes as a List, for iteration."
+      },
+      {
+        "txt": "@return an view of the attributes as an unmodifialbe List. public List<Attribute> asList() { ArrayList<Attribute> list = new ArrayList<>(size); for (int i = 0; i < size; i++) { Attribute attr = vals[i] == null ? new BooleanAttribute(keys[i]) : // deprecated class, but maybe someone still wants it new Attribute(keys[i], vals[i], Attributes.this); list.add(attr); } return Collections.unmodifiableList(list);"
+      },
+      {
+        "txt": "} public Map<String, String> dataset() { return new Dataset(this); } Get the HTML representation of these attributes. @return HTML @throws SerializationException if the HTML representation of the attributes cannot be constructed. public String html() { StringBuilder sb = StringUtil.borrowBuilder(); try {"
+      },
+      {
+        "txt": "html(sb, (new Document(\"\")).outputSettings()); // output settings a bit funky, but this html() seldom used } catch (IOException e) { // ought never happen throw new SerializationException(e); } return StringUtil.releaseBuilder(sb); } final void html(final Appendable accum, final Document.OutputSettings out) throws IOException { final int sz = size; for (int i = 0; i < sz; i++) { final String key = keys[i];"
+      },
+      {
+        "txt": "final String val = vals[i]; accum.append(' ').append(key); if (!Attribute.shouldCollapseAttribute(key, val, out)) { accum.append(\"=\\\"\"); Entities.escape(accum, val == null ? EmptyString : val, out, true, false, false); accum.append('\"'); } } } @Override"
+      },
+      {
+        "txt": "public String toString() { return html(); } @Override public boolean equals(Object o) { if (this == o) return true; if (o == null || getClass() != o.getClass()) return false; Attributes that = (Attributes) o; if (size != that.size) return false; if (!Arrays.equals(keys, that.keys)) return false;"
+      },
+      {
+        "txt": "return Arrays.equals(vals, that.vals); } @Override public int hashCode() { int result = size; result = 31 * result + Arrays.hashCode(keys); result = 31 * result + Arrays.hashCode(vals); return result; } @Override"
+      },
+      {
+        "txt": "public Attributes clone() { Attributes clone; try { clone = (Attributes) super.clone(); } catch (CloneNotSupportedException e) { throw new RuntimeException(e); } clone.size = size; keys = copyOf(keys, size); vals = copyOf(vals, size);"
+      },
+      {
+        "txt": "} public void normalize() { for (int i = 0; i < size; i++) { keys[i] = lowerCase(keys[i]); } } <extra_id_0> private static class Dataset extends AbstractMap<String, String> { private final Attributes attributes; private Dataset(Attributes attributes) { this.attributes = attributes; } @Override"
+      },
+      {
+        "txt": "} @Override public Set<Entry<String, String>> entrySet() { return new EntrySet(); } @Override public String put(String key, String value) { String dataKey = dataKey(key); String oldValue = attributes.hasKey(dataKey) ? attributes.get(dataKey) : null; attributes.put(dataKey, value);"
+      },
+      {
+        "txt": "return oldValue; } private class EntrySet extends AbstractSet<Map.Entry<String, String>> { @Override public Iterator<Map.Entry<String, String>> iterator() { return new DatasetIterator(); } @Override public int size() { int count = 0;"
+      },
+      {
+        "txt": "Iterator iter = new DatasetIterator(); while (iter.hasNext()) count++; return count; } } private class DatasetIterator implements Iterator<Map.Entry<String, String>> { private Iterator<Attribute> attrIter = attributes.iterator(); private Attribute attr; public boolean hasNext() {"
+      },
+      {
+        "txt": "while (attrIter.hasNext()) { attr = attrIter.next(); if (attr.isDataAttribute()) return true; } return false; } public Entry<String, String> next() { return new Attribute(attr.getKey().substring(dataPrefix.length()), attr.getValue()); } public void remove() {"
+      },
+      {
+        "txt": "attributes.remove(attr.getKey()); } } } private static String dataKey(String key) { return dataPrefix + key; }"
+      }
+    ]
+  },
+  {
+    "id": 2152,
+    "file_path": "src/main/java/org/jsoup/parser/HtmlTreeBuilder.java",
+    "start-bug-line": 199,
+    "end-bug-line": 199,
+    "bug": "",
+    "fix": "if (!startTag.attributes.isEmpty()) { int dupes = startTag.attributes.deduplicate(settings); if (dupes > 0) { error(\"Duplicate attribute\"); } }",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.jsoup.parser; import org.jsoup.helper.Validate; import org.jsoup.internal.StringUtil; import org.jsoup.nodes.CDataNode; import org.jsoup.nodes.Comment; import org.jsoup.nodes.DataNode; import org.jsoup.nodes.Document; import org.jsoup.nodes.Element; import org.jsoup.nodes.FormElement;"
+      },
+      {
+        "txt": "import org.jsoup.nodes.Node; import org.jsoup.nodes.TextNode; import org.jsoup.select.Elements; import java.io.Reader; import java.io.StringReader; import java.util.ArrayList; import java.util.List; import static org.jsoup.internal.StringUtil.inSorted; public class HtmlTreeBuilder extends TreeBuilder { static final String[] TagsSearchInScope = new String[]{\"applet\", \"caption\", \"html\", \"marquee\", \"object\", \"table\", \"td\", \"th\"};"
+      },
+      {
+        "txt": "static final String[] TagSearchList = new String[]{\"ol\", \"ul\"}; static final String[] TagSearchButton = new String[]{\"button\"}; static final String[] TagSearchTableScope = new String[]{\"html\", \"table\"}; static final String[] TagSearchSelectScope = new String[]{\"optgroup\", \"option\"}; static final String[] TagSearchEndTags = new String[]{\"dd\", \"dt\", \"li\", \"optgroup\", \"option\", \"p\", \"rp\", \"rt\"}; static final String[] TagSearchSpecial = new String[]{\"address\", \"applet\", \"area\", \"article\", \"aside\", \"base\", \"basefont\", \"bgsound\", \"blockquote\", \"body\", \"br\", \"button\", \"caption\", \"center\", \"col\", \"colgroup\", \"command\", \"dd\", \"details\", \"dir\", \"div\", \"dl\", \"dt\", \"embed\", \"fieldset\", \"figcaption\", \"figure\", \"footer\", \"form\", \"frame\", \"frameset\", \"h1\", \"h2\", \"h3\", \"h4\", \"h5\", \"h6\", \"head\", \"header\", \"hgroup\", \"hr\", \"html\", \"iframe\", \"img\", \"input\", \"isindex\", \"li\", \"link\", \"listing\", \"marquee\", \"menu\", \"meta\", \"nav\","
+      },
+      {
+        "txt": "\"noembed\", \"noframes\", \"noscript\", \"object\", \"ol\", \"p\", \"param\", \"plaintext\", \"pre\", \"script\", \"section\", \"select\", \"style\", \"summary\", \"table\", \"tbody\", \"td\", \"textarea\", \"tfoot\", \"th\", \"thead\", \"title\", \"tr\", \"ul\", \"wbr\", \"xmp\"}; public static final int MaxScopeSearchDepth = 100; // prevents the parser bogging down in exceptionally broken pages private HtmlTreeBuilderState state; // the current state private HtmlTreeBuilderState originalState; // original / marked state private boolean baseUriSetFromDoc; private Element headElement; // the current head element private FormElement formElement; // the current form element private Element contextElement; // fragment parse context -- could be null even if fragment parsing"
+      },
+      {
+        "txt": "private ArrayList<Element> formattingElements; // active (open) formatting elements private List<String> pendingTableCharacters; // chars in table to be shifted out private Token.EndTag emptyEnd; // reused empty end tag private boolean framesetOk; // if ok to go into frameset private boolean fosterInserts; // if next inserts should be fostered private boolean fragmentParsing; // if parsing a fragment of html ParseSettings defaultSettings() { return ParseSettings.htmlDefault; } @Override"
+      },
+      {
+        "txt": "protected void initialiseParse(Reader input, String baseUri, Parser parser) { super.initialiseParse(input, baseUri, parser); state = HtmlTreeBuilderState.Initial; originalState = null; baseUriSetFromDoc = false; headElement = null; formElement = null; contextElement = null; formattingElements = new ArrayList<>(); pendingTableCharacters = new ArrayList<>();"
+      },
+      {
+        "txt": "emptyEnd = new Token.EndTag(); framesetOk = true; fosterInserts = false; fragmentParsing = false; } List<Node> parseFragment(String inputFragment, Element context, String baseUri, Parser parser) { state = HtmlTreeBuilderState.Initial; initialiseParse(new StringReader(inputFragment), baseUri, parser); contextElement = context; fragmentParsing = true;"
+      },
+      {
+        "txt": "Element root = null; if (context != null) { if (context.ownerDocument() != null) // quirks setup: doc.quirksMode(context.ownerDocument().quirksMode()); String contextTag = context.tagName(); if (StringUtil.in(contextTag, \"title\", \"textarea\")) tokeniser.transition(TokeniserState.Rcdata); else if (StringUtil.in(contextTag, \"iframe\", \"noembed\", \"noframes\", \"style\", \"xmp\")) tokeniser.transition(TokeniserState.Rawtext); else if (contextTag.equals(\"script\"))"
+      },
+      {
+        "txt": "tokeniser.transition(TokeniserState.ScriptData); else if (contextTag.equals((\"noscript\"))) tokeniser.transition(TokeniserState.Data); // if scripting enabled, rawtext else if (contextTag.equals(\"plaintext\")) tokeniser.transition(TokeniserState.Data); else tokeniser.transition(TokeniserState.Data); // default root = new Element(Tag.valueOf(\"html\", settings), baseUri); doc.appendChild(root); stack.add(root);"
+      },
+      {
+        "txt": "resetInsertionMode(); Elements contextChain = context.parents(); contextChain.add(0, context); for (Element parent: contextChain) { if (parent instanceof FormElement) { formElement = (FormElement) parent; break; } } }"
+      },
+      {
+        "txt": "runParser(); if (context != null) return root.childNodes(); else return doc.childNodes(); } @Override protected boolean process(Token token) { currentToken = token; return this.state.process(token, this);"
+      },
+      {
+        "txt": "} boolean process(Token token, HtmlTreeBuilderState state) { currentToken = token; return state.process(token, this); } void transition(HtmlTreeBuilderState state) { this.state = state; } HtmlTreeBuilderState state() { return state;"
+      },
+      {
+        "txt": "} void markInsertionMode() { originalState = state; } HtmlTreeBuilderState originalState() { return originalState; } void framesetOk(boolean framesetOk) { this.framesetOk = framesetOk; }"
+      },
+      {
+        "txt": "boolean framesetOk() { return framesetOk; } Document getDocument() { return doc; } String getBaseUri() { return baseUri; } void maybeSetBaseUri(Element base) {"
+      },
+      {
+        "txt": "if (baseUriSetFromDoc) // only listen to the first <base href> in parse return; String href = base.absUrl(\"href\"); if (href.length() != 0) { // ignore <base target> etc baseUri = href; baseUriSetFromDoc = true; doc.setBaseUri(href); // set on the doc so doc.createElement(Tag) will get updated base, and to update all descendants } } boolean isFragmentParsing() {"
+      },
+      {
+        "txt": "} void error(HtmlTreeBuilderState state) { if (parser.getErrors().canAddError()) parser.getErrors().add(new ParseError(reader.pos(), \"Unexpected token [%s] when in state [%s]\", currentToken.tokenType(), state)); } Element insert(final Token.StartTag startTag) { <extra_id_0> if (startTag.isSelfClosing()) { Element el = insertEmpty(startTag); stack.add(el); tokeniser.transition(TokeniserState.Data); // handles <script />, otherwise needs breakout steps from script data tokeniser.emit(emptyEnd.reset().name(el.tagName())); // ensure we get out of whatever state we are in. emitted for yielded processing return el;"
+      },
+      {
+        "txt": "tokeniser.emit(emptyEnd.reset().name(el.tagName())); // ensure we get out of whatever state we are in. emitted for yielded processing return el; } Element el = new Element(Tag.valueOf(startTag.name(), settings), baseUri, settings.normalizeAttributes(startTag.attributes)); insert(el); return el; } Element insertStartTag(String startTagName) { Element el = new Element(Tag.valueOf(startTagName, settings), baseUri); insert(el);"
+      },
+      {
+        "txt": "return el; } void insert(Element el) { insertNode(el); stack.add(el); } Element insertEmpty(Token.StartTag startTag) { Tag tag = Tag.valueOf(startTag.name(), settings); Element el = new Element(tag, baseUri, startTag.attributes); insertNode(el);"
+      },
+      {
+        "txt": "if (startTag.isSelfClosing()) { if (tag.isKnownTag()) { if (!tag.isEmpty()) tokeniser.error(\"Tag cannot be self closing; not a void tag\"); } else // unknown tag, remember this is self closing for output tag.setSelfClosing(); } return el; }"
+      },
+      {
+        "txt": "FormElement insertForm(Token.StartTag startTag, boolean onStack) { Tag tag = Tag.valueOf(startTag.name(), settings); FormElement el = new FormElement(tag, baseUri, startTag.attributes); setFormElement(el); insertNode(el); if (onStack) stack.add(el); return el; } void insert(Token.Comment commentToken) {"
+      },
+      {
+        "txt": "Comment comment = new Comment(commentToken.getData()); insertNode(comment); } void insert(Token.Character characterToken) { final Node node; final Element el = currentElement(); final String tagName = el.tagName(); final String data = characterToken.getData(); if (characterToken.isCData()) node = new CDataNode(data);"
+      },
+      {
+        "txt": "else if (tagName.equals(\"script\") || tagName.equals(\"style\")) node = new DataNode(data); else node = new TextNode(data); el.appendChild(node); // doesn't use insertNode, because we don't foster these; and will always have a stack. } private void insertNode(Node node) { if (stack.isEmpty()) doc.appendChild(node); else if (isFosterInserts())"
+      },
+      {
+        "txt": "insertInFosterParent(node); else currentElement().appendChild(node); if (node instanceof Element && ((Element) node).tag().isFormListed()) { if (formElement != null) formElement.addElement((Element) node); } } Element pop() { int size = stack.size();"
+      },
+      {
+        "txt": "return stack.remove(size-1); } void push(Element element) { stack.add(element); } ArrayList<Element> getStack() { return stack; } boolean onStack(Element el) { return isElementInQueue(stack, el);"
+      },
+      {
+        "txt": "} private boolean isElementInQueue(ArrayList<Element> queue, Element element) { for (int pos = queue.size() -1; pos >= 0; pos--) { Element next = queue.get(pos); if (next == element) { return true; } } return false; }"
+      },
+      {
+        "txt": "Element getFromStack(String elName) { for (int pos = stack.size() -1; pos >= 0; pos--) { Element next = stack.get(pos); if (next.normalName().equals(elName)) { return next; } } return null; } boolean removeFromStack(Element el) {"
+      },
+      {
+        "txt": "for (int pos = stack.size() -1; pos >= 0; pos--) { Element next = stack.get(pos); if (next == el) { stack.remove(pos); return true; } } return false; } void popStackToClose(String elName) {"
+      },
+      {
+        "txt": "for (int pos = stack.size() -1; pos >= 0; pos--) { Element next = stack.get(pos); stack.remove(pos); if (next.normalName().equals(elName)) break; } } void popStackToClose(String... elNames) { for (int pos = stack.size() -1; pos >= 0; pos--) { Element next = stack.get(pos);"
+      },
+      {
+        "txt": "stack.remove(pos); if (inSorted(next.normalName(), elNames)) break; } } void popStackToBefore(String elName) { for (int pos = stack.size() -1; pos >= 0; pos--) { Element next = stack.get(pos); if (next.normalName().equals(elName)) { break;"
+      },
+      {
+        "txt": "} else { stack.remove(pos); } } } void clearStackToTableContext() { clearStackToContext(\"table\"); } void clearStackToTableBodyContext() { clearStackToContext(\"tbody\", \"tfoot\", \"thead\", \"template\");"
+      },
+      {
+        "txt": "} void clearStackToTableRowContext() { clearStackToContext(\"tr\", \"template\"); } private void clearStackToContext(String... nodeNames) { for (int pos = stack.size() -1; pos >= 0; pos--) { Element next = stack.get(pos); if (StringUtil.in(next.normalName(), nodeNames) || next.normalName().equals(\"html\")) break; else"
+      },
+      {
+        "txt": "stack.remove(pos); } } Element aboveOnStack(Element el) { assert onStack(el); for (int pos = stack.size() -1; pos >= 0; pos--) { Element next = stack.get(pos); if (next == el) { return stack.get(pos-1); }"
+      },
+      {
+        "txt": "} return null; } void insertOnStackAfter(Element after, Element in) { int i = stack.lastIndexOf(after); Validate.isTrue(i != -1); stack.add(i+1, in); } void replaceOnStack(Element out, Element in) { replaceInQueue(stack, out, in);"
+      },
+      {
+        "txt": "} private void replaceInQueue(ArrayList<Element> queue, Element out, Element in) { int i = queue.lastIndexOf(out); Validate.isTrue(i != -1); queue.set(i, in); } void resetInsertionMode() { boolean last = false; for (int pos = stack.size() -1; pos >= 0; pos--) { Element node = stack.get(pos);"
+      },
+      {
+        "txt": "if (pos == 0) { last = true; node = contextElement; } String name = node.normalName(); if (\"select\".equals(name)) { transition(HtmlTreeBuilderState.InSelect); break; // frag } else if ((\"td\".equals(name) || \"th\".equals(name) && !last)) { transition(HtmlTreeBuilderState.InCell);"
+      },
+      {
+        "txt": "break; } else if (\"tr\".equals(name)) { transition(HtmlTreeBuilderState.InRow); break; } else if (\"tbody\".equals(name) || \"thead\".equals(name) || \"tfoot\".equals(name)) { transition(HtmlTreeBuilderState.InTableBody); break; } else if (\"caption\".equals(name)) { transition(HtmlTreeBuilderState.InCaption); break;"
+      },
+      {
+        "txt": "} else if (\"colgroup\".equals(name)) { transition(HtmlTreeBuilderState.InColumnGroup); break; // frag } else if (\"table\".equals(name)) { transition(HtmlTreeBuilderState.InTable); break; } else if (\"head\".equals(name)) { transition(HtmlTreeBuilderState.InBody); break; // frag } else if (\"body\".equals(name)) {"
+      },
+      {
+        "txt": "transition(HtmlTreeBuilderState.InBody); break; } else if (\"frameset\".equals(name)) { transition(HtmlTreeBuilderState.InFrameset); break; // frag } else if (\"html\".equals(name)) { transition(HtmlTreeBuilderState.BeforeHead); break; // frag } else if (last) { transition(HtmlTreeBuilderState.InBody);"
+      },
+      {
+        "txt": "break; // frag } } } private String[] specificScopeTarget = {null}; private boolean inSpecificScope(String targetName, String[] baseTypes, String[] extraTypes) { specificScopeTarget[0] = targetName; return inSpecificScope(specificScopeTarget, baseTypes, extraTypes); } private boolean inSpecificScope(String[] targetNames, String[] baseTypes, String[] extraTypes) {"
+      },
+      {
+        "txt": "final int bottom = stack.size() -1; final int top = bottom > MaxScopeSearchDepth ? bottom - MaxScopeSearchDepth : 0; for (int pos = bottom; pos >= top; pos--) { final String elName = stack.get(pos).normalName(); if (inSorted(elName, targetNames)) return true; if (inSorted(elName, baseTypes)) return false; if (extraTypes != null && inSorted(elName, extraTypes)) return false;"
+      },
+      {
+        "txt": "} return false; } boolean inScope(String[] targetNames) { return inSpecificScope(targetNames, TagsSearchInScope, null); } boolean inScope(String targetName) { return inScope(targetName, null); } boolean inScope(String targetName, String[] extras) {"
+      },
+      {
+        "txt": "return inSpecificScope(targetName, TagsSearchInScope, extras); } boolean inListItemScope(String targetName) { return inScope(targetName, TagSearchList); } boolean inButtonScope(String targetName) { return inScope(targetName, TagSearchButton); } boolean inTableScope(String targetName) { return inSpecificScope(targetName, TagSearchTableScope, null);"
+      },
+      {
+        "txt": "} boolean inSelectScope(String targetName) { for (int pos = stack.size() -1; pos >= 0; pos--) { Element el = stack.get(pos); String elName = el.normalName(); if (elName.equals(targetName)) return true; if (!inSorted(elName, TagSearchSelectScope)) // all elements except return false; }"
+      },
+      {
+        "txt": "Validate.fail(\"Should not be reachable\"); return false; } void setHeadElement(Element headElement) { this.headElement = headElement; } Element getHeadElement() { return headElement; } boolean isFosterInserts() {"
+      },
+      {
+        "txt": "return fosterInserts; } void setFosterInserts(boolean fosterInserts) { this.fosterInserts = fosterInserts; } FormElement getFormElement() { return formElement; } void setFormElement(FormElement formElement) { this.formElement = formElement;"
+      },
+      {
+        "txt": "} void newPendingTableCharacters() { pendingTableCharacters = new ArrayList<>(); } List<String> getPendingTableCharacters() { return pendingTableCharacters; } 11.2.5.2 Closing elements that have implied end tags<p/> When the steps below require the UA to generate implied end tags, then, while the current node is a dd element, a dt element, an li element, an option element, an optgroup element, a p element, an rp element, or an rt element,"
+      },
+      {
+        "txt": "the UA must pop the current node off the stack of open elements. @param excludeTag If a step requires the UA to generate implied end tags but lists an element to exclude from the process, then the UA must perform the above steps as if that element was not in the above list. void generateImpliedEndTags(String excludeTag) { while ((excludeTag != null && !currentElement().normalName().equals(excludeTag)) && inSorted(currentElement().normalName(), TagSearchEndTags)) pop(); } void generateImpliedEndTags() { generateImpliedEndTags(null);"
+      },
+      {
+        "txt": "} boolean isSpecial(Element el) { String name = el.normalName(); return inSorted(name, TagSearchSpecial); } Element lastFormattingElement() { return formattingElements.size() > 0 ? formattingElements.get(formattingElements.size()-1) : null; } Element removeLastFormattingElement() { int size = formattingElements.size();"
+      },
+      {
+        "txt": "if (size > 0) return formattingElements.remove(size-1); else return null; } void pushActiveFormattingElements(Element in) { int numSeen = 0; for (int pos = formattingElements.size() -1; pos >= 0; pos--) { Element el = formattingElements.get(pos); if (el == null) // marker"
+      },
+      {
+        "txt": "break; if (isSameFormattingElement(in, el)) numSeen++; if (numSeen == 3) { formattingElements.remove(pos); break; } } formattingElements.add(in); }"
+      },
+      {
+        "txt": "private boolean isSameFormattingElement(Element a, Element b) { return a.normalName().equals(b.normalName()) && a.attributes().equals(b.attributes()); } void reconstructFormattingElements() { Element last = lastFormattingElement(); if (last == null || onStack(last)) return; Element entry = last; int size = formattingElements.size();"
+      },
+      {
+        "txt": "int pos = size - 1; boolean skip = false; while (true) { if (pos == 0) { // step 4. if none before, skip to 8 skip = true; break; } entry = formattingElements.get(--pos); // step 5. one earlier than entry if (entry == null || onStack(entry)) // step 6 - neither marker nor on stack break; // jump to 8, else continue back to 4"
+      },
+      {
+        "txt": "} while(true) { if (!skip) // step 7: on later than entry entry = formattingElements.get(++pos); Validate.notNull(entry); // should not occur, as we break at last element skip = false; // can only skip increment from 4. Element newEl = insertStartTag(entry.normalName()); // todo: avoid fostering here? newEl.attributes().addAll(entry.attributes()); formattingElements.set(pos, newEl); if (pos == size-1) // if not last entry in list, jump to 7"
+      },
+      {
+        "txt": "break; } } void clearFormattingElementsToLastMarker() { while (!formattingElements.isEmpty()) { Element el = removeLastFormattingElement(); if (el == null) break; } }"
+      },
+      {
+        "txt": "void removeFromActiveFormattingElements(Element el) { for (int pos = formattingElements.size() -1; pos >= 0; pos--) { Element next = formattingElements.get(pos); if (next == el) { formattingElements.remove(pos); break; } } } boolean isInActiveFormattingElements(Element el) {"
+      },
+      {
+        "txt": "return isElementInQueue(formattingElements, el); } Element getActiveFormattingElement(String nodeName) { for (int pos = formattingElements.size() -1; pos >= 0; pos--) { Element next = formattingElements.get(pos); if (next == null) // scope marker break; else if (next.normalName().equals(nodeName)) return next; }"
+      },
+      {
+        "txt": "return null; } void replaceActiveFormattingElement(Element out, Element in) { replaceInQueue(formattingElements, out, in); } void insertMarkerToFormattingElements() { formattingElements.add(null); } void insertInFosterParent(Node in) { Element fosterParent;"
+      },
+      {
+        "txt": "Element lastTable = getFromStack(\"table\"); boolean isLastTableParent = false; if (lastTable != null) { if (lastTable.parent() != null) { fosterParent = lastTable.parent(); isLastTableParent = true; } else fosterParent = aboveOnStack(lastTable); } else { // no table == frag fosterParent = stack.get(0);"
+      },
+      {
+        "txt": "} if (isLastTableParent) { Validate.notNull(lastTable); // last table cannot be null by this point. lastTable.before(in); } else fosterParent.appendChild(in); } @Override public String toString() {"
+      },
+      {
+        "txt": "return \"TreeBuilder{\" + \"currentToken=\" + currentToken + \", state=\" + state + \", currentElement=\" + currentElement() + '}'; }"
+      }
+    ]
+  },
+  {
+    "id": 2153,
+    "file_path": "src/main/java/org/jsoup/parser/ParseSettings.java",
+    "start-bug-line": 38,
+    "end-bug-line": 38,
+    "bug": "",
+    "fix": "public boolean preserveAttributeCase() { return preserveAttributeCase; }",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.jsoup.parser; import org.jsoup.nodes.Attributes; import static org.jsoup.internal.Normalizer.lowerCase; public class ParseSettings { public static final ParseSettings htmlDefault; public static final ParseSettings preserveCase; static { htmlDefault = new ParseSettings(false, false);"
+      },
+      {
+        "txt": "} private final boolean preserveTagCase; private final boolean preserveAttributeCase; public boolean preserveTagCase() { return preserveTagCase; } <extra_id_0> public ParseSettings(boolean tag, boolean attribute) { preserveTagCase = tag; preserveAttributeCase = attribute; } public String normalizeTag(String name) { name = name.trim();"
+      },
+      {
+        "txt": "public String normalizeTag(String name) { name = name.trim(); if (!preserveTagCase) name = lowerCase(name); return name; } public String normalizeAttribute(String name) { name = name.trim(); if (!preserveAttributeCase) name = lowerCase(name);"
+      },
+      {
+        "txt": "return name; } Attributes normalizeAttributes(Attributes attributes) { if (!preserveAttributeCase) { attributes.normalize(); } return attributes; }"
+      }
+    ]
+  },
+  {
+    "id": 2154,
+    "file_path": "src/main/java/org/jsoup/parser/Token.java",
+    "start-bug-line": 116,
+    "end-bug-line": 116,
+    "bug": "attributes.put(pendingAttributeName, value);",
+    "fix": "attributes.add(pendingAttributeName, value);",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.jsoup.parser; import org.jsoup.helper.Validate; import org.jsoup.nodes.Attributes; import static org.jsoup.internal.Normalizer.lowerCase; abstract class Token { TokenType type; private Token() { } String tokenType() { return this.getClass().getSimpleName();"
+      },
+      {
+        "txt": "} abstract Token reset(); static void reset(StringBuilder sb) { if (sb != null) { sb.delete(0, sb.length()); } } static final class Doctype extends Token { final StringBuilder name = new StringBuilder(); String pubSysKey = null;"
+      },
+      {
+        "txt": "final StringBuilder publicIdentifier = new StringBuilder(); final StringBuilder systemIdentifier = new StringBuilder(); boolean forceQuirks = false; Doctype() { type = TokenType.Doctype; } @Override Token reset() { reset(name); pubSysKey = null;"
+      },
+      {
+        "txt": "reset(publicIdentifier); reset(systemIdentifier); forceQuirks = false; return this; } String getName() { return name.toString(); } String getPubSysKey() { return pubSysKey;"
+      },
+      {
+        "txt": "} String getPublicIdentifier() { return publicIdentifier.toString(); } public String getSystemIdentifier() { return systemIdentifier.toString(); } public boolean isForceQuirks() { return forceQuirks; }"
+      },
+      {
+        "txt": "} static abstract class Tag extends Token { protected String tagName; protected String normalName; // lc version of tag name, for case insensitive tree build private String pendingAttributeName; // attribute names are generally caught in one hop, not accumulated private StringBuilder pendingAttributeValue = new StringBuilder(); // but values are accumulated, from e.g. & in hrefs private String pendingAttributeValueS; // try to get attr vals in one shot, vs Builder private boolean hasEmptyAttributeValue = false; // distinguish boolean attribute from empty string value private boolean hasPendingAttributeValue = false; boolean selfClosing = false;"
+      },
+      {
+        "txt": "Attributes attributes; // start tags get attributes on construction. End tags get attributes on first new attribute (but only for parser convenience, not used). @Override Tag reset() { tagName = null; normalName = null; pendingAttributeName = null; reset(pendingAttributeValue); pendingAttributeValueS = null; hasEmptyAttributeValue = false; hasPendingAttributeValue = false;"
+      },
+      {
+        "txt": "selfClosing = false; attributes = null; return this; } final void newAttribute() { if (attributes == null) attributes = new Attributes(); if (pendingAttributeName != null) { pendingAttributeName = pendingAttributeName.trim(); if (pendingAttributeName.length() > 0) {"
+      },
+      {
+        "txt": "if (hasPendingAttributeValue) value = pendingAttributeValue.length() > 0 ? pendingAttributeValue.toString() : pendingAttributeValueS; else if (hasEmptyAttributeValue) value = \"\"; else value = null; <extra_id_0> } } pendingAttributeName = null; hasEmptyAttributeValue = false; hasPendingAttributeValue = false; reset(pendingAttributeValue);"
+      },
+      {
+        "txt": "hasPendingAttributeValue = false; reset(pendingAttributeValue); pendingAttributeValueS = null; } final void finaliseTag() { if (pendingAttributeName != null) { newAttribute(); } } final String name() { // preserves case, for input into Tag.valueOf (which may drop case)"
+      },
+      {
+        "txt": "Validate.isFalse(tagName == null || tagName.length() == 0); return tagName; } final String normalName() { // lower case, used in tree building for working out where in tree it should go return normalName; } final Tag name(String name) { tagName = name; normalName = lowerCase(name); return this;"
+      },
+      {
+        "txt": "} final boolean isSelfClosing() { return selfClosing; } @SuppressWarnings({\"TypeMayBeWeakened\"}) final Attributes getAttributes() { return attributes; } final void appendTagName(String append) { tagName = tagName == null ? append : tagName.concat(append);"
+      },
+      {
+        "txt": "normalName = lowerCase(tagName); } final void appendTagName(char append) { appendTagName(String.valueOf(append)); } final void appendAttributeName(String append) { pendingAttributeName = pendingAttributeName == null ? append : pendingAttributeName.concat(append); } final void appendAttributeName(char append) { appendAttributeName(String.valueOf(append));"
+      },
+      {
+        "txt": "} final void appendAttributeValue(String append) { ensureAttributeValue(); if (pendingAttributeValue.length() == 0) { pendingAttributeValueS = append; } else { pendingAttributeValue.append(append); } } final void appendAttributeValue(char append) {"
+      },
+      {
+        "txt": "ensureAttributeValue(); pendingAttributeValue.append(append); } final void appendAttributeValue(char[] append) { ensureAttributeValue(); pendingAttributeValue.append(append); } final void appendAttributeValue(int[] appendCodepoints) { ensureAttributeValue(); for (int codepoint : appendCodepoints) {"
+      },
+      {
+        "txt": "pendingAttributeValue.appendCodePoint(codepoint); } } final void setEmptyAttributeValue() { hasEmptyAttributeValue = true; } private void ensureAttributeValue() { hasPendingAttributeValue = true; if (pendingAttributeValueS != null) { pendingAttributeValue.append(pendingAttributeValueS);"
+      },
+      {
+        "txt": "pendingAttributeValueS = null; } } } final static class StartTag extends Tag { StartTag() { super(); attributes = new Attributes(); type = TokenType.StartTag; }"
+      },
+      {
+        "txt": "@Override Tag reset() { super.reset(); attributes = new Attributes(); return this; } StartTag nameAttr(String name, Attributes attributes) { this.tagName = name; this.attributes = attributes; normalName = lowerCase(tagName);"
+      },
+      {
+        "txt": "return this; } @Override public String toString() { if (attributes != null && attributes.size() > 0) return \"<\" + name() + \" \" + attributes.toString() + \">\"; else return \"<\" + name() + \">\"; } }"
+      },
+      {
+        "txt": "final static class EndTag extends Tag{ EndTag() { super(); type = TokenType.EndTag; } @Override public String toString() { return \"</\" + name() + \">\"; } }"
+      },
+      {
+        "txt": "final static class Comment extends Token { final StringBuilder data = new StringBuilder(); boolean bogus = false; @Override Token reset() { reset(data); bogus = false; return this; } Comment() {"
+      },
+      {
+        "txt": "type = TokenType.Comment; } String getData() { return data.toString(); } @Override public String toString() { return \"<!--\" + getData() + \"-->\"; } }"
+      },
+      {
+        "txt": "static class Character extends Token { private String data; Character() { super(); type = TokenType.Character; } @Override Token reset() { data = null; return this;"
+      },
+      {
+        "txt": "} Character data(String data) { this.data = data; return this; } String getData() { return data; } @Override public String toString() {"
+      },
+      {
+        "txt": "return getData(); } } final static class CData extends Character { CData(String data) { super(); this.data(data); } @Override public String toString() {"
+      },
+      {
+        "txt": "return \"<![CDATA[\" + getData() + \"]]>\"; } } final static class EOF extends Token { EOF() { type = Token.TokenType.EOF; } @Override Token reset() { return this;"
+      },
+      {
+        "txt": "} } final boolean isDoctype() { return type == TokenType.Doctype; } final Doctype asDoctype() { return (Doctype) this; } final boolean isStartTag() { return type == TokenType.StartTag;"
+      },
+      {
+        "txt": "} final StartTag asStartTag() { return (StartTag) this; } final boolean isEndTag() { return type == TokenType.EndTag; } final EndTag asEndTag() { return (EndTag) this; }"
+      },
+      {
+        "txt": "final boolean isComment() { return type == TokenType.Comment; } final Comment asComment() { return (Comment) this; } final boolean isCharacter() { return type == TokenType.Character; } final boolean isCData() {"
+      },
+      {
+        "txt": "return this instanceof CData; } final Character asCharacter() { return (Character) this; } final boolean isEOF() { return type == TokenType.EOF; } public enum TokenType { Doctype,"
+      },
+      {
+        "txt": "StartTag, EndTag, Comment, Character, // note no CData - treated in builder as an extension of Character EOF }"
+      }
+    ]
+  },
+  {
+    "id": 2155,
+    "file_path": "src/main/java/org/jsoup/parser/XmlTreeBuilder.java",
+    "start-bug-line": 78,
+    "end-bug-line": 78,
+    "bug": "",
+    "fix": "startTag.attributes.deduplicate(settings);",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.jsoup.parser; import org.jsoup.helper.Validate;"
+      },
+      {
+        "txt": "import org.jsoup.nodes.CDataNode; import org.jsoup.nodes.Comment; import org.jsoup.nodes.Document; import org.jsoup.nodes.DocumentType; import org.jsoup.nodes.Element; import org.jsoup.nodes.Node; import org.jsoup.nodes.TextNode; import org.jsoup.nodes.XmlDeclaration; import java.io.Reader; import java.io.StringReader;"
+      },
+      {
+        "txt": "import java.util.List; public class XmlTreeBuilder extends TreeBuilder { ParseSettings defaultSettings() { return ParseSettings.preserveCase; } @Override protected void initialiseParse(Reader input, String baseUri, Parser parser) { super.initialiseParse(input, baseUri, parser); stack.add(doc); // place the document onto the stack. differs from HtmlTreeBuilder (not on stack) doc.outputSettings().syntax(Document.OutputSettings.Syntax.xml);"
+      },
+      {
+        "txt": "} Document parse(Reader input, String baseUri) { return parse(input, baseUri, new Parser(this)); } Document parse(String input, String baseUri) { return parse(new StringReader(input), baseUri, new Parser(this)); } @Override protected boolean process(Token token) { switch (token.type) {"
+      },
+      {
+        "txt": "case StartTag: insert(token.asStartTag()); break; case EndTag: popStackToClose(token.asEndTag()); break; case Comment: insert(token.asComment()); break; case Character:"
+      },
+      {
+        "txt": "insert(token.asCharacter()); break; case Doctype: insert(token.asDoctype()); break; case EOF: // could put some normalisation here if desired break; default: Validate.fail(\"Unexpected token type: \" + token.type); }"
+      },
+      {
+        "txt": "} private void insertNode(Node node) { currentElement().appendChild(node); } Element insert(Token.StartTag startTag) { Tag tag = Tag.valueOf(startTag.name(), settings); <extra_id_0> Element el = new Element(tag, baseUri, settings.normalizeAttributes(startTag.attributes)); insertNode(el); if (startTag.isSelfClosing()) { if (!tag.isKnownTag()) // unknown tag, remember this is self closing for output. see above. tag.setSelfClosing(); } else {"
+      },
+      {
+        "txt": "tag.setSelfClosing(); } else { stack.add(el); } return el; } void insert(Token.Comment commentToken) { Comment comment = new Comment(commentToken.getData()); Node insert = comment; if (commentToken.bogus && comment.isXmlDeclaration()) {"
+      },
+      {
+        "txt": "XmlDeclaration decl = comment.asXmlDeclaration(); // else, we couldn't parse it as a decl, so leave as a comment if (decl != null) insert = decl; } insertNode(insert); } void insert(Token.Character token) { final String data = token.getData(); insertNode(token.isCData() ? new CDataNode(data) : new TextNode(data)); }"
+      },
+      {
+        "txt": "void insert(Token.Doctype d) { DocumentType doctypeNode = new DocumentType(settings.normalizeTag(d.getName()), d.getPublicIdentifier(), d.getSystemIdentifier()); doctypeNode.setPubSysKey(d.getPubSysKey()); insertNode(doctypeNode); } private void popStackToClose(Token.EndTag endTag) { String elName = settings.normalizeTag(endTag.tagName); Element firstFound = null; for (int pos = stack.size() -1; pos >= 0; pos--) { Element next = stack.get(pos);"
+      },
+      {
+        "txt": "if (next.nodeName().equals(elName)) { firstFound = next; break; } } if (firstFound == null) return; // not found, skip for (int pos = stack.size() -1; pos >= 0; pos--) { Element next = stack.get(pos); stack.remove(pos);"
+      },
+      {
+        "txt": "if (next == firstFound) break; } } List<Node> parseFragment(String inputFragment, String baseUri, Parser parser) { initialiseParse(new StringReader(inputFragment), baseUri, parser); runParser(); return doc.childNodes(); } List<Node> parseFragment(String inputFragment, Element context, String baseUri, Parser parser) {"
+      },
+      {
+        "txt": "return parseFragment(inputFragment, baseUri, parser); }"
+      }
+    ]
+  }
+]

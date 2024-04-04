@@ -1,0 +1,236 @@
+[
+  {
+    "id": 1144,
+    "file_path": "src/main/java/org/apache/commons/csv/CSVFormat.java",
+    "start-bug-line": 1189,
+    "end-bug-line": 1191,
+    "bug": "if (newRecord && (c < 0x20 || c > 0x21 && c < 0x23 || c > 0x2B && c < 0x2D || c > 0x7E)) { quote = true; } else if (c <= COMMENT) {",
+    "fix": "if (c <= COMMENT) {",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.csv; import static org.apache.commons.csv.Constants.BACKSLASH;"
+      },
+      {
+        "txt": "import static org.apache.commons.csv.Constants.COMMA; import static org.apache.commons.csv.Constants.COMMENT; import static org.apache.commons.csv.Constants.EMPTY; import static org.apache.commons.csv.Constants.CR; import static org.apache.commons.csv.Constants.CRLF; import static org.apache.commons.csv.Constants.DOUBLE_QUOTE_CHAR; import static org.apache.commons.csv.Constants.LF; import static org.apache.commons.csv.Constants.PIPE; import static org.apache.commons.csv.Constants.SP; import static org.apache.commons.csv.Constants.TAB;"
+      },
+      {
+        "txt": "import java.io.File; import java.io.FileOutputStream; import java.io.IOException; import java.io.OutputStreamWriter; import java.io.Reader; import java.io.Serializable; import java.io.StringWriter; import java.nio.charset.Charset; import java.nio.file.Files; import java.nio.file.Path;"
+      },
+      {
+        "txt": "import java.sql.ResultSet; import java.sql.ResultSetMetaData; import java.sql.SQLException; import java.util.Arrays; import java.util.HashSet; import java.util.Set; public final class CSVFormat implements Serializable { public enum Predefined { Default(CSVFormat.DEFAULT), Excel(CSVFormat.EXCEL),"
+      },
+      {
+        "txt": "InformixUnload(CSVFormat.INFORMIX_UNLOAD), InformixUnloadCsv(CSVFormat.INFORMIX_UNLOAD_CSV), MySQL(CSVFormat.MYSQL), PostgreSQLCsv(CSVFormat.POSTGRESQL_CSV), PostgreSQLText(CSVFormat.POSTGRESQL_TEXT), RFC4180(CSVFormat.RFC4180), TDF(CSVFormat.TDF); private final CSVFormat format; Predefined(final CSVFormat format) { this.format = format;"
+      },
+      {
+        "txt": "} public CSVFormat getFormat() { return format; } } public static final CSVFormat DEFAULT = new CSVFormat(COMMA, DOUBLE_QUOTE_CHAR, null, null, null, false, true, CRLF, null, null, null, false, false, false, false, false, false); public static final CSVFormat EXCEL = DEFAULT .withIgnoreEmptyLines(false) .withAllowMissingColumnNames();"
+      },
+      {
+        "txt": "public static final CSVFormat INFORMIX_UNLOAD = DEFAULT .withDelimiter(PIPE) .withEscape(BACKSLASH) .withQuote(DOUBLE_QUOTE_CHAR) .withRecordSeparator(LF); public static final CSVFormat INFORMIX_UNLOAD_CSV = DEFAULT .withDelimiter(COMMA) .withQuote(DOUBLE_QUOTE_CHAR) .withRecordSeparator(LF); public static final CSVFormat MYSQL = DEFAULT"
+      },
+      {
+        "txt": ".withDelimiter(TAB) .withEscape(BACKSLASH) .withIgnoreEmptyLines(false) .withQuote(null) .withRecordSeparator(LF) .withNullString(\"\\\\N\") .withQuoteMode(QuoteMode.ALL_NON_NULL); public static final CSVFormat POSTGRESQL_CSV = DEFAULT .withDelimiter(COMMA) .withEscape(DOUBLE_QUOTE_CHAR)"
+      },
+      {
+        "txt": ".withIgnoreEmptyLines(false) .withQuote(DOUBLE_QUOTE_CHAR) .withRecordSeparator(LF) .withNullString(EMPTY) .withQuoteMode(QuoteMode.ALL_NON_NULL); public static final CSVFormat POSTGRESQL_TEXT = DEFAULT .withDelimiter(TAB) .withEscape(DOUBLE_QUOTE_CHAR) .withIgnoreEmptyLines(false) .withQuote(DOUBLE_QUOTE_CHAR)"
+      },
+      {
+        "txt": ".withRecordSeparator(LF) .withNullString(\"\\\\N\") .withQuoteMode(QuoteMode.ALL_NON_NULL); public static final CSVFormat RFC4180 = DEFAULT.withIgnoreEmptyLines(false); private static final long serialVersionUID = 1L; public static final CSVFormat TDF = DEFAULT .withDelimiter(TAB) .withIgnoreSurroundingSpaces(); private static boolean isLineBreak(final char c) { return c == LF || c == CR;"
+      },
+      {
+        "txt": "} private static boolean isLineBreak(final Character c) { return c != null && isLineBreak(c.charValue()); } public static CSVFormat newFormat(final char delimiter) { return new CSVFormat(delimiter, null, null, null, null, false, false, null, null, null, null, false, false, false, false, false, false); } public static CSVFormat valueOf(final String format) { return CSVFormat.Predefined.valueOf(format).getFormat();"
+      },
+      {
+        "txt": "} private final boolean allowMissingColumnNames; private final Character commentMarker; // null if commenting is disabled private final char delimiter; private final Character escapeCharacter; // null if escaping is disabled private final String[] header; // array of header column names private final String[] headerComments; // array of header comment lines private final boolean ignoreEmptyLines; private final boolean ignoreHeaderCase; // should ignore header names case private final boolean ignoreSurroundingSpaces; // Should leading/trailing spaces be ignored around values?"
+      },
+      {
+        "txt": "private final String nullString; // the string to be used for null values private final Character quoteCharacter; // null if quoting is disabled private final QuoteMode quoteMode; private final String recordSeparator; // for outputs private final boolean skipHeaderRecord; private final boolean trailingDelimiter; private final boolean trim; private final boolean autoFlush; private CSVFormat(final char delimiter, final Character quoteChar, final QuoteMode quoteMode, final Character commentStart, final Character escape, final boolean ignoreSurroundingSpaces,"
+      },
+      {
+        "txt": "final boolean ignoreEmptyLines, final String recordSeparator, final String nullString, final Object[] headerComments, final String[] header, final boolean skipHeaderRecord, final boolean allowMissingColumnNames, final boolean ignoreHeaderCase, final boolean trim, final boolean trailingDelimiter, final boolean autoFlush) { this.delimiter = delimiter; this.quoteCharacter = quoteChar; this.quoteMode = quoteMode; this.commentMarker = commentStart; this.escapeCharacter = escape; this.ignoreSurroundingSpaces = ignoreSurroundingSpaces;"
+      },
+      {
+        "txt": "this.allowMissingColumnNames = allowMissingColumnNames; this.ignoreEmptyLines = ignoreEmptyLines; this.recordSeparator = recordSeparator; this.nullString = nullString; this.headerComments = toStringArray(headerComments); this.header = header == null ? null : header.clone(); this.skipHeaderRecord = skipHeaderRecord; this.ignoreHeaderCase = ignoreHeaderCase; this.trailingDelimiter = trailingDelimiter; this.trim = trim;"
+      },
+      {
+        "txt": "this.autoFlush = autoFlush; validate(); } @Override public boolean equals(final Object obj) { if (this == obj) { return true; } if (obj == null) { return false;"
+      },
+      {
+        "txt": "} if (getClass() != obj.getClass()) { return false; } final CSVFormat other = (CSVFormat) obj; if (delimiter != other.delimiter) { return false; } if (quoteMode != other.quoteMode) { return false;"
+      },
+      {
+        "txt": "} if (quoteCharacter == null) { if (other.quoteCharacter != null) { return false; } } else if (!quoteCharacter.equals(other.quoteCharacter)) { return false; } if (commentMarker == null) { if (other.commentMarker != null) {"
+      },
+      {
+        "txt": "return false; } } else if (!commentMarker.equals(other.commentMarker)) { return false; } if (escapeCharacter == null) { if (other.escapeCharacter != null) { return false; } } else if (!escapeCharacter.equals(other.escapeCharacter)) {"
+      },
+      {
+        "txt": "return false; } if (nullString == null) { if (other.nullString != null) { return false; } } else if (!nullString.equals(other.nullString)) { return false; } if (!Arrays.equals(header, other.header)) {"
+      },
+      {
+        "txt": "return false; } if (ignoreSurroundingSpaces != other.ignoreSurroundingSpaces) { return false; } if (ignoreEmptyLines != other.ignoreEmptyLines) { return false; } if (skipHeaderRecord != other.skipHeaderRecord) { return false;"
+      },
+      {
+        "txt": "} if (recordSeparator == null) { if (other.recordSeparator != null) { return false; } } else if (!recordSeparator.equals(other.recordSeparator)) { return false; } return true; }"
+      },
+      {
+        "txt": "public String format(final Object... values) { final StringWriter out = new StringWriter(); try (final CSVPrinter csvPrinter = new CSVPrinter(out, this)) { csvPrinter.printRecord(values); return out.toString().trim(); } catch (final IOException e) { throw new IllegalStateException(e); } } public boolean getAllowMissingColumnNames() {"
+      },
+      {
+        "txt": "return allowMissingColumnNames; } public Character getCommentMarker() { return commentMarker; } public char getDelimiter() { return delimiter; } public Character getEscapeCharacter() { return escapeCharacter;"
+      },
+      {
+        "txt": "} public String[] getHeader() { return header != null ? header.clone() : null; } public String[] getHeaderComments() { return headerComments != null ? headerComments.clone() : null; } public boolean getIgnoreEmptyLines() { return ignoreEmptyLines; }"
+      },
+      {
+        "txt": "public boolean getIgnoreHeaderCase() { return ignoreHeaderCase; } public boolean getIgnoreSurroundingSpaces() { return ignoreSurroundingSpaces; } public String getNullString() { return nullString; } public Character getQuoteCharacter() {"
+      },
+      {
+        "txt": "return quoteCharacter; } public QuoteMode getQuoteMode() { return quoteMode; } public String getRecordSeparator() { return recordSeparator; } public boolean getSkipHeaderRecord() { return skipHeaderRecord;"
+      },
+      {
+        "txt": "} public boolean getTrailingDelimiter() { return trailingDelimiter; } public boolean getTrim() { return trim; } public boolean getAutoFlush() { return autoFlush; }"
+      },
+      {
+        "txt": "@Override public int hashCode() { final int prime = 31; int result = 1; result = prime * result + delimiter; result = prime * result + ((quoteMode == null) ? 0 : quoteMode.hashCode()); result = prime * result + ((quoteCharacter == null) ? 0 : quoteCharacter.hashCode()); result = prime * result + ((commentMarker == null) ? 0 : commentMarker.hashCode()); result = prime * result + ((escapeCharacter == null) ? 0 : escapeCharacter.hashCode()); result = prime * result + ((nullString == null) ? 0 : nullString.hashCode());"
+      },
+      {
+        "txt": "result = prime * result + (ignoreSurroundingSpaces ? 1231 : 1237); result = prime * result + (ignoreHeaderCase ? 1231 : 1237); result = prime * result + (ignoreEmptyLines ? 1231 : 1237); result = prime * result + (skipHeaderRecord ? 1231 : 1237); result = prime * result + ((recordSeparator == null) ? 0 : recordSeparator.hashCode()); result = prime * result + Arrays.hashCode(header); return result; } public boolean isCommentMarkerSet() { return commentMarker != null;"
+      },
+      {
+        "txt": "} public boolean isEscapeCharacterSet() { return escapeCharacter != null; } public boolean isNullStringSet() { return nullString != null; } public boolean isQuoteCharacterSet() { return quoteCharacter != null; }"
+      },
+      {
+        "txt": "public CSVParser parse(final Reader in) throws IOException { return new CSVParser(in, this); } public CSVPrinter print(final Appendable out) throws IOException { return new CSVPrinter(out, this); } public CSVPrinter printer() throws IOException { return new CSVPrinter(System.out, this); } @SuppressWarnings(\"resource\")"
+      },
+      {
+        "txt": "public CSVPrinter print(final File out, final Charset charset) throws IOException { return new CSVPrinter(new OutputStreamWriter(new FileOutputStream(out), charset), this); } public CSVPrinter print(final Path out, final Charset charset) throws IOException { return print(Files.newBufferedWriter(out, charset)); } public void print(final Object value, final Appendable out, final boolean newRecord) throws IOException { CharSequence charSequence; if (value == null) { if (null == nullString) {"
+      },
+      {
+        "txt": "charSequence = EMPTY; } else { if (QuoteMode.ALL == quoteMode) { charSequence = quoteCharacter + nullString + quoteCharacter; } else { charSequence = nullString; } } } else { charSequence = value instanceof CharSequence ? (CharSequence) value : value.toString();"
+      },
+      {
+        "txt": "} charSequence = getTrim() ? trim(charSequence) : charSequence; this.print(value, charSequence, 0, charSequence.length(), out, newRecord); } private void print(final Object object, final CharSequence value, final int offset, final int len, final Appendable out, final boolean newRecord) throws IOException { if (!newRecord) { out.append(getDelimiter()); } if (object == null) {"
+      },
+      {
+        "txt": "out.append(value); } else if (isQuoteCharacterSet()) { printAndQuote(object, value, offset, len, out, newRecord); } else if (isEscapeCharacterSet()) { printAndEscape(value, offset, len, out); } else { out.append(value, offset, offset + len); } } private void printAndEscape(final CharSequence value, final int offset, final int len, final Appendable out)"
+      },
+      {
+        "txt": "throws IOException { int start = offset; int pos = offset; final int end = offset + len; final char delim = getDelimiter(); final char escape = getEscapeCharacter().charValue(); while (pos < end) { char c = value.charAt(pos); if (c == CR || c == LF || c == delim || c == escape) { if (pos > start) {"
+      },
+      {
+        "txt": "out.append(value, start, pos); } if (c == LF) { c = 'n'; } else if (c == CR) { c = 'r'; } out.append(escape); out.append(c); start = pos + 1; // start on the current char after this one"
+      },
+      {
+        "txt": "} pos++; } if (pos > start) { out.append(value, start, pos); } } private void printAndQuote(final Object object, final CharSequence value, final int offset, final int len, final Appendable out, final boolean newRecord) throws IOException { boolean quote = false;"
+      },
+      {
+        "txt": "int start = offset; int pos = offset; final int end = offset + len; final char delimChar = getDelimiter(); final char quoteChar = getQuoteCharacter().charValue(); QuoteMode quoteModePolicy = getQuoteMode(); if (quoteModePolicy == null) { quoteModePolicy = QuoteMode.MINIMAL; } switch (quoteModePolicy) {"
+      },
+      {
+        "txt": "case ALL: case ALL_NON_NULL: quote = true; break; case NON_NUMERIC: quote = !(object instanceof Number); break; case NONE: printAndEscape(value, offset, len, out); return;"
+      },
+      {
+        "txt": "if (len <= 0) { if (newRecord) { quote = true; } } else { char c = value.charAt(pos); <extra_id_0> quote = true; } else { while (pos < end) { c = value.charAt(pos); if (c == LF || c == CR || c == quoteChar || c == delimChar) { quote = true;"
+      },
+      {
+        "txt": "if (c == LF || c == CR || c == quoteChar || c == delimChar) { quote = true; break; } pos++; } if (!quote) { pos = end - 1; c = value.charAt(pos); if (c <= SP) {"
+      },
+      {
+        "txt": "quote = true; } } } } if (!quote) { out.append(value, start, end); return; } break;"
+      },
+      {
+        "txt": "default: throw new IllegalStateException(\"Unexpected Quote value: \" + quoteModePolicy); } if (!quote) { out.append(value, start, end); return; } out.append(quoteChar); while (pos < end) { final char c = value.charAt(pos);"
+      },
+      {
+        "txt": "if (c == quoteChar) { out.append(value, start, pos + 1); start = pos; } pos++; } out.append(value, start, pos); out.append(quoteChar); } public void println(final Appendable out) throws IOException {"
+      },
+      {
+        "txt": "if (getTrailingDelimiter()) { out.append(getDelimiter()); } if (recordSeparator != null) { out.append(recordSeparator); } } public void printRecord(final Appendable out, final Object... values) throws IOException { for (int i = 0; i < values.length; i++) { print(values[i], out, i == 0);"
+      },
+      {
+        "txt": "} println(out); } @Override public String toString() { final StringBuilder sb = new StringBuilder(); sb.append(\"Delimiter=<\").append(delimiter).append('>'); if (isEscapeCharacterSet()) { sb.append(' '); sb.append(\"Escape=<\").append(escapeCharacter).append('>');"
+      },
+      {
+        "txt": "} if (isQuoteCharacterSet()) { sb.append(' '); sb.append(\"QuoteChar=<\").append(quoteCharacter).append('>'); } if (isCommentMarkerSet()) { sb.append(' '); sb.append(\"CommentStart=<\").append(commentMarker).append('>'); } if (isNullStringSet()) {"
+      },
+      {
+        "txt": "sb.append(' '); sb.append(\"NullString=<\").append(nullString).append('>'); } if (recordSeparator != null) { sb.append(' '); sb.append(\"RecordSeparator=<\").append(recordSeparator).append('>'); } if (getIgnoreEmptyLines()) { sb.append(\" EmptyLines:ignored\"); }"
+      },
+      {
+        "txt": "if (getIgnoreSurroundingSpaces()) { sb.append(\" SurroundingSpaces:ignored\"); } if (getIgnoreHeaderCase()) { sb.append(\" IgnoreHeaderCase:ignored\"); } sb.append(\" SkipHeaderRecord:\").append(skipHeaderRecord); if (headerComments != null) { sb.append(' '); sb.append(\"HeaderComments:\").append(Arrays.toString(headerComments));"
+      },
+      {
+        "txt": "} if (header != null) { sb.append(' '); sb.append(\"Header:\").append(Arrays.toString(header)); } return sb.toString(); } private String[] toStringArray(final Object[] values) { if (values == null) { return null;"
+      },
+      {
+        "txt": "} final String[] strings = new String[values.length]; for (int i = 0; i < values.length; i++) { final Object value = values[i]; strings[i] = value == null ? null : value.toString(); } return strings; } private CharSequence trim(final CharSequence charSequence) { if (charSequence instanceof String) {"
+      },
+      {
+        "txt": "return ((String) charSequence).trim(); } final int count = charSequence.length(); int len = count; int pos = 0; while (pos < len && charSequence.charAt(pos) <= SP) { pos++; } while (pos < len && charSequence.charAt(len - 1) <= SP) { len--;"
+      },
+      {
+        "txt": "} return pos > 0 || len < count ? charSequence.subSequence(pos, len) : charSequence; } private void validate() throws IllegalArgumentException { if (isLineBreak(delimiter)) { throw new IllegalArgumentException(\"The delimiter cannot be a line break\"); } if (quoteCharacter != null && delimiter == quoteCharacter.charValue()) { throw new IllegalArgumentException( \"The quoteChar character and the delimiter cannot be the same ('\" + quoteCharacter + \"')\");"
+      },
+      {
+        "txt": "} if (escapeCharacter != null && delimiter == escapeCharacter.charValue()) { throw new IllegalArgumentException( \"The escape character and the delimiter cannot be the same ('\" + escapeCharacter + \"')\"); } if (commentMarker != null && delimiter == commentMarker.charValue()) { throw new IllegalArgumentException( \"The comment start character and the delimiter cannot be the same ('\" + commentMarker + \"')\"); } if (quoteCharacter != null && quoteCharacter.equals(commentMarker)) {"
+      },
+      {
+        "txt": "throw new IllegalArgumentException( \"The comment start character and the quoteChar cannot be the same ('\" + commentMarker + \"')\"); } if (escapeCharacter != null && escapeCharacter.equals(commentMarker)) { throw new IllegalArgumentException( \"The comment start and the escape character cannot be the same ('\" + commentMarker + \"')\"); } if (escapeCharacter == null && quoteMode == QuoteMode.NONE) { throw new IllegalArgumentException(\"No quotes mode set but no escape character is set\"); }"
+      },
+      {
+        "txt": "if (header != null) { final Set<String> dupCheck = new HashSet<>(); for (final String hdr : header) { if (!dupCheck.add(hdr)) { throw new IllegalArgumentException( \"The header contains a duplicate entry: '\" + hdr + \"' in \" + Arrays.toString(header)); } } } }"
+      },
+      {
+        "txt": "public CSVFormat withAllowMissingColumnNames() { return this.withAllowMissingColumnNames(true); } public CSVFormat withAllowMissingColumnNames(final boolean allowMissingColumnNames) { return new CSVFormat(delimiter, quoteCharacter, quoteMode, commentMarker, escapeCharacter, ignoreSurroundingSpaces, ignoreEmptyLines, recordSeparator, nullString, headerComments, header, skipHeaderRecord, allowMissingColumnNames, ignoreHeaderCase, trim, trailingDelimiter, autoFlush); } public CSVFormat withCommentMarker(final char commentMarker) { return withCommentMarker(Character.valueOf(commentMarker));"
+      },
+      {
+        "txt": "} public CSVFormat withCommentMarker(final Character commentMarker) { if (isLineBreak(commentMarker)) { throw new IllegalArgumentException(\"The comment start marker character cannot be a line break\"); } return new CSVFormat(delimiter, quoteCharacter, quoteMode, commentMarker, escapeCharacter, ignoreSurroundingSpaces, ignoreEmptyLines, recordSeparator, nullString, headerComments, header, skipHeaderRecord, allowMissingColumnNames, ignoreHeaderCase, trim, trailingDelimiter, autoFlush); } public CSVFormat withDelimiter(final char delimiter) {"
+      },
+      {
+        "txt": "if (isLineBreak(delimiter)) { throw new IllegalArgumentException(\"The delimiter cannot be a line break\"); } return new CSVFormat(delimiter, quoteCharacter, quoteMode, commentMarker, escapeCharacter, ignoreSurroundingSpaces, ignoreEmptyLines, recordSeparator, nullString, headerComments, header, skipHeaderRecord, allowMissingColumnNames, ignoreHeaderCase, trim, trailingDelimiter, autoFlush); } public CSVFormat withEscape(final char escape) { return withEscape(Character.valueOf(escape)); }"
+      },
+      {
+        "txt": "public CSVFormat withEscape(final Character escape) { if (isLineBreak(escape)) { throw new IllegalArgumentException(\"The escape character cannot be a line break\"); } return new CSVFormat(delimiter, quoteCharacter, quoteMode, commentMarker, escape, ignoreSurroundingSpaces, ignoreEmptyLines, recordSeparator, nullString, headerComments, header, skipHeaderRecord, allowMissingColumnNames, ignoreHeaderCase, trim, trailingDelimiter, autoFlush); } public CSVFormat withFirstRecordAsHeader() { return withHeader().withSkipHeaderRecord();"
+      },
+      {
+        "txt": "} public CSVFormat withHeader(final Class<? extends Enum<?>> headerEnum) { String[] header = null; if (headerEnum != null) { final Enum<?>[] enumValues = headerEnum.getEnumConstants(); header = new String[enumValues.length]; for (int i = 0; i < enumValues.length; i++) { header[i] = enumValues[i].name(); } }"
+      },
+      {
+        "txt": "return withHeader(header); } public CSVFormat withHeader(final ResultSet resultSet) throws SQLException { return withHeader(resultSet != null ? resultSet.getMetaData() : null); } public CSVFormat withHeader(final ResultSetMetaData metaData) throws SQLException { String[] labels = null; if (metaData != null) { final int columnCount = metaData.getColumnCount(); labels = new String[columnCount];"
+      },
+      {
+        "txt": "for (int i = 0; i < columnCount; i++) { labels[i] = metaData.getColumnLabel(i + 1); } } return withHeader(labels); } public CSVFormat withHeader(final String... header) { return new CSVFormat(delimiter, quoteCharacter, quoteMode, commentMarker, escapeCharacter, ignoreSurroundingSpaces, ignoreEmptyLines, recordSeparator, nullString, headerComments, header, skipHeaderRecord, allowMissingColumnNames, ignoreHeaderCase, trim, trailingDelimiter, autoFlush);"
+      },
+      {
+        "txt": "} public CSVFormat withHeaderComments(final Object... headerComments) { return new CSVFormat(delimiter, quoteCharacter, quoteMode, commentMarker, escapeCharacter, ignoreSurroundingSpaces, ignoreEmptyLines, recordSeparator, nullString, headerComments, header, skipHeaderRecord, allowMissingColumnNames, ignoreHeaderCase, trim, trailingDelimiter, autoFlush); } public CSVFormat withIgnoreEmptyLines() { return this.withIgnoreEmptyLines(true); } public CSVFormat withIgnoreEmptyLines(final boolean ignoreEmptyLines) {"
+      },
+      {
+        "txt": "return new CSVFormat(delimiter, quoteCharacter, quoteMode, commentMarker, escapeCharacter, ignoreSurroundingSpaces, ignoreEmptyLines, recordSeparator, nullString, headerComments, header, skipHeaderRecord, allowMissingColumnNames, ignoreHeaderCase, trim, trailingDelimiter, autoFlush); } public CSVFormat withIgnoreHeaderCase() { return this.withIgnoreHeaderCase(true); } public CSVFormat withIgnoreHeaderCase(final boolean ignoreHeaderCase) { return new CSVFormat(delimiter, quoteCharacter, quoteMode, commentMarker, escapeCharacter, ignoreSurroundingSpaces, ignoreEmptyLines, recordSeparator, nullString, headerComments, header,"
+      },
+      {
+        "txt": "skipHeaderRecord, allowMissingColumnNames, ignoreHeaderCase, trim, trailingDelimiter, autoFlush); } public CSVFormat withIgnoreSurroundingSpaces() { return this.withIgnoreSurroundingSpaces(true); } public CSVFormat withIgnoreSurroundingSpaces(final boolean ignoreSurroundingSpaces) { return new CSVFormat(delimiter, quoteCharacter, quoteMode, commentMarker, escapeCharacter, ignoreSurroundingSpaces, ignoreEmptyLines, recordSeparator, nullString, headerComments, header, skipHeaderRecord, allowMissingColumnNames, ignoreHeaderCase, trim, trailingDelimiter, autoFlush); }"
+      },
+      {
+        "txt": "public CSVFormat withNullString(final String nullString) { return new CSVFormat(delimiter, quoteCharacter, quoteMode, commentMarker, escapeCharacter, ignoreSurroundingSpaces, ignoreEmptyLines, recordSeparator, nullString, headerComments, header, skipHeaderRecord, allowMissingColumnNames, ignoreHeaderCase, trim, trailingDelimiter, autoFlush); } public CSVFormat withQuote(final char quoteChar) { return withQuote(Character.valueOf(quoteChar)); } public CSVFormat withQuote(final Character quoteChar) { if (isLineBreak(quoteChar)) {"
+      },
+      {
+        "txt": "throw new IllegalArgumentException(\"The quoteChar cannot be a line break\"); } return new CSVFormat(delimiter, quoteChar, quoteMode, commentMarker, escapeCharacter, ignoreSurroundingSpaces, ignoreEmptyLines, recordSeparator, nullString, headerComments, header, skipHeaderRecord, allowMissingColumnNames, ignoreHeaderCase, trim, trailingDelimiter, autoFlush); } public CSVFormat withQuoteMode(final QuoteMode quoteModePolicy) { return new CSVFormat(delimiter, quoteCharacter, quoteModePolicy, commentMarker, escapeCharacter, ignoreSurroundingSpaces, ignoreEmptyLines, recordSeparator, nullString, headerComments, header, skipHeaderRecord, allowMissingColumnNames, ignoreHeaderCase, trim, trailingDelimiter, autoFlush);"
+      },
+      {
+        "txt": "} public CSVFormat withRecordSeparator(final char recordSeparator) { return withRecordSeparator(String.valueOf(recordSeparator)); } public CSVFormat withRecordSeparator(final String recordSeparator) { return new CSVFormat(delimiter, quoteCharacter, quoteMode, commentMarker, escapeCharacter, ignoreSurroundingSpaces, ignoreEmptyLines, recordSeparator, nullString, headerComments, header, skipHeaderRecord, allowMissingColumnNames, ignoreHeaderCase, trim, trailingDelimiter, autoFlush); } public CSVFormat withSkipHeaderRecord() {"
+      },
+      {
+        "txt": "return this.withSkipHeaderRecord(true); } public CSVFormat withSkipHeaderRecord(final boolean skipHeaderRecord) { return new CSVFormat(delimiter, quoteCharacter, quoteMode, commentMarker, escapeCharacter, ignoreSurroundingSpaces, ignoreEmptyLines, recordSeparator, nullString, headerComments, header, skipHeaderRecord, allowMissingColumnNames, ignoreHeaderCase, trim, trailingDelimiter, autoFlush); } public CSVFormat withTrailingDelimiter() { return withTrailingDelimiter(true); }"
+      },
+      {
+        "txt": "public CSVFormat withTrailingDelimiter(final boolean trailingDelimiter) { return new CSVFormat(delimiter, quoteCharacter, quoteMode, commentMarker, escapeCharacter, ignoreSurroundingSpaces, ignoreEmptyLines, recordSeparator, nullString, headerComments, header, skipHeaderRecord, allowMissingColumnNames, ignoreHeaderCase, trim, trailingDelimiter, autoFlush); } public CSVFormat withTrim() { return withTrim(true); } public CSVFormat withTrim(final boolean trim) { return new CSVFormat(delimiter, quoteCharacter, quoteMode, commentMarker, escapeCharacter,"
+      },
+      {
+        "txt": "ignoreSurroundingSpaces, ignoreEmptyLines, recordSeparator, nullString, headerComments, header, skipHeaderRecord, allowMissingColumnNames, ignoreHeaderCase, trim, trailingDelimiter, autoFlush); } public CSVFormat withAutoFlush(final boolean autoFlush) { return new CSVFormat(delimiter, quoteCharacter, quoteMode, commentMarker, escapeCharacter, ignoreSurroundingSpaces, ignoreEmptyLines, recordSeparator, nullString, headerComments, header, skipHeaderRecord, allowMissingColumnNames, ignoreHeaderCase, trim, trailingDelimiter, autoFlush); }"
+      }
+    ]
+  }
+]

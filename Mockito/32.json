@@ -1,0 +1,62 @@
+[
+  {
+    "id": 2868,
+    "file_path": "src/org/mockito/internal/configuration/SpyAnnotationEngine.java",
+    "start-bug-line": 19,
+    "end-bug-line": 19,
+    "bug": "",
+    "fix": "import static org.mockito.Mockito.withSettings;",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.mockito.internal.configuration; import java.lang.annotation.Annotation; import java.lang.reflect.Field; import org.mockito.Captor;"
+      },
+      {
+        "txt": "import org.mockito.Mockito; import org.mockito.Spy; import org.mockito.configuration.AnnotationEngine; import org.mockito.exceptions.Reporter; import org.mockito.exceptions.base.MockitoException; import org.mockito.internal.util.MockUtil; <extra_id_0> @SuppressWarnings({\"unchecked\"}) public class SpyAnnotationEngine implements AnnotationEngine { public Object createMockFor(Annotation annotation, Field field) { return null; } @SuppressWarnings(\"deprecation\")"
+      },
+      {
+        "txt": "} @SuppressWarnings(\"deprecation\") public void process(Class<?> context, Object testClass) { Field[] fields = context.getDeclaredFields(); for (Field field : fields) { if (field.isAnnotationPresent(Spy.class)) { assertNoAnnotations(Spy.class, field, Mock.class, org.mockito.MockitoAnnotations.Mock.class, Captor.class); boolean wasAccessible = field.isAccessible(); field.setAccessible(true); try {"
+      },
+      {
+        "txt": "Object instance = field.get(testClass); if (instance == null) { throw new MockitoException(\"Cannot create a @Spy for '\" + field.getName() + \"' field because the *instance* is missing\\n\" + \"The instance must be created *before* initMocks();\\n\" + \"Example of correct usage of @Spy:\\n\" + \" @Spy List mock = new LinkedList();\\n\" + \" //also, don't forget about MockitoAnnotations.initMocks();\"); } if (new MockUtil().isMock(instance)) { Mockito.reset(instance);"
+      },
+      {
+        "txt": "} else { field.set(testClass, Mockito.spy(instance)); } } catch (IllegalAccessException e) { throw new MockitoException(\"Problems initiating spied field \" + field.getName(), e); } finally { field.setAccessible(wasAccessible); } } }"
+      },
+      {
+        "txt": "} void assertNoAnnotations(Class annotation, Field field, Class ... undesiredAnnotations) { for (Class u : undesiredAnnotations) { if (field.isAnnotationPresent(u)) { new Reporter().unsupportedCombinationOfAnnotations(annotation.getSimpleName(), annotation.getClass().getSimpleName()); } } }"
+      }
+    ]
+  },
+  {
+    "id": 2869,
+    "file_path": "src/org/mockito/internal/configuration/SpyAnnotationEngine.java",
+    "start-bug-line": 49,
+    "end-bug-line": 49,
+    "bug": "field.set(testClass, Mockito.spy(instance));",
+    "fix": "field.set(testClass, Mockito.mock(instance.getClass(), withSettings() .spiedInstance(instance) .defaultAnswer(Mockito.CALLS_REAL_METHODS) .name(field.getName())));",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.mockito.internal.configuration; import java.lang.annotation.Annotation; import java.lang.reflect.Field; import org.mockito.Captor; import org.mockito.Mock; import org.mockito.Mockito; import org.mockito.Spy; import org.mockito.configuration.AnnotationEngine; import org.mockito.exceptions.Reporter;"
+      },
+      {
+        "txt": "import org.mockito.exceptions.base.MockitoException; import org.mockito.internal.util.MockUtil; @SuppressWarnings({\"unchecked\"}) public class SpyAnnotationEngine implements AnnotationEngine { public Object createMockFor(Annotation annotation, Field field) { return null; } @SuppressWarnings(\"deprecation\") public void process(Class<?> context, Object testClass) { Field[] fields = context.getDeclaredFields();"
+      },
+      {
+        "txt": "for (Field field : fields) { if (field.isAnnotationPresent(Spy.class)) { assertNoAnnotations(Spy.class, field, Mock.class, org.mockito.MockitoAnnotations.Mock.class, Captor.class); boolean wasAccessible = field.isAccessible(); field.setAccessible(true); try { Object instance = field.get(testClass); if (instance == null) { throw new MockitoException(\"Cannot create a @Spy for '\" + field.getName() + \"' field because the *instance* is missing\\n\" + \"The instance must be created *before* initMocks();\\n\" +"
+      },
+      {
+        "txt": "\" @Spy List mock = new LinkedList();\\n\" + \" //also, don't forget about MockitoAnnotations.initMocks();\"); } if (new MockUtil().isMock(instance)) { Mockito.reset(instance); } else { <extra_id_0> } } catch (IllegalAccessException e) { throw new MockitoException(\"Problems initiating spied field \" + field.getName(), e); } finally { field.setAccessible(wasAccessible); }"
+      },
+      {
+        "txt": "field.setAccessible(wasAccessible); } } } } void assertNoAnnotations(Class annotation, Field field, Class ... undesiredAnnotations) { for (Class u : undesiredAnnotations) { if (field.isAnnotationPresent(u)) { new Reporter().unsupportedCombinationOfAnnotations(annotation.getSimpleName(), annotation.getClass().getSimpleName()); }"
+      },
+      {
+        "txt": "} }"
+      }
+    ]
+  }
+]

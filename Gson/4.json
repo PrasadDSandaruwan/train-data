@@ -1,0 +1,1757 @@
+[
+  {
+    "id": 1161,
+    "file_path": "gson/src/main/java/com/google/gson/stream/JsonReader.java",
+    "start-bug-line": 574,
+    "end-bug-line": 576,
+    "bug": "if (stackSize == 1) { checkLenient(); }",
+    "fix": "[Delete]",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.google.gson.stream; import com.google.gson.internal.JsonReaderInternalAccess;"
+      },
+      {
+        "txt": "import com.google.gson.internal.bind.JsonTreeReader; import java.io.Closeable; import java.io.EOFException; import java.io.IOException; import java.io.Reader; public class JsonReader implements Closeable { private static final char[] NON_EXECUTE_PREFIX = \")]}'\\n\".toCharArray(); private static final long MIN_INCOMPLETE_INTEGER = Long.MIN_VALUE / 10; private static final int PEEKED_NONE = 0; private static final int PEEKED_BEGIN_OBJECT = 1;"
+      },
+      {
+        "txt": "private static final int PEEKED_END_OBJECT = 2; private static final int PEEKED_BEGIN_ARRAY = 3; private static final int PEEKED_END_ARRAY = 4; private static final int PEEKED_TRUE = 5; private static final int PEEKED_FALSE = 6; private static final int PEEKED_NULL = 7; private static final int PEEKED_SINGLE_QUOTED = 8; private static final int PEEKED_DOUBLE_QUOTED = 9; private static final int PEEKED_UNQUOTED = 10; private static final int PEEKED_BUFFERED = 11;"
+      },
+      {
+        "txt": "private static final int PEEKED_SINGLE_QUOTED_NAME = 12; private static final int PEEKED_DOUBLE_QUOTED_NAME = 13; private static final int PEEKED_UNQUOTED_NAME = 14; private static final int PEEKED_LONG = 15; private static final int PEEKED_NUMBER = 16; private static final int PEEKED_EOF = 17; private static final int NUMBER_CHAR_NONE = 0; private static final int NUMBER_CHAR_SIGN = 1; private static final int NUMBER_CHAR_DIGIT = 2; private static final int NUMBER_CHAR_DECIMAL = 3;"
+      },
+      {
+        "txt": "private static final int NUMBER_CHAR_FRACTION_DIGIT = 4; private static final int NUMBER_CHAR_EXP_E = 5; private static final int NUMBER_CHAR_EXP_SIGN = 6; private static final int NUMBER_CHAR_EXP_DIGIT = 7; private final Reader in; private boolean lenient = false; private final char[] buffer = new char[1024]; private int pos = 0; private int limit = 0; private int lineNumber = 0;"
+      },
+      {
+        "txt": "private int lineStart = 0; int peeked = PEEKED_NONE; private long peekedLong; private int peekedNumberLength; private String peekedString; private int[] stack = new int[32]; private int stackSize = 0; { stack[stackSize++] = JsonScope.EMPTY_DOCUMENT; }"
+      },
+      {
+        "txt": "private String[] pathNames = new String[32]; private int[] pathIndices = new int[32]; public JsonReader(Reader in) { if (in == null) { throw new NullPointerException(\"in == null\"); } this.in = in; } public final void setLenient(boolean lenient) { this.lenient = lenient;"
+      },
+      {
+        "txt": "} public final boolean isLenient() { return lenient; } public void beginArray() throws IOException { int p = peeked; if (p == PEEKED_NONE) { p = doPeek(); } if (p == PEEKED_BEGIN_ARRAY) {"
+      },
+      {
+        "txt": "push(JsonScope.EMPTY_ARRAY); pathIndices[stackSize - 1] = 0; peeked = PEEKED_NONE; } else { throw new IllegalStateException(\"Expected BEGIN_ARRAY but was \" + peek() + \" at line \" + getLineNumber() + \" column \" + getColumnNumber() + \" path \" + getPath()); } } public void endArray() throws IOException { int p = peeked;"
+      },
+      {
+        "txt": "if (p == PEEKED_NONE) { p = doPeek(); } if (p == PEEKED_END_ARRAY) { stackSize--; pathIndices[stackSize - 1]++; peeked = PEEKED_NONE; } else { throw new IllegalStateException(\"Expected END_ARRAY but was \" + peek() + \" at line \" + getLineNumber() + \" column \" + getColumnNumber() + \" path \" + getPath());"
+      },
+      {
+        "txt": "} } public void beginObject() throws IOException { int p = peeked; if (p == PEEKED_NONE) { p = doPeek(); } if (p == PEEKED_BEGIN_OBJECT) { push(JsonScope.EMPTY_OBJECT); peeked = PEEKED_NONE;"
+      },
+      {
+        "txt": "} else { throw new IllegalStateException(\"Expected BEGIN_OBJECT but was \" + peek() + \" at line \" + getLineNumber() + \" column \" + getColumnNumber() + \" path \" + getPath()); } } public void endObject() throws IOException { int p = peeked; if (p == PEEKED_NONE) { p = doPeek(); }"
+      },
+      {
+        "txt": "if (p == PEEKED_END_OBJECT) { stackSize--; pathNames[stackSize] = null; // Free the last path name so that it can be garbage collected! pathIndices[stackSize - 1]++; peeked = PEEKED_NONE; } else { throw new IllegalStateException(\"Expected END_OBJECT but was \" + peek() + \" at line \" + getLineNumber() + \" column \" + getColumnNumber() + \" path \" + getPath()); } }"
+      },
+      {
+        "txt": "public boolean hasNext() throws IOException { int p = peeked; if (p == PEEKED_NONE) { p = doPeek(); } return p != PEEKED_END_OBJECT && p != PEEKED_END_ARRAY; } public JsonToken peek() throws IOException { int p = peeked; if (p == PEEKED_NONE) {"
+      },
+      {
+        "txt": "p = doPeek(); } switch (p) { case PEEKED_BEGIN_OBJECT: return JsonToken.BEGIN_OBJECT; case PEEKED_END_OBJECT: return JsonToken.END_OBJECT; case PEEKED_BEGIN_ARRAY: return JsonToken.BEGIN_ARRAY; case PEEKED_END_ARRAY:"
+      },
+      {
+        "txt": "return JsonToken.END_ARRAY; case PEEKED_SINGLE_QUOTED_NAME: case PEEKED_DOUBLE_QUOTED_NAME: case PEEKED_UNQUOTED_NAME: return JsonToken.NAME; case PEEKED_TRUE: case PEEKED_FALSE: return JsonToken.BOOLEAN; case PEEKED_NULL: return JsonToken.NULL;"
+      },
+      {
+        "txt": "case PEEKED_SINGLE_QUOTED: case PEEKED_DOUBLE_QUOTED: case PEEKED_UNQUOTED: case PEEKED_BUFFERED: return JsonToken.STRING; case PEEKED_LONG: case PEEKED_NUMBER: return JsonToken.NUMBER; case PEEKED_EOF: return JsonToken.END_DOCUMENT;"
+      },
+      {
+        "txt": "default: throw new AssertionError(); } } int doPeek() throws IOException { int peekStack = stack[stackSize - 1]; if (peekStack == JsonScope.EMPTY_ARRAY) { stack[stackSize - 1] = JsonScope.NONEMPTY_ARRAY; } else if (peekStack == JsonScope.NONEMPTY_ARRAY) { int c = nextNonWhitespace(true);"
+      },
+      {
+        "txt": "switch (c) { case ']': return peeked = PEEKED_END_ARRAY; case ';': checkLenient(); // fall-through case ',': break; default: throw syntaxError(\"Unterminated array\"); }"
+      },
+      {
+        "txt": "} else if (peekStack == JsonScope.EMPTY_OBJECT || peekStack == JsonScope.NONEMPTY_OBJECT) { stack[stackSize - 1] = JsonScope.DANGLING_NAME; if (peekStack == JsonScope.NONEMPTY_OBJECT) { int c = nextNonWhitespace(true); switch (c) { case '}': return peeked = PEEKED_END_OBJECT; case ';': checkLenient(); // fall-through case ',':"
+      },
+      {
+        "txt": "break; default: throw syntaxError(\"Unterminated object\"); } } int c = nextNonWhitespace(true); switch (c) { case '\"': return peeked = PEEKED_DOUBLE_QUOTED_NAME; case '\\'':"
+      },
+      {
+        "txt": "checkLenient(); return peeked = PEEKED_SINGLE_QUOTED_NAME; case '}': if (peekStack != JsonScope.NONEMPTY_OBJECT) { return peeked = PEEKED_END_OBJECT; } else { throw syntaxError(\"Expected name\"); } default: checkLenient();"
+      },
+      {
+        "txt": "pos--; // Don't consume the first character in an unquoted string. if (isLiteral((char) c)) { return peeked = PEEKED_UNQUOTED_NAME; } else { throw syntaxError(\"Expected name\"); } } } else if (peekStack == JsonScope.DANGLING_NAME) { stack[stackSize - 1] = JsonScope.NONEMPTY_OBJECT; int c = nextNonWhitespace(true);"
+      },
+      {
+        "txt": "switch (c) { case ':': break; case '=': checkLenient(); if ((pos < limit || fillBuffer(1)) && buffer[pos] == '>') { pos++; } break; default:"
+      },
+      {
+        "txt": "throw syntaxError(\"Expected ':'\"); } } else if (peekStack == JsonScope.EMPTY_DOCUMENT) { if (lenient) { consumeNonExecutePrefix(); } stack[stackSize - 1] = JsonScope.NONEMPTY_DOCUMENT; } else if (peekStack == JsonScope.NONEMPTY_DOCUMENT) { int c = nextNonWhitespace(false); if (c == -1) {"
+      },
+      {
+        "txt": "return peeked = PEEKED_EOF; } else { checkLenient(); pos--; } } else if (peekStack == JsonScope.CLOSED) { throw new IllegalStateException(\"JsonReader is closed\"); } int c = nextNonWhitespace(true); switch (c) {"
+      },
+      {
+        "txt": "case ']': if (peekStack == JsonScope.EMPTY_ARRAY) { return peeked = PEEKED_END_ARRAY; } case ';': case ',': if (peekStack == JsonScope.EMPTY_ARRAY || peekStack == JsonScope.NONEMPTY_ARRAY) { checkLenient(); pos--; return peeked = PEEKED_NULL;"
+      },
+      {
+        "txt": "throw syntaxError(\"Unexpected value\"); } case '\\'': checkLenient(); return peeked = PEEKED_SINGLE_QUOTED; case '\"': <extra_id_0> return peeked = PEEKED_DOUBLE_QUOTED; case '[': return peeked = PEEKED_BEGIN_ARRAY; case '{': return peeked = PEEKED_BEGIN_OBJECT; default:"
+      },
+      {
+        "txt": "return peeked = PEEKED_BEGIN_OBJECT; default: pos--; // Don't consume the first character in a literal value. } if (stackSize == 1) { checkLenient(); } int result = peekKeyword(); if (result != PEEKED_NONE) { return result;"
+      },
+      {
+        "txt": "} result = peekNumber(); if (result != PEEKED_NONE) { return result; } if (!isLiteral(buffer[pos])) { throw syntaxError(\"Expected value\"); } checkLenient(); return peeked = PEEKED_UNQUOTED;"
+      },
+      {
+        "txt": "} private int peekKeyword() throws IOException { char c = buffer[pos]; String keyword; String keywordUpper; int peeking; if (c == 't' || c == 'T') { keyword = \"true\"; keywordUpper = \"TRUE\"; peeking = PEEKED_TRUE;"
+      },
+      {
+        "txt": "} else if (c == 'f' || c == 'F') { keyword = \"false\"; keywordUpper = \"FALSE\"; peeking = PEEKED_FALSE; } else if (c == 'n' || c == 'N') { keyword = \"null\"; keywordUpper = \"NULL\"; peeking = PEEKED_NULL; } else { return PEEKED_NONE;"
+      },
+      {
+        "txt": "} int length = keyword.length(); for (int i = 1; i < length; i++) { if (pos + i >= limit && !fillBuffer(i + 1)) { return PEEKED_NONE; } c = buffer[pos + i]; if (c != keyword.charAt(i) && c != keywordUpper.charAt(i)) { return PEEKED_NONE; }"
+      },
+      {
+        "txt": "} if ((pos + length < limit || fillBuffer(length + 1)) && isLiteral(buffer[pos + length])) { return PEEKED_NONE; // Don't match trues, falsey or nullsoft! } pos += length; return peeked = peeking; } private int peekNumber() throws IOException { char[] buffer = this.buffer;"
+      },
+      {
+        "txt": "int p = pos; int l = limit; long value = 0; // Negative to accommodate Long.MIN_VALUE more easily. boolean negative = false; boolean fitsInLong = true; int last = NUMBER_CHAR_NONE; int i = 0; charactersOfNumber: for (; true; i++) { if (p + i == l) {"
+      },
+      {
+        "txt": "if (i == buffer.length) { return PEEKED_NONE; } if (!fillBuffer(i + 1)) { break; } p = pos; l = limit; } char c = buffer[p + i];"
+      },
+      {
+        "txt": "switch (c) { case '-': if (last == NUMBER_CHAR_NONE) { negative = true; last = NUMBER_CHAR_SIGN; continue; } else if (last == NUMBER_CHAR_EXP_E) { last = NUMBER_CHAR_EXP_SIGN; continue; }"
+      },
+      {
+        "txt": "return PEEKED_NONE; case '+': if (last == NUMBER_CHAR_EXP_E) { last = NUMBER_CHAR_EXP_SIGN; continue; } return PEEKED_NONE; case 'e': case 'E': if (last == NUMBER_CHAR_DIGIT || last == NUMBER_CHAR_FRACTION_DIGIT) {"
+      },
+      {
+        "txt": "last = NUMBER_CHAR_EXP_E; continue; } return PEEKED_NONE; case '.': if (last == NUMBER_CHAR_DIGIT) { last = NUMBER_CHAR_DECIMAL; continue; } return PEEKED_NONE;"
+      },
+      {
+        "txt": "default: if (c < '0' || c > '9') { if (!isLiteral(c)) { break charactersOfNumber; } return PEEKED_NONE; } if (last == NUMBER_CHAR_SIGN || last == NUMBER_CHAR_NONE) { value = -(c - '0'); last = NUMBER_CHAR_DIGIT;"
+      },
+      {
+        "txt": "} else if (last == NUMBER_CHAR_DIGIT) { if (value == 0) { return PEEKED_NONE; // Leading '0' prefix is not allowed (since it could be octal). } long newValue = value * 10 - (c - '0'); fitsInLong &= value > MIN_INCOMPLETE_INTEGER || (value == MIN_INCOMPLETE_INTEGER && newValue < value); value = newValue; } else if (last == NUMBER_CHAR_DECIMAL) { last = NUMBER_CHAR_FRACTION_DIGIT;"
+      },
+      {
+        "txt": "} else if (last == NUMBER_CHAR_EXP_E || last == NUMBER_CHAR_EXP_SIGN) { last = NUMBER_CHAR_EXP_DIGIT; } } } if (last == NUMBER_CHAR_DIGIT && fitsInLong && (value != Long.MIN_VALUE || negative)) { peekedLong = negative ? value : -value; pos += i; return peeked = PEEKED_LONG; } else if (last == NUMBER_CHAR_DIGIT || last == NUMBER_CHAR_FRACTION_DIGIT"
+      },
+      {
+        "txt": "|| last == NUMBER_CHAR_EXP_DIGIT) { peekedNumberLength = i; return peeked = PEEKED_NUMBER; } else { return PEEKED_NONE; } } private boolean isLiteral(char c) throws IOException { switch (c) { case '/':"
+      },
+      {
+        "txt": "case '\\\\': case ';': case '#': case '=': checkLenient(); // fall-through case '{': case '}': case '[': case ']': case ':':"
+      },
+      {
+        "txt": "case ',': case ' ': case '\\t': case '\\f': case '\\r': case '\\n': return false; default: return true; }"
+      },
+      {
+        "txt": "} public String nextName() throws IOException { int p = peeked; if (p == PEEKED_NONE) { p = doPeek(); } String result; if (p == PEEKED_UNQUOTED_NAME) { result = nextUnquotedValue(); } else if (p == PEEKED_SINGLE_QUOTED_NAME) {"
+      },
+      {
+        "txt": "result = nextQuotedValue('\\''); } else if (p == PEEKED_DOUBLE_QUOTED_NAME) { result = nextQuotedValue('\"'); } else { throw new IllegalStateException(\"Expected a name but was \" + peek() + \" at line \" + getLineNumber() + \" column \" + getColumnNumber() + \" path \" + getPath()); } peeked = PEEKED_NONE; pathNames[stackSize - 1] = result; return result;"
+      },
+      {
+        "txt": "} public String nextString() throws IOException { int p = peeked; if (p == PEEKED_NONE) { p = doPeek(); } String result; if (p == PEEKED_UNQUOTED) { result = nextUnquotedValue(); } else if (p == PEEKED_SINGLE_QUOTED) {"
+      },
+      {
+        "txt": "result = nextQuotedValue('\\''); } else if (p == PEEKED_DOUBLE_QUOTED) { result = nextQuotedValue('\"'); } else if (p == PEEKED_BUFFERED) { result = peekedString; peekedString = null; } else if (p == PEEKED_LONG) { result = Long.toString(peekedLong); } else if (p == PEEKED_NUMBER) { result = new String(buffer, pos, peekedNumberLength);"
+      },
+      {
+        "txt": "pos += peekedNumberLength; } else { throw new IllegalStateException(\"Expected a string but was \" + peek() + \" at line \" + getLineNumber() + \" column \" + getColumnNumber() + \" path \" + getPath()); } peeked = PEEKED_NONE; pathIndices[stackSize - 1]++; return result; } public boolean nextBoolean() throws IOException {"
+      },
+      {
+        "txt": "int p = peeked; if (p == PEEKED_NONE) { p = doPeek(); } if (p == PEEKED_TRUE) { peeked = PEEKED_NONE; pathIndices[stackSize - 1]++; return true; } else if (p == PEEKED_FALSE) { peeked = PEEKED_NONE;"
+      },
+      {
+        "txt": "pathIndices[stackSize - 1]++; return false; } throw new IllegalStateException(\"Expected a boolean but was \" + peek() + \" at line \" + getLineNumber() + \" column \" + getColumnNumber() + \" path \" + getPath()); } public void nextNull() throws IOException { int p = peeked; if (p == PEEKED_NONE) { p = doPeek();"
+      },
+      {
+        "txt": "} if (p == PEEKED_NULL) { peeked = PEEKED_NONE; pathIndices[stackSize - 1]++; } else { throw new IllegalStateException(\"Expected null but was \" + peek() + \" at line \" + getLineNumber() + \" column \" + getColumnNumber() + \" path \" + getPath()); } } public double nextDouble() throws IOException {"
+      },
+      {
+        "txt": "int p = peeked; if (p == PEEKED_NONE) { p = doPeek(); } if (p == PEEKED_LONG) { peeked = PEEKED_NONE; pathIndices[stackSize - 1]++; return (double) peekedLong; } if (p == PEEKED_NUMBER) {"
+      },
+      {
+        "txt": "peekedString = new String(buffer, pos, peekedNumberLength); pos += peekedNumberLength; } else if (p == PEEKED_SINGLE_QUOTED || p == PEEKED_DOUBLE_QUOTED) { peekedString = nextQuotedValue(p == PEEKED_SINGLE_QUOTED ? '\\'' : '\"'); } else if (p == PEEKED_UNQUOTED) { peekedString = nextUnquotedValue(); } else if (p != PEEKED_BUFFERED) { throw new IllegalStateException(\"Expected a double but was \" + peek() + \" at line \" + getLineNumber() + \" column \" + getColumnNumber() + \" path \" + getPath()); }"
+      },
+      {
+        "txt": "peeked = PEEKED_BUFFERED; double result = Double.parseDouble(peekedString); // don't catch this NumberFormatException. if (!lenient && (Double.isNaN(result) || Double.isInfinite(result))) { throw new MalformedJsonException(\"JSON forbids NaN and infinities: \" + result + \" at line \" + getLineNumber() + \" column \" + getColumnNumber() + \" path \" + getPath()); } peekedString = null; peeked = PEEKED_NONE; pathIndices[stackSize - 1]++; return result;"
+      },
+      {
+        "txt": "} public long nextLong() throws IOException { int p = peeked; if (p == PEEKED_NONE) { p = doPeek(); } if (p == PEEKED_LONG) { peeked = PEEKED_NONE; pathIndices[stackSize - 1]++; return peekedLong;"
+      },
+      {
+        "txt": "} if (p == PEEKED_NUMBER) { peekedString = new String(buffer, pos, peekedNumberLength); pos += peekedNumberLength; } else if (p == PEEKED_SINGLE_QUOTED || p == PEEKED_DOUBLE_QUOTED) { peekedString = nextQuotedValue(p == PEEKED_SINGLE_QUOTED ? '\\'' : '\"'); try { long result = Long.parseLong(peekedString); peeked = PEEKED_NONE; pathIndices[stackSize - 1]++;"
+      },
+      {
+        "txt": "return result; } catch (NumberFormatException ignored) { } } else { throw new IllegalStateException(\"Expected a long but was \" + peek() + \" at line \" + getLineNumber() + \" column \" + getColumnNumber() + \" path \" + getPath()); } peeked = PEEKED_BUFFERED; double asDouble = Double.parseDouble(peekedString); // don't catch this NumberFormatException. long result = (long) asDouble;"
+      },
+      {
+        "txt": "if (result != asDouble) { // Make sure no precision was lost casting to 'long'. throw new NumberFormatException(\"Expected a long but was \" + peekedString + \" at line \" + getLineNumber() + \" column \" + getColumnNumber() + \" path \" + getPath()); } peekedString = null; peeked = PEEKED_NONE; pathIndices[stackSize - 1]++; return result; } private String nextQuotedValue(char quote) throws IOException {"
+      },
+      {
+        "txt": "char[] buffer = this.buffer; StringBuilder builder = new StringBuilder(); while (true) { int p = pos; int l = limit; int start = p; while (p < l) { int c = buffer[p++]; if (c == quote) { pos = p;"
+      },
+      {
+        "txt": "builder.append(buffer, start, p - start - 1); return builder.toString(); } else if (c == '\\\\') { pos = p; builder.append(buffer, start, p - start - 1); builder.append(readEscapeCharacter()); p = pos; l = limit; start = p; } else if (c == '\\n') {"
+      },
+      {
+        "txt": "lineNumber++; lineStart = p; } } builder.append(buffer, start, p - start); pos = p; if (!fillBuffer(1)) { throw syntaxError(\"Unterminated string\"); } }"
+      },
+      {
+        "txt": "} @SuppressWarnings(\"fallthrough\") private String nextUnquotedValue() throws IOException { StringBuilder builder = null; int i = 0; findNonLiteralCharacter: while (true) { for (; pos + i < limit; i++) { switch (buffer[pos + i]) { case '/':"
+      },
+      {
+        "txt": "case '\\\\': case ';': case '#': case '=': checkLenient(); // fall-through case '{': case '}': case '[': case ']': case ':':"
+      },
+      {
+        "txt": "case ',': case ' ': case '\\t': case '\\f': case '\\r': case '\\n': break findNonLiteralCharacter; } } if (i < buffer.length) {"
+      },
+      {
+        "txt": "if (fillBuffer(i + 1)) { continue; } else { break; } } if (builder == null) { builder = new StringBuilder(); } builder.append(buffer, pos, i);"
+      },
+      {
+        "txt": "pos += i; i = 0; if (!fillBuffer(1)) { break; } } String result; if (builder == null) { result = new String(buffer, pos, i); } else {"
+      },
+      {
+        "txt": "builder.append(buffer, pos, i); result = builder.toString(); } pos += i; return result; } private void skipQuotedValue(char quote) throws IOException { char[] buffer = this.buffer; do { int p = pos;"
+      },
+      {
+        "txt": "int l = limit; while (p < l) { int c = buffer[p++]; if (c == quote) { pos = p; return; } else if (c == '\\\\') { pos = p; readEscapeCharacter(); p = pos;"
+      },
+      {
+        "txt": "l = limit; } else if (c == '\\n') { lineNumber++; lineStart = p; } } pos = p; } while (fillBuffer(1)); throw syntaxError(\"Unterminated string\"); }"
+      },
+      {
+        "txt": "private void skipUnquotedValue() throws IOException { do { int i = 0; for (; pos + i < limit; i++) { switch (buffer[pos + i]) { case '/': case '\\\\': case ';': case '#': case '=':"
+      },
+      {
+        "txt": "checkLenient(); // fall-through case '{': case '}': case '[': case ']': case ':': case ',': case ' ': case '\\t': case '\\f':"
+      },
+      {
+        "txt": "case '\\r': case '\\n': pos += i; return; } } pos += i; } while (fillBuffer(1)); } public int nextInt() throws IOException {"
+      },
+      {
+        "txt": "int p = peeked; if (p == PEEKED_NONE) { p = doPeek(); } int result; if (p == PEEKED_LONG) { result = (int) peekedLong; if (peekedLong != result) { // Make sure no precision was lost casting to 'int'. throw new NumberFormatException(\"Expected an int but was \" + peekedLong + \" at line \" + getLineNumber() + \" column \" + getColumnNumber() + \" path \" + getPath());"
+      },
+      {
+        "txt": "} peeked = PEEKED_NONE; pathIndices[stackSize - 1]++; return result; } if (p == PEEKED_NUMBER) { peekedString = new String(buffer, pos, peekedNumberLength); pos += peekedNumberLength; } else if (p == PEEKED_SINGLE_QUOTED || p == PEEKED_DOUBLE_QUOTED) { peekedString = nextQuotedValue(p == PEEKED_SINGLE_QUOTED ? '\\'' : '\"');"
+      },
+      {
+        "txt": "try { result = Integer.parseInt(peekedString); peeked = PEEKED_NONE; pathIndices[stackSize - 1]++; return result; } catch (NumberFormatException ignored) { } } else { throw new IllegalStateException(\"Expected an int but was \" + peek() + \" at line \" + getLineNumber() + \" column \" + getColumnNumber() + \" path \" + getPath());"
+      },
+      {
+        "txt": "} peeked = PEEKED_BUFFERED; double asDouble = Double.parseDouble(peekedString); // don't catch this NumberFormatException. result = (int) asDouble; if (result != asDouble) { // Make sure no precision was lost casting to 'int'. throw new NumberFormatException(\"Expected an int but was \" + peekedString + \" at line \" + getLineNumber() + \" column \" + getColumnNumber() + \" path \" + getPath()); } peekedString = null; peeked = PEEKED_NONE;"
+      },
+      {
+        "txt": "pathIndices[stackSize - 1]++; return result; } public void close() throws IOException { peeked = PEEKED_NONE; stack[0] = JsonScope.CLOSED; stackSize = 1; in.close(); } public void skipValue() throws IOException {"
+      },
+      {
+        "txt": "int count = 0; do { int p = peeked; if (p == PEEKED_NONE) { p = doPeek(); } if (p == PEEKED_BEGIN_ARRAY) { push(JsonScope.EMPTY_ARRAY); count++; } else if (p == PEEKED_BEGIN_OBJECT) {"
+      },
+      {
+        "txt": "push(JsonScope.EMPTY_OBJECT); count++; } else if (p == PEEKED_END_ARRAY) { stackSize--; count--; } else if (p == PEEKED_END_OBJECT) { stackSize--; count--; } else if (p == PEEKED_UNQUOTED_NAME || p == PEEKED_UNQUOTED) { skipUnquotedValue();"
+      },
+      {
+        "txt": "} else if (p == PEEKED_SINGLE_QUOTED || p == PEEKED_SINGLE_QUOTED_NAME) { skipQuotedValue('\\''); } else if (p == PEEKED_DOUBLE_QUOTED || p == PEEKED_DOUBLE_QUOTED_NAME) { skipQuotedValue('\"'); } else if (p == PEEKED_NUMBER) { pos += peekedNumberLength; } peeked = PEEKED_NONE; } while (count != 0); pathIndices[stackSize - 1]++;"
+      },
+      {
+        "txt": "pathNames[stackSize - 1] = \"null\"; } private void push(int newTop) { if (stackSize == stack.length) { int[] newStack = new int[stackSize * 2]; int[] newPathIndices = new int[stackSize * 2]; String[] newPathNames = new String[stackSize * 2]; System.arraycopy(stack, 0, newStack, 0, stackSize); System.arraycopy(pathIndices, 0, newPathIndices, 0, stackSize); System.arraycopy(pathNames, 0, newPathNames, 0, stackSize);"
+      },
+      {
+        "txt": "stack = newStack; pathIndices = newPathIndices; pathNames = newPathNames; } stack[stackSize++] = newTop; } private boolean fillBuffer(int minimum) throws IOException { char[] buffer = this.buffer; lineStart -= pos; if (limit != pos) {"
+      },
+      {
+        "txt": "limit -= pos; System.arraycopy(buffer, pos, buffer, 0, limit); } else { limit = 0; } pos = 0; int total; while ((total = in.read(buffer, limit, buffer.length - limit)) != -1) { limit += total; if (lineNumber == 0 && lineStart == 0 && limit > 0 && buffer[0] == '\\ufeff') {"
+      },
+      {
+        "txt": "pos++; lineStart++; minimum++; } if (limit >= minimum) { return true; } } return false; }"
+      },
+      {
+        "txt": "int getLineNumber() { return lineNumber + 1; } int getColumnNumber() { return pos - lineStart + 1; } private int nextNonWhitespace(boolean throwOnEof) throws IOException { char[] buffer = this.buffer; int p = pos; int l = limit;"
+      },
+      {
+        "txt": "while (true) { if (p == l) { pos = p; if (!fillBuffer(1)) { break; } p = pos; l = limit; } int c = buffer[p++];"
+      },
+      {
+        "txt": "if (c == '\\n') { lineNumber++; lineStart = p; continue; } else if (c == ' ' || c == '\\r' || c == '\\t') { continue; } if (c == '/') { pos = p; if (p == l) {"
+      },
+      {
+        "txt": "pos--; // push back '/' so it's still in the buffer when this method returns boolean charsLoaded = fillBuffer(2); pos++; // consume the '/' again if (!charsLoaded) { return c; } } checkLenient(); char peek = buffer[pos]; switch (peek) {"
+      },
+      {
+        "txt": "case '*': pos++; if (!skipTo(\"*/\")) { throw syntaxError(\"Unterminated comment\"); } p = pos + 2; l = limit; continue; case '/': pos++;"
+      },
+      {
+        "txt": "skipToEndOfLine(); p = pos; l = limit; continue; default: return c; } } else if (c == '#') { pos = p; checkLenient();"
+      },
+      {
+        "txt": "skipToEndOfLine(); p = pos; l = limit; } else { pos = p; return c; } } if (throwOnEof) { throw new EOFException(\"End of input\""
+      },
+      {
+        "txt": "+ \" at line \" + getLineNumber() + \" column \" + getColumnNumber()); } else { return -1; } } private void checkLenient() throws IOException { if (!lenient) { throw syntaxError(\"Use JsonReader.setLenient(true) to accept malformed JSON\"); } }"
+      },
+      {
+        "txt": "private void skipToEndOfLine() throws IOException { while (pos < limit || fillBuffer(1)) { char c = buffer[pos++]; if (c == '\\n') { lineNumber++; lineStart = pos; break; } else if (c == '\\r') { break; }"
+      },
+      {
+        "txt": "} } private boolean skipTo(String toFind) throws IOException { outer: for (; pos + toFind.length() <= limit || fillBuffer(toFind.length()); pos++) { if (buffer[pos] == '\\n') { lineNumber++; lineStart = pos + 1; continue; }"
+      },
+      {
+        "txt": "for (int c = 0; c < toFind.length(); c++) { if (buffer[pos + c] != toFind.charAt(c)) { continue outer; } } return true; } return false; } @Override public String toString() {"
+      },
+      {
+        "txt": "return getClass().getSimpleName() + \" at line \" + getLineNumber() + \" column \" + getColumnNumber(); } public String getPath() { StringBuilder result = new StringBuilder().append('$'); for (int i = 0, size = stackSize; i < size; i++) { switch (stack[i]) { case JsonScope.EMPTY_ARRAY: case JsonScope.NONEMPTY_ARRAY: result.append('[').append(pathIndices[i]).append(']');"
+      },
+      {
+        "txt": "break; case JsonScope.EMPTY_OBJECT: case JsonScope.DANGLING_NAME: case JsonScope.NONEMPTY_OBJECT: result.append('.'); if (pathNames[i] != null) { result.append(pathNames[i]); } break; case JsonScope.NONEMPTY_DOCUMENT:"
+      },
+      {
+        "txt": "case JsonScope.EMPTY_DOCUMENT: case JsonScope.CLOSED: break; } } return result.toString(); } private char readEscapeCharacter() throws IOException { if (pos == limit && !fillBuffer(1)) { throw syntaxError(\"Unterminated escape sequence\");"
+      },
+      {
+        "txt": "} char escaped = buffer[pos++]; switch (escaped) { case 'u': if (pos + 4 > limit && !fillBuffer(4)) { throw syntaxError(\"Unterminated escape sequence\"); } char result = 0; for (int i = pos, end = i + 4; i < end; i++) { char c = buffer[i];"
+      },
+      {
+        "txt": "result <<= 4; if (c >= '0' && c <= '9') { result += (c - '0'); } else if (c >= 'a' && c <= 'f') { result += (c - 'a' + 10); } else if (c >= 'A' && c <= 'F') { result += (c - 'A' + 10); } else { throw new NumberFormatException(\"\\\\u\" + new String(buffer, pos, 4)); }"
+      },
+      {
+        "txt": "} pos += 4; return result; case 't': return '\\t'; case 'b': return '\\b'; case 'n': return '\\n'; case 'r':"
+      },
+      {
+        "txt": "return '\\r'; case 'f': return '\\f'; case '\\n': lineNumber++; lineStart = pos; case '\\'': case '\"': case '\\\\': default:"
+      },
+      {
+        "txt": "return escaped; } } private IOException syntaxError(String message) throws IOException { throw new MalformedJsonException(message + \" at line \" + getLineNumber() + \" column \" + getColumnNumber() + \" path \" + getPath()); } private void consumeNonExecutePrefix() throws IOException { nextNonWhitespace(true); pos--;"
+      },
+      {
+        "txt": "if (pos + NON_EXECUTE_PREFIX.length > limit && !fillBuffer(NON_EXECUTE_PREFIX.length)) { return; } for (int i = 0; i < NON_EXECUTE_PREFIX.length; i++) { if (buffer[pos + i] != NON_EXECUTE_PREFIX[i]) { return; // not a security token! } } pos += NON_EXECUTE_PREFIX.length; }"
+      },
+      {
+        "txt": "static { JsonReaderInternalAccess.INSTANCE = new JsonReaderInternalAccess() { @Override public void promoteNameToValue(JsonReader reader) throws IOException { if (reader instanceof JsonTreeReader) { ((JsonTreeReader)reader).promoteNameToValue(); return; } int p = reader.peeked; if (p == PEEKED_NONE) { p = reader.doPeek();"
+      },
+      {
+        "txt": "} if (p == PEEKED_DOUBLE_QUOTED_NAME) { reader.peeked = PEEKED_DOUBLE_QUOTED; } else if (p == PEEKED_SINGLE_QUOTED_NAME) { reader.peeked = PEEKED_SINGLE_QUOTED; } else if (p == PEEKED_UNQUOTED_NAME) { reader.peeked = PEEKED_UNQUOTED; } else { throw new IllegalStateException(\"Expected a name but was \" + reader.peek() + \" \" + \" at line \" + reader.getLineNumber() + \" column \" + reader.getColumnNumber()"
+      },
+      {
+        "txt": "+ \" path \" + reader.getPath()); } } }; }"
+      }
+    ]
+  },
+  {
+    "id": 1162,
+    "file_path": "gson/src/main/java/com/google/gson/stream/JsonReader.java",
+    "start-bug-line": 585,
+    "end-bug-line": 587,
+    "bug": "if (stackSize == 1) { checkLenient(); }",
+    "fix": "[Delete]",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.google.gson.stream; import com.google.gson.internal.JsonReaderInternalAccess; import com.google.gson.internal.bind.JsonTreeReader;"
+      },
+      {
+        "txt": "import java.io.Closeable; import java.io.EOFException; import java.io.IOException; import java.io.Reader; public class JsonReader implements Closeable { private static final char[] NON_EXECUTE_PREFIX = \")]}'\\n\".toCharArray(); private static final long MIN_INCOMPLETE_INTEGER = Long.MIN_VALUE / 10; private static final int PEEKED_NONE = 0; private static final int PEEKED_BEGIN_OBJECT = 1; private static final int PEEKED_END_OBJECT = 2;"
+      },
+      {
+        "txt": "private static final int PEEKED_BEGIN_ARRAY = 3; private static final int PEEKED_END_ARRAY = 4; private static final int PEEKED_TRUE = 5; private static final int PEEKED_FALSE = 6; private static final int PEEKED_NULL = 7; private static final int PEEKED_SINGLE_QUOTED = 8; private static final int PEEKED_DOUBLE_QUOTED = 9; private static final int PEEKED_UNQUOTED = 10; private static final int PEEKED_BUFFERED = 11; private static final int PEEKED_SINGLE_QUOTED_NAME = 12;"
+      },
+      {
+        "txt": "private static final int PEEKED_DOUBLE_QUOTED_NAME = 13; private static final int PEEKED_UNQUOTED_NAME = 14; private static final int PEEKED_LONG = 15; private static final int PEEKED_NUMBER = 16; private static final int PEEKED_EOF = 17; private static final int NUMBER_CHAR_NONE = 0; private static final int NUMBER_CHAR_SIGN = 1; private static final int NUMBER_CHAR_DIGIT = 2; private static final int NUMBER_CHAR_DECIMAL = 3; private static final int NUMBER_CHAR_FRACTION_DIGIT = 4;"
+      },
+      {
+        "txt": "private static final int NUMBER_CHAR_EXP_E = 5; private static final int NUMBER_CHAR_EXP_SIGN = 6; private static final int NUMBER_CHAR_EXP_DIGIT = 7; private final Reader in; private boolean lenient = false; private final char[] buffer = new char[1024]; private int pos = 0; private int limit = 0; private int lineNumber = 0; private int lineStart = 0;"
+      },
+      {
+        "txt": "int peeked = PEEKED_NONE; private long peekedLong; private int peekedNumberLength; private String peekedString; private int[] stack = new int[32]; private int stackSize = 0; { stack[stackSize++] = JsonScope.EMPTY_DOCUMENT; } private String[] pathNames = new String[32];"
+      },
+      {
+        "txt": "private int[] pathIndices = new int[32]; public JsonReader(Reader in) { if (in == null) { throw new NullPointerException(\"in == null\"); } this.in = in; } public final void setLenient(boolean lenient) { this.lenient = lenient; }"
+      },
+      {
+        "txt": "public final boolean isLenient() { return lenient; } public void beginArray() throws IOException { int p = peeked; if (p == PEEKED_NONE) { p = doPeek(); } if (p == PEEKED_BEGIN_ARRAY) { push(JsonScope.EMPTY_ARRAY);"
+      },
+      {
+        "txt": "pathIndices[stackSize - 1] = 0; peeked = PEEKED_NONE; } else { throw new IllegalStateException(\"Expected BEGIN_ARRAY but was \" + peek() + \" at line \" + getLineNumber() + \" column \" + getColumnNumber() + \" path \" + getPath()); } } public void endArray() throws IOException { int p = peeked; if (p == PEEKED_NONE) {"
+      },
+      {
+        "txt": "p = doPeek(); } if (p == PEEKED_END_ARRAY) { stackSize--; pathIndices[stackSize - 1]++; peeked = PEEKED_NONE; } else { throw new IllegalStateException(\"Expected END_ARRAY but was \" + peek() + \" at line \" + getLineNumber() + \" column \" + getColumnNumber() + \" path \" + getPath()); }"
+      },
+      {
+        "txt": "} public void beginObject() throws IOException { int p = peeked; if (p == PEEKED_NONE) { p = doPeek(); } if (p == PEEKED_BEGIN_OBJECT) { push(JsonScope.EMPTY_OBJECT); peeked = PEEKED_NONE; } else {"
+      },
+      {
+        "txt": "throw new IllegalStateException(\"Expected BEGIN_OBJECT but was \" + peek() + \" at line \" + getLineNumber() + \" column \" + getColumnNumber() + \" path \" + getPath()); } } public void endObject() throws IOException { int p = peeked; if (p == PEEKED_NONE) { p = doPeek(); } if (p == PEEKED_END_OBJECT) {"
+      },
+      {
+        "txt": "stackSize--; pathNames[stackSize] = null; // Free the last path name so that it can be garbage collected! pathIndices[stackSize - 1]++; peeked = PEEKED_NONE; } else { throw new IllegalStateException(\"Expected END_OBJECT but was \" + peek() + \" at line \" + getLineNumber() + \" column \" + getColumnNumber() + \" path \" + getPath()); } } public boolean hasNext() throws IOException {"
+      },
+      {
+        "txt": "int p = peeked; if (p == PEEKED_NONE) { p = doPeek(); } return p != PEEKED_END_OBJECT && p != PEEKED_END_ARRAY; } public JsonToken peek() throws IOException { int p = peeked; if (p == PEEKED_NONE) { p = doPeek();"
+      },
+      {
+        "txt": "} switch (p) { case PEEKED_BEGIN_OBJECT: return JsonToken.BEGIN_OBJECT; case PEEKED_END_OBJECT: return JsonToken.END_OBJECT; case PEEKED_BEGIN_ARRAY: return JsonToken.BEGIN_ARRAY; case PEEKED_END_ARRAY: return JsonToken.END_ARRAY;"
+      },
+      {
+        "txt": "case PEEKED_SINGLE_QUOTED_NAME: case PEEKED_DOUBLE_QUOTED_NAME: case PEEKED_UNQUOTED_NAME: return JsonToken.NAME; case PEEKED_TRUE: case PEEKED_FALSE: return JsonToken.BOOLEAN; case PEEKED_NULL: return JsonToken.NULL; case PEEKED_SINGLE_QUOTED:"
+      },
+      {
+        "txt": "case PEEKED_DOUBLE_QUOTED: case PEEKED_UNQUOTED: case PEEKED_BUFFERED: return JsonToken.STRING; case PEEKED_LONG: case PEEKED_NUMBER: return JsonToken.NUMBER; case PEEKED_EOF: return JsonToken.END_DOCUMENT; default:"
+      },
+      {
+        "txt": "throw new AssertionError(); } } int doPeek() throws IOException { int peekStack = stack[stackSize - 1]; if (peekStack == JsonScope.EMPTY_ARRAY) { stack[stackSize - 1] = JsonScope.NONEMPTY_ARRAY; } else if (peekStack == JsonScope.NONEMPTY_ARRAY) { int c = nextNonWhitespace(true); switch (c) {"
+      },
+      {
+        "txt": "case ']': return peeked = PEEKED_END_ARRAY; case ';': checkLenient(); // fall-through case ',': break; default: throw syntaxError(\"Unterminated array\"); } } else if (peekStack == JsonScope.EMPTY_OBJECT || peekStack == JsonScope.NONEMPTY_OBJECT) {"
+      },
+      {
+        "txt": "stack[stackSize - 1] = JsonScope.DANGLING_NAME; if (peekStack == JsonScope.NONEMPTY_OBJECT) { int c = nextNonWhitespace(true); switch (c) { case '}': return peeked = PEEKED_END_OBJECT; case ';': checkLenient(); // fall-through case ',': break;"
+      },
+      {
+        "txt": "default: throw syntaxError(\"Unterminated object\"); } } int c = nextNonWhitespace(true); switch (c) { case '\"': return peeked = PEEKED_DOUBLE_QUOTED_NAME; case '\\'': checkLenient();"
+      },
+      {
+        "txt": "return peeked = PEEKED_SINGLE_QUOTED_NAME; case '}': if (peekStack != JsonScope.NONEMPTY_OBJECT) { return peeked = PEEKED_END_OBJECT; } else { throw syntaxError(\"Expected name\"); } default: checkLenient(); pos--; // Don't consume the first character in an unquoted string."
+      },
+      {
+        "txt": "if (isLiteral((char) c)) { return peeked = PEEKED_UNQUOTED_NAME; } else { throw syntaxError(\"Expected name\"); } } } else if (peekStack == JsonScope.DANGLING_NAME) { stack[stackSize - 1] = JsonScope.NONEMPTY_OBJECT; int c = nextNonWhitespace(true); switch (c) {"
+      },
+      {
+        "txt": "case ':': break; case '=': checkLenient(); if ((pos < limit || fillBuffer(1)) && buffer[pos] == '>') { pos++; } break; default: throw syntaxError(\"Expected ':'\");"
+      },
+      {
+        "txt": "} } else if (peekStack == JsonScope.EMPTY_DOCUMENT) { if (lenient) { consumeNonExecutePrefix(); } stack[stackSize - 1] = JsonScope.NONEMPTY_DOCUMENT; } else if (peekStack == JsonScope.NONEMPTY_DOCUMENT) { int c = nextNonWhitespace(false); if (c == -1) { return peeked = PEEKED_EOF;"
+      },
+      {
+        "txt": "} else { checkLenient(); pos--; } } else if (peekStack == JsonScope.CLOSED) { throw new IllegalStateException(\"JsonReader is closed\"); } int c = nextNonWhitespace(true); switch (c) { case ']':"
+      },
+      {
+        "txt": "if (peekStack == JsonScope.EMPTY_ARRAY) { return peeked = PEEKED_END_ARRAY; } case ';': case ',': if (peekStack == JsonScope.EMPTY_ARRAY || peekStack == JsonScope.NONEMPTY_ARRAY) { checkLenient(); pos--; return peeked = PEEKED_NULL; } else {"
+      },
+      {
+        "txt": "throw syntaxError(\"Unexpected value\"); } case '\\'': checkLenient(); return peeked = PEEKED_SINGLE_QUOTED; case '\"': if (stackSize == 1) { checkLenient(); } return peeked = PEEKED_DOUBLE_QUOTED;"
+      },
+      {
+        "txt": "return peeked = PEEKED_BEGIN_ARRAY; case '{': return peeked = PEEKED_BEGIN_OBJECT; default: pos--; // Don't consume the first character in a literal value. } <extra_id_0> int result = peekKeyword(); if (result != PEEKED_NONE) { return result; } result = peekNumber(); if (result != PEEKED_NONE) {"
+      },
+      {
+        "txt": "result = peekNumber(); if (result != PEEKED_NONE) { return result; } if (!isLiteral(buffer[pos])) { throw syntaxError(\"Expected value\"); } checkLenient(); return peeked = PEEKED_UNQUOTED; }"
+      },
+      {
+        "txt": "private int peekKeyword() throws IOException { char c = buffer[pos]; String keyword; String keywordUpper; int peeking; if (c == 't' || c == 'T') { keyword = \"true\"; keywordUpper = \"TRUE\"; peeking = PEEKED_TRUE; } else if (c == 'f' || c == 'F') {"
+      },
+      {
+        "txt": "keyword = \"false\"; keywordUpper = \"FALSE\"; peeking = PEEKED_FALSE; } else if (c == 'n' || c == 'N') { keyword = \"null\"; keywordUpper = \"NULL\"; peeking = PEEKED_NULL; } else { return PEEKED_NONE; }"
+      },
+      {
+        "txt": "int length = keyword.length(); for (int i = 1; i < length; i++) { if (pos + i >= limit && !fillBuffer(i + 1)) { return PEEKED_NONE; } c = buffer[pos + i]; if (c != keyword.charAt(i) && c != keywordUpper.charAt(i)) { return PEEKED_NONE; } }"
+      },
+      {
+        "txt": "if ((pos + length < limit || fillBuffer(length + 1)) && isLiteral(buffer[pos + length])) { return PEEKED_NONE; // Don't match trues, falsey or nullsoft! } pos += length; return peeked = peeking; } private int peekNumber() throws IOException { char[] buffer = this.buffer; int p = pos;"
+      },
+      {
+        "txt": "int l = limit; long value = 0; // Negative to accommodate Long.MIN_VALUE more easily. boolean negative = false; boolean fitsInLong = true; int last = NUMBER_CHAR_NONE; int i = 0; charactersOfNumber: for (; true; i++) { if (p + i == l) { if (i == buffer.length) {"
+      },
+      {
+        "txt": "return PEEKED_NONE; } if (!fillBuffer(i + 1)) { break; } p = pos; l = limit; } char c = buffer[p + i]; switch (c) {"
+      },
+      {
+        "txt": "case '-': if (last == NUMBER_CHAR_NONE) { negative = true; last = NUMBER_CHAR_SIGN; continue; } else if (last == NUMBER_CHAR_EXP_E) { last = NUMBER_CHAR_EXP_SIGN; continue; } return PEEKED_NONE;"
+      },
+      {
+        "txt": "case '+': if (last == NUMBER_CHAR_EXP_E) { last = NUMBER_CHAR_EXP_SIGN; continue; } return PEEKED_NONE; case 'e': case 'E': if (last == NUMBER_CHAR_DIGIT || last == NUMBER_CHAR_FRACTION_DIGIT) { last = NUMBER_CHAR_EXP_E;"
+      },
+      {
+        "txt": "continue; } return PEEKED_NONE; case '.': if (last == NUMBER_CHAR_DIGIT) { last = NUMBER_CHAR_DECIMAL; continue; } return PEEKED_NONE; default:"
+      },
+      {
+        "txt": "if (c < '0' || c > '9') { if (!isLiteral(c)) { break charactersOfNumber; } return PEEKED_NONE; } if (last == NUMBER_CHAR_SIGN || last == NUMBER_CHAR_NONE) { value = -(c - '0'); last = NUMBER_CHAR_DIGIT; } else if (last == NUMBER_CHAR_DIGIT) {"
+      },
+      {
+        "txt": "if (value == 0) { return PEEKED_NONE; // Leading '0' prefix is not allowed (since it could be octal). } long newValue = value * 10 - (c - '0'); fitsInLong &= value > MIN_INCOMPLETE_INTEGER || (value == MIN_INCOMPLETE_INTEGER && newValue < value); value = newValue; } else if (last == NUMBER_CHAR_DECIMAL) { last = NUMBER_CHAR_FRACTION_DIGIT; } else if (last == NUMBER_CHAR_EXP_E || last == NUMBER_CHAR_EXP_SIGN) {"
+      },
+      {
+        "txt": "last = NUMBER_CHAR_EXP_DIGIT; } } } if (last == NUMBER_CHAR_DIGIT && fitsInLong && (value != Long.MIN_VALUE || negative)) { peekedLong = negative ? value : -value; pos += i; return peeked = PEEKED_LONG; } else if (last == NUMBER_CHAR_DIGIT || last == NUMBER_CHAR_FRACTION_DIGIT || last == NUMBER_CHAR_EXP_DIGIT) {"
+      },
+      {
+        "txt": "peekedNumberLength = i; return peeked = PEEKED_NUMBER; } else { return PEEKED_NONE; } } private boolean isLiteral(char c) throws IOException { switch (c) { case '/': case '\\\\':"
+      },
+      {
+        "txt": "case ';': case '#': case '=': checkLenient(); // fall-through case '{': case '}': case '[': case ']': case ':': case ',':"
+      },
+      {
+        "txt": "case ' ': case '\\t': case '\\f': case '\\r': case '\\n': return false; default: return true; } }"
+      },
+      {
+        "txt": "public String nextName() throws IOException { int p = peeked; if (p == PEEKED_NONE) { p = doPeek(); } String result; if (p == PEEKED_UNQUOTED_NAME) { result = nextUnquotedValue(); } else if (p == PEEKED_SINGLE_QUOTED_NAME) { result = nextQuotedValue('\\'');"
+      },
+      {
+        "txt": "} else if (p == PEEKED_DOUBLE_QUOTED_NAME) { result = nextQuotedValue('\"'); } else { throw new IllegalStateException(\"Expected a name but was \" + peek() + \" at line \" + getLineNumber() + \" column \" + getColumnNumber() + \" path \" + getPath()); } peeked = PEEKED_NONE; pathNames[stackSize - 1] = result; return result; }"
+      },
+      {
+        "txt": "public String nextString() throws IOException { int p = peeked; if (p == PEEKED_NONE) { p = doPeek(); } String result; if (p == PEEKED_UNQUOTED) { result = nextUnquotedValue(); } else if (p == PEEKED_SINGLE_QUOTED) { result = nextQuotedValue('\\'');"
+      },
+      {
+        "txt": "} else if (p == PEEKED_DOUBLE_QUOTED) { result = nextQuotedValue('\"'); } else if (p == PEEKED_BUFFERED) { result = peekedString; peekedString = null; } else if (p == PEEKED_LONG) { result = Long.toString(peekedLong); } else if (p == PEEKED_NUMBER) { result = new String(buffer, pos, peekedNumberLength); pos += peekedNumberLength;"
+      },
+      {
+        "txt": "} else { throw new IllegalStateException(\"Expected a string but was \" + peek() + \" at line \" + getLineNumber() + \" column \" + getColumnNumber() + \" path \" + getPath()); } peeked = PEEKED_NONE; pathIndices[stackSize - 1]++; return result; } public boolean nextBoolean() throws IOException { int p = peeked;"
+      },
+      {
+        "txt": "if (p == PEEKED_NONE) { p = doPeek(); } if (p == PEEKED_TRUE) { peeked = PEEKED_NONE; pathIndices[stackSize - 1]++; return true; } else if (p == PEEKED_FALSE) { peeked = PEEKED_NONE; pathIndices[stackSize - 1]++;"
+      },
+      {
+        "txt": "return false; } throw new IllegalStateException(\"Expected a boolean but was \" + peek() + \" at line \" + getLineNumber() + \" column \" + getColumnNumber() + \" path \" + getPath()); } public void nextNull() throws IOException { int p = peeked; if (p == PEEKED_NONE) { p = doPeek(); }"
+      },
+      {
+        "txt": "if (p == PEEKED_NULL) { peeked = PEEKED_NONE; pathIndices[stackSize - 1]++; } else { throw new IllegalStateException(\"Expected null but was \" + peek() + \" at line \" + getLineNumber() + \" column \" + getColumnNumber() + \" path \" + getPath()); } } public double nextDouble() throws IOException { int p = peeked;"
+      },
+      {
+        "txt": "if (p == PEEKED_NONE) { p = doPeek(); } if (p == PEEKED_LONG) { peeked = PEEKED_NONE; pathIndices[stackSize - 1]++; return (double) peekedLong; } if (p == PEEKED_NUMBER) { peekedString = new String(buffer, pos, peekedNumberLength);"
+      },
+      {
+        "txt": "pos += peekedNumberLength; } else if (p == PEEKED_SINGLE_QUOTED || p == PEEKED_DOUBLE_QUOTED) { peekedString = nextQuotedValue(p == PEEKED_SINGLE_QUOTED ? '\\'' : '\"'); } else if (p == PEEKED_UNQUOTED) { peekedString = nextUnquotedValue(); } else if (p != PEEKED_BUFFERED) { throw new IllegalStateException(\"Expected a double but was \" + peek() + \" at line \" + getLineNumber() + \" column \" + getColumnNumber() + \" path \" + getPath()); } peeked = PEEKED_BUFFERED;"
+      },
+      {
+        "txt": "double result = Double.parseDouble(peekedString); // don't catch this NumberFormatException. if (!lenient && (Double.isNaN(result) || Double.isInfinite(result))) { throw new MalformedJsonException(\"JSON forbids NaN and infinities: \" + result + \" at line \" + getLineNumber() + \" column \" + getColumnNumber() + \" path \" + getPath()); } peekedString = null; peeked = PEEKED_NONE; pathIndices[stackSize - 1]++; return result; }"
+      },
+      {
+        "txt": "public long nextLong() throws IOException { int p = peeked; if (p == PEEKED_NONE) { p = doPeek(); } if (p == PEEKED_LONG) { peeked = PEEKED_NONE; pathIndices[stackSize - 1]++; return peekedLong; }"
+      },
+      {
+        "txt": "if (p == PEEKED_NUMBER) { peekedString = new String(buffer, pos, peekedNumberLength); pos += peekedNumberLength; } else if (p == PEEKED_SINGLE_QUOTED || p == PEEKED_DOUBLE_QUOTED) { peekedString = nextQuotedValue(p == PEEKED_SINGLE_QUOTED ? '\\'' : '\"'); try { long result = Long.parseLong(peekedString); peeked = PEEKED_NONE; pathIndices[stackSize - 1]++; return result;"
+      },
+      {
+        "txt": "} catch (NumberFormatException ignored) { } } else { throw new IllegalStateException(\"Expected a long but was \" + peek() + \" at line \" + getLineNumber() + \" column \" + getColumnNumber() + \" path \" + getPath()); } peeked = PEEKED_BUFFERED; double asDouble = Double.parseDouble(peekedString); // don't catch this NumberFormatException. long result = (long) asDouble; if (result != asDouble) { // Make sure no precision was lost casting to 'long'."
+      },
+      {
+        "txt": "throw new NumberFormatException(\"Expected a long but was \" + peekedString + \" at line \" + getLineNumber() + \" column \" + getColumnNumber() + \" path \" + getPath()); } peekedString = null; peeked = PEEKED_NONE; pathIndices[stackSize - 1]++; return result; } private String nextQuotedValue(char quote) throws IOException { char[] buffer = this.buffer;"
+      },
+      {
+        "txt": "StringBuilder builder = new StringBuilder(); while (true) { int p = pos; int l = limit; int start = p; while (p < l) { int c = buffer[p++]; if (c == quote) { pos = p; builder.append(buffer, start, p - start - 1);"
+      },
+      {
+        "txt": "return builder.toString(); } else if (c == '\\\\') { pos = p; builder.append(buffer, start, p - start - 1); builder.append(readEscapeCharacter()); p = pos; l = limit; start = p; } else if (c == '\\n') { lineNumber++;"
+      },
+      {
+        "txt": "lineStart = p; } } builder.append(buffer, start, p - start); pos = p; if (!fillBuffer(1)) { throw syntaxError(\"Unterminated string\"); } } }"
+      },
+      {
+        "txt": "@SuppressWarnings(\"fallthrough\") private String nextUnquotedValue() throws IOException { StringBuilder builder = null; int i = 0; findNonLiteralCharacter: while (true) { for (; pos + i < limit; i++) { switch (buffer[pos + i]) { case '/': case '\\\\':"
+      },
+      {
+        "txt": "case ';': case '#': case '=': checkLenient(); // fall-through case '{': case '}': case '[': case ']': case ':': case ',':"
+      },
+      {
+        "txt": "case ' ': case '\\t': case '\\f': case '\\r': case '\\n': break findNonLiteralCharacter; } } if (i < buffer.length) { if (fillBuffer(i + 1)) {"
+      },
+      {
+        "txt": "continue; } else { break; } } if (builder == null) { builder = new StringBuilder(); } builder.append(buffer, pos, i); pos += i;"
+      },
+      {
+        "txt": "i = 0; if (!fillBuffer(1)) { break; } } String result; if (builder == null) { result = new String(buffer, pos, i); } else { builder.append(buffer, pos, i);"
+      },
+      {
+        "txt": "result = builder.toString(); } pos += i; return result; } private void skipQuotedValue(char quote) throws IOException { char[] buffer = this.buffer; do { int p = pos; int l = limit;"
+      },
+      {
+        "txt": "while (p < l) { int c = buffer[p++]; if (c == quote) { pos = p; return; } else if (c == '\\\\') { pos = p; readEscapeCharacter(); p = pos; l = limit;"
+      },
+      {
+        "txt": "} else if (c == '\\n') { lineNumber++; lineStart = p; } } pos = p; } while (fillBuffer(1)); throw syntaxError(\"Unterminated string\"); } private void skipUnquotedValue() throws IOException {"
+      },
+      {
+        "txt": "do { int i = 0; for (; pos + i < limit; i++) { switch (buffer[pos + i]) { case '/': case '\\\\': case ';': case '#': case '=': checkLenient(); // fall-through"
+      },
+      {
+        "txt": "case '{': case '}': case '[': case ']': case ':': case ',': case ' ': case '\\t': case '\\f': case '\\r':"
+      },
+      {
+        "txt": "case '\\n': pos += i; return; } } pos += i; } while (fillBuffer(1)); } public int nextInt() throws IOException { int p = peeked;"
+      },
+      {
+        "txt": "if (p == PEEKED_NONE) { p = doPeek(); } int result; if (p == PEEKED_LONG) { result = (int) peekedLong; if (peekedLong != result) { // Make sure no precision was lost casting to 'int'. throw new NumberFormatException(\"Expected an int but was \" + peekedLong + \" at line \" + getLineNumber() + \" column \" + getColumnNumber() + \" path \" + getPath()); }"
+      },
+      {
+        "txt": "peeked = PEEKED_NONE; pathIndices[stackSize - 1]++; return result; } if (p == PEEKED_NUMBER) { peekedString = new String(buffer, pos, peekedNumberLength); pos += peekedNumberLength; } else if (p == PEEKED_SINGLE_QUOTED || p == PEEKED_DOUBLE_QUOTED) { peekedString = nextQuotedValue(p == PEEKED_SINGLE_QUOTED ? '\\'' : '\"'); try {"
+      },
+      {
+        "txt": "result = Integer.parseInt(peekedString); peeked = PEEKED_NONE; pathIndices[stackSize - 1]++; return result; } catch (NumberFormatException ignored) { } } else { throw new IllegalStateException(\"Expected an int but was \" + peek() + \" at line \" + getLineNumber() + \" column \" + getColumnNumber() + \" path \" + getPath()); }"
+      },
+      {
+        "txt": "peeked = PEEKED_BUFFERED; double asDouble = Double.parseDouble(peekedString); // don't catch this NumberFormatException. result = (int) asDouble; if (result != asDouble) { // Make sure no precision was lost casting to 'int'. throw new NumberFormatException(\"Expected an int but was \" + peekedString + \" at line \" + getLineNumber() + \" column \" + getColumnNumber() + \" path \" + getPath()); } peekedString = null; peeked = PEEKED_NONE; pathIndices[stackSize - 1]++;"
+      },
+      {
+        "txt": "return result; } public void close() throws IOException { peeked = PEEKED_NONE; stack[0] = JsonScope.CLOSED; stackSize = 1; in.close(); } public void skipValue() throws IOException { int count = 0;"
+      },
+      {
+        "txt": "do { int p = peeked; if (p == PEEKED_NONE) { p = doPeek(); } if (p == PEEKED_BEGIN_ARRAY) { push(JsonScope.EMPTY_ARRAY); count++; } else if (p == PEEKED_BEGIN_OBJECT) { push(JsonScope.EMPTY_OBJECT);"
+      },
+      {
+        "txt": "count++; } else if (p == PEEKED_END_ARRAY) { stackSize--; count--; } else if (p == PEEKED_END_OBJECT) { stackSize--; count--; } else if (p == PEEKED_UNQUOTED_NAME || p == PEEKED_UNQUOTED) { skipUnquotedValue(); } else if (p == PEEKED_SINGLE_QUOTED || p == PEEKED_SINGLE_QUOTED_NAME) {"
+      },
+      {
+        "txt": "skipQuotedValue('\\''); } else if (p == PEEKED_DOUBLE_QUOTED || p == PEEKED_DOUBLE_QUOTED_NAME) { skipQuotedValue('\"'); } else if (p == PEEKED_NUMBER) { pos += peekedNumberLength; } peeked = PEEKED_NONE; } while (count != 0); pathIndices[stackSize - 1]++; pathNames[stackSize - 1] = \"null\";"
+      },
+      {
+        "txt": "} private void push(int newTop) { if (stackSize == stack.length) { int[] newStack = new int[stackSize * 2]; int[] newPathIndices = new int[stackSize * 2]; String[] newPathNames = new String[stackSize * 2]; System.arraycopy(stack, 0, newStack, 0, stackSize); System.arraycopy(pathIndices, 0, newPathIndices, 0, stackSize); System.arraycopy(pathNames, 0, newPathNames, 0, stackSize); stack = newStack;"
+      },
+      {
+        "txt": "pathIndices = newPathIndices; pathNames = newPathNames; } stack[stackSize++] = newTop; } private boolean fillBuffer(int minimum) throws IOException { char[] buffer = this.buffer; lineStart -= pos; if (limit != pos) { limit -= pos;"
+      },
+      {
+        "txt": "System.arraycopy(buffer, pos, buffer, 0, limit); } else { limit = 0; } pos = 0; int total; while ((total = in.read(buffer, limit, buffer.length - limit)) != -1) { limit += total; if (lineNumber == 0 && lineStart == 0 && limit > 0 && buffer[0] == '\\ufeff') { pos++;"
+      },
+      {
+        "txt": "lineStart++; minimum++; } if (limit >= minimum) { return true; } } return false; } int getLineNumber() {"
+      },
+      {
+        "txt": "return lineNumber + 1; } int getColumnNumber() { return pos - lineStart + 1; } private int nextNonWhitespace(boolean throwOnEof) throws IOException { char[] buffer = this.buffer; int p = pos; int l = limit; while (true) {"
+      },
+      {
+        "txt": "if (p == l) { pos = p; if (!fillBuffer(1)) { break; } p = pos; l = limit; } int c = buffer[p++]; if (c == '\\n') {"
+      },
+      {
+        "txt": "lineNumber++; lineStart = p; continue; } else if (c == ' ' || c == '\\r' || c == '\\t') { continue; } if (c == '/') { pos = p; if (p == l) { pos--; // push back '/' so it's still in the buffer when this method returns"
+      },
+      {
+        "txt": "boolean charsLoaded = fillBuffer(2); pos++; // consume the '/' again if (!charsLoaded) { return c; } } checkLenient(); char peek = buffer[pos]; switch (peek) { case '*':"
+      },
+      {
+        "txt": "pos++; if (!skipTo(\"*/\")) { throw syntaxError(\"Unterminated comment\"); } p = pos + 2; l = limit; continue; case '/': pos++; skipToEndOfLine();"
+      },
+      {
+        "txt": "p = pos; l = limit; continue; default: return c; } } else if (c == '#') { pos = p; checkLenient(); skipToEndOfLine();"
+      },
+      {
+        "txt": "p = pos; l = limit; } else { pos = p; return c; } } if (throwOnEof) { throw new EOFException(\"End of input\" + \" at line \" + getLineNumber() + \" column \" + getColumnNumber());"
+      },
+      {
+        "txt": "} else { return -1; } } private void checkLenient() throws IOException { if (!lenient) { throw syntaxError(\"Use JsonReader.setLenient(true) to accept malformed JSON\"); } } private void skipToEndOfLine() throws IOException {"
+      },
+      {
+        "txt": "while (pos < limit || fillBuffer(1)) { char c = buffer[pos++]; if (c == '\\n') { lineNumber++; lineStart = pos; break; } else if (c == '\\r') { break; } }"
+      },
+      {
+        "txt": "} private boolean skipTo(String toFind) throws IOException { outer: for (; pos + toFind.length() <= limit || fillBuffer(toFind.length()); pos++) { if (buffer[pos] == '\\n') { lineNumber++; lineStart = pos + 1; continue; } for (int c = 0; c < toFind.length(); c++) {"
+      },
+      {
+        "txt": "if (buffer[pos + c] != toFind.charAt(c)) { continue outer; } } return true; } return false; } @Override public String toString() { return getClass().getSimpleName()"
+      },
+      {
+        "txt": "+ \" at line \" + getLineNumber() + \" column \" + getColumnNumber(); } public String getPath() { StringBuilder result = new StringBuilder().append('$'); for (int i = 0, size = stackSize; i < size; i++) { switch (stack[i]) { case JsonScope.EMPTY_ARRAY: case JsonScope.NONEMPTY_ARRAY: result.append('[').append(pathIndices[i]).append(']'); break;"
+      },
+      {
+        "txt": "case JsonScope.EMPTY_OBJECT: case JsonScope.DANGLING_NAME: case JsonScope.NONEMPTY_OBJECT: result.append('.'); if (pathNames[i] != null) { result.append(pathNames[i]); } break; case JsonScope.NONEMPTY_DOCUMENT: case JsonScope.EMPTY_DOCUMENT:"
+      },
+      {
+        "txt": "case JsonScope.CLOSED: break; } } return result.toString(); } private char readEscapeCharacter() throws IOException { if (pos == limit && !fillBuffer(1)) { throw syntaxError(\"Unterminated escape sequence\"); }"
+      },
+      {
+        "txt": "char escaped = buffer[pos++]; switch (escaped) { case 'u': if (pos + 4 > limit && !fillBuffer(4)) { throw syntaxError(\"Unterminated escape sequence\"); } char result = 0; for (int i = pos, end = i + 4; i < end; i++) { char c = buffer[i]; result <<= 4;"
+      },
+      {
+        "txt": "if (c >= '0' && c <= '9') { result += (c - '0'); } else if (c >= 'a' && c <= 'f') { result += (c - 'a' + 10); } else if (c >= 'A' && c <= 'F') { result += (c - 'A' + 10); } else { throw new NumberFormatException(\"\\\\u\" + new String(buffer, pos, 4)); } }"
+      },
+      {
+        "txt": "pos += 4; return result; case 't': return '\\t'; case 'b': return '\\b'; case 'n': return '\\n'; case 'r': return '\\r';"
+      },
+      {
+        "txt": "case 'f': return '\\f'; case '\\n': lineNumber++; lineStart = pos; case '\\'': case '\"': case '\\\\': default: return escaped;"
+      },
+      {
+        "txt": "} } private IOException syntaxError(String message) throws IOException { throw new MalformedJsonException(message + \" at line \" + getLineNumber() + \" column \" + getColumnNumber() + \" path \" + getPath()); } private void consumeNonExecutePrefix() throws IOException { nextNonWhitespace(true); pos--; if (pos + NON_EXECUTE_PREFIX.length > limit && !fillBuffer(NON_EXECUTE_PREFIX.length)) {"
+      },
+      {
+        "txt": "return; } for (int i = 0; i < NON_EXECUTE_PREFIX.length; i++) { if (buffer[pos + i] != NON_EXECUTE_PREFIX[i]) { return; // not a security token! } } pos += NON_EXECUTE_PREFIX.length; } static {"
+      },
+      {
+        "txt": "JsonReaderInternalAccess.INSTANCE = new JsonReaderInternalAccess() { @Override public void promoteNameToValue(JsonReader reader) throws IOException { if (reader instanceof JsonTreeReader) { ((JsonTreeReader)reader).promoteNameToValue(); return; } int p = reader.peeked; if (p == PEEKED_NONE) { p = reader.doPeek(); }"
+      },
+      {
+        "txt": "if (p == PEEKED_DOUBLE_QUOTED_NAME) { reader.peeked = PEEKED_DOUBLE_QUOTED; } else if (p == PEEKED_SINGLE_QUOTED_NAME) { reader.peeked = PEEKED_SINGLE_QUOTED; } else if (p == PEEKED_UNQUOTED_NAME) { reader.peeked = PEEKED_UNQUOTED; } else { throw new IllegalStateException(\"Expected a name but was \" + reader.peek() + \" \" + \" at line \" + reader.getLineNumber() + \" column \" + reader.getColumnNumber() + \" path \" + reader.getPath());"
+      },
+      {
+        "txt": "} } }; }"
+      }
+    ]
+  },
+  {
+    "id": 1163,
+    "file_path": "gson/src/main/java/com/google/gson/stream/JsonWriter.java",
+    "start-bug-line": 325,
+    "end-bug-line": 325,
+    "bug": "beforeValue(true);",
+    "fix": "beforeValue();",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.google.gson.stream; import java.io.Closeable; import java.io.Flushable; import java.io.IOException; import java.io.Writer; import static com.google.gson.stream.JsonScope.DANGLING_NAME; import static com.google.gson.stream.JsonScope.EMPTY_ARRAY;"
+      },
+      {
+        "txt": "import static com.google.gson.stream.JsonScope.EMPTY_DOCUMENT; import static com.google.gson.stream.JsonScope.EMPTY_OBJECT; import static com.google.gson.stream.JsonScope.NONEMPTY_ARRAY; import static com.google.gson.stream.JsonScope.NONEMPTY_DOCUMENT; import static com.google.gson.stream.JsonScope.NONEMPTY_OBJECT; public class JsonWriter implements Closeable, Flushable { private static final String[] REPLACEMENT_CHARS; private static final String[] HTML_SAFE_REPLACEMENT_CHARS; static { REPLACEMENT_CHARS = new String[128];"
+      },
+      {
+        "txt": "for (int i = 0; i <= 0x1f; i++) { REPLACEMENT_CHARS[i] = String.format(\"\\\\u%04x\", (int) i); } REPLACEMENT_CHARS['\"'] = \"\\\\\\\"\"; REPLACEMENT_CHARS['\\\\'] = \"\\\\\\\\\"; REPLACEMENT_CHARS['\\t'] = \"\\\\t\"; REPLACEMENT_CHARS['\\b'] = \"\\\\b\"; REPLACEMENT_CHARS['\\n'] = \"\\\\n\"; REPLACEMENT_CHARS['\\r'] = \"\\\\r\"; REPLACEMENT_CHARS['\\f'] = \"\\\\f\";"
+      },
+      {
+        "txt": "HTML_SAFE_REPLACEMENT_CHARS = REPLACEMENT_CHARS.clone(); HTML_SAFE_REPLACEMENT_CHARS['<'] = \"\\\\u003c\"; HTML_SAFE_REPLACEMENT_CHARS['>'] = \"\\\\u003e\"; HTML_SAFE_REPLACEMENT_CHARS['&'] = \"\\\\u0026\"; HTML_SAFE_REPLACEMENT_CHARS['='] = \"\\\\u003d\"; HTML_SAFE_REPLACEMENT_CHARS['\\''] = \"\\\\u0027\"; } private final Writer out; private int[] stack = new int[32]; private int stackSize = 0;"
+      },
+      {
+        "txt": "{ push(EMPTY_DOCUMENT); } private String indent; private String separator = \":\"; private boolean lenient; private boolean htmlSafe; private String deferredName; private boolean serializeNulls = true; public JsonWriter(Writer out) {"
+      },
+      {
+        "txt": "if (out == null) { throw new NullPointerException(\"out == null\"); } this.out = out; } public final void setIndent(String indent) { if (indent.length() == 0) { this.indent = null; this.separator = \":\"; } else {"
+      },
+      {
+        "txt": "this.indent = indent; this.separator = \": \"; } } public final void setLenient(boolean lenient) { this.lenient = lenient; } public boolean isLenient() { return lenient; }"
+      },
+      {
+        "txt": "public final void setHtmlSafe(boolean htmlSafe) { this.htmlSafe = htmlSafe; } public final boolean isHtmlSafe() { return htmlSafe; } public final void setSerializeNulls(boolean serializeNulls) { this.serializeNulls = serializeNulls; } public final boolean getSerializeNulls() {"
+      },
+      {
+        "txt": "return serializeNulls; } public JsonWriter beginArray() throws IOException { writeDeferredName(); return open(EMPTY_ARRAY, \"[\"); } public JsonWriter endArray() throws IOException { return close(EMPTY_ARRAY, NONEMPTY_ARRAY, \"]\"); } public JsonWriter beginObject() throws IOException {"
+      },
+      {
+        "txt": "return open(EMPTY_OBJECT, \"{\"); } public JsonWriter endObject() throws IOException { return close(EMPTY_OBJECT, NONEMPTY_OBJECT, \"}\"); } private JsonWriter open(int empty, String openBracket) throws IOException { <extra_id_0> push(empty); out.write(openBracket); return this; } private JsonWriter close(int empty, int nonempty, String closeBracket) throws IOException {"
+      },
+      {
+        "txt": "private JsonWriter close(int empty, int nonempty, String closeBracket) throws IOException { int context = peek(); if (context != nonempty && context != empty) { throw new IllegalStateException(\"Nesting problem.\"); } if (deferredName != null) { throw new IllegalStateException(\"Dangling name: \" + deferredName); } stackSize--;"
+      },
+      {
+        "txt": "if (context == nonempty) { newline(); } out.write(closeBracket); return this; } private void push(int newTop) { if (stackSize == stack.length) { int[] newStack = new int[stackSize * 2]; System.arraycopy(stack, 0, newStack, 0, stackSize);"
+      },
+      {
+        "txt": "stack = newStack; } stack[stackSize++] = newTop; } private int peek() { if (stackSize == 0) { throw new IllegalStateException(\"JsonWriter is closed.\"); } return stack[stackSize - 1]; }"
+      },
+      {
+        "txt": "private void replaceTop(int topOfStack) { stack[stackSize - 1] = topOfStack; } public JsonWriter name(String name) throws IOException { if (name == null) { throw new NullPointerException(\"name == null\"); } if (deferredName != null) { throw new IllegalStateException(); }"
+      },
+      {
+        "txt": "if (stackSize == 0) { throw new IllegalStateException(\"JsonWriter is closed.\"); } deferredName = name; return this; } private void writeDeferredName() throws IOException { if (deferredName != null) { beforeName(); string(deferredName);"
+      },
+      {
+        "txt": "deferredName = null; } } public JsonWriter value(String value) throws IOException { if (value == null) { return nullValue(); } writeDeferredName(); beforeValue(false); string(value);"
+      },
+      {
+        "txt": "return this; } public JsonWriter jsonValue(String value) throws IOException { if (value == null) { return nullValue(); } writeDeferredName(); beforeValue(false); out.append(value); return this;"
+      },
+      {
+        "txt": "} public JsonWriter nullValue() throws IOException { if (deferredName != null) { if (serializeNulls) { writeDeferredName(); } else { deferredName = null; return this; // skip the name and the value } }"
+      },
+      {
+        "txt": "beforeValue(false); out.write(\"null\"); return this; } public JsonWriter value(boolean value) throws IOException { writeDeferredName(); beforeValue(false); out.write(value ? \"true\" : \"false\"); return this; }"
+      },
+      {
+        "txt": "public JsonWriter value(double value) throws IOException { if (Double.isNaN(value) || Double.isInfinite(value)) { throw new IllegalArgumentException(\"Numeric values must be finite, but was \" + value); } writeDeferredName(); beforeValue(false); out.append(Double.toString(value)); return this; } public JsonWriter value(long value) throws IOException {"
+      },
+      {
+        "txt": "writeDeferredName(); beforeValue(false); out.write(Long.toString(value)); return this; } public JsonWriter value(Number value) throws IOException { if (value == null) { return nullValue(); } writeDeferredName();"
+      },
+      {
+        "txt": "String string = value.toString(); if (!lenient && (string.equals(\"-Infinity\") || string.equals(\"Infinity\") || string.equals(\"NaN\"))) { throw new IllegalArgumentException(\"Numeric values must be finite, but was \" + value); } beforeValue(false); out.append(string); return this; } public void flush() throws IOException {"
+      },
+      {
+        "txt": "if (stackSize == 0) { throw new IllegalStateException(\"JsonWriter is closed.\"); } out.flush(); } public void close() throws IOException { out.close(); int size = stackSize; if (size > 1 || size == 1 && stack[size - 1] != NONEMPTY_DOCUMENT) { throw new IOException(\"Incomplete document\");"
+      },
+      {
+        "txt": "} stackSize = 0; } private void string(String value) throws IOException { String[] replacements = htmlSafe ? HTML_SAFE_REPLACEMENT_CHARS : REPLACEMENT_CHARS; out.write(\"\\\"\"); int last = 0; int length = value.length(); for (int i = 0; i < length; i++) { char c = value.charAt(i);"
+      },
+      {
+        "txt": "String replacement; if (c < 128) { replacement = replacements[c]; if (replacement == null) { continue; } } else if (c == '\\u2028') { replacement = \"\\\\u2028\"; } else if (c == '\\u2029') { replacement = \"\\\\u2029\";"
+      },
+      {
+        "txt": "} else { continue; } if (last < i) { out.write(value, last, i - last); } out.write(replacement); last = i + 1; } if (last < length) {"
+      },
+      {
+        "txt": "out.write(value, last, length - last); } out.write(\"\\\"\"); } private void newline() throws IOException { if (indent == null) { return; } out.write(\"\\n\"); for (int i = 1, size = stackSize; i < size; i++) {"
+      },
+      {
+        "txt": "out.write(indent); } } private void beforeName() throws IOException { int context = peek(); if (context == NONEMPTY_OBJECT) { // first in object out.write(','); } else if (context != EMPTY_OBJECT) { // not in an object! throw new IllegalStateException(\"Nesting problem.\"); }"
+      },
+      {
+        "txt": "newline(); replaceTop(DANGLING_NAME); } @SuppressWarnings(\"fallthrough\") private void beforeValue(boolean root) throws IOException { switch (peek()) { case NONEMPTY_DOCUMENT: if (!lenient) { throw new IllegalStateException( \"JSON must have only one top-level value.\");"
+      },
+      {
+        "txt": "} case EMPTY_DOCUMENT: // first in document if (!lenient && !root) { throw new IllegalStateException( \"JSON must start with an array or an object.\"); } replaceTop(NONEMPTY_DOCUMENT); break; case EMPTY_ARRAY: // first in array replaceTop(NONEMPTY_ARRAY);"
+      },
+      {
+        "txt": "newline(); break; case NONEMPTY_ARRAY: // another in array out.append(','); newline(); break; case DANGLING_NAME: // value for name out.append(separator); replaceTop(NONEMPTY_OBJECT); break;"
+      },
+      {
+        "txt": "default: throw new IllegalStateException(\"Nesting problem.\"); } }"
+      }
+    ]
+  },
+  {
+    "id": 1164,
+    "file_path": "gson/src/main/java/com/google/gson/stream/JsonWriter.java",
+    "start-bug-line": 418,
+    "end-bug-line": 418,
+    "bug": "beforeValue(false);",
+    "fix": "beforeValue();",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.google.gson.stream; import java.io.Closeable; import java.io.Flushable; import java.io.IOException; import java.io.Writer; import static com.google.gson.stream.JsonScope.DANGLING_NAME; import static com.google.gson.stream.JsonScope.EMPTY_ARRAY; import static com.google.gson.stream.JsonScope.EMPTY_DOCUMENT; import static com.google.gson.stream.JsonScope.EMPTY_OBJECT; import static com.google.gson.stream.JsonScope.NONEMPTY_ARRAY;"
+      },
+      {
+        "txt": "import static com.google.gson.stream.JsonScope.NONEMPTY_DOCUMENT; import static com.google.gson.stream.JsonScope.NONEMPTY_OBJECT; public class JsonWriter implements Closeable, Flushable { private static final String[] REPLACEMENT_CHARS; private static final String[] HTML_SAFE_REPLACEMENT_CHARS; static { REPLACEMENT_CHARS = new String[128]; for (int i = 0; i <= 0x1f; i++) { REPLACEMENT_CHARS[i] = String.format(\"\\\\u%04x\", (int) i); }"
+      },
+      {
+        "txt": "REPLACEMENT_CHARS['\"'] = \"\\\\\\\"\"; REPLACEMENT_CHARS['\\\\'] = \"\\\\\\\\\"; REPLACEMENT_CHARS['\\t'] = \"\\\\t\"; REPLACEMENT_CHARS['\\b'] = \"\\\\b\"; REPLACEMENT_CHARS['\\n'] = \"\\\\n\"; REPLACEMENT_CHARS['\\r'] = \"\\\\r\"; REPLACEMENT_CHARS['\\f'] = \"\\\\f\"; HTML_SAFE_REPLACEMENT_CHARS = REPLACEMENT_CHARS.clone(); HTML_SAFE_REPLACEMENT_CHARS['<'] = \"\\\\u003c\"; HTML_SAFE_REPLACEMENT_CHARS['>'] = \"\\\\u003e\";"
+      },
+      {
+        "txt": "HTML_SAFE_REPLACEMENT_CHARS['&'] = \"\\\\u0026\"; HTML_SAFE_REPLACEMENT_CHARS['='] = \"\\\\u003d\"; HTML_SAFE_REPLACEMENT_CHARS['\\''] = \"\\\\u0027\"; } private final Writer out; private int[] stack = new int[32]; private int stackSize = 0; { push(EMPTY_DOCUMENT); }"
+      },
+      {
+        "txt": "private String indent; private String separator = \":\"; private boolean lenient; private boolean htmlSafe; private String deferredName; private boolean serializeNulls = true; public JsonWriter(Writer out) { if (out == null) { throw new NullPointerException(\"out == null\"); }"
+      },
+      {
+        "txt": "this.out = out; } public final void setIndent(String indent) { if (indent.length() == 0) { this.indent = null; this.separator = \":\"; } else { this.indent = indent; this.separator = \": \"; }"
+      },
+      {
+        "txt": "} public final void setLenient(boolean lenient) { this.lenient = lenient; } public boolean isLenient() { return lenient; } public final void setHtmlSafe(boolean htmlSafe) { this.htmlSafe = htmlSafe; }"
+      },
+      {
+        "txt": "public final boolean isHtmlSafe() { return htmlSafe; } public final void setSerializeNulls(boolean serializeNulls) { this.serializeNulls = serializeNulls; } public final boolean getSerializeNulls() { return serializeNulls; } public JsonWriter beginArray() throws IOException {"
+      },
+      {
+        "txt": "writeDeferredName(); return open(EMPTY_ARRAY, \"[\"); } public JsonWriter endArray() throws IOException { return close(EMPTY_ARRAY, NONEMPTY_ARRAY, \"]\"); } public JsonWriter beginObject() throws IOException { writeDeferredName(); return open(EMPTY_OBJECT, \"{\"); }"
+      },
+      {
+        "txt": "public JsonWriter endObject() throws IOException { return close(EMPTY_OBJECT, NONEMPTY_OBJECT, \"}\"); } private JsonWriter open(int empty, String openBracket) throws IOException { beforeValue(true); push(empty); out.write(openBracket); return this; } private JsonWriter close(int empty, int nonempty, String closeBracket)"
+      },
+      {
+        "txt": "throws IOException { int context = peek(); if (context != nonempty && context != empty) { throw new IllegalStateException(\"Nesting problem.\"); } if (deferredName != null) { throw new IllegalStateException(\"Dangling name: \" + deferredName); } stackSize--; if (context == nonempty) {"
+      },
+      {
+        "txt": "newline(); } out.write(closeBracket); return this; } private void push(int newTop) { if (stackSize == stack.length) { int[] newStack = new int[stackSize * 2]; System.arraycopy(stack, 0, newStack, 0, stackSize); stack = newStack;"
+      },
+      {
+        "txt": "} stack[stackSize++] = newTop; } private int peek() { if (stackSize == 0) { throw new IllegalStateException(\"JsonWriter is closed.\"); } return stack[stackSize - 1]; } private void replaceTop(int topOfStack) {"
+      },
+      {
+        "txt": "stack[stackSize - 1] = topOfStack; } public JsonWriter name(String name) throws IOException { if (name == null) { throw new NullPointerException(\"name == null\"); } if (deferredName != null) { throw new IllegalStateException(); } if (stackSize == 0) {"
+      },
+      {
+        "txt": "throw new IllegalStateException(\"JsonWriter is closed.\"); } deferredName = name; return this; } private void writeDeferredName() throws IOException { if (deferredName != null) { beforeName(); string(deferredName); deferredName = null;"
+      },
+      {
+        "txt": "} public JsonWriter value(String value) throws IOException { if (value == null) { return nullValue(); } writeDeferredName(); <extra_id_0> string(value); return this; } public JsonWriter jsonValue(String value) throws IOException { if (value == null) { return nullValue();"
+      },
+      {
+        "txt": "if (value == null) { return nullValue(); } writeDeferredName(); beforeValue(false); out.append(value); return this; } public JsonWriter nullValue() throws IOException { if (deferredName != null) {"
+      },
+      {
+        "txt": "if (serializeNulls) { writeDeferredName(); } else { deferredName = null; return this; // skip the name and the value } } beforeValue(false); out.write(\"null\"); return this;"
+      },
+      {
+        "txt": "} public JsonWriter value(boolean value) throws IOException { writeDeferredName(); beforeValue(false); out.write(value ? \"true\" : \"false\"); return this; } public JsonWriter value(double value) throws IOException { if (Double.isNaN(value) || Double.isInfinite(value)) { throw new IllegalArgumentException(\"Numeric values must be finite, but was \" + value);"
+      },
+      {
+        "txt": "} writeDeferredName(); beforeValue(false); out.append(Double.toString(value)); return this; } public JsonWriter value(long value) throws IOException { writeDeferredName(); beforeValue(false); out.write(Long.toString(value));"
+      },
+      {
+        "txt": "return this; } public JsonWriter value(Number value) throws IOException { if (value == null) { return nullValue(); } writeDeferredName(); String string = value.toString(); if (!lenient && (string.equals(\"-Infinity\") || string.equals(\"Infinity\") || string.equals(\"NaN\"))) {"
+      },
+      {
+        "txt": "throw new IllegalArgumentException(\"Numeric values must be finite, but was \" + value); } beforeValue(false); out.append(string); return this; } public void flush() throws IOException { if (stackSize == 0) { throw new IllegalStateException(\"JsonWriter is closed.\"); }"
+      },
+      {
+        "txt": "out.flush(); } public void close() throws IOException { out.close(); int size = stackSize; if (size > 1 || size == 1 && stack[size - 1] != NONEMPTY_DOCUMENT) { throw new IOException(\"Incomplete document\"); } stackSize = 0; }"
+      },
+      {
+        "txt": "private void string(String value) throws IOException { String[] replacements = htmlSafe ? HTML_SAFE_REPLACEMENT_CHARS : REPLACEMENT_CHARS; out.write(\"\\\"\"); int last = 0; int length = value.length(); for (int i = 0; i < length; i++) { char c = value.charAt(i); String replacement; if (c < 128) { replacement = replacements[c];"
+      },
+      {
+        "txt": "if (replacement == null) { continue; } } else if (c == '\\u2028') { replacement = \"\\\\u2028\"; } else if (c == '\\u2029') { replacement = \"\\\\u2029\"; } else { continue; }"
+      },
+      {
+        "txt": "if (last < i) { out.write(value, last, i - last); } out.write(replacement); last = i + 1; } if (last < length) { out.write(value, last, length - last); } out.write(\"\\\"\");"
+      },
+      {
+        "txt": "} private void newline() throws IOException { if (indent == null) { return; } out.write(\"\\n\"); for (int i = 1, size = stackSize; i < size; i++) { out.write(indent); } }"
+      },
+      {
+        "txt": "private void beforeName() throws IOException { int context = peek(); if (context == NONEMPTY_OBJECT) { // first in object out.write(','); } else if (context != EMPTY_OBJECT) { // not in an object! throw new IllegalStateException(\"Nesting problem.\"); } newline(); replaceTop(DANGLING_NAME); }"
+      },
+      {
+        "txt": "@SuppressWarnings(\"fallthrough\") private void beforeValue(boolean root) throws IOException { switch (peek()) { case NONEMPTY_DOCUMENT: if (!lenient) { throw new IllegalStateException( \"JSON must have only one top-level value.\"); } case EMPTY_DOCUMENT: // first in document if (!lenient && !root) {"
+      },
+      {
+        "txt": "throw new IllegalStateException( \"JSON must start with an array or an object.\"); } replaceTop(NONEMPTY_DOCUMENT); break; case EMPTY_ARRAY: // first in array replaceTop(NONEMPTY_ARRAY); newline(); break; case NONEMPTY_ARRAY: // another in array"
+      },
+      {
+        "txt": "out.append(','); newline(); break; case DANGLING_NAME: // value for name out.append(separator); replaceTop(NONEMPTY_OBJECT); break; default: throw new IllegalStateException(\"Nesting problem.\"); }"
+      }
+    ]
+  },
+  {
+    "id": 1165,
+    "file_path": "gson/src/main/java/com/google/gson/stream/JsonWriter.java",
+    "start-bug-line": 435,
+    "end-bug-line": 435,
+    "bug": "beforeValue(false);",
+    "fix": "beforeValue();",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.google.gson.stream; import java.io.Closeable; import java.io.Flushable; import java.io.IOException; import java.io.Writer; import static com.google.gson.stream.JsonScope.DANGLING_NAME; import static com.google.gson.stream.JsonScope.EMPTY_ARRAY; import static com.google.gson.stream.JsonScope.EMPTY_DOCUMENT; import static com.google.gson.stream.JsonScope.EMPTY_OBJECT;"
+      },
+      {
+        "txt": "import static com.google.gson.stream.JsonScope.NONEMPTY_ARRAY; import static com.google.gson.stream.JsonScope.NONEMPTY_DOCUMENT; import static com.google.gson.stream.JsonScope.NONEMPTY_OBJECT; public class JsonWriter implements Closeable, Flushable { private static final String[] REPLACEMENT_CHARS; private static final String[] HTML_SAFE_REPLACEMENT_CHARS; static { REPLACEMENT_CHARS = new String[128]; for (int i = 0; i <= 0x1f; i++) { REPLACEMENT_CHARS[i] = String.format(\"\\\\u%04x\", (int) i);"
+      },
+      {
+        "txt": "} REPLACEMENT_CHARS['\"'] = \"\\\\\\\"\"; REPLACEMENT_CHARS['\\\\'] = \"\\\\\\\\\"; REPLACEMENT_CHARS['\\t'] = \"\\\\t\"; REPLACEMENT_CHARS['\\b'] = \"\\\\b\"; REPLACEMENT_CHARS['\\n'] = \"\\\\n\"; REPLACEMENT_CHARS['\\r'] = \"\\\\r\"; REPLACEMENT_CHARS['\\f'] = \"\\\\f\"; HTML_SAFE_REPLACEMENT_CHARS = REPLACEMENT_CHARS.clone(); HTML_SAFE_REPLACEMENT_CHARS['<'] = \"\\\\u003c\";"
+      },
+      {
+        "txt": "HTML_SAFE_REPLACEMENT_CHARS['>'] = \"\\\\u003e\"; HTML_SAFE_REPLACEMENT_CHARS['&'] = \"\\\\u0026\"; HTML_SAFE_REPLACEMENT_CHARS['='] = \"\\\\u003d\"; HTML_SAFE_REPLACEMENT_CHARS['\\''] = \"\\\\u0027\"; } private final Writer out; private int[] stack = new int[32]; private int stackSize = 0; { push(EMPTY_DOCUMENT);"
+      },
+      {
+        "txt": "} private String indent; private String separator = \":\"; private boolean lenient; private boolean htmlSafe; private String deferredName; private boolean serializeNulls = true; public JsonWriter(Writer out) { if (out == null) { throw new NullPointerException(\"out == null\");"
+      },
+      {
+        "txt": "} this.out = out; } public final void setIndent(String indent) { if (indent.length() == 0) { this.indent = null; this.separator = \":\"; } else { this.indent = indent; this.separator = \": \";"
+      },
+      {
+        "txt": "} } public final void setLenient(boolean lenient) { this.lenient = lenient; } public boolean isLenient() { return lenient; } public final void setHtmlSafe(boolean htmlSafe) { this.htmlSafe = htmlSafe;"
+      },
+      {
+        "txt": "} public final boolean isHtmlSafe() { return htmlSafe; } public final void setSerializeNulls(boolean serializeNulls) { this.serializeNulls = serializeNulls; } public final boolean getSerializeNulls() { return serializeNulls; }"
+      },
+      {
+        "txt": "public JsonWriter beginArray() throws IOException { writeDeferredName(); return open(EMPTY_ARRAY, \"[\"); } public JsonWriter endArray() throws IOException { return close(EMPTY_ARRAY, NONEMPTY_ARRAY, \"]\"); } public JsonWriter beginObject() throws IOException { writeDeferredName(); return open(EMPTY_OBJECT, \"{\");"
+      },
+      {
+        "txt": "} public JsonWriter endObject() throws IOException { return close(EMPTY_OBJECT, NONEMPTY_OBJECT, \"}\"); } private JsonWriter open(int empty, String openBracket) throws IOException { beforeValue(true); push(empty); out.write(openBracket); return this; }"
+      },
+      {
+        "txt": "private JsonWriter close(int empty, int nonempty, String closeBracket) throws IOException { int context = peek(); if (context != nonempty && context != empty) { throw new IllegalStateException(\"Nesting problem.\"); } if (deferredName != null) { throw new IllegalStateException(\"Dangling name: \" + deferredName); } stackSize--;"
+      },
+      {
+        "txt": "if (context == nonempty) { newline(); } out.write(closeBracket); return this; } private void push(int newTop) { if (stackSize == stack.length) { int[] newStack = new int[stackSize * 2]; System.arraycopy(stack, 0, newStack, 0, stackSize);"
+      },
+      {
+        "txt": "stack = newStack; } stack[stackSize++] = newTop; } private int peek() { if (stackSize == 0) { throw new IllegalStateException(\"JsonWriter is closed.\"); } return stack[stackSize - 1]; }"
+      },
+      {
+        "txt": "private void replaceTop(int topOfStack) { stack[stackSize - 1] = topOfStack; } public JsonWriter name(String name) throws IOException { if (name == null) { throw new NullPointerException(\"name == null\"); } if (deferredName != null) { throw new IllegalStateException(); }"
+      },
+      {
+        "txt": "if (stackSize == 0) { throw new IllegalStateException(\"JsonWriter is closed.\"); } deferredName = name; return this; } private void writeDeferredName() throws IOException { if (deferredName != null) { beforeName(); string(deferredName);"
+      },
+      {
+        "txt": "deferredName = null; } } public JsonWriter value(String value) throws IOException { if (value == null) { return nullValue(); } writeDeferredName(); beforeValue(false); string(value);"
+      },
+      {
+        "txt": "} public JsonWriter jsonValue(String value) throws IOException { if (value == null) { return nullValue(); } writeDeferredName(); <extra_id_0> out.append(value); return this; } public JsonWriter nullValue() throws IOException { if (deferredName != null) { if (serializeNulls) {"
+      },
+      {
+        "txt": "if (deferredName != null) { if (serializeNulls) { writeDeferredName(); } else { deferredName = null; return this; // skip the name and the value } } beforeValue(false); out.write(\"null\");"
+      },
+      {
+        "txt": "return this; } public JsonWriter value(boolean value) throws IOException { writeDeferredName(); beforeValue(false); out.write(value ? \"true\" : \"false\"); return this; } public JsonWriter value(double value) throws IOException { if (Double.isNaN(value) || Double.isInfinite(value)) {"
+      },
+      {
+        "txt": "throw new IllegalArgumentException(\"Numeric values must be finite, but was \" + value); } writeDeferredName(); beforeValue(false); out.append(Double.toString(value)); return this; } public JsonWriter value(long value) throws IOException { writeDeferredName(); beforeValue(false);"
+      },
+      {
+        "txt": "out.write(Long.toString(value)); return this; } public JsonWriter value(Number value) throws IOException { if (value == null) { return nullValue(); } writeDeferredName(); String string = value.toString(); if (!lenient"
+      },
+      {
+        "txt": "&& (string.equals(\"-Infinity\") || string.equals(\"Infinity\") || string.equals(\"NaN\"))) { throw new IllegalArgumentException(\"Numeric values must be finite, but was \" + value); } beforeValue(false); out.append(string); return this; } public void flush() throws IOException { if (stackSize == 0) { throw new IllegalStateException(\"JsonWriter is closed.\");"
+      },
+      {
+        "txt": "} out.flush(); } public void close() throws IOException { out.close(); int size = stackSize; if (size > 1 || size == 1 && stack[size - 1] != NONEMPTY_DOCUMENT) { throw new IOException(\"Incomplete document\"); } stackSize = 0;"
+      },
+      {
+        "txt": "} private void string(String value) throws IOException { String[] replacements = htmlSafe ? HTML_SAFE_REPLACEMENT_CHARS : REPLACEMENT_CHARS; out.write(\"\\\"\"); int last = 0; int length = value.length(); for (int i = 0; i < length; i++) { char c = value.charAt(i); String replacement; if (c < 128) {"
+      },
+      {
+        "txt": "replacement = replacements[c]; if (replacement == null) { continue; } } else if (c == '\\u2028') { replacement = \"\\\\u2028\"; } else if (c == '\\u2029') { replacement = \"\\\\u2029\"; } else { continue;"
+      },
+      {
+        "txt": "} if (last < i) { out.write(value, last, i - last); } out.write(replacement); last = i + 1; } if (last < length) { out.write(value, last, length - last); }"
+      },
+      {
+        "txt": "out.write(\"\\\"\"); } private void newline() throws IOException { if (indent == null) { return; } out.write(\"\\n\"); for (int i = 1, size = stackSize; i < size; i++) { out.write(indent); }"
+      },
+      {
+        "txt": "} private void beforeName() throws IOException { int context = peek(); if (context == NONEMPTY_OBJECT) { // first in object out.write(','); } else if (context != EMPTY_OBJECT) { // not in an object! throw new IllegalStateException(\"Nesting problem.\"); } newline(); replaceTop(DANGLING_NAME);"
+      },
+      {
+        "txt": "} @SuppressWarnings(\"fallthrough\") private void beforeValue(boolean root) throws IOException { switch (peek()) { case NONEMPTY_DOCUMENT: if (!lenient) { throw new IllegalStateException( \"JSON must have only one top-level value.\"); } case EMPTY_DOCUMENT: // first in document"
+      },
+      {
+        "txt": "if (!lenient && !root) { throw new IllegalStateException( \"JSON must start with an array or an object.\"); } replaceTop(NONEMPTY_DOCUMENT); break; case EMPTY_ARRAY: // first in array replaceTop(NONEMPTY_ARRAY); newline(); break;"
+      },
+      {
+        "txt": "case NONEMPTY_ARRAY: // another in array out.append(','); newline(); break; case DANGLING_NAME: // value for name out.append(separator); replaceTop(NONEMPTY_OBJECT); break; default: throw new IllegalStateException(\"Nesting problem.\");"
+      },
+      {
+        "txt": "} }"
+      }
+    ]
+  },
+  {
+    "id": 1166,
+    "file_path": "gson/src/main/java/com/google/gson/stream/JsonWriter.java",
+    "start-bug-line": 454,
+    "end-bug-line": 454,
+    "bug": "beforeValue(false);",
+    "fix": "beforeValue();",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.google.gson.stream; import java.io.Closeable;"
+      },
+      {
+        "txt": "import java.io.Flushable; import java.io.IOException; import java.io.Writer; import static com.google.gson.stream.JsonScope.DANGLING_NAME; import static com.google.gson.stream.JsonScope.EMPTY_ARRAY; import static com.google.gson.stream.JsonScope.EMPTY_DOCUMENT; import static com.google.gson.stream.JsonScope.EMPTY_OBJECT; import static com.google.gson.stream.JsonScope.NONEMPTY_ARRAY; import static com.google.gson.stream.JsonScope.NONEMPTY_DOCUMENT; import static com.google.gson.stream.JsonScope.NONEMPTY_OBJECT;"
+      },
+      {
+        "txt": "public class JsonWriter implements Closeable, Flushable { private static final String[] REPLACEMENT_CHARS; private static final String[] HTML_SAFE_REPLACEMENT_CHARS; static { REPLACEMENT_CHARS = new String[128]; for (int i = 0; i <= 0x1f; i++) { REPLACEMENT_CHARS[i] = String.format(\"\\\\u%04x\", (int) i); } REPLACEMENT_CHARS['\"'] = \"\\\\\\\"\"; REPLACEMENT_CHARS['\\\\'] = \"\\\\\\\\\";"
+      },
+      {
+        "txt": "REPLACEMENT_CHARS['\\t'] = \"\\\\t\"; REPLACEMENT_CHARS['\\b'] = \"\\\\b\"; REPLACEMENT_CHARS['\\n'] = \"\\\\n\"; REPLACEMENT_CHARS['\\r'] = \"\\\\r\"; REPLACEMENT_CHARS['\\f'] = \"\\\\f\"; HTML_SAFE_REPLACEMENT_CHARS = REPLACEMENT_CHARS.clone(); HTML_SAFE_REPLACEMENT_CHARS['<'] = \"\\\\u003c\"; HTML_SAFE_REPLACEMENT_CHARS['>'] = \"\\\\u003e\"; HTML_SAFE_REPLACEMENT_CHARS['&'] = \"\\\\u0026\"; HTML_SAFE_REPLACEMENT_CHARS['='] = \"\\\\u003d\";"
+      },
+      {
+        "txt": "HTML_SAFE_REPLACEMENT_CHARS['\\''] = \"\\\\u0027\"; } private final Writer out; private int[] stack = new int[32]; private int stackSize = 0; { push(EMPTY_DOCUMENT); } private String indent; private String separator = \":\";"
+      },
+      {
+        "txt": "private boolean lenient; private boolean htmlSafe; private String deferredName; private boolean serializeNulls = true; public JsonWriter(Writer out) { if (out == null) { throw new NullPointerException(\"out == null\"); } this.out = out; }"
+      },
+      {
+        "txt": "public final void setIndent(String indent) { if (indent.length() == 0) { this.indent = null; this.separator = \":\"; } else { this.indent = indent; this.separator = \": \"; } } public final void setLenient(boolean lenient) {"
+      },
+      {
+        "txt": "this.lenient = lenient; } public boolean isLenient() { return lenient; } public final void setHtmlSafe(boolean htmlSafe) { this.htmlSafe = htmlSafe; } public final boolean isHtmlSafe() { return htmlSafe;"
+      },
+      {
+        "txt": "} public final void setSerializeNulls(boolean serializeNulls) { this.serializeNulls = serializeNulls; } public final boolean getSerializeNulls() { return serializeNulls; } public JsonWriter beginArray() throws IOException { writeDeferredName(); return open(EMPTY_ARRAY, \"[\");"
+      },
+      {
+        "txt": "} public JsonWriter endArray() throws IOException { return close(EMPTY_ARRAY, NONEMPTY_ARRAY, \"]\"); } public JsonWriter beginObject() throws IOException { writeDeferredName(); return open(EMPTY_OBJECT, \"{\"); } public JsonWriter endObject() throws IOException { return close(EMPTY_OBJECT, NONEMPTY_OBJECT, \"}\");"
+      },
+      {
+        "txt": "} private JsonWriter open(int empty, String openBracket) throws IOException { beforeValue(true); push(empty); out.write(openBracket); return this; } private JsonWriter close(int empty, int nonempty, String closeBracket) throws IOException { int context = peek();"
+      },
+      {
+        "txt": "if (context != nonempty && context != empty) { throw new IllegalStateException(\"Nesting problem.\"); } if (deferredName != null) { throw new IllegalStateException(\"Dangling name: \" + deferredName); } stackSize--; if (context == nonempty) { newline(); }"
+      },
+      {
+        "txt": "out.write(closeBracket); return this; } private void push(int newTop) { if (stackSize == stack.length) { int[] newStack = new int[stackSize * 2]; System.arraycopy(stack, 0, newStack, 0, stackSize); stack = newStack; } stack[stackSize++] = newTop;"
+      },
+      {
+        "txt": "} private int peek() { if (stackSize == 0) { throw new IllegalStateException(\"JsonWriter is closed.\"); } return stack[stackSize - 1]; } private void replaceTop(int topOfStack) { stack[stackSize - 1] = topOfStack; }"
+      },
+      {
+        "txt": "public JsonWriter name(String name) throws IOException { if (name == null) { throw new NullPointerException(\"name == null\"); } if (deferredName != null) { throw new IllegalStateException(); } if (stackSize == 0) { throw new IllegalStateException(\"JsonWriter is closed.\"); }"
+      },
+      {
+        "txt": "deferredName = name; return this; } private void writeDeferredName() throws IOException { if (deferredName != null) { beforeName(); string(deferredName); deferredName = null; } }"
+      },
+      {
+        "txt": "public JsonWriter value(String value) throws IOException { if (value == null) { return nullValue(); } writeDeferredName(); beforeValue(false); string(value); return this; } public JsonWriter jsonValue(String value) throws IOException {"
+      },
+      {
+        "txt": "if (value == null) { return nullValue(); } writeDeferredName(); beforeValue(false); out.append(value); return this; } public JsonWriter nullValue() throws IOException { if (deferredName != null) {"
+      },
+      {
+        "txt": "writeDeferredName(); } else { deferredName = null; return this; // skip the name and the value } } <extra_id_0> out.write(\"null\"); return this; } public JsonWriter value(boolean value) throws IOException { writeDeferredName(); beforeValue(false);"
+      },
+      {
+        "txt": "writeDeferredName(); beforeValue(false); out.write(value ? \"true\" : \"false\"); return this; } public JsonWriter value(double value) throws IOException { if (Double.isNaN(value) || Double.isInfinite(value)) { throw new IllegalArgumentException(\"Numeric values must be finite, but was \" + value); } writeDeferredName();"
+      },
+      {
+        "txt": "beforeValue(false); out.append(Double.toString(value)); return this; } public JsonWriter value(long value) throws IOException { writeDeferredName(); beforeValue(false); out.write(Long.toString(value)); return this; }"
+      },
+      {
+        "txt": "public JsonWriter value(Number value) throws IOException { if (value == null) { return nullValue(); } writeDeferredName(); String string = value.toString(); if (!lenient && (string.equals(\"-Infinity\") || string.equals(\"Infinity\") || string.equals(\"NaN\"))) { throw new IllegalArgumentException(\"Numeric values must be finite, but was \" + value); }"
+      },
+      {
+        "txt": "beforeValue(false); out.append(string); return this; } public void flush() throws IOException { if (stackSize == 0) { throw new IllegalStateException(\"JsonWriter is closed.\"); } out.flush(); }"
+      },
+      {
+        "txt": "public void close() throws IOException { out.close(); int size = stackSize; if (size > 1 || size == 1 && stack[size - 1] != NONEMPTY_DOCUMENT) { throw new IOException(\"Incomplete document\"); } stackSize = 0; } private void string(String value) throws IOException { String[] replacements = htmlSafe ? HTML_SAFE_REPLACEMENT_CHARS : REPLACEMENT_CHARS;"
+      },
+      {
+        "txt": "out.write(\"\\\"\"); int last = 0; int length = value.length(); for (int i = 0; i < length; i++) { char c = value.charAt(i); String replacement; if (c < 128) { replacement = replacements[c]; if (replacement == null) { continue;"
+      },
+      {
+        "txt": "} } else if (c == '\\u2028') { replacement = \"\\\\u2028\"; } else if (c == '\\u2029') { replacement = \"\\\\u2029\"; } else { continue; } if (last < i) { out.write(value, last, i - last);"
+      },
+      {
+        "txt": "} out.write(replacement); last = i + 1; } if (last < length) { out.write(value, last, length - last); } out.write(\"\\\"\"); } private void newline() throws IOException {"
+      },
+      {
+        "txt": "if (indent == null) { return; } out.write(\"\\n\"); for (int i = 1, size = stackSize; i < size; i++) { out.write(indent); } } private void beforeName() throws IOException { int context = peek();"
+      },
+      {
+        "txt": "if (context == NONEMPTY_OBJECT) { // first in object out.write(','); } else if (context != EMPTY_OBJECT) { // not in an object! throw new IllegalStateException(\"Nesting problem.\"); } newline(); replaceTop(DANGLING_NAME); } @SuppressWarnings(\"fallthrough\") private void beforeValue(boolean root) throws IOException {"
+      },
+      {
+        "txt": "switch (peek()) { case NONEMPTY_DOCUMENT: if (!lenient) { throw new IllegalStateException( \"JSON must have only one top-level value.\"); } case EMPTY_DOCUMENT: // first in document if (!lenient && !root) { throw new IllegalStateException( \"JSON must start with an array or an object.\");"
+      },
+      {
+        "txt": "} replaceTop(NONEMPTY_DOCUMENT); break; case EMPTY_ARRAY: // first in array replaceTop(NONEMPTY_ARRAY); newline(); break; case NONEMPTY_ARRAY: // another in array out.append(','); newline();"
+      },
+      {
+        "txt": "break; case DANGLING_NAME: // value for name out.append(separator); replaceTop(NONEMPTY_OBJECT); break; default: throw new IllegalStateException(\"Nesting problem.\"); } }"
+      }
+    ]
+  },
+  {
+    "id": 1167,
+    "file_path": "gson/src/main/java/com/google/gson/stream/JsonWriter.java",
+    "start-bug-line": 466,
+    "end-bug-line": 466,
+    "bug": "beforeValue(false);",
+    "fix": "beforeValue();",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.google.gson.stream; import java.io.Closeable; import java.io.Flushable; import java.io.IOException; import java.io.Writer; import static com.google.gson.stream.JsonScope.DANGLING_NAME; import static com.google.gson.stream.JsonScope.EMPTY_ARRAY; import static com.google.gson.stream.JsonScope.EMPTY_DOCUMENT;"
+      },
+      {
+        "txt": "import static com.google.gson.stream.JsonScope.EMPTY_OBJECT; import static com.google.gson.stream.JsonScope.NONEMPTY_ARRAY; import static com.google.gson.stream.JsonScope.NONEMPTY_DOCUMENT; import static com.google.gson.stream.JsonScope.NONEMPTY_OBJECT; public class JsonWriter implements Closeable, Flushable { private static final String[] REPLACEMENT_CHARS; private static final String[] HTML_SAFE_REPLACEMENT_CHARS; static { REPLACEMENT_CHARS = new String[128]; for (int i = 0; i <= 0x1f; i++) {"
+      },
+      {
+        "txt": "REPLACEMENT_CHARS[i] = String.format(\"\\\\u%04x\", (int) i); } REPLACEMENT_CHARS['\"'] = \"\\\\\\\"\"; REPLACEMENT_CHARS['\\\\'] = \"\\\\\\\\\"; REPLACEMENT_CHARS['\\t'] = \"\\\\t\"; REPLACEMENT_CHARS['\\b'] = \"\\\\b\"; REPLACEMENT_CHARS['\\n'] = \"\\\\n\"; REPLACEMENT_CHARS['\\r'] = \"\\\\r\"; REPLACEMENT_CHARS['\\f'] = \"\\\\f\"; HTML_SAFE_REPLACEMENT_CHARS = REPLACEMENT_CHARS.clone();"
+      },
+      {
+        "txt": "HTML_SAFE_REPLACEMENT_CHARS['<'] = \"\\\\u003c\"; HTML_SAFE_REPLACEMENT_CHARS['>'] = \"\\\\u003e\"; HTML_SAFE_REPLACEMENT_CHARS['&'] = \"\\\\u0026\"; HTML_SAFE_REPLACEMENT_CHARS['='] = \"\\\\u003d\"; HTML_SAFE_REPLACEMENT_CHARS['\\''] = \"\\\\u0027\"; } private final Writer out; private int[] stack = new int[32]; private int stackSize = 0; {"
+      },
+      {
+        "txt": "push(EMPTY_DOCUMENT); } private String indent; private String separator = \":\"; private boolean lenient; private boolean htmlSafe; private String deferredName; private boolean serializeNulls = true; public JsonWriter(Writer out) { if (out == null) {"
+      },
+      {
+        "txt": "throw new NullPointerException(\"out == null\"); } this.out = out; } public final void setIndent(String indent) { if (indent.length() == 0) { this.indent = null; this.separator = \":\"; } else { this.indent = indent;"
+      },
+      {
+        "txt": "this.separator = \": \"; } } public final void setLenient(boolean lenient) { this.lenient = lenient; } public boolean isLenient() { return lenient; } public final void setHtmlSafe(boolean htmlSafe) {"
+      },
+      {
+        "txt": "this.htmlSafe = htmlSafe; } public final boolean isHtmlSafe() { return htmlSafe; } public final void setSerializeNulls(boolean serializeNulls) { this.serializeNulls = serializeNulls; } public final boolean getSerializeNulls() { return serializeNulls;"
+      },
+      {
+        "txt": "} public JsonWriter beginArray() throws IOException { writeDeferredName(); return open(EMPTY_ARRAY, \"[\"); } public JsonWriter endArray() throws IOException { return close(EMPTY_ARRAY, NONEMPTY_ARRAY, \"]\"); } public JsonWriter beginObject() throws IOException { writeDeferredName();"
+      },
+      {
+        "txt": "return open(EMPTY_OBJECT, \"{\"); } public JsonWriter endObject() throws IOException { return close(EMPTY_OBJECT, NONEMPTY_OBJECT, \"}\"); } private JsonWriter open(int empty, String openBracket) throws IOException { beforeValue(true); push(empty); out.write(openBracket); return this;"
+      },
+      {
+        "txt": "} private JsonWriter close(int empty, int nonempty, String closeBracket) throws IOException { int context = peek(); if (context != nonempty && context != empty) { throw new IllegalStateException(\"Nesting problem.\"); } if (deferredName != null) { throw new IllegalStateException(\"Dangling name: \" + deferredName); }"
+      },
+      {
+        "txt": "stackSize--; if (context == nonempty) { newline(); } out.write(closeBracket); return this; } private void push(int newTop) { if (stackSize == stack.length) { int[] newStack = new int[stackSize * 2];"
+      },
+      {
+        "txt": "System.arraycopy(stack, 0, newStack, 0, stackSize); stack = newStack; } stack[stackSize++] = newTop; } private int peek() { if (stackSize == 0) { throw new IllegalStateException(\"JsonWriter is closed.\"); } return stack[stackSize - 1];"
+      },
+      {
+        "txt": "} private void replaceTop(int topOfStack) { stack[stackSize - 1] = topOfStack; } public JsonWriter name(String name) throws IOException { if (name == null) { throw new NullPointerException(\"name == null\"); } if (deferredName != null) { throw new IllegalStateException();"
+      },
+      {
+        "txt": "} if (stackSize == 0) { throw new IllegalStateException(\"JsonWriter is closed.\"); } deferredName = name; return this; } private void writeDeferredName() throws IOException { if (deferredName != null) { beforeName();"
+      },
+      {
+        "txt": "string(deferredName); deferredName = null; } } public JsonWriter value(String value) throws IOException { if (value == null) { return nullValue(); } writeDeferredName(); beforeValue(false);"
+      },
+      {
+        "txt": "string(value); return this; } public JsonWriter jsonValue(String value) throws IOException { if (value == null) { return nullValue(); } writeDeferredName(); beforeValue(false); out.append(value);"
+      },
+      {
+        "txt": "return this; } public JsonWriter nullValue() throws IOException { if (deferredName != null) { if (serializeNulls) { writeDeferredName(); } else { deferredName = null; return this; // skip the name and the value }"
+      },
+      {
+        "txt": "beforeValue(false); out.write(\"null\"); return this; } public JsonWriter value(boolean value) throws IOException { writeDeferredName(); <extra_id_0> out.write(value ? \"true\" : \"false\"); return this; } public JsonWriter value(double value) throws IOException { if (Double.isNaN(value) || Double.isInfinite(value)) { throw new IllegalArgumentException(\"Numeric values must be finite, but was \" + value);"
+      },
+      {
+        "txt": "if (Double.isNaN(value) || Double.isInfinite(value)) { throw new IllegalArgumentException(\"Numeric values must be finite, but was \" + value); } writeDeferredName(); beforeValue(false); out.append(Double.toString(value)); return this; } public JsonWriter value(long value) throws IOException { writeDeferredName();"
+      },
+      {
+        "txt": "beforeValue(false); out.write(Long.toString(value)); return this; } public JsonWriter value(Number value) throws IOException { if (value == null) { return nullValue(); } writeDeferredName(); String string = value.toString();"
+      },
+      {
+        "txt": "if (!lenient && (string.equals(\"-Infinity\") || string.equals(\"Infinity\") || string.equals(\"NaN\"))) { throw new IllegalArgumentException(\"Numeric values must be finite, but was \" + value); } beforeValue(false); out.append(string); return this; } public void flush() throws IOException { if (stackSize == 0) {"
+      },
+      {
+        "txt": "throw new IllegalStateException(\"JsonWriter is closed.\"); } out.flush(); } public void close() throws IOException { out.close(); int size = stackSize; if (size > 1 || size == 1 && stack[size - 1] != NONEMPTY_DOCUMENT) { throw new IOException(\"Incomplete document\"); }"
+      },
+      {
+        "txt": "stackSize = 0; } private void string(String value) throws IOException { String[] replacements = htmlSafe ? HTML_SAFE_REPLACEMENT_CHARS : REPLACEMENT_CHARS; out.write(\"\\\"\"); int last = 0; int length = value.length(); for (int i = 0; i < length; i++) { char c = value.charAt(i); String replacement;"
+      },
+      {
+        "txt": "if (c < 128) { replacement = replacements[c]; if (replacement == null) { continue; } } else if (c == '\\u2028') { replacement = \"\\\\u2028\"; } else if (c == '\\u2029') { replacement = \"\\\\u2029\"; } else {"
+      },
+      {
+        "txt": "continue; } if (last < i) { out.write(value, last, i - last); } out.write(replacement); last = i + 1; } if (last < length) { out.write(value, last, length - last);"
+      },
+      {
+        "txt": "} out.write(\"\\\"\"); } private void newline() throws IOException { if (indent == null) { return; } out.write(\"\\n\"); for (int i = 1, size = stackSize; i < size; i++) { out.write(indent);"
+      },
+      {
+        "txt": "} } private void beforeName() throws IOException { int context = peek(); if (context == NONEMPTY_OBJECT) { // first in object out.write(','); } else if (context != EMPTY_OBJECT) { // not in an object! throw new IllegalStateException(\"Nesting problem.\"); } newline();"
+      },
+      {
+        "txt": "replaceTop(DANGLING_NAME); } @SuppressWarnings(\"fallthrough\") private void beforeValue(boolean root) throws IOException { switch (peek()) { case NONEMPTY_DOCUMENT: if (!lenient) { throw new IllegalStateException( \"JSON must have only one top-level value.\"); }"
+      },
+      {
+        "txt": "case EMPTY_DOCUMENT: // first in document if (!lenient && !root) { throw new IllegalStateException( \"JSON must start with an array or an object.\"); } replaceTop(NONEMPTY_DOCUMENT); break; case EMPTY_ARRAY: // first in array replaceTop(NONEMPTY_ARRAY); newline();"
+      },
+      {
+        "txt": "break; case NONEMPTY_ARRAY: // another in array out.append(','); newline(); break; case DANGLING_NAME: // value for name out.append(separator); replaceTop(NONEMPTY_OBJECT); break; default:"
+      },
+      {
+        "txt": "throw new IllegalStateException(\"Nesting problem.\"); } }"
+      }
+    ]
+  },
+  {
+    "id": 1168,
+    "file_path": "gson/src/main/java/com/google/gson/stream/JsonWriter.java",
+    "start-bug-line": 483,
+    "end-bug-line": 483,
+    "bug": "beforeValue(false);",
+    "fix": "beforeValue();",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.google.gson.stream; import java.io.Closeable; import java.io.Flushable; import java.io.IOException; import java.io.Writer; import static com.google.gson.stream.JsonScope.DANGLING_NAME; import static com.google.gson.stream.JsonScope.EMPTY_ARRAY;"
+      },
+      {
+        "txt": "import static com.google.gson.stream.JsonScope.EMPTY_DOCUMENT; import static com.google.gson.stream.JsonScope.EMPTY_OBJECT; import static com.google.gson.stream.JsonScope.NONEMPTY_ARRAY; import static com.google.gson.stream.JsonScope.NONEMPTY_DOCUMENT; import static com.google.gson.stream.JsonScope.NONEMPTY_OBJECT; public class JsonWriter implements Closeable, Flushable { private static final String[] REPLACEMENT_CHARS; private static final String[] HTML_SAFE_REPLACEMENT_CHARS; static { REPLACEMENT_CHARS = new String[128];"
+      },
+      {
+        "txt": "for (int i = 0; i <= 0x1f; i++) { REPLACEMENT_CHARS[i] = String.format(\"\\\\u%04x\", (int) i); } REPLACEMENT_CHARS['\"'] = \"\\\\\\\"\"; REPLACEMENT_CHARS['\\\\'] = \"\\\\\\\\\"; REPLACEMENT_CHARS['\\t'] = \"\\\\t\"; REPLACEMENT_CHARS['\\b'] = \"\\\\b\"; REPLACEMENT_CHARS['\\n'] = \"\\\\n\"; REPLACEMENT_CHARS['\\r'] = \"\\\\r\"; REPLACEMENT_CHARS['\\f'] = \"\\\\f\";"
+      },
+      {
+        "txt": "HTML_SAFE_REPLACEMENT_CHARS = REPLACEMENT_CHARS.clone(); HTML_SAFE_REPLACEMENT_CHARS['<'] = \"\\\\u003c\"; HTML_SAFE_REPLACEMENT_CHARS['>'] = \"\\\\u003e\"; HTML_SAFE_REPLACEMENT_CHARS['&'] = \"\\\\u0026\"; HTML_SAFE_REPLACEMENT_CHARS['='] = \"\\\\u003d\"; HTML_SAFE_REPLACEMENT_CHARS['\\''] = \"\\\\u0027\"; } private final Writer out; private int[] stack = new int[32]; private int stackSize = 0;"
+      },
+      {
+        "txt": "{ push(EMPTY_DOCUMENT); } private String indent; private String separator = \":\"; private boolean lenient; private boolean htmlSafe; private String deferredName; private boolean serializeNulls = true; public JsonWriter(Writer out) {"
+      },
+      {
+        "txt": "if (out == null) { throw new NullPointerException(\"out == null\"); } this.out = out; } public final void setIndent(String indent) { if (indent.length() == 0) { this.indent = null; this.separator = \":\"; } else {"
+      },
+      {
+        "txt": "this.indent = indent; this.separator = \": \"; } } public final void setLenient(boolean lenient) { this.lenient = lenient; } public boolean isLenient() { return lenient; }"
+      },
+      {
+        "txt": "public final void setHtmlSafe(boolean htmlSafe) { this.htmlSafe = htmlSafe; } public final boolean isHtmlSafe() { return htmlSafe; } public final void setSerializeNulls(boolean serializeNulls) { this.serializeNulls = serializeNulls; } public final boolean getSerializeNulls() {"
+      },
+      {
+        "txt": "return serializeNulls; } public JsonWriter beginArray() throws IOException { writeDeferredName(); return open(EMPTY_ARRAY, \"[\"); } public JsonWriter endArray() throws IOException { return close(EMPTY_ARRAY, NONEMPTY_ARRAY, \"]\"); } public JsonWriter beginObject() throws IOException {"
+      },
+      {
+        "txt": "writeDeferredName(); return open(EMPTY_OBJECT, \"{\"); } public JsonWriter endObject() throws IOException { return close(EMPTY_OBJECT, NONEMPTY_OBJECT, \"}\"); } private JsonWriter open(int empty, String openBracket) throws IOException { beforeValue(true); push(empty); out.write(openBracket);"
+      },
+      {
+        "txt": "return this; } private JsonWriter close(int empty, int nonempty, String closeBracket) throws IOException { int context = peek(); if (context != nonempty && context != empty) { throw new IllegalStateException(\"Nesting problem.\"); } if (deferredName != null) { throw new IllegalStateException(\"Dangling name: \" + deferredName);"
+      },
+      {
+        "txt": "} stackSize--; if (context == nonempty) { newline(); } out.write(closeBracket); return this; } private void push(int newTop) { if (stackSize == stack.length) {"
+      },
+      {
+        "txt": "int[] newStack = new int[stackSize * 2]; System.arraycopy(stack, 0, newStack, 0, stackSize); stack = newStack; } stack[stackSize++] = newTop; } private int peek() { if (stackSize == 0) { throw new IllegalStateException(\"JsonWriter is closed.\"); }"
+      },
+      {
+        "txt": "return stack[stackSize - 1]; } private void replaceTop(int topOfStack) { stack[stackSize - 1] = topOfStack; } public JsonWriter name(String name) throws IOException { if (name == null) { throw new NullPointerException(\"name == null\"); } if (deferredName != null) {"
+      },
+      {
+        "txt": "throw new IllegalStateException(); } if (stackSize == 0) { throw new IllegalStateException(\"JsonWriter is closed.\"); } deferredName = name; return this; } private void writeDeferredName() throws IOException { if (deferredName != null) {"
+      },
+      {
+        "txt": "beforeName(); string(deferredName); deferredName = null; } } public JsonWriter value(String value) throws IOException { if (value == null) { return nullValue(); } writeDeferredName();"
+      },
+      {
+        "txt": "beforeValue(false); string(value); return this; } public JsonWriter jsonValue(String value) throws IOException { if (value == null) { return nullValue(); } writeDeferredName(); beforeValue(false);"
+      },
+      {
+        "txt": "out.append(value); return this; } public JsonWriter nullValue() throws IOException { if (deferredName != null) { if (serializeNulls) { writeDeferredName(); } else { deferredName = null; return this; // skip the name and the value"
+      },
+      {
+        "txt": "} } beforeValue(false); out.write(\"null\"); return this; } public JsonWriter value(boolean value) throws IOException { writeDeferredName(); beforeValue(false); out.write(value ? \"true\" : \"false\");"
+      },
+      {
+        "txt": "} public JsonWriter value(double value) throws IOException { if (Double.isNaN(value) || Double.isInfinite(value)) { throw new IllegalArgumentException(\"Numeric values must be finite, but was \" + value); } writeDeferredName(); <extra_id_0> out.append(Double.toString(value)); return this; } public JsonWriter value(long value) throws IOException { writeDeferredName(); beforeValue(false);"
+      },
+      {
+        "txt": "writeDeferredName(); beforeValue(false); out.write(Long.toString(value)); return this; } public JsonWriter value(Number value) throws IOException { if (value == null) { return nullValue(); } writeDeferredName();"
+      },
+      {
+        "txt": "String string = value.toString(); if (!lenient && (string.equals(\"-Infinity\") || string.equals(\"Infinity\") || string.equals(\"NaN\"))) { throw new IllegalArgumentException(\"Numeric values must be finite, but was \" + value); } beforeValue(false); out.append(string); return this; } public void flush() throws IOException {"
+      },
+      {
+        "txt": "if (stackSize == 0) { throw new IllegalStateException(\"JsonWriter is closed.\"); } out.flush(); } public void close() throws IOException { out.close(); int size = stackSize; if (size > 1 || size == 1 && stack[size - 1] != NONEMPTY_DOCUMENT) { throw new IOException(\"Incomplete document\");"
+      },
+      {
+        "txt": "} stackSize = 0; } private void string(String value) throws IOException { String[] replacements = htmlSafe ? HTML_SAFE_REPLACEMENT_CHARS : REPLACEMENT_CHARS; out.write(\"\\\"\"); int last = 0; int length = value.length(); for (int i = 0; i < length; i++) { char c = value.charAt(i);"
+      },
+      {
+        "txt": "String replacement; if (c < 128) { replacement = replacements[c]; if (replacement == null) { continue; } } else if (c == '\\u2028') { replacement = \"\\\\u2028\"; } else if (c == '\\u2029') { replacement = \"\\\\u2029\";"
+      },
+      {
+        "txt": "} else { continue; } if (last < i) { out.write(value, last, i - last); } out.write(replacement); last = i + 1; } if (last < length) {"
+      },
+      {
+        "txt": "out.write(value, last, length - last); } out.write(\"\\\"\"); } private void newline() throws IOException { if (indent == null) { return; } out.write(\"\\n\"); for (int i = 1, size = stackSize; i < size; i++) {"
+      },
+      {
+        "txt": "out.write(indent); } } private void beforeName() throws IOException { int context = peek(); if (context == NONEMPTY_OBJECT) { // first in object out.write(','); } else if (context != EMPTY_OBJECT) { // not in an object! throw new IllegalStateException(\"Nesting problem.\"); }"
+      },
+      {
+        "txt": "newline(); replaceTop(DANGLING_NAME); } @SuppressWarnings(\"fallthrough\") private void beforeValue(boolean root) throws IOException { switch (peek()) { case NONEMPTY_DOCUMENT: if (!lenient) { throw new IllegalStateException( \"JSON must have only one top-level value.\");"
+      },
+      {
+        "txt": "} case EMPTY_DOCUMENT: // first in document if (!lenient && !root) { throw new IllegalStateException( \"JSON must start with an array or an object.\"); } replaceTop(NONEMPTY_DOCUMENT); break; case EMPTY_ARRAY: // first in array replaceTop(NONEMPTY_ARRAY);"
+      },
+      {
+        "txt": "newline(); break; case NONEMPTY_ARRAY: // another in array out.append(','); newline(); break; case DANGLING_NAME: // value for name out.append(separator); replaceTop(NONEMPTY_OBJECT); break;"
+      },
+      {
+        "txt": "default: throw new IllegalStateException(\"Nesting problem.\"); } }"
+      }
+    ]
+  },
+  {
+    "id": 1169,
+    "file_path": "gson/src/main/java/com/google/gson/stream/JsonWriter.java",
+    "start-bug-line": 495,
+    "end-bug-line": 495,
+    "bug": "beforeValue(false);",
+    "fix": "beforeValue();",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.google.gson.stream; import java.io.Closeable; import java.io.Flushable;"
+      },
+      {
+        "txt": "import java.io.IOException; import java.io.Writer; import static com.google.gson.stream.JsonScope.DANGLING_NAME; import static com.google.gson.stream.JsonScope.EMPTY_ARRAY; import static com.google.gson.stream.JsonScope.EMPTY_DOCUMENT; import static com.google.gson.stream.JsonScope.EMPTY_OBJECT; import static com.google.gson.stream.JsonScope.NONEMPTY_ARRAY; import static com.google.gson.stream.JsonScope.NONEMPTY_DOCUMENT; import static com.google.gson.stream.JsonScope.NONEMPTY_OBJECT; public class JsonWriter implements Closeable, Flushable {"
+      },
+      {
+        "txt": "private static final String[] REPLACEMENT_CHARS; private static final String[] HTML_SAFE_REPLACEMENT_CHARS; static { REPLACEMENT_CHARS = new String[128]; for (int i = 0; i <= 0x1f; i++) { REPLACEMENT_CHARS[i] = String.format(\"\\\\u%04x\", (int) i); } REPLACEMENT_CHARS['\"'] = \"\\\\\\\"\"; REPLACEMENT_CHARS['\\\\'] = \"\\\\\\\\\"; REPLACEMENT_CHARS['\\t'] = \"\\\\t\";"
+      },
+      {
+        "txt": "REPLACEMENT_CHARS['\\b'] = \"\\\\b\"; REPLACEMENT_CHARS['\\n'] = \"\\\\n\"; REPLACEMENT_CHARS['\\r'] = \"\\\\r\"; REPLACEMENT_CHARS['\\f'] = \"\\\\f\"; HTML_SAFE_REPLACEMENT_CHARS = REPLACEMENT_CHARS.clone(); HTML_SAFE_REPLACEMENT_CHARS['<'] = \"\\\\u003c\"; HTML_SAFE_REPLACEMENT_CHARS['>'] = \"\\\\u003e\"; HTML_SAFE_REPLACEMENT_CHARS['&'] = \"\\\\u0026\"; HTML_SAFE_REPLACEMENT_CHARS['='] = \"\\\\u003d\"; HTML_SAFE_REPLACEMENT_CHARS['\\''] = \"\\\\u0027\";"
+      },
+      {
+        "txt": "} private final Writer out; private int[] stack = new int[32]; private int stackSize = 0; { push(EMPTY_DOCUMENT); } private String indent; private String separator = \":\"; private boolean lenient;"
+      },
+      {
+        "txt": "private boolean htmlSafe; private String deferredName; private boolean serializeNulls = true; public JsonWriter(Writer out) { if (out == null) { throw new NullPointerException(\"out == null\"); } this.out = out; } public final void setIndent(String indent) {"
+      },
+      {
+        "txt": "if (indent.length() == 0) { this.indent = null; this.separator = \":\"; } else { this.indent = indent; this.separator = \": \"; } } public final void setLenient(boolean lenient) { this.lenient = lenient;"
+      },
+      {
+        "txt": "} public boolean isLenient() { return lenient; } public final void setHtmlSafe(boolean htmlSafe) { this.htmlSafe = htmlSafe; } public final boolean isHtmlSafe() { return htmlSafe; }"
+      },
+      {
+        "txt": "public final void setSerializeNulls(boolean serializeNulls) { this.serializeNulls = serializeNulls; } public final boolean getSerializeNulls() { return serializeNulls; } public JsonWriter beginArray() throws IOException { writeDeferredName(); return open(EMPTY_ARRAY, \"[\"); }"
+      },
+      {
+        "txt": "public JsonWriter endArray() throws IOException { return close(EMPTY_ARRAY, NONEMPTY_ARRAY, \"]\"); } public JsonWriter beginObject() throws IOException { writeDeferredName(); return open(EMPTY_OBJECT, \"{\"); } public JsonWriter endObject() throws IOException { return close(EMPTY_OBJECT, NONEMPTY_OBJECT, \"}\"); }"
+      },
+      {
+        "txt": "private JsonWriter open(int empty, String openBracket) throws IOException { beforeValue(true); push(empty); out.write(openBracket); return this; } private JsonWriter close(int empty, int nonempty, String closeBracket) throws IOException { int context = peek(); if (context != nonempty && context != empty) {"
+      },
+      {
+        "txt": "throw new IllegalStateException(\"Nesting problem.\"); } if (deferredName != null) { throw new IllegalStateException(\"Dangling name: \" + deferredName); } stackSize--; if (context == nonempty) { newline(); } out.write(closeBracket);"
+      },
+      {
+        "txt": "return this; } private void push(int newTop) { if (stackSize == stack.length) { int[] newStack = new int[stackSize * 2]; System.arraycopy(stack, 0, newStack, 0, stackSize); stack = newStack; } stack[stackSize++] = newTop; }"
+      },
+      {
+        "txt": "private int peek() { if (stackSize == 0) { throw new IllegalStateException(\"JsonWriter is closed.\"); } return stack[stackSize - 1]; } private void replaceTop(int topOfStack) { stack[stackSize - 1] = topOfStack; } public JsonWriter name(String name) throws IOException {"
+      },
+      {
+        "txt": "if (name == null) { throw new NullPointerException(\"name == null\"); } if (deferredName != null) { throw new IllegalStateException(); } if (stackSize == 0) { throw new IllegalStateException(\"JsonWriter is closed.\"); } deferredName = name;"
+      },
+      {
+        "txt": "return this; } private void writeDeferredName() throws IOException { if (deferredName != null) { beforeName(); string(deferredName); deferredName = null; } } public JsonWriter value(String value) throws IOException {"
+      },
+      {
+        "txt": "if (value == null) { return nullValue(); } writeDeferredName(); beforeValue(false); string(value); return this; } public JsonWriter jsonValue(String value) throws IOException { if (value == null) {"
+      },
+      {
+        "txt": "return nullValue(); } writeDeferredName(); beforeValue(false); out.append(value); return this; } public JsonWriter nullValue() throws IOException { if (deferredName != null) { if (serializeNulls) {"
+      },
+      {
+        "txt": "writeDeferredName(); } else { deferredName = null; return this; // skip the name and the value } } beforeValue(false); out.write(\"null\"); return this; }"
+      },
+      {
+        "txt": "public JsonWriter value(boolean value) throws IOException { writeDeferredName(); beforeValue(false); out.write(value ? \"true\" : \"false\"); return this; } public JsonWriter value(double value) throws IOException { if (Double.isNaN(value) || Double.isInfinite(value)) { throw new IllegalArgumentException(\"Numeric values must be finite, but was \" + value); }"
+      },
+      {
+        "txt": "beforeValue(false); out.append(Double.toString(value)); return this; } public JsonWriter value(long value) throws IOException { writeDeferredName(); <extra_id_0> out.write(Long.toString(value)); return this; } public JsonWriter value(Number value) throws IOException { if (value == null) { return nullValue();"
+      },
+      {
+        "txt": "if (value == null) { return nullValue(); } writeDeferredName(); String string = value.toString(); if (!lenient && (string.equals(\"-Infinity\") || string.equals(\"Infinity\") || string.equals(\"NaN\"))) { throw new IllegalArgumentException(\"Numeric values must be finite, but was \" + value); } beforeValue(false);"
+      },
+      {
+        "txt": "out.append(string); return this; } public void flush() throws IOException { if (stackSize == 0) { throw new IllegalStateException(\"JsonWriter is closed.\"); } out.flush(); } public void close() throws IOException {"
+      },
+      {
+        "txt": "out.close(); int size = stackSize; if (size > 1 || size == 1 && stack[size - 1] != NONEMPTY_DOCUMENT) { throw new IOException(\"Incomplete document\"); } stackSize = 0; } private void string(String value) throws IOException { String[] replacements = htmlSafe ? HTML_SAFE_REPLACEMENT_CHARS : REPLACEMENT_CHARS; out.write(\"\\\"\");"
+      },
+      {
+        "txt": "int last = 0; int length = value.length(); for (int i = 0; i < length; i++) { char c = value.charAt(i); String replacement; if (c < 128) { replacement = replacements[c]; if (replacement == null) { continue; }"
+      },
+      {
+        "txt": "} else if (c == '\\u2028') { replacement = \"\\\\u2028\"; } else if (c == '\\u2029') { replacement = \"\\\\u2029\"; } else { continue; } if (last < i) { out.write(value, last, i - last); }"
+      },
+      {
+        "txt": "out.write(replacement); last = i + 1; } if (last < length) { out.write(value, last, length - last); } out.write(\"\\\"\"); } private void newline() throws IOException { if (indent == null) {"
+      },
+      {
+        "txt": "return; } out.write(\"\\n\"); for (int i = 1, size = stackSize; i < size; i++) { out.write(indent); } } private void beforeName() throws IOException { int context = peek(); if (context == NONEMPTY_OBJECT) { // first in object"
+      },
+      {
+        "txt": "out.write(','); } else if (context != EMPTY_OBJECT) { // not in an object! throw new IllegalStateException(\"Nesting problem.\"); } newline(); replaceTop(DANGLING_NAME); } @SuppressWarnings(\"fallthrough\") private void beforeValue(boolean root) throws IOException { switch (peek()) {"
+      },
+      {
+        "txt": "case NONEMPTY_DOCUMENT: if (!lenient) { throw new IllegalStateException( \"JSON must have only one top-level value.\"); } case EMPTY_DOCUMENT: // first in document if (!lenient && !root) { throw new IllegalStateException( \"JSON must start with an array or an object.\"); }"
+      },
+      {
+        "txt": "replaceTop(NONEMPTY_DOCUMENT); break; case EMPTY_ARRAY: // first in array replaceTop(NONEMPTY_ARRAY); newline(); break; case NONEMPTY_ARRAY: // another in array out.append(','); newline(); break;"
+      },
+      {
+        "txt": "case DANGLING_NAME: // value for name out.append(separator); replaceTop(NONEMPTY_OBJECT); break; default: throw new IllegalStateException(\"Nesting problem.\"); } }"
+      }
+    ]
+  },
+  {
+    "id": 1170,
+    "file_path": "gson/src/main/java/com/google/gson/stream/JsonWriter.java",
+    "start-bug-line": 518,
+    "end-bug-line": 518,
+    "bug": "beforeValue(false);",
+    "fix": "beforeValue();",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.google.gson.stream; import java.io.Closeable; import java.io.Flushable; import java.io.IOException; import java.io.Writer; import static com.google.gson.stream.JsonScope.DANGLING_NAME; import static com.google.gson.stream.JsonScope.EMPTY_ARRAY;"
+      },
+      {
+        "txt": "import static com.google.gson.stream.JsonScope.EMPTY_DOCUMENT; import static com.google.gson.stream.JsonScope.EMPTY_OBJECT; import static com.google.gson.stream.JsonScope.NONEMPTY_ARRAY; import static com.google.gson.stream.JsonScope.NONEMPTY_DOCUMENT; import static com.google.gson.stream.JsonScope.NONEMPTY_OBJECT; public class JsonWriter implements Closeable, Flushable { private static final String[] REPLACEMENT_CHARS; private static final String[] HTML_SAFE_REPLACEMENT_CHARS; static { REPLACEMENT_CHARS = new String[128];"
+      },
+      {
+        "txt": "for (int i = 0; i <= 0x1f; i++) { REPLACEMENT_CHARS[i] = String.format(\"\\\\u%04x\", (int) i); } REPLACEMENT_CHARS['\"'] = \"\\\\\\\"\"; REPLACEMENT_CHARS['\\\\'] = \"\\\\\\\\\"; REPLACEMENT_CHARS['\\t'] = \"\\\\t\"; REPLACEMENT_CHARS['\\b'] = \"\\\\b\"; REPLACEMENT_CHARS['\\n'] = \"\\\\n\"; REPLACEMENT_CHARS['\\r'] = \"\\\\r\"; REPLACEMENT_CHARS['\\f'] = \"\\\\f\";"
+      },
+      {
+        "txt": "HTML_SAFE_REPLACEMENT_CHARS = REPLACEMENT_CHARS.clone(); HTML_SAFE_REPLACEMENT_CHARS['<'] = \"\\\\u003c\"; HTML_SAFE_REPLACEMENT_CHARS['>'] = \"\\\\u003e\"; HTML_SAFE_REPLACEMENT_CHARS['&'] = \"\\\\u0026\"; HTML_SAFE_REPLACEMENT_CHARS['='] = \"\\\\u003d\"; HTML_SAFE_REPLACEMENT_CHARS['\\''] = \"\\\\u0027\"; } private final Writer out; private int[] stack = new int[32]; private int stackSize = 0;"
+      },
+      {
+        "txt": "{ push(EMPTY_DOCUMENT); } private String indent; private String separator = \":\"; private boolean lenient; private boolean htmlSafe; private String deferredName; private boolean serializeNulls = true; public JsonWriter(Writer out) {"
+      },
+      {
+        "txt": "if (out == null) { throw new NullPointerException(\"out == null\"); } this.out = out; } public final void setIndent(String indent) { if (indent.length() == 0) { this.indent = null; this.separator = \":\"; } else {"
+      },
+      {
+        "txt": "this.indent = indent; this.separator = \": \"; } } public final void setLenient(boolean lenient) { this.lenient = lenient; } public boolean isLenient() { return lenient; }"
+      },
+      {
+        "txt": "public final void setHtmlSafe(boolean htmlSafe) { this.htmlSafe = htmlSafe; } public final boolean isHtmlSafe() { return htmlSafe; } public final void setSerializeNulls(boolean serializeNulls) { this.serializeNulls = serializeNulls; } public final boolean getSerializeNulls() {"
+      },
+      {
+        "txt": "return serializeNulls; } public JsonWriter beginArray() throws IOException { writeDeferredName(); return open(EMPTY_ARRAY, \"[\"); } public JsonWriter endArray() throws IOException { return close(EMPTY_ARRAY, NONEMPTY_ARRAY, \"]\"); } public JsonWriter beginObject() throws IOException {"
+      },
+      {
+        "txt": "writeDeferredName(); return open(EMPTY_OBJECT, \"{\"); } public JsonWriter endObject() throws IOException { return close(EMPTY_OBJECT, NONEMPTY_OBJECT, \"}\"); } private JsonWriter open(int empty, String openBracket) throws IOException { beforeValue(true); push(empty); out.write(openBracket);"
+      },
+      {
+        "txt": "return this; } private JsonWriter close(int empty, int nonempty, String closeBracket) throws IOException { int context = peek(); if (context != nonempty && context != empty) { throw new IllegalStateException(\"Nesting problem.\"); } if (deferredName != null) { throw new IllegalStateException(\"Dangling name: \" + deferredName);"
+      },
+      {
+        "txt": "} stackSize--; if (context == nonempty) { newline(); } out.write(closeBracket); return this; } private void push(int newTop) { if (stackSize == stack.length) {"
+      },
+      {
+        "txt": "int[] newStack = new int[stackSize * 2]; System.arraycopy(stack, 0, newStack, 0, stackSize); stack = newStack; } stack[stackSize++] = newTop; } private int peek() { if (stackSize == 0) { throw new IllegalStateException(\"JsonWriter is closed.\"); }"
+      },
+      {
+        "txt": "return stack[stackSize - 1]; } private void replaceTop(int topOfStack) { stack[stackSize - 1] = topOfStack; } public JsonWriter name(String name) throws IOException { if (name == null) { throw new NullPointerException(\"name == null\"); } if (deferredName != null) {"
+      },
+      {
+        "txt": "throw new IllegalStateException(); } if (stackSize == 0) { throw new IllegalStateException(\"JsonWriter is closed.\"); } deferredName = name; return this; } private void writeDeferredName() throws IOException { if (deferredName != null) {"
+      },
+      {
+        "txt": "beforeName(); string(deferredName); deferredName = null; } } public JsonWriter value(String value) throws IOException { if (value == null) { return nullValue(); } writeDeferredName();"
+      },
+      {
+        "txt": "beforeValue(false); string(value); return this; } public JsonWriter jsonValue(String value) throws IOException { if (value == null) { return nullValue(); } writeDeferredName(); beforeValue(false);"
+      },
+      {
+        "txt": "out.append(value); return this; } public JsonWriter nullValue() throws IOException { if (deferredName != null) { if (serializeNulls) { writeDeferredName(); } else { deferredName = null; return this; // skip the name and the value"
+      },
+      {
+        "txt": "} } beforeValue(false); out.write(\"null\"); return this; } public JsonWriter value(boolean value) throws IOException { writeDeferredName(); beforeValue(false); out.write(value ? \"true\" : \"false\");"
+      },
+      {
+        "txt": "return this; } public JsonWriter value(double value) throws IOException { if (Double.isNaN(value) || Double.isInfinite(value)) { throw new IllegalArgumentException(\"Numeric values must be finite, but was \" + value); } writeDeferredName(); beforeValue(false); out.append(Double.toString(value)); return this;"
+      },
+      {
+        "txt": "} public JsonWriter value(long value) throws IOException { writeDeferredName(); beforeValue(false); out.write(Long.toString(value)); return this; } public JsonWriter value(Number value) throws IOException { if (value == null) { return nullValue();"
+      },
+      {
+        "txt": "writeDeferredName(); String string = value.toString(); if (!lenient && (string.equals(\"-Infinity\") || string.equals(\"Infinity\") || string.equals(\"NaN\"))) { throw new IllegalArgumentException(\"Numeric values must be finite, but was \" + value); } <extra_id_0> out.append(string); return this; } public void flush() throws IOException { if (stackSize == 0) { throw new IllegalStateException(\"JsonWriter is closed.\");"
+      },
+      {
+        "txt": "if (stackSize == 0) { throw new IllegalStateException(\"JsonWriter is closed.\"); } out.flush(); } public void close() throws IOException { out.close(); int size = stackSize; if (size > 1 || size == 1 && stack[size - 1] != NONEMPTY_DOCUMENT) { throw new IOException(\"Incomplete document\");"
+      },
+      {
+        "txt": "} stackSize = 0; } private void string(String value) throws IOException { String[] replacements = htmlSafe ? HTML_SAFE_REPLACEMENT_CHARS : REPLACEMENT_CHARS; out.write(\"\\\"\"); int last = 0; int length = value.length(); for (int i = 0; i < length; i++) { char c = value.charAt(i);"
+      },
+      {
+        "txt": "String replacement; if (c < 128) { replacement = replacements[c]; if (replacement == null) { continue; } } else if (c == '\\u2028') { replacement = \"\\\\u2028\"; } else if (c == '\\u2029') { replacement = \"\\\\u2029\";"
+      },
+      {
+        "txt": "} else { continue; } if (last < i) { out.write(value, last, i - last); } out.write(replacement); last = i + 1; } if (last < length) {"
+      },
+      {
+        "txt": "out.write(value, last, length - last); } out.write(\"\\\"\"); } private void newline() throws IOException { if (indent == null) { return; } out.write(\"\\n\"); for (int i = 1, size = stackSize; i < size; i++) {"
+      },
+      {
+        "txt": "out.write(indent); } } private void beforeName() throws IOException { int context = peek(); if (context == NONEMPTY_OBJECT) { // first in object out.write(','); } else if (context != EMPTY_OBJECT) { // not in an object! throw new IllegalStateException(\"Nesting problem.\"); }"
+      },
+      {
+        "txt": "newline(); replaceTop(DANGLING_NAME); } @SuppressWarnings(\"fallthrough\") private void beforeValue(boolean root) throws IOException { switch (peek()) { case NONEMPTY_DOCUMENT: if (!lenient) { throw new IllegalStateException( \"JSON must have only one top-level value.\");"
+      },
+      {
+        "txt": "} case EMPTY_DOCUMENT: // first in document if (!lenient && !root) { throw new IllegalStateException( \"JSON must start with an array or an object.\"); } replaceTop(NONEMPTY_DOCUMENT); break; case EMPTY_ARRAY: // first in array replaceTop(NONEMPTY_ARRAY);"
+      },
+      {
+        "txt": "newline(); break; case NONEMPTY_ARRAY: // another in array out.append(','); newline(); break; case DANGLING_NAME: // value for name out.append(separator); replaceTop(NONEMPTY_OBJECT); break;"
+      },
+      {
+        "txt": "default: throw new IllegalStateException(\"Nesting problem.\"); } }"
+      }
+    ]
+  },
+  {
+    "id": 1171,
+    "file_path": "gson/src/main/java/com/google/gson/stream/JsonWriter.java",
+    "start-bug-line": 613,
+    "end-bug-line": 613,
+    "bug": "private void beforeValue(boolean root) throws IOException {",
+    "fix": "private void beforeValue() throws IOException {",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.google.gson.stream; import java.io.Closeable; import java.io.Flushable; import java.io.IOException; import java.io.Writer; import static com.google.gson.stream.JsonScope.DANGLING_NAME;"
+      },
+      {
+        "txt": "import static com.google.gson.stream.JsonScope.EMPTY_ARRAY; import static com.google.gson.stream.JsonScope.EMPTY_DOCUMENT; import static com.google.gson.stream.JsonScope.EMPTY_OBJECT; import static com.google.gson.stream.JsonScope.NONEMPTY_ARRAY; import static com.google.gson.stream.JsonScope.NONEMPTY_DOCUMENT; import static com.google.gson.stream.JsonScope.NONEMPTY_OBJECT; public class JsonWriter implements Closeable, Flushable { private static final String[] REPLACEMENT_CHARS; private static final String[] HTML_SAFE_REPLACEMENT_CHARS; static {"
+      },
+      {
+        "txt": "REPLACEMENT_CHARS = new String[128]; for (int i = 0; i <= 0x1f; i++) { REPLACEMENT_CHARS[i] = String.format(\"\\\\u%04x\", (int) i); } REPLACEMENT_CHARS['\"'] = \"\\\\\\\"\"; REPLACEMENT_CHARS['\\\\'] = \"\\\\\\\\\"; REPLACEMENT_CHARS['\\t'] = \"\\\\t\"; REPLACEMENT_CHARS['\\b'] = \"\\\\b\"; REPLACEMENT_CHARS['\\n'] = \"\\\\n\"; REPLACEMENT_CHARS['\\r'] = \"\\\\r\";"
+      },
+      {
+        "txt": "REPLACEMENT_CHARS['\\f'] = \"\\\\f\"; HTML_SAFE_REPLACEMENT_CHARS = REPLACEMENT_CHARS.clone(); HTML_SAFE_REPLACEMENT_CHARS['<'] = \"\\\\u003c\"; HTML_SAFE_REPLACEMENT_CHARS['>'] = \"\\\\u003e\"; HTML_SAFE_REPLACEMENT_CHARS['&'] = \"\\\\u0026\"; HTML_SAFE_REPLACEMENT_CHARS['='] = \"\\\\u003d\"; HTML_SAFE_REPLACEMENT_CHARS['\\''] = \"\\\\u0027\"; } private final Writer out; private int[] stack = new int[32];"
+      },
+      {
+        "txt": "private int stackSize = 0; { push(EMPTY_DOCUMENT); } private String indent; private String separator = \":\"; private boolean lenient; private boolean htmlSafe; private String deferredName; private boolean serializeNulls = true;"
+      },
+      {
+        "txt": "public JsonWriter(Writer out) { if (out == null) { throw new NullPointerException(\"out == null\"); } this.out = out; } public final void setIndent(String indent) { if (indent.length() == 0) { this.indent = null; this.separator = \":\";"
+      },
+      {
+        "txt": "} else { this.indent = indent; this.separator = \": \"; } } public final void setLenient(boolean lenient) { this.lenient = lenient; } public boolean isLenient() { return lenient;"
+      },
+      {
+        "txt": "} public final void setHtmlSafe(boolean htmlSafe) { this.htmlSafe = htmlSafe; } public final boolean isHtmlSafe() { return htmlSafe; } public final void setSerializeNulls(boolean serializeNulls) { this.serializeNulls = serializeNulls; }"
+      },
+      {
+        "txt": "public final boolean getSerializeNulls() { return serializeNulls; } public JsonWriter beginArray() throws IOException { writeDeferredName(); return open(EMPTY_ARRAY, \"[\"); } public JsonWriter endArray() throws IOException { return close(EMPTY_ARRAY, NONEMPTY_ARRAY, \"]\"); }"
+      },
+      {
+        "txt": "public JsonWriter beginObject() throws IOException { writeDeferredName(); return open(EMPTY_OBJECT, \"{\"); } public JsonWriter endObject() throws IOException { return close(EMPTY_OBJECT, NONEMPTY_OBJECT, \"}\"); } private JsonWriter open(int empty, String openBracket) throws IOException { beforeValue(true); push(empty);"
+      },
+      {
+        "txt": "out.write(openBracket); return this; } private JsonWriter close(int empty, int nonempty, String closeBracket) throws IOException { int context = peek(); if (context != nonempty && context != empty) { throw new IllegalStateException(\"Nesting problem.\"); } if (deferredName != null) {"
+      },
+      {
+        "txt": "throw new IllegalStateException(\"Dangling name: \" + deferredName); } stackSize--; if (context == nonempty) { newline(); } out.write(closeBracket); return this; } private void push(int newTop) {"
+      },
+      {
+        "txt": "if (stackSize == stack.length) { int[] newStack = new int[stackSize * 2]; System.arraycopy(stack, 0, newStack, 0, stackSize); stack = newStack; } stack[stackSize++] = newTop; } private int peek() { if (stackSize == 0) { throw new IllegalStateException(\"JsonWriter is closed.\");"
+      },
+      {
+        "txt": "} return stack[stackSize - 1]; } private void replaceTop(int topOfStack) { stack[stackSize - 1] = topOfStack; } public JsonWriter name(String name) throws IOException { if (name == null) { throw new NullPointerException(\"name == null\"); }"
+      },
+      {
+        "txt": "if (deferredName != null) { throw new IllegalStateException(); } if (stackSize == 0) { throw new IllegalStateException(\"JsonWriter is closed.\"); } deferredName = name; return this; } private void writeDeferredName() throws IOException {"
+      },
+      {
+        "txt": "if (deferredName != null) { beforeName(); string(deferredName); deferredName = null; } } public JsonWriter value(String value) throws IOException { if (value == null) { return nullValue(); }"
+      },
+      {
+        "txt": "writeDeferredName(); beforeValue(false); string(value); return this; } public JsonWriter jsonValue(String value) throws IOException { if (value == null) { return nullValue(); } writeDeferredName();"
+      },
+      {
+        "txt": "beforeValue(false); out.append(value); return this; } public JsonWriter nullValue() throws IOException { if (deferredName != null) { if (serializeNulls) { writeDeferredName(); } else { deferredName = null;"
+      },
+      {
+        "txt": "return this; // skip the name and the value } } beforeValue(false); out.write(\"null\"); return this; } public JsonWriter value(boolean value) throws IOException { writeDeferredName(); beforeValue(false);"
+      },
+      {
+        "txt": "out.write(value ? \"true\" : \"false\"); return this; } public JsonWriter value(double value) throws IOException { if (Double.isNaN(value) || Double.isInfinite(value)) { throw new IllegalArgumentException(\"Numeric values must be finite, but was \" + value); } writeDeferredName(); beforeValue(false); out.append(Double.toString(value));"
+      },
+      {
+        "txt": "return this; } public JsonWriter value(long value) throws IOException { writeDeferredName(); beforeValue(false); out.write(Long.toString(value)); return this; } public JsonWriter value(Number value) throws IOException { if (value == null) {"
+      },
+      {
+        "txt": "return nullValue(); } writeDeferredName(); String string = value.toString(); if (!lenient && (string.equals(\"-Infinity\") || string.equals(\"Infinity\") || string.equals(\"NaN\"))) { throw new IllegalArgumentException(\"Numeric values must be finite, but was \" + value); } beforeValue(false); out.append(string);"
+      },
+      {
+        "txt": "return this; } public void flush() throws IOException { if (stackSize == 0) { throw new IllegalStateException(\"JsonWriter is closed.\"); } out.flush(); } public void close() throws IOException { out.close();"
+      },
+      {
+        "txt": "int size = stackSize; if (size > 1 || size == 1 && stack[size - 1] != NONEMPTY_DOCUMENT) { throw new IOException(\"Incomplete document\"); } stackSize = 0; } private void string(String value) throws IOException { String[] replacements = htmlSafe ? HTML_SAFE_REPLACEMENT_CHARS : REPLACEMENT_CHARS; out.write(\"\\\"\"); int last = 0;"
+      },
+      {
+        "txt": "int length = value.length(); for (int i = 0; i < length; i++) { char c = value.charAt(i); String replacement; if (c < 128) { replacement = replacements[c]; if (replacement == null) { continue; } } else if (c == '\\u2028') {"
+      },
+      {
+        "txt": "replacement = \"\\\\u2028\"; } else if (c == '\\u2029') { replacement = \"\\\\u2029\"; } else { continue; } if (last < i) { out.write(value, last, i - last); } out.write(replacement);"
+      },
+      {
+        "txt": "last = i + 1; } if (last < length) { out.write(value, last, length - last); } out.write(\"\\\"\"); } private void newline() throws IOException { if (indent == null) { return;"
+      },
+      {
+        "txt": "} out.write(\"\\n\"); for (int i = 1, size = stackSize; i < size; i++) { out.write(indent); } } private void beforeName() throws IOException { int context = peek(); if (context == NONEMPTY_OBJECT) { // first in object out.write(',');"
+      },
+      {
+        "txt": "throw new IllegalStateException(\"Nesting problem.\"); } newline(); replaceTop(DANGLING_NAME); } @SuppressWarnings(\"fallthrough\") <extra_id_0> switch (peek()) { case NONEMPTY_DOCUMENT: if (!lenient) { throw new IllegalStateException( \"JSON must have only one top-level value.\"); }"
+      },
+      {
+        "txt": "\"JSON must have only one top-level value.\"); } case EMPTY_DOCUMENT: // first in document if (!lenient && !root) { throw new IllegalStateException( \"JSON must start with an array or an object.\"); } replaceTop(NONEMPTY_DOCUMENT); break; case EMPTY_ARRAY: // first in array"
+      },
+      {
+        "txt": "replaceTop(NONEMPTY_ARRAY); newline(); break; case NONEMPTY_ARRAY: // another in array out.append(','); newline(); break; case DANGLING_NAME: // value for name out.append(separator); replaceTop(NONEMPTY_OBJECT);"
+      },
+      {
+        "txt": "break; default: throw new IllegalStateException(\"Nesting problem.\"); } }"
+      }
+    ]
+  },
+  {
+    "id": 1172,
+    "file_path": "gson/src/main/java/com/google/gson/stream/JsonWriter.java",
+    "start-bug-line": 622,
+    "end-bug-line": 625,
+    "bug": "if (!lenient && !root) { throw new IllegalStateException( \"JSON must start with an array or an object.\"); }",
+    "fix": "[Delete]",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.google.gson.stream; import java.io.Closeable; import java.io.Flushable; import java.io.IOException;"
+      },
+      {
+        "txt": "import java.io.Writer; import static com.google.gson.stream.JsonScope.DANGLING_NAME; import static com.google.gson.stream.JsonScope.EMPTY_ARRAY; import static com.google.gson.stream.JsonScope.EMPTY_DOCUMENT; import static com.google.gson.stream.JsonScope.EMPTY_OBJECT; import static com.google.gson.stream.JsonScope.NONEMPTY_ARRAY; import static com.google.gson.stream.JsonScope.NONEMPTY_DOCUMENT; import static com.google.gson.stream.JsonScope.NONEMPTY_OBJECT; public class JsonWriter implements Closeable, Flushable { private static final String[] REPLACEMENT_CHARS;"
+      },
+      {
+        "txt": "private static final String[] HTML_SAFE_REPLACEMENT_CHARS; static { REPLACEMENT_CHARS = new String[128]; for (int i = 0; i <= 0x1f; i++) { REPLACEMENT_CHARS[i] = String.format(\"\\\\u%04x\", (int) i); } REPLACEMENT_CHARS['\"'] = \"\\\\\\\"\"; REPLACEMENT_CHARS['\\\\'] = \"\\\\\\\\\"; REPLACEMENT_CHARS['\\t'] = \"\\\\t\"; REPLACEMENT_CHARS['\\b'] = \"\\\\b\";"
+      },
+      {
+        "txt": "REPLACEMENT_CHARS['\\n'] = \"\\\\n\"; REPLACEMENT_CHARS['\\r'] = \"\\\\r\"; REPLACEMENT_CHARS['\\f'] = \"\\\\f\"; HTML_SAFE_REPLACEMENT_CHARS = REPLACEMENT_CHARS.clone(); HTML_SAFE_REPLACEMENT_CHARS['<'] = \"\\\\u003c\"; HTML_SAFE_REPLACEMENT_CHARS['>'] = \"\\\\u003e\"; HTML_SAFE_REPLACEMENT_CHARS['&'] = \"\\\\u0026\"; HTML_SAFE_REPLACEMENT_CHARS['='] = \"\\\\u003d\"; HTML_SAFE_REPLACEMENT_CHARS['\\''] = \"\\\\u0027\"; }"
+      },
+      {
+        "txt": "private final Writer out; private int[] stack = new int[32]; private int stackSize = 0; { push(EMPTY_DOCUMENT); } private String indent; private String separator = \":\"; private boolean lenient; private boolean htmlSafe;"
+      },
+      {
+        "txt": "private String deferredName; private boolean serializeNulls = true; public JsonWriter(Writer out) { if (out == null) { throw new NullPointerException(\"out == null\"); } this.out = out; } public final void setIndent(String indent) { if (indent.length() == 0) {"
+      },
+      {
+        "txt": "this.indent = null; this.separator = \":\"; } else { this.indent = indent; this.separator = \": \"; } } public final void setLenient(boolean lenient) { this.lenient = lenient; }"
+      },
+      {
+        "txt": "public boolean isLenient() { return lenient; } public final void setHtmlSafe(boolean htmlSafe) { this.htmlSafe = htmlSafe; } public final boolean isHtmlSafe() { return htmlSafe; } public final void setSerializeNulls(boolean serializeNulls) {"
+      },
+      {
+        "txt": "this.serializeNulls = serializeNulls; } public final boolean getSerializeNulls() { return serializeNulls; } public JsonWriter beginArray() throws IOException { writeDeferredName(); return open(EMPTY_ARRAY, \"[\"); } public JsonWriter endArray() throws IOException {"
+      },
+      {
+        "txt": "return close(EMPTY_ARRAY, NONEMPTY_ARRAY, \"]\"); } public JsonWriter beginObject() throws IOException { writeDeferredName(); return open(EMPTY_OBJECT, \"{\"); } public JsonWriter endObject() throws IOException { return close(EMPTY_OBJECT, NONEMPTY_OBJECT, \"}\"); } private JsonWriter open(int empty, String openBracket) throws IOException {"
+      },
+      {
+        "txt": "beforeValue(true); push(empty); out.write(openBracket); return this; } private JsonWriter close(int empty, int nonempty, String closeBracket) throws IOException { int context = peek(); if (context != nonempty && context != empty) { throw new IllegalStateException(\"Nesting problem.\");"
+      },
+      {
+        "txt": "} if (deferredName != null) { throw new IllegalStateException(\"Dangling name: \" + deferredName); } stackSize--; if (context == nonempty) { newline(); } out.write(closeBracket); return this;"
+      },
+      {
+        "txt": "} private void push(int newTop) { if (stackSize == stack.length) { int[] newStack = new int[stackSize * 2]; System.arraycopy(stack, 0, newStack, 0, stackSize); stack = newStack; } stack[stackSize++] = newTop; } private int peek() {"
+      },
+      {
+        "txt": "if (stackSize == 0) { throw new IllegalStateException(\"JsonWriter is closed.\"); } return stack[stackSize - 1]; } private void replaceTop(int topOfStack) { stack[stackSize - 1] = topOfStack; } public JsonWriter name(String name) throws IOException { if (name == null) {"
+      },
+      {
+        "txt": "throw new NullPointerException(\"name == null\"); } if (deferredName != null) { throw new IllegalStateException(); } if (stackSize == 0) { throw new IllegalStateException(\"JsonWriter is closed.\"); } deferredName = name; return this;"
+      },
+      {
+        "txt": "} private void writeDeferredName() throws IOException { if (deferredName != null) { beforeName(); string(deferredName); deferredName = null; } } public JsonWriter value(String value) throws IOException { if (value == null) {"
+      },
+      {
+        "txt": "return nullValue(); } writeDeferredName(); beforeValue(false); string(value); return this; } public JsonWriter jsonValue(String value) throws IOException { if (value == null) { return nullValue();"
+      },
+      {
+        "txt": "} writeDeferredName(); beforeValue(false); out.append(value); return this; } public JsonWriter nullValue() throws IOException { if (deferredName != null) { if (serializeNulls) { writeDeferredName();"
+      },
+      {
+        "txt": "} else { deferredName = null; return this; // skip the name and the value } } beforeValue(false); out.write(\"null\"); return this; } public JsonWriter value(boolean value) throws IOException {"
+      },
+      {
+        "txt": "writeDeferredName(); beforeValue(false); out.write(value ? \"true\" : \"false\"); return this; } public JsonWriter value(double value) throws IOException { if (Double.isNaN(value) || Double.isInfinite(value)) { throw new IllegalArgumentException(\"Numeric values must be finite, but was \" + value); } writeDeferredName();"
+      },
+      {
+        "txt": "beforeValue(false); out.append(Double.toString(value)); return this; } public JsonWriter value(long value) throws IOException { writeDeferredName(); beforeValue(false); out.write(Long.toString(value)); return this; }"
+      },
+      {
+        "txt": "public JsonWriter value(Number value) throws IOException { if (value == null) { return nullValue(); } writeDeferredName(); String string = value.toString(); if (!lenient && (string.equals(\"-Infinity\") || string.equals(\"Infinity\") || string.equals(\"NaN\"))) { throw new IllegalArgumentException(\"Numeric values must be finite, but was \" + value); }"
+      },
+      {
+        "txt": "beforeValue(false); out.append(string); return this; } public void flush() throws IOException { if (stackSize == 0) { throw new IllegalStateException(\"JsonWriter is closed.\"); } out.flush(); }"
+      },
+      {
+        "txt": "public void close() throws IOException { out.close(); int size = stackSize; if (size > 1 || size == 1 && stack[size - 1] != NONEMPTY_DOCUMENT) { throw new IOException(\"Incomplete document\"); } stackSize = 0; } private void string(String value) throws IOException { String[] replacements = htmlSafe ? HTML_SAFE_REPLACEMENT_CHARS : REPLACEMENT_CHARS;"
+      },
+      {
+        "txt": "out.write(\"\\\"\"); int last = 0; int length = value.length(); for (int i = 0; i < length; i++) { char c = value.charAt(i); String replacement; if (c < 128) { replacement = replacements[c]; if (replacement == null) { continue;"
+      },
+      {
+        "txt": "} } else if (c == '\\u2028') { replacement = \"\\\\u2028\"; } else if (c == '\\u2029') { replacement = \"\\\\u2029\"; } else { continue; } if (last < i) { out.write(value, last, i - last);"
+      },
+      {
+        "txt": "} out.write(replacement); last = i + 1; } if (last < length) { out.write(value, last, length - last); } out.write(\"\\\"\"); } private void newline() throws IOException {"
+      },
+      {
+        "txt": "if (indent == null) { return; } out.write(\"\\n\"); for (int i = 1, size = stackSize; i < size; i++) { out.write(indent); } } private void beforeName() throws IOException { int context = peek();"
+      },
+      {
+        "txt": "if (context == NONEMPTY_OBJECT) { // first in object out.write(','); } else if (context != EMPTY_OBJECT) { // not in an object! throw new IllegalStateException(\"Nesting problem.\"); } newline(); replaceTop(DANGLING_NAME); } @SuppressWarnings(\"fallthrough\") private void beforeValue(boolean root) throws IOException {"
+      },
+      {
+        "txt": "case NONEMPTY_DOCUMENT: if (!lenient) { throw new IllegalStateException( \"JSON must have only one top-level value.\"); } case EMPTY_DOCUMENT: // first in document <extra_id_0> replaceTop(NONEMPTY_DOCUMENT); break; case EMPTY_ARRAY: // first in array replaceTop(NONEMPTY_ARRAY); newline(); break;"
+      },
+      {
+        "txt": "newline(); break; case NONEMPTY_ARRAY: // another in array out.append(','); newline(); break; case DANGLING_NAME: // value for name out.append(separator); replaceTop(NONEMPTY_OBJECT); break;"
+      },
+      {
+        "txt": "default: throw new IllegalStateException(\"Nesting problem.\"); } }"
+      }
+    ]
+  }
+]

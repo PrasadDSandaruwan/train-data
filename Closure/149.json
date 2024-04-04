@@ -1,0 +1,1607 @@
+[
+  {
+    "id": 652,
+    "file_path": "src/com/google/javascript/jscomp/AbstractCommandLineRunner.java",
+    "start-bug-line": 159,
+    "end-bug-line": 159,
+    "bug": "",
+    "fix": "options.outputCharset = getOutputCharset();",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.google.javascript.jscomp; import com.google.common.annotations.VisibleForTesting; import com.google.common.base.Charsets; import com.google.common.base.Joiner; import com.google.common.base.Preconditions; import com.google.common.collect.ImmutableList; import com.google.common.collect.Lists; import com.google.common.collect.Maps; import com.google.javascript.rhino.Node;"
+      },
+      {
+        "txt": "import com.google.javascript.rhino.TokenStream; import com.google.protobuf.CodedOutputStream; import java.io.BufferedWriter; import java.io.File; import java.io.FileOutputStream; import java.io.FileWriter; import java.io.IOException; import java.io.OutputStreamWriter; import java.io.PrintStream; import java.io.Writer;"
+      },
+      {
+        "txt": "import java.nio.charset.Charset; import java.util.ArrayList; import java.util.Collections; import java.util.List; import java.util.Map; import java.util.logging.Level; abstract class AbstractCommandLineRunner<A extends Compiler, B extends CompilerOptions> { private final CommandLineConfig config; private Appendable out;"
+      },
+      {
+        "txt": "private final PrintStream err; private A compiler; private static Charset inputCharset; private static final int NUM_RUNS_TO_DETERMINE_OPTIMAL_ORDER = 100; private final RunTimeStats runTimeStats = new RunTimeStats(); AbstractCommandLineRunner() { this(System.out, System.err); } AbstractCommandLineRunner(PrintStream out, PrintStream err) { this.config = new CommandLineConfig();"
+      },
+      {
+        "txt": "this.out = out; this.err = err; } protected CommandLineConfig getCommandLineConfig() { return config; } protected abstract A createCompiler(); protected abstract B createOptions(); protected DiagnosticGroups getDiagnosticGroups() { return new DiagnosticGroups();"
+      },
+      {
+        "txt": "} @Deprecated protected void initOptionsFromFlags(CompilerOptions options) {} final protected void setRunOptions(CompilerOptions options) throws FlagUsageException, IOException { DiagnosticGroups diagnosticGroups = getDiagnosticGroups(); diagnosticGroups.setWarningLevels( options, config.jscompError, CheckLevel.ERROR); diagnosticGroups.setWarningLevels( options, config.jscompWarning, CheckLevel.WARNING);"
+      },
+      {
+        "txt": "options, config.jscompOff, CheckLevel.OFF); createDefineReplacements(config.define, options); options.manageClosureDependencies = config.manageClosureDependencies; options.devMode = config.jscompDevMode; options.setCodingConvention(config.codingConvention); options.setSummaryDetailLevel(config.summaryDetailLevel); <extra_id_0> if (config.jsOutputFile.length() > 0) { options.jsOutputFile = config.jsOutputFile; } if (config.createSourceMap.length() > 0) { options.sourceMapOutputPath = config.createSourceMap; }"
+      },
+      {
+        "txt": "options.sourceMapOutputPath = config.createSourceMap; } options.sourceMapDetailLevel = config.sourceMapDetailLevel; if (!config.variableMapInputFile.equals(\"\")) { options.inputVariableMapSerialized = VariableMap.load(config.variableMapInputFile).toBytes(); } if (!config.propertyMapInputFile.equals(\"\")) { options.inputPropertyMapSerialized = VariableMap.load(config.propertyMapInputFile).toBytes();"
+      },
+      {
+        "txt": "} } final protected A getCompiler() { return compiler; } final public void run() { int result = 0; int runs = 1; Throwable error = null; if (config.computePhaseOrdering) {"
+      },
+      {
+        "txt": "runs = NUM_RUNS_TO_DETERMINE_OPTIMAL_ORDER; PhaseOptimizer.randomizeLoops(); } try { for (int i = 0; i < runs && result == 0; i++) { runTimeStats.recordStartRun(); result = doRun(); runTimeStats.recordEndRun(); } } catch (Throwable t) {"
+      },
+      {
+        "txt": "error = t; } exit(runTimeStats, error); } void exit(RunTimeStats runTimeStats, Throwable error) { int result = 0; if (error instanceof AbstractCommandLineRunner.FlagUsageException) { System.err.println(error.getMessage()); result = -1; } else if (error != null) {"
+      },
+      {
+        "txt": "error.printStackTrace(); result = -2; } if (config.computePhaseOrdering) { runTimeStats.outputBestPhaseOrdering(); } System.exit(result); } protected PrintStream getErrorPrintStream() { return err;"
+      },
+      {
+        "txt": "} protected static class FlagUsageException extends Exception { private static final long serialVersionUID = 1L; FlagUsageException(String message) { super(message); } } private static List<JSSourceFile> createInputs(List<String> files, boolean allowStdIn) throws FlagUsageException, IOException { List<JSSourceFile> inputs = new ArrayList<JSSourceFile>(files.size());"
+      },
+      {
+        "txt": "boolean usingStdin = false; for (String filename : files) { if (!\"-\".equals(filename)) { JSSourceFile newFile = JSSourceFile.fromFile(filename, inputCharset); inputs.add(newFile); } else { if (!allowStdIn) { throw new FlagUsageException(\"Can't specify stdin.\"); } if (usingStdin) {"
+      },
+      {
+        "txt": "throw new FlagUsageException(\"Can't specify stdin twice.\"); } inputs.add(JSSourceFile.fromInputStream(\"stdin\", System.in)); usingStdin = true; } } return inputs; } private static List<JSSourceFile> createSourceInputs(List<String> files) throws FlagUsageException, IOException {"
+      },
+      {
+        "txt": "if (files.isEmpty()) { files = Collections.singletonList(\"-\"); } try { return createInputs(files, true); } catch (FlagUsageException e) { throw new FlagUsageException(\"Bad --js flag. \" + e.getMessage()); } } private static List<JSSourceFile> createExternInputs(List<String> files)"
+      },
+      {
+        "txt": "throws FlagUsageException, IOException { if (files.isEmpty()) { return ImmutableList.of(JSSourceFile.fromCode(\"/dev/null\", \"\")); } try { return createInputs(files, false); } catch (FlagUsageException e) { throw new FlagUsageException(\"Bad --externs flag. \" + e.getMessage()); } }"
+      },
+      {
+        "txt": "static JSModule[] createJsModules(List<String> specs, List<String> jsFiles) throws FlagUsageException, IOException { Preconditions.checkState(specs != null); Preconditions.checkState(!specs.isEmpty()); Preconditions.checkState(jsFiles != null); final int totalNumJsFiles = jsFiles.size(); int nextJsFileIndex = 0; Map<String, JSModule> modulesByName = Maps.newLinkedHashMap(); for (String spec : specs) { String[] parts = spec.split(\":\");"
+      },
+      {
+        "txt": "if (parts.length < 2 || parts.length > 4) { throw new FlagUsageException(\"Expected 2-4 colon-delimited parts in \" + \"module spec: \" + spec); } String name = parts[0]; if (!TokenStream.isJSIdentifier(name)) { throw new FlagUsageException(\"Invalid module name: '\" + name + \"'\"); } if (modulesByName.containsKey(name)) { throw new FlagUsageException(\"Duplicate module name: \" + name);"
+      },
+      {
+        "txt": "} JSModule module = new JSModule(name); int numJsFiles = -1; try { numJsFiles = Integer.parseInt(parts[1]); } catch (NumberFormatException ignored) { numJsFiles = -1; } if (numJsFiles < 0) { throw new FlagUsageException(\"Invalid js file count '\" + parts[1]"
+      },
+      {
+        "txt": "+ \"' for module: \" + name); } if (nextJsFileIndex + numJsFiles > totalNumJsFiles) { throw new FlagUsageException(\"Not enough js files specified. Expected \" + (nextJsFileIndex + numJsFiles - totalNumJsFiles) + \" more in module:\" + name); } List<String> moduleJsFiles = jsFiles.subList(nextJsFileIndex, nextJsFileIndex + numJsFiles); for (JSSourceFile input : createInputs(moduleJsFiles, false)) {"
+      },
+      {
+        "txt": "module.add(input); } nextJsFileIndex += numJsFiles; if (parts.length > 2) { String depList = parts[2]; if (depList.length() > 0) { String[] deps = depList.split(\",\"); for (String dep : deps) { JSModule other = modulesByName.get(dep); if (other == null) {"
+      },
+      {
+        "txt": "throw new FlagUsageException(\"Module '\" + name + \"' depends on unknown module '\" + dep + \"'. Be sure to list modules in dependency order.\"); } module.addDependency(other); } } } modulesByName.put(name, module); }"
+      },
+      {
+        "txt": "if (nextJsFileIndex < totalNumJsFiles) { throw new FlagUsageException(\"Too many js files specified. Expected \" + nextJsFileIndex + \" but found \" + totalNumJsFiles); } return modulesByName.values().toArray(new JSModule[modulesByName.size()]); } static Map<String, String> parseModuleWrappers(List<String> specs, JSModule[] modules) throws FlagUsageException { Preconditions.checkState(specs != null); Map<String, String> wrappers ="
+      },
+      {
+        "txt": "Maps.newHashMapWithExpectedSize(modules.length); for (JSModule m : modules) { wrappers.put(m.getName(), \"\"); } for (String spec : specs) { int pos = spec.indexOf(':'); if (pos == -1) { throw new FlagUsageException(\"Expected module wrapper to have \" + \"<name>:<wrapper> format: \" + spec); }"
+      },
+      {
+        "txt": "String name = spec.substring(0, pos); if (!wrappers.containsKey(name)) { throw new FlagUsageException(\"Unknown module: '\" + name + \"'\"); } String wrapper = spec.substring(pos + 1); if (!wrapper.contains(\"%s\")) { throw new FlagUsageException(\"No %s placeholder in module wrapper: '\" + wrapper + \"'\"); } wrappers.put(name, wrapper);"
+      },
+      {
+        "txt": "} return wrappers; } static void writeOutput(Appendable out, Compiler compiler, String code, String wrapper, String codePlaceholder) throws IOException { int pos = wrapper.indexOf(codePlaceholder); if (pos != -1) { String prefix = \"\"; if (pos > 0) { prefix = wrapper.substring(0, pos);"
+      },
+      {
+        "txt": "out.append(prefix); } out.append(code); int suffixStart = pos + codePlaceholder.length(); if (suffixStart != wrapper.length()) { out.append(wrapper.substring(suffixStart)); } out.append('\\n'); if (compiler != null && compiler.getSourceMap() != null) { compiler.getSourceMap().setWrapperPrefix(prefix);"
+      },
+      {
+        "txt": "} } else { out.append(code); out.append('\\n'); } } private static void maybeCreateDirsForPath(String pathPrefix) { if (pathPrefix.length() > 0) { String dirName = pathPrefix.charAt(pathPrefix.length() - 1) == File.separatorChar"
+      },
+      {
+        "txt": "? pathPrefix.substring(0, pathPrefix.length() - 1) : new File( pathPrefix).getParent(); if (dirName != null) { new File(dirName).mkdirs(); } } } protected int doRun() throws FlagUsageException, IOException { Compiler.setLoggingLevel(Level.parse(config.loggingLevel)); List<JSSourceFile> externsList = createExterns();"
+      },
+      {
+        "txt": "JSSourceFile[] externs = new JSSourceFile[externsList.size()]; externsList.toArray(externs); compiler = createCompiler(); B options = createOptions(); JSModule[] modules = null; Result result; setRunOptions(options); if (inputCharset == Charsets.UTF_8) { options.outputCharset = Charsets.US_ASCII; } else {"
+      },
+      {
+        "txt": "options.outputCharset = inputCharset; } boolean writeOutputToFile = !options.jsOutputFile.isEmpty(); if (writeOutputToFile) { out = toWriter(options.jsOutputFile, inputCharset.name()); } List<String> jsFiles = config.js; List<String> moduleSpecs = config.module; if (!moduleSpecs.isEmpty()) { modules = createJsModules(moduleSpecs, jsFiles);"
+      },
+      {
+        "txt": "result = compiler.compile(externs, modules, options); } else { List<JSSourceFile> inputList = createSourceInputs(jsFiles); JSSourceFile[] inputs = new JSSourceFile[inputList.size()]; inputList.toArray(inputs); result = compiler.compile(externs, inputs, options); } int errCode = processResults(result, modules, options); if (writeOutputToFile) { ((Writer)out).close();"
+      },
+      {
+        "txt": "} return errCode; } int processResults(Result result, JSModule[] modules, B options) throws FlagUsageException, IOException { if (config.computePhaseOrdering) { return 0; } if (config.printPassGraph) { if (compiler.getRoot() == null) {"
+      },
+      {
+        "txt": "return 1; } else { out.append(DotFormatter.toDot(compiler.getPassConfig().getPassGraph())); out.append('\\n'); return 0; } } if (config.printAst) { if (compiler.getRoot() == null) { return 1;"
+      },
+      {
+        "txt": "} else { ControlFlowGraph<Node> cfg = compiler.computeCFG(); DotFormatter.appendDot(compiler.getRoot(), cfg, out); out.append('\\n'); return 0; } } if (config.printTree) { if (compiler.getRoot() == null) { out.append(\"Code contains errors; no tree was generated.\\n\");"
+      },
+      {
+        "txt": "return 1; } else { compiler.getRoot().appendStringTree(out); out.append(\"\\n\"); return 0; } } if (result.success) { if (modules == null) { writeOutput(out, compiler, compiler.toSource(), config.outputWrapper,"
+      },
+      {
+        "txt": "config.outputWrapperMarker); outputSourceMap(options); } else { String moduleFilePrefix = config.moduleOutputPathPrefix; maybeCreateDirsForPath(moduleFilePrefix); Map<String, String> moduleWrappers = parseModuleWrappers(config.moduleWrapper, modules); Writer mapOut = null; if (!shouldGenerateMapPerModule(options)) { mapOut = toWriter(expandSourceMapPath(options, null));"
+      },
+      {
+        "txt": "} for (JSModule m : modules) { if (shouldGenerateMapPerModule(options)) { mapOut = toWriter(expandSourceMapPath(options, m)); } Writer writer = toWriter( moduleFilePrefix + m.getName() + \".js\"); if (options.sourceMapOutputPath != null) { compiler.getSourceMap().reset(); }"
+      },
+      {
+        "txt": "writeOutput(writer, compiler, compiler.toSource(m), moduleWrappers.get( m.getName()), \"%s\"); if (options.sourceMapOutputPath != null) { compiler.getSourceMap().appendTo(mapOut, m.getName()); } writer.close(); if (shouldGenerateMapPerModule(options) && mapOut != null) { mapOut.close(); mapOut = null; }"
+      },
+      {
+        "txt": "} if (mapOut != null) { mapOut.close(); } } if (options.externExportsPath != null) { Writer eeOut = openExternExportsStream(options, options.jsOutputFile); eeOut.append(result.externExport); eeOut.close();"
+      },
+      {
+        "txt": "} outputNameMaps(options); outputManifest(); } return Math.min(result.errors.length, 0x7f); } private Charset getInputCharset() throws FlagUsageException { if (!config.charset.isEmpty()) { if (!Charset.isSupported(config.charset)) { throw new FlagUsageException(config.charset +"
+      },
+      {
+        "txt": "\" is not a valid charset name.\"); } return Charset.forName(config.charset); } return Charsets.UTF_8; } protected List<JSSourceFile> createExterns() throws FlagUsageException, IOException { return createExternInputs(config.externs); }"
+      },
+      {
+        "txt": "private boolean shouldGenerateMapPerModule(B options) { return options.sourceMapOutputPath != null && options.sourceMapOutputPath.contains(\"%outname%\"); } private Writer openExternExportsStream(B options, String path) throws IOException { if (options.externExportsPath == null) { return null; } String exPath = options.externExportsPath;"
+      },
+      {
+        "txt": "if (!exPath.contains(File.separator)) { File outputFile = new File(path); exPath = outputFile.getParent() + File.separatorChar + exPath; } return toWriter(exPath); } private String expandCommandLinePath( String path, JSModule forModule) { String sub; if (forModule != null) {"
+      },
+      {
+        "txt": "sub = config.moduleOutputPathPrefix + forModule.getName() + \".js\"; } else if (!config.module.isEmpty()) { sub = config.moduleOutputPathPrefix; } else { sub = config.jsOutputFile; } return path.replace(\"%outname%\", sub); } @VisibleForTesting String expandSourceMapPath(B options, JSModule forModule) {"
+      },
+      {
+        "txt": "if (Strings.isEmpty(options.sourceMapOutputPath)) { return null; } return expandCommandLinePath(options.sourceMapOutputPath, forModule); } @VisibleForTesting String expandManifest(JSModule forModule) { if (Strings.isEmpty(config.outputManifest)) { return null; }"
+      },
+      {
+        "txt": "return expandCommandLinePath(config.outputManifest, forModule); } private Writer toWriter(String fileName) throws IOException { if (fileName == null) { return null; } return new BufferedWriter(new FileWriter(fileName)); } private Writer toWriter(String fileName, String charSet) throws IOException {"
+      },
+      {
+        "txt": "if (fileName == null) { return null; } return new BufferedWriter( new OutputStreamWriter(new FileOutputStream(fileName), charSet)); } private void outputSourceMap(B options) throws IOException { if (Strings.isEmpty(options.sourceMapOutputPath)) { return;"
+      },
+      {
+        "txt": "} String outName = expandSourceMapPath(options, null); Writer out = toWriter(outName); compiler.getSourceMap().appendTo(out, outName); out.close(); } private String getMapPath(String outputFile) { String basePath = \"\"; if (outputFile.equals(\"\")) { if (!config.moduleOutputPathPrefix.equals(\"\")) {"
+      },
+      {
+        "txt": "basePath = config.moduleOutputPathPrefix; } else { basePath = \"jscompiler\"; } } else { File file = new File(outputFile); String outputFileName = file.getName(); if (outputFileName.endsWith(\".js\")) { outputFileName = outputFileName.substring(0, outputFileName.length() - 3);"
+      },
+      {
+        "txt": "} basePath = file.getParent() + File.separatorChar + outputFileName; } return basePath; } private void outputNameMaps(B options) throws FlagUsageException, IOException { String propertyMapOutputPath = null; String variableMapOutputPath = null; String functionInformationMapOutputPath = null;"
+      },
+      {
+        "txt": "if (config.createNameMapFiles) { String basePath = getMapPath(options.jsOutputFile); propertyMapOutputPath = basePath + \"_props_map.out\"; variableMapOutputPath = basePath + \"_vars_map.out\"; functionInformationMapOutputPath = basePath + \"_functions_map.out\"; } if (!config.variableMapOutputFile.equals(\"\")) { if (variableMapOutputPath != null) { throw new FlagUsageException(\"The flags variable_map_output_file and \" + \"create_name_map_files cannot both be used simultaniously.\");"
+      },
+      {
+        "txt": "} variableMapOutputPath = config.variableMapOutputFile; } if (!config.propertyMapOutputFile.equals(\"\")) { if (propertyMapOutputPath != null) { throw new FlagUsageException(\"The flags property_map_output_file and \" + \"create_name_map_files cannot both be used simultaniously.\"); } propertyMapOutputPath = config.propertyMapOutputFile; }"
+      },
+      {
+        "txt": "if (variableMapOutputPath != null) { if (compiler.getVariableMap() != null) { compiler.getVariableMap().save(variableMapOutputPath); } } if (propertyMapOutputPath != null) { if (compiler.getPropertyMap() != null) { compiler.getPropertyMap().save(propertyMapOutputPath); } }"
+      },
+      {
+        "txt": "if (functionInformationMapOutputPath != null) { if (compiler.getFunctionalInformationMap() != null) { FileOutputStream file = new FileOutputStream(functionInformationMapOutputPath); CodedOutputStream outputStream = CodedOutputStream.newInstance(file); compiler.getFunctionalInformationMap().writeTo(outputStream); outputStream.flush(); file.flush(); file.close(); }"
+      },
+      {
+        "txt": "} } @VisibleForTesting static void createDefineReplacements(List<String> definitions, CompilerOptions options) { for (String override : definitions) { String[] assignment = override.split(\"=\", 2); String defName = assignment[0]; if (defName.length() > 0) { if (assignment.length == 1) {"
+      },
+      {
+        "txt": "options.setDefineToBooleanLiteral(defName, true); continue; } else { String defValue = assignment[1]; if (defValue.equals(\"true\")) { options.setDefineToBooleanLiteral(defName, true); continue; } else if (defValue.equals(\"false\")) { options.setDefineToBooleanLiteral(defName, false); continue;"
+      },
+      {
+        "txt": "} else if (defValue.length() > 1 && ((defValue.charAt(0) == '\\'' && defValue.charAt(defValue.length() - 1) == '\\'') || (defValue.charAt(0) == '\\\"' && defValue.charAt(defValue.length() - 1) == '\\\"'))) { String maybeStringVal = defValue.substring(1, defValue.length() - 1); if (maybeStringVal.indexOf(defValue.charAt(0)) == -1) { options.setDefineToStringLiteral(defName, maybeStringVal); continue;"
+      },
+      {
+        "txt": "} } else { try { options.setDefineToDoubleLiteral(defName, Double.parseDouble(defValue)); continue; } catch (NumberFormatException e) { } } }"
+      },
+      {
+        "txt": "} throw new RuntimeException( \"--define flag syntax invalid: \" + override); } } private boolean shouldGenerateManifestPerModule() { return !config.module.isEmpty() && config.outputManifest != null && config.outputManifest.contains(\"%outname%\"); }"
+      },
+      {
+        "txt": "private void outputManifest() throws IOException { String outputManifest = config.outputManifest; if (Strings.isEmpty(outputManifest)) { return; } JSModuleGraph graph = compiler.getModuleGraph(); if (shouldGenerateManifestPerModule()) { Iterable<JSModule> modules = graph.getAllModules(); for (JSModule module : modules) { Writer out = toWriter(expandManifest(module));"
+      },
+      {
+        "txt": "printManifestTo(module.getInputs(), out); out.close(); } } else { Writer out = toWriter(expandManifest(null)); if (graph == null) { printManifestTo(compiler.getInputsInOrder(), out); } else { printModuleGraphManifestTo(graph, out); }"
+      },
+      {
+        "txt": "out.close(); } } @VisibleForTesting void printModuleGraphManifestTo( JSModuleGraph graph, Appendable out) throws IOException { Joiner commas = Joiner.on(\",\"); boolean requiresNewline = false; for (JSModule module : graph.getAllModulesInDependencyOrder()) { if (requiresNewline) {"
+      },
+      {
+        "txt": "out.append(\"\\n\"); } String dependencies = commas.join(module.getSortedDependencyNames()); out.append( String.format(\"{%s%s}\\n\", module.getName(), dependencies.isEmpty() ? \"\" : \":\" + dependencies)); printManifestTo(module.getInputs(), out); requiresNewline = true; }"
+      },
+      {
+        "txt": "} private void printManifestTo(Iterable<CompilerInput> inputs, Appendable out) throws IOException { List<String> names = Lists.newArrayList(); for (CompilerInput input : inputs) { names.add(input.getName()); } String result = Joiner.on(\"\\n\").join(names); out.append(result); out.append(\"\\n\");"
+      },
+      {
+        "txt": "} class RunTimeStats { private long bestRunTime = Long.MAX_VALUE; private long worstRunTime = Long.MIN_VALUE; long lastStartTime = 0; private List<List<String>> loopedPassesInBestRun = null; private void recordStartRun() { lastStartTime = System.currentTimeMillis(); PhaseOptimizer.clearLoopsRun(); }"
+      },
+      {
+        "txt": "private void recordEndRun() { long endTime = System.currentTimeMillis(); long length = endTime - lastStartTime; worstRunTime = Math.max(length, worstRunTime); if (length < bestRunTime) { loopedPassesInBestRun = PhaseOptimizer.getLoopsRun(); bestRunTime = length; } } private void outputBestPhaseOrdering() {"
+      },
+      {
+        "txt": "try { out.append(\"Best time: \" + bestRunTime + \"\\n\"); out.append(\"Worst time: \" + worstRunTime + \"\\n\"); int i = 1; for (List<String> loop : loopedPassesInBestRun) { out.append(\"\\nLoop \" + i + \":\\n\" + Joiner.on(\"\\n\").join(loop)+ \"\\n\"); i++; } } catch (IOException e) { throw new RuntimeException(\"unexpected exception\", e);"
+      },
+      {
+        "txt": "} } } static class CommandLineConfig { private boolean printTree = false; CommandLineConfig setPrintTree(boolean printTree) { this.printTree = printTree; return this; } private boolean computePhaseOrdering = false;"
+      },
+      {
+        "txt": "CommandLineConfig setComputePhaseOrdering(boolean computePhaseOrdering) { this.computePhaseOrdering = computePhaseOrdering; return this; } private boolean printAst = false; CommandLineConfig setPrintAst(boolean printAst) { this.printAst = printAst; return this; } private boolean printPassGraph = false;"
+      },
+      {
+        "txt": "CommandLineConfig setPrintPassGraph(boolean printPassGraph) { this.printPassGraph = printPassGraph; return this; } private CompilerOptions.DevMode jscompDevMode = CompilerOptions.DevMode.OFF; CommandLineConfig setJscompDevMode(CompilerOptions.DevMode jscompDevMode) { this.jscompDevMode = jscompDevMode; return this; } private String loggingLevel = Level.WARNING.getName();"
+      },
+      {
+        "txt": "CommandLineConfig setLoggingLevel(String loggingLevel) { this.loggingLevel = loggingLevel; return this; } private final List<String> externs = Lists.newArrayList(); CommandLineConfig setExterns(List<String> externs) { this.externs.clear(); this.externs.addAll(externs); return this; }"
+      },
+      {
+        "txt": "private final List<String> js = Lists.newArrayList(); CommandLineConfig setJs(List<String> js) { this.js.clear(); this.js.addAll(js); return this; } private String jsOutputFile = \"\"; CommandLineConfig setJsOutputFile(String jsOutputFile) { this.jsOutputFile = jsOutputFile; return this;"
+      },
+      {
+        "txt": "} private final List<String> module = Lists.newArrayList(); CommandLineConfig setModule(List<String> module) { this.module.clear(); this.module.addAll(module); return this; } private String variableMapInputFile = \"\"; CommandLineConfig setVariableMapInputFile(String variableMapInputFile) { this.variableMapInputFile = variableMapInputFile;"
+      },
+      {
+        "txt": "return this; } private String propertyMapInputFile = \"\"; CommandLineConfig setPropertyMapInputFile(String propertyMapInputFile) { this.propertyMapInputFile = propertyMapInputFile; return this; } private String variableMapOutputFile = \"\"; CommandLineConfig setVariableMapOutputFile(String variableMapOutputFile) { this.variableMapOutputFile = variableMapOutputFile;"
+      },
+      {
+        "txt": "return this; } private boolean createNameMapFiles = false; CommandLineConfig setCreateNameMapFiles(boolean createNameMapFiles) { this.createNameMapFiles = createNameMapFiles; return this; } private String propertyMapOutputFile = \"\"; CommandLineConfig setPropertyMapOutputFile(String propertyMapOutputFile) { this.propertyMapOutputFile = propertyMapOutputFile;"
+      },
+      {
+        "txt": "return this; } private CodingConvention codingConvention = new DefaultCodingConvention(); CommandLineConfig setCodingConvention(CodingConvention codingConvention) { this.codingConvention = codingConvention; return this; } private int summaryDetailLevel = 1; CommandLineConfig setSummaryDetailLevel(int summaryDetailLevel) { this.summaryDetailLevel = summaryDetailLevel;"
+      },
+      {
+        "txt": "return this; } private String outputWrapper = \"\"; CommandLineConfig setOutputWrapper(String outputWrapper) { this.outputWrapper = outputWrapper; return this; } private String outputWrapperMarker = \"\"; CommandLineConfig setOutputWrapperMarker(String outputWrapperMarker) { this.outputWrapperMarker = outputWrapperMarker;"
+      },
+      {
+        "txt": "return this; } private final List<String> moduleWrapper = Lists.newArrayList(); CommandLineConfig setModuleWrapper(List<String> moduleWrapper) { this.moduleWrapper.clear(); this.moduleWrapper.addAll(moduleWrapper); return this; } private String moduleOutputPathPrefix = \"\"; CommandLineConfig setModuleOutputPathPrefix(String moduleOutputPathPrefix) {"
+      },
+      {
+        "txt": "this.moduleOutputPathPrefix = moduleOutputPathPrefix; return this; } private String createSourceMap = \"\"; CommandLineConfig setCreateSourceMap(String createSourceMap) { this.createSourceMap = createSourceMap; return this; } private SourceMap.DetailLevel sourceMapDetailLevel = SourceMap.DetailLevel.ALL;"
+      },
+      {
+        "txt": "CommandLineConfig setSourceMapDetailLevel(SourceMap.DetailLevel level) { this.sourceMapDetailLevel = level; return this; } private final List<String> jscompError = Lists.newArrayList(); CommandLineConfig setJscompError(List<String> jscompError) { this.jscompError.clear(); this.jscompError.addAll(jscompError); return this; }"
+      },
+      {
+        "txt": "private final List<String> jscompWarning = Lists.newArrayList(); CommandLineConfig setJscompWarning(List<String> jscompWarning) { this.jscompWarning.clear(); this.jscompWarning.addAll(jscompWarning); return this; } private final List<String> jscompOff = Lists.newArrayList(); CommandLineConfig setJscompOff(List<String> jscompOff) { this.jscompOff.clear(); this.jscompOff.addAll(jscompOff);"
+      },
+      {
+        "txt": "return this; } private final List<String> define = Lists.newArrayList(); CommandLineConfig setDefine(List<String> define) { this.define.clear(); this.define.addAll(define); return this; } private String charset = \"\"; CommandLineConfig setCharset(String charset) {"
+      },
+      {
+        "txt": "this.charset = charset; return this; } private boolean manageClosureDependencies = false; CommandLineConfig setManageClosureDependencies(boolean newVal) { this.manageClosureDependencies = newVal; return this; } private String outputManifest = \"\"; CommandLineConfig setOutputManifest(String outputManifest) {"
+      },
+      {
+        "txt": "this.outputManifest = outputManifest; return this; } }"
+      }
+    ]
+  },
+  {
+    "id": 653,
+    "file_path": "src/com/google/javascript/jscomp/AbstractCommandLineRunner.java",
+    "start-bug-line": 518,
+    "end-bug-line": 522,
+    "bug": "if (inputCharset == Charsets.UTF_8) { options.outputCharset = Charsets.US_ASCII; } else { options.outputCharset = inputCharset; }",
+    "fix": "[Delete]",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "import com.google.common.annotations.VisibleForTesting; import com.google.common.base.Charsets; import com.google.common.base.Joiner; import com.google.common.base.Preconditions; import com.google.common.collect.ImmutableList; import com.google.common.collect.Lists; import com.google.common.collect.Maps; import com.google.javascript.rhino.Node; import com.google.javascript.rhino.TokenStream; import com.google.protobuf.CodedOutputStream;"
+      },
+      {
+        "txt": "import java.io.BufferedWriter; import java.io.File; import java.io.FileOutputStream; import java.io.FileWriter; import java.io.IOException; import java.io.OutputStreamWriter; import java.io.PrintStream; import java.io.Writer; import java.nio.charset.Charset; import java.util.ArrayList;"
+      },
+      {
+        "txt": "import java.util.Collections; import java.util.List; import java.util.Map; import java.util.logging.Level; abstract class AbstractCommandLineRunner<A extends Compiler, B extends CompilerOptions> { private final CommandLineConfig config; private Appendable out; private final PrintStream err; private A compiler;"
+      },
+      {
+        "txt": "private static Charset inputCharset; private static final int NUM_RUNS_TO_DETERMINE_OPTIMAL_ORDER = 100; private final RunTimeStats runTimeStats = new RunTimeStats(); AbstractCommandLineRunner() { this(System.out, System.err); } AbstractCommandLineRunner(PrintStream out, PrintStream err) { this.config = new CommandLineConfig(); this.out = out; this.err = err;"
+      },
+      {
+        "txt": "} protected CommandLineConfig getCommandLineConfig() { return config; } protected abstract A createCompiler(); protected abstract B createOptions(); protected DiagnosticGroups getDiagnosticGroups() { return new DiagnosticGroups(); } @Deprecated"
+      },
+      {
+        "txt": "protected void initOptionsFromFlags(CompilerOptions options) {} final protected void setRunOptions(CompilerOptions options) throws FlagUsageException, IOException { DiagnosticGroups diagnosticGroups = getDiagnosticGroups(); diagnosticGroups.setWarningLevels( options, config.jscompError, CheckLevel.ERROR); diagnosticGroups.setWarningLevels( options, config.jscompWarning, CheckLevel.WARNING); diagnosticGroups.setWarningLevels( options, config.jscompOff, CheckLevel.OFF);"
+      },
+      {
+        "txt": "createDefineReplacements(config.define, options); options.manageClosureDependencies = config.manageClosureDependencies; options.devMode = config.jscompDevMode; options.setCodingConvention(config.codingConvention); options.setSummaryDetailLevel(config.summaryDetailLevel); inputCharset = getInputCharset(); if (config.jsOutputFile.length() > 0) { options.jsOutputFile = config.jsOutputFile; } if (config.createSourceMap.length() > 0) {"
+      },
+      {
+        "txt": "options.sourceMapOutputPath = config.createSourceMap; } options.sourceMapDetailLevel = config.sourceMapDetailLevel; if (!config.variableMapInputFile.equals(\"\")) { options.inputVariableMapSerialized = VariableMap.load(config.variableMapInputFile).toBytes(); } if (!config.propertyMapInputFile.equals(\"\")) { options.inputPropertyMapSerialized = VariableMap.load(config.propertyMapInputFile).toBytes();"
+      },
+      {
+        "txt": "} } final protected A getCompiler() { return compiler; } final public void run() { int result = 0; int runs = 1; Throwable error = null; if (config.computePhaseOrdering) {"
+      },
+      {
+        "txt": "runs = NUM_RUNS_TO_DETERMINE_OPTIMAL_ORDER; PhaseOptimizer.randomizeLoops(); } try { for (int i = 0; i < runs && result == 0; i++) { runTimeStats.recordStartRun(); result = doRun(); runTimeStats.recordEndRun(); } } catch (Throwable t) {"
+      },
+      {
+        "txt": "error = t; } exit(runTimeStats, error); } void exit(RunTimeStats runTimeStats, Throwable error) { int result = 0; if (error instanceof AbstractCommandLineRunner.FlagUsageException) { System.err.println(error.getMessage()); result = -1; } else if (error != null) {"
+      },
+      {
+        "txt": "error.printStackTrace(); result = -2; } if (config.computePhaseOrdering) { runTimeStats.outputBestPhaseOrdering(); } System.exit(result); } protected PrintStream getErrorPrintStream() { return err;"
+      },
+      {
+        "txt": "} protected static class FlagUsageException extends Exception { private static final long serialVersionUID = 1L; FlagUsageException(String message) { super(message); } } private static List<JSSourceFile> createInputs(List<String> files, boolean allowStdIn) throws FlagUsageException, IOException { List<JSSourceFile> inputs = new ArrayList<JSSourceFile>(files.size());"
+      },
+      {
+        "txt": "boolean usingStdin = false; for (String filename : files) { if (!\"-\".equals(filename)) { JSSourceFile newFile = JSSourceFile.fromFile(filename, inputCharset); inputs.add(newFile); } else { if (!allowStdIn) { throw new FlagUsageException(\"Can't specify stdin.\"); } if (usingStdin) {"
+      },
+      {
+        "txt": "throw new FlagUsageException(\"Can't specify stdin twice.\"); } inputs.add(JSSourceFile.fromInputStream(\"stdin\", System.in)); usingStdin = true; } } return inputs; } private static List<JSSourceFile> createSourceInputs(List<String> files) throws FlagUsageException, IOException {"
+      },
+      {
+        "txt": "if (files.isEmpty()) { files = Collections.singletonList(\"-\"); } try { return createInputs(files, true); } catch (FlagUsageException e) { throw new FlagUsageException(\"Bad --js flag. \" + e.getMessage()); } } private static List<JSSourceFile> createExternInputs(List<String> files)"
+      },
+      {
+        "txt": "throws FlagUsageException, IOException { if (files.isEmpty()) { return ImmutableList.of(JSSourceFile.fromCode(\"/dev/null\", \"\")); } try { return createInputs(files, false); } catch (FlagUsageException e) { throw new FlagUsageException(\"Bad --externs flag. \" + e.getMessage()); } }"
+      },
+      {
+        "txt": "static JSModule[] createJsModules(List<String> specs, List<String> jsFiles) throws FlagUsageException, IOException { Preconditions.checkState(specs != null); Preconditions.checkState(!specs.isEmpty()); Preconditions.checkState(jsFiles != null); final int totalNumJsFiles = jsFiles.size(); int nextJsFileIndex = 0; Map<String, JSModule> modulesByName = Maps.newLinkedHashMap(); for (String spec : specs) { String[] parts = spec.split(\":\");"
+      },
+      {
+        "txt": "if (parts.length < 2 || parts.length > 4) { throw new FlagUsageException(\"Expected 2-4 colon-delimited parts in \" + \"module spec: \" + spec); } String name = parts[0]; if (!TokenStream.isJSIdentifier(name)) { throw new FlagUsageException(\"Invalid module name: '\" + name + \"'\"); } if (modulesByName.containsKey(name)) { throw new FlagUsageException(\"Duplicate module name: \" + name);"
+      },
+      {
+        "txt": "} JSModule module = new JSModule(name); int numJsFiles = -1; try { numJsFiles = Integer.parseInt(parts[1]); } catch (NumberFormatException ignored) { numJsFiles = -1; } if (numJsFiles < 0) { throw new FlagUsageException(\"Invalid js file count '\" + parts[1]"
+      },
+      {
+        "txt": "+ \"' for module: \" + name); } if (nextJsFileIndex + numJsFiles > totalNumJsFiles) { throw new FlagUsageException(\"Not enough js files specified. Expected \" + (nextJsFileIndex + numJsFiles - totalNumJsFiles) + \" more in module:\" + name); } List<String> moduleJsFiles = jsFiles.subList(nextJsFileIndex, nextJsFileIndex + numJsFiles); for (JSSourceFile input : createInputs(moduleJsFiles, false)) {"
+      },
+      {
+        "txt": "module.add(input); } nextJsFileIndex += numJsFiles; if (parts.length > 2) { String depList = parts[2]; if (depList.length() > 0) { String[] deps = depList.split(\",\"); for (String dep : deps) { JSModule other = modulesByName.get(dep); if (other == null) {"
+      },
+      {
+        "txt": "throw new FlagUsageException(\"Module '\" + name + \"' depends on unknown module '\" + dep + \"'. Be sure to list modules in dependency order.\"); } module.addDependency(other); } } } modulesByName.put(name, module); }"
+      },
+      {
+        "txt": "if (nextJsFileIndex < totalNumJsFiles) { throw new FlagUsageException(\"Too many js files specified. Expected \" + nextJsFileIndex + \" but found \" + totalNumJsFiles); } return modulesByName.values().toArray(new JSModule[modulesByName.size()]); } static Map<String, String> parseModuleWrappers(List<String> specs, JSModule[] modules) throws FlagUsageException { Preconditions.checkState(specs != null); Map<String, String> wrappers ="
+      },
+      {
+        "txt": "Maps.newHashMapWithExpectedSize(modules.length); for (JSModule m : modules) { wrappers.put(m.getName(), \"\"); } for (String spec : specs) { int pos = spec.indexOf(':'); if (pos == -1) { throw new FlagUsageException(\"Expected module wrapper to have \" + \"<name>:<wrapper> format: \" + spec); }"
+      },
+      {
+        "txt": "String name = spec.substring(0, pos); if (!wrappers.containsKey(name)) { throw new FlagUsageException(\"Unknown module: '\" + name + \"'\"); } String wrapper = spec.substring(pos + 1); if (!wrapper.contains(\"%s\")) { throw new FlagUsageException(\"No %s placeholder in module wrapper: '\" + wrapper + \"'\"); } wrappers.put(name, wrapper);"
+      },
+      {
+        "txt": "} return wrappers; } static void writeOutput(Appendable out, Compiler compiler, String code, String wrapper, String codePlaceholder) throws IOException { int pos = wrapper.indexOf(codePlaceholder); if (pos != -1) { String prefix = \"\"; if (pos > 0) { prefix = wrapper.substring(0, pos);"
+      },
+      {
+        "txt": "out.append(prefix); } out.append(code); int suffixStart = pos + codePlaceholder.length(); if (suffixStart != wrapper.length()) { out.append(wrapper.substring(suffixStart)); } out.append('\\n'); if (compiler != null && compiler.getSourceMap() != null) { compiler.getSourceMap().setWrapperPrefix(prefix);"
+      },
+      {
+        "txt": "} } else { out.append(code); out.append('\\n'); } } private static void maybeCreateDirsForPath(String pathPrefix) { if (pathPrefix.length() > 0) { String dirName = pathPrefix.charAt(pathPrefix.length() - 1) == File.separatorChar"
+      },
+      {
+        "txt": "? pathPrefix.substring(0, pathPrefix.length() - 1) : new File( pathPrefix).getParent(); if (dirName != null) { new File(dirName).mkdirs(); } } } protected int doRun() throws FlagUsageException, IOException { Compiler.setLoggingLevel(Level.parse(config.loggingLevel)); List<JSSourceFile> externsList = createExterns();"
+      },
+      {
+        "txt": "externsList.toArray(externs); compiler = createCompiler(); B options = createOptions(); JSModule[] modules = null; Result result; setRunOptions(options); <extra_id_0> boolean writeOutputToFile = !options.jsOutputFile.isEmpty(); if (writeOutputToFile) { out = toWriter(options.jsOutputFile, inputCharset.name()); } List<String> jsFiles = config.js; List<String> moduleSpecs = config.module;"
+      },
+      {
+        "txt": "List<String> jsFiles = config.js; List<String> moduleSpecs = config.module; if (!moduleSpecs.isEmpty()) { modules = createJsModules(moduleSpecs, jsFiles); result = compiler.compile(externs, modules, options); } else { List<JSSourceFile> inputList = createSourceInputs(jsFiles); JSSourceFile[] inputs = new JSSourceFile[inputList.size()]; inputList.toArray(inputs); result = compiler.compile(externs, inputs, options);"
+      },
+      {
+        "txt": "} int errCode = processResults(result, modules, options); if (writeOutputToFile) { ((Writer)out).close(); } return errCode; } int processResults(Result result, JSModule[] modules, B options) throws FlagUsageException, IOException { if (config.computePhaseOrdering) {"
+      },
+      {
+        "txt": "return 0; } if (config.printPassGraph) { if (compiler.getRoot() == null) { return 1; } else { out.append(DotFormatter.toDot(compiler.getPassConfig().getPassGraph())); out.append('\\n'); return 0; }"
+      },
+      {
+        "txt": "} if (config.printAst) { if (compiler.getRoot() == null) { return 1; } else { ControlFlowGraph<Node> cfg = compiler.computeCFG(); DotFormatter.appendDot(compiler.getRoot(), cfg, out); out.append('\\n'); return 0; }"
+      },
+      {
+        "txt": "} if (config.printTree) { if (compiler.getRoot() == null) { out.append(\"Code contains errors; no tree was generated.\\n\"); return 1; } else { compiler.getRoot().appendStringTree(out); out.append(\"\\n\"); return 0; }"
+      },
+      {
+        "txt": "} if (result.success) { if (modules == null) { writeOutput(out, compiler, compiler.toSource(), config.outputWrapper, config.outputWrapperMarker); outputSourceMap(options); } else { String moduleFilePrefix = config.moduleOutputPathPrefix; maybeCreateDirsForPath(moduleFilePrefix); Map<String, String> moduleWrappers ="
+      },
+      {
+        "txt": "parseModuleWrappers(config.moduleWrapper, modules); Writer mapOut = null; if (!shouldGenerateMapPerModule(options)) { mapOut = toWriter(expandSourceMapPath(options, null)); } for (JSModule m : modules) { if (shouldGenerateMapPerModule(options)) { mapOut = toWriter(expandSourceMapPath(options, m)); } Writer writer = toWriter("
+      },
+      {
+        "txt": "moduleFilePrefix + m.getName() + \".js\"); if (options.sourceMapOutputPath != null) { compiler.getSourceMap().reset(); } writeOutput(writer, compiler, compiler.toSource(m), moduleWrappers.get( m.getName()), \"%s\"); if (options.sourceMapOutputPath != null) { compiler.getSourceMap().appendTo(mapOut, m.getName()); } writer.close();"
+      },
+      {
+        "txt": "if (shouldGenerateMapPerModule(options) && mapOut != null) { mapOut.close(); mapOut = null; } } if (mapOut != null) { mapOut.close(); } } if (options.externExportsPath != null) {"
+      },
+      {
+        "txt": "Writer eeOut = openExternExportsStream(options, options.jsOutputFile); eeOut.append(result.externExport); eeOut.close(); } outputNameMaps(options); outputManifest(); } return Math.min(result.errors.length, 0x7f); }"
+      },
+      {
+        "txt": "private Charset getInputCharset() throws FlagUsageException { if (!config.charset.isEmpty()) { if (!Charset.isSupported(config.charset)) { throw new FlagUsageException(config.charset + \" is not a valid charset name.\"); } return Charset.forName(config.charset); } return Charsets.UTF_8; }"
+      },
+      {
+        "txt": "protected List<JSSourceFile> createExterns() throws FlagUsageException, IOException { return createExternInputs(config.externs); } private boolean shouldGenerateMapPerModule(B options) { return options.sourceMapOutputPath != null && options.sourceMapOutputPath.contains(\"%outname%\"); } private Writer openExternExportsStream(B options, String path) throws IOException {"
+      },
+      {
+        "txt": "if (options.externExportsPath == null) { return null; } String exPath = options.externExportsPath; if (!exPath.contains(File.separator)) { File outputFile = new File(path); exPath = outputFile.getParent() + File.separatorChar + exPath; } return toWriter(exPath); }"
+      },
+      {
+        "txt": "private String expandCommandLinePath( String path, JSModule forModule) { String sub; if (forModule != null) { sub = config.moduleOutputPathPrefix + forModule.getName() + \".js\"; } else if (!config.module.isEmpty()) { sub = config.moduleOutputPathPrefix; } else { sub = config.jsOutputFile; }"
+      },
+      {
+        "txt": "return path.replace(\"%outname%\", sub); } @VisibleForTesting String expandSourceMapPath(B options, JSModule forModule) { if (Strings.isEmpty(options.sourceMapOutputPath)) { return null; } return expandCommandLinePath(options.sourceMapOutputPath, forModule); } @VisibleForTesting"
+      },
+      {
+        "txt": "String expandManifest(JSModule forModule) { if (Strings.isEmpty(config.outputManifest)) { return null; } return expandCommandLinePath(config.outputManifest, forModule); } private Writer toWriter(String fileName) throws IOException { if (fileName == null) { return null; }"
+      },
+      {
+        "txt": "return new BufferedWriter(new FileWriter(fileName)); } private Writer toWriter(String fileName, String charSet) throws IOException { if (fileName == null) { return null; } return new BufferedWriter( new OutputStreamWriter(new FileOutputStream(fileName), charSet)); }"
+      },
+      {
+        "txt": "private void outputSourceMap(B options) throws IOException { if (Strings.isEmpty(options.sourceMapOutputPath)) { return; } String outName = expandSourceMapPath(options, null); Writer out = toWriter(outName); compiler.getSourceMap().appendTo(out, outName); out.close(); }"
+      },
+      {
+        "txt": "private String getMapPath(String outputFile) { String basePath = \"\"; if (outputFile.equals(\"\")) { if (!config.moduleOutputPathPrefix.equals(\"\")) { basePath = config.moduleOutputPathPrefix; } else { basePath = \"jscompiler\"; } } else { File file = new File(outputFile);"
+      },
+      {
+        "txt": "String outputFileName = file.getName(); if (outputFileName.endsWith(\".js\")) { outputFileName = outputFileName.substring(0, outputFileName.length() - 3); } basePath = file.getParent() + File.separatorChar + outputFileName; } return basePath; } private void outputNameMaps(B options) throws FlagUsageException,"
+      },
+      {
+        "txt": "IOException { String propertyMapOutputPath = null; String variableMapOutputPath = null; String functionInformationMapOutputPath = null; if (config.createNameMapFiles) { String basePath = getMapPath(options.jsOutputFile); propertyMapOutputPath = basePath + \"_props_map.out\"; variableMapOutputPath = basePath + \"_vars_map.out\"; functionInformationMapOutputPath = basePath + \"_functions_map.out\"; }"
+      },
+      {
+        "txt": "if (!config.variableMapOutputFile.equals(\"\")) { if (variableMapOutputPath != null) { throw new FlagUsageException(\"The flags variable_map_output_file and \" + \"create_name_map_files cannot both be used simultaniously.\"); } variableMapOutputPath = config.variableMapOutputFile; } if (!config.propertyMapOutputFile.equals(\"\")) { if (propertyMapOutputPath != null) { throw new FlagUsageException(\"The flags property_map_output_file and \""
+      },
+      {
+        "txt": "+ \"create_name_map_files cannot both be used simultaniously.\"); } propertyMapOutputPath = config.propertyMapOutputFile; } if (variableMapOutputPath != null) { if (compiler.getVariableMap() != null) { compiler.getVariableMap().save(variableMapOutputPath); } } if (propertyMapOutputPath != null) {"
+      },
+      {
+        "txt": "if (compiler.getPropertyMap() != null) { compiler.getPropertyMap().save(propertyMapOutputPath); } } if (functionInformationMapOutputPath != null) { if (compiler.getFunctionalInformationMap() != null) { FileOutputStream file = new FileOutputStream(functionInformationMapOutputPath); CodedOutputStream outputStream = CodedOutputStream.newInstance(file); compiler.getFunctionalInformationMap().writeTo(outputStream);"
+      },
+      {
+        "txt": "outputStream.flush(); file.flush(); file.close(); } } } @VisibleForTesting static void createDefineReplacements(List<String> definitions, CompilerOptions options) { for (String override : definitions) {"
+      },
+      {
+        "txt": "String[] assignment = override.split(\"=\", 2); String defName = assignment[0]; if (defName.length() > 0) { if (assignment.length == 1) { options.setDefineToBooleanLiteral(defName, true); continue; } else { String defValue = assignment[1]; if (defValue.equals(\"true\")) { options.setDefineToBooleanLiteral(defName, true);"
+      },
+      {
+        "txt": "continue; } else if (defValue.equals(\"false\")) { options.setDefineToBooleanLiteral(defName, false); continue; } else if (defValue.length() > 1 && ((defValue.charAt(0) == '\\'' && defValue.charAt(defValue.length() - 1) == '\\'') || (defValue.charAt(0) == '\\\"' && defValue.charAt(defValue.length() - 1) == '\\\"'))) { String maybeStringVal ="
+      },
+      {
+        "txt": "defValue.substring(1, defValue.length() - 1); if (maybeStringVal.indexOf(defValue.charAt(0)) == -1) { options.setDefineToStringLiteral(defName, maybeStringVal); continue; } } else { try { options.setDefineToDoubleLiteral(defName, Double.parseDouble(defValue)); continue;"
+      },
+      {
+        "txt": "} catch (NumberFormatException e) { } } } } throw new RuntimeException( \"--define flag syntax invalid: \" + override); } } private boolean shouldGenerateManifestPerModule() {"
+      },
+      {
+        "txt": "return !config.module.isEmpty() && config.outputManifest != null && config.outputManifest.contains(\"%outname%\"); } private void outputManifest() throws IOException { String outputManifest = config.outputManifest; if (Strings.isEmpty(outputManifest)) { return; } JSModuleGraph graph = compiler.getModuleGraph();"
+      },
+      {
+        "txt": "if (shouldGenerateManifestPerModule()) { Iterable<JSModule> modules = graph.getAllModules(); for (JSModule module : modules) { Writer out = toWriter(expandManifest(module)); printManifestTo(module.getInputs(), out); out.close(); } } else { Writer out = toWriter(expandManifest(null)); if (graph == null) {"
+      },
+      {
+        "txt": "printManifestTo(compiler.getInputsInOrder(), out); } else { printModuleGraphManifestTo(graph, out); } out.close(); } } @VisibleForTesting void printModuleGraphManifestTo( JSModuleGraph graph, Appendable out) throws IOException {"
+      },
+      {
+        "txt": "Joiner commas = Joiner.on(\",\"); boolean requiresNewline = false; for (JSModule module : graph.getAllModulesInDependencyOrder()) { if (requiresNewline) { out.append(\"\\n\"); } String dependencies = commas.join(module.getSortedDependencyNames()); out.append( String.format(\"{%s%s}\\n\", module.getName(),"
+      },
+      {
+        "txt": "dependencies.isEmpty() ? \"\" : \":\" + dependencies)); printManifestTo(module.getInputs(), out); requiresNewline = true; } } private void printManifestTo(Iterable<CompilerInput> inputs, Appendable out) throws IOException { List<String> names = Lists.newArrayList(); for (CompilerInput input : inputs) { names.add(input.getName());"
+      },
+      {
+        "txt": "} String result = Joiner.on(\"\\n\").join(names); out.append(result); out.append(\"\\n\"); } class RunTimeStats { private long bestRunTime = Long.MAX_VALUE; private long worstRunTime = Long.MIN_VALUE; long lastStartTime = 0; private List<List<String>> loopedPassesInBestRun = null;"
+      },
+      {
+        "txt": "private void recordStartRun() { lastStartTime = System.currentTimeMillis(); PhaseOptimizer.clearLoopsRun(); } private void recordEndRun() { long endTime = System.currentTimeMillis(); long length = endTime - lastStartTime; worstRunTime = Math.max(length, worstRunTime); if (length < bestRunTime) { loopedPassesInBestRun = PhaseOptimizer.getLoopsRun();"
+      },
+      {
+        "txt": "bestRunTime = length; } } private void outputBestPhaseOrdering() { try { out.append(\"Best time: \" + bestRunTime + \"\\n\"); out.append(\"Worst time: \" + worstRunTime + \"\\n\"); int i = 1; for (List<String> loop : loopedPassesInBestRun) { out.append(\"\\nLoop \" + i + \":\\n\" + Joiner.on(\"\\n\").join(loop)+ \"\\n\");"
+      },
+      {
+        "txt": "i++; } } catch (IOException e) { throw new RuntimeException(\"unexpected exception\", e); } } } static class CommandLineConfig { private boolean printTree = false; CommandLineConfig setPrintTree(boolean printTree) {"
+      },
+      {
+        "txt": "this.printTree = printTree; return this; } private boolean computePhaseOrdering = false; CommandLineConfig setComputePhaseOrdering(boolean computePhaseOrdering) { this.computePhaseOrdering = computePhaseOrdering; return this; } private boolean printAst = false; CommandLineConfig setPrintAst(boolean printAst) {"
+      },
+      {
+        "txt": "this.printAst = printAst; return this; } private boolean printPassGraph = false; CommandLineConfig setPrintPassGraph(boolean printPassGraph) { this.printPassGraph = printPassGraph; return this; } private CompilerOptions.DevMode jscompDevMode = CompilerOptions.DevMode.OFF; CommandLineConfig setJscompDevMode(CompilerOptions.DevMode jscompDevMode) {"
+      },
+      {
+        "txt": "this.jscompDevMode = jscompDevMode; return this; } private String loggingLevel = Level.WARNING.getName(); CommandLineConfig setLoggingLevel(String loggingLevel) { this.loggingLevel = loggingLevel; return this; } private final List<String> externs = Lists.newArrayList(); CommandLineConfig setExterns(List<String> externs) {"
+      },
+      {
+        "txt": "this.externs.clear(); this.externs.addAll(externs); return this; } private final List<String> js = Lists.newArrayList(); CommandLineConfig setJs(List<String> js) { this.js.clear(); this.js.addAll(js); return this; }"
+      },
+      {
+        "txt": "private String jsOutputFile = \"\"; CommandLineConfig setJsOutputFile(String jsOutputFile) { this.jsOutputFile = jsOutputFile; return this; } private final List<String> module = Lists.newArrayList(); CommandLineConfig setModule(List<String> module) { this.module.clear(); this.module.addAll(module); return this;"
+      },
+      {
+        "txt": "} private String variableMapInputFile = \"\"; CommandLineConfig setVariableMapInputFile(String variableMapInputFile) { this.variableMapInputFile = variableMapInputFile; return this; } private String propertyMapInputFile = \"\"; CommandLineConfig setPropertyMapInputFile(String propertyMapInputFile) { this.propertyMapInputFile = propertyMapInputFile; return this;"
+      },
+      {
+        "txt": "} private String variableMapOutputFile = \"\"; CommandLineConfig setVariableMapOutputFile(String variableMapOutputFile) { this.variableMapOutputFile = variableMapOutputFile; return this; } private boolean createNameMapFiles = false; CommandLineConfig setCreateNameMapFiles(boolean createNameMapFiles) { this.createNameMapFiles = createNameMapFiles; return this;"
+      },
+      {
+        "txt": "} private String propertyMapOutputFile = \"\"; CommandLineConfig setPropertyMapOutputFile(String propertyMapOutputFile) { this.propertyMapOutputFile = propertyMapOutputFile; return this; } private CodingConvention codingConvention = new DefaultCodingConvention(); CommandLineConfig setCodingConvention(CodingConvention codingConvention) { this.codingConvention = codingConvention; return this;"
+      },
+      {
+        "txt": "} private int summaryDetailLevel = 1; CommandLineConfig setSummaryDetailLevel(int summaryDetailLevel) { this.summaryDetailLevel = summaryDetailLevel; return this; } private String outputWrapper = \"\"; CommandLineConfig setOutputWrapper(String outputWrapper) { this.outputWrapper = outputWrapper; return this;"
+      },
+      {
+        "txt": "} private String outputWrapperMarker = \"\"; CommandLineConfig setOutputWrapperMarker(String outputWrapperMarker) { this.outputWrapperMarker = outputWrapperMarker; return this; } private final List<String> moduleWrapper = Lists.newArrayList(); CommandLineConfig setModuleWrapper(List<String> moduleWrapper) { this.moduleWrapper.clear(); this.moduleWrapper.addAll(moduleWrapper);"
+      },
+      {
+        "txt": "return this; } private String moduleOutputPathPrefix = \"\"; CommandLineConfig setModuleOutputPathPrefix(String moduleOutputPathPrefix) { this.moduleOutputPathPrefix = moduleOutputPathPrefix; return this; } private String createSourceMap = \"\"; CommandLineConfig setCreateSourceMap(String createSourceMap) { this.createSourceMap = createSourceMap;"
+      },
+      {
+        "txt": "return this; } private SourceMap.DetailLevel sourceMapDetailLevel = SourceMap.DetailLevel.ALL; CommandLineConfig setSourceMapDetailLevel(SourceMap.DetailLevel level) { this.sourceMapDetailLevel = level; return this; } private final List<String> jscompError = Lists.newArrayList(); CommandLineConfig setJscompError(List<String> jscompError) {"
+      },
+      {
+        "txt": "this.jscompError.clear(); this.jscompError.addAll(jscompError); return this; } private final List<String> jscompWarning = Lists.newArrayList(); CommandLineConfig setJscompWarning(List<String> jscompWarning) { this.jscompWarning.clear(); this.jscompWarning.addAll(jscompWarning); return this; }"
+      },
+      {
+        "txt": "private final List<String> jscompOff = Lists.newArrayList(); CommandLineConfig setJscompOff(List<String> jscompOff) { this.jscompOff.clear(); this.jscompOff.addAll(jscompOff); return this; } private final List<String> define = Lists.newArrayList(); CommandLineConfig setDefine(List<String> define) { this.define.clear(); this.define.addAll(define);"
+      },
+      {
+        "txt": "return this; } private String charset = \"\"; CommandLineConfig setCharset(String charset) { this.charset = charset; return this; } private boolean manageClosureDependencies = false; CommandLineConfig setManageClosureDependencies(boolean newVal) { this.manageClosureDependencies = newVal;"
+      },
+      {
+        "txt": "return this; } private String outputManifest = \"\"; CommandLineConfig setOutputManifest(String outputManifest) { this.outputManifest = outputManifest; return this; } }"
+      }
+    ]
+  },
+  {
+    "id": 654,
+    "file_path": "src/com/google/javascript/jscomp/AbstractCommandLineRunner.java",
+    "start-bug-line": 693,
+    "end-bug-line": 693,
+    "bug": "",
+    "fix": "private String getOutputCharset() throws FlagUsageException { if (!config.charset.isEmpty()) { if (!Charset.isSupported(config.charset)) { throw new FlagUsageException(config.charset + \" is not a valid charset name.\"); } return config.charset; } return \"US-ASCII\"; }",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.google.javascript.jscomp; import com.google.common.annotations.VisibleForTesting; import com.google.common.base.Charsets; import com.google.common.base.Joiner; import com.google.common.base.Preconditions; import com.google.common.collect.ImmutableList; import com.google.common.collect.Lists; import com.google.common.collect.Maps; import com.google.javascript.rhino.Node; import com.google.javascript.rhino.TokenStream;"
+      },
+      {
+        "txt": "import com.google.protobuf.CodedOutputStream; import java.io.BufferedWriter; import java.io.File; import java.io.FileOutputStream; import java.io.FileWriter; import java.io.IOException; import java.io.OutputStreamWriter; import java.io.PrintStream; import java.io.Writer; import java.nio.charset.Charset;"
+      },
+      {
+        "txt": "import java.util.ArrayList; import java.util.Collections; import java.util.List; import java.util.Map; import java.util.logging.Level; abstract class AbstractCommandLineRunner<A extends Compiler, B extends CompilerOptions> { private final CommandLineConfig config; private Appendable out; private final PrintStream err;"
+      },
+      {
+        "txt": "private A compiler; private static Charset inputCharset; private static final int NUM_RUNS_TO_DETERMINE_OPTIMAL_ORDER = 100; private final RunTimeStats runTimeStats = new RunTimeStats(); AbstractCommandLineRunner() { this(System.out, System.err); } AbstractCommandLineRunner(PrintStream out, PrintStream err) { this.config = new CommandLineConfig(); this.out = out;"
+      },
+      {
+        "txt": "this.err = err; } protected CommandLineConfig getCommandLineConfig() { return config; } protected abstract A createCompiler(); protected abstract B createOptions(); protected DiagnosticGroups getDiagnosticGroups() { return new DiagnosticGroups(); }"
+      },
+      {
+        "txt": "@Deprecated protected void initOptionsFromFlags(CompilerOptions options) {} final protected void setRunOptions(CompilerOptions options) throws FlagUsageException, IOException { DiagnosticGroups diagnosticGroups = getDiagnosticGroups(); diagnosticGroups.setWarningLevels( options, config.jscompError, CheckLevel.ERROR); diagnosticGroups.setWarningLevels( options, config.jscompWarning, CheckLevel.WARNING); diagnosticGroups.setWarningLevels("
+      },
+      {
+        "txt": "options, config.jscompOff, CheckLevel.OFF); createDefineReplacements(config.define, options); options.manageClosureDependencies = config.manageClosureDependencies; options.devMode = config.jscompDevMode; options.setCodingConvention(config.codingConvention); options.setSummaryDetailLevel(config.summaryDetailLevel); inputCharset = getInputCharset(); if (config.jsOutputFile.length() > 0) { options.jsOutputFile = config.jsOutputFile; }"
+      },
+      {
+        "txt": "if (config.createSourceMap.length() > 0) { options.sourceMapOutputPath = config.createSourceMap; } options.sourceMapDetailLevel = config.sourceMapDetailLevel; if (!config.variableMapInputFile.equals(\"\")) { options.inputVariableMapSerialized = VariableMap.load(config.variableMapInputFile).toBytes(); } if (!config.propertyMapInputFile.equals(\"\")) { options.inputPropertyMapSerialized ="
+      },
+      {
+        "txt": "VariableMap.load(config.propertyMapInputFile).toBytes(); } } final protected A getCompiler() { return compiler; } final public void run() { int result = 0; int runs = 1; Throwable error = null;"
+      },
+      {
+        "txt": "if (config.computePhaseOrdering) { runs = NUM_RUNS_TO_DETERMINE_OPTIMAL_ORDER; PhaseOptimizer.randomizeLoops(); } try { for (int i = 0; i < runs && result == 0; i++) { runTimeStats.recordStartRun(); result = doRun(); runTimeStats.recordEndRun(); }"
+      },
+      {
+        "txt": "} catch (Throwable t) { error = t; } exit(runTimeStats, error); } void exit(RunTimeStats runTimeStats, Throwable error) { int result = 0; if (error instanceof AbstractCommandLineRunner.FlagUsageException) { System.err.println(error.getMessage()); result = -1;"
+      },
+      {
+        "txt": "} else if (error != null) { error.printStackTrace(); result = -2; } if (config.computePhaseOrdering) { runTimeStats.outputBestPhaseOrdering(); } System.exit(result); } protected PrintStream getErrorPrintStream() {"
+      },
+      {
+        "txt": "return err; } protected static class FlagUsageException extends Exception { private static final long serialVersionUID = 1L; FlagUsageException(String message) { super(message); } } private static List<JSSourceFile> createInputs(List<String> files, boolean allowStdIn) throws FlagUsageException, IOException {"
+      },
+      {
+        "txt": "List<JSSourceFile> inputs = new ArrayList<JSSourceFile>(files.size()); boolean usingStdin = false; for (String filename : files) { if (!\"-\".equals(filename)) { JSSourceFile newFile = JSSourceFile.fromFile(filename, inputCharset); inputs.add(newFile); } else { if (!allowStdIn) { throw new FlagUsageException(\"Can't specify stdin.\"); }"
+      },
+      {
+        "txt": "if (usingStdin) { throw new FlagUsageException(\"Can't specify stdin twice.\"); } inputs.add(JSSourceFile.fromInputStream(\"stdin\", System.in)); usingStdin = true; } } return inputs; } private static List<JSSourceFile> createSourceInputs(List<String> files)"
+      },
+      {
+        "txt": "throws FlagUsageException, IOException { if (files.isEmpty()) { files = Collections.singletonList(\"-\"); } try { return createInputs(files, true); } catch (FlagUsageException e) { throw new FlagUsageException(\"Bad --js flag. \" + e.getMessage()); } }"
+      },
+      {
+        "txt": "private static List<JSSourceFile> createExternInputs(List<String> files) throws FlagUsageException, IOException { if (files.isEmpty()) { return ImmutableList.of(JSSourceFile.fromCode(\"/dev/null\", \"\")); } try { return createInputs(files, false); } catch (FlagUsageException e) { throw new FlagUsageException(\"Bad --externs flag. \" + e.getMessage()); }"
+      },
+      {
+        "txt": "} static JSModule[] createJsModules(List<String> specs, List<String> jsFiles) throws FlagUsageException, IOException { Preconditions.checkState(specs != null); Preconditions.checkState(!specs.isEmpty()); Preconditions.checkState(jsFiles != null); final int totalNumJsFiles = jsFiles.size(); int nextJsFileIndex = 0; Map<String, JSModule> modulesByName = Maps.newLinkedHashMap(); for (String spec : specs) {"
+      },
+      {
+        "txt": "String[] parts = spec.split(\":\"); if (parts.length < 2 || parts.length > 4) { throw new FlagUsageException(\"Expected 2-4 colon-delimited parts in \" + \"module spec: \" + spec); } String name = parts[0]; if (!TokenStream.isJSIdentifier(name)) { throw new FlagUsageException(\"Invalid module name: '\" + name + \"'\"); } if (modulesByName.containsKey(name)) {"
+      },
+      {
+        "txt": "throw new FlagUsageException(\"Duplicate module name: \" + name); } JSModule module = new JSModule(name); int numJsFiles = -1; try { numJsFiles = Integer.parseInt(parts[1]); } catch (NumberFormatException ignored) { numJsFiles = -1; } if (numJsFiles < 0) {"
+      },
+      {
+        "txt": "throw new FlagUsageException(\"Invalid js file count '\" + parts[1] + \"' for module: \" + name); } if (nextJsFileIndex + numJsFiles > totalNumJsFiles) { throw new FlagUsageException(\"Not enough js files specified. Expected \" + (nextJsFileIndex + numJsFiles - totalNumJsFiles) + \" more in module:\" + name); } List<String> moduleJsFiles = jsFiles.subList(nextJsFileIndex, nextJsFileIndex + numJsFiles);"
+      },
+      {
+        "txt": "for (JSSourceFile input : createInputs(moduleJsFiles, false)) { module.add(input); } nextJsFileIndex += numJsFiles; if (parts.length > 2) { String depList = parts[2]; if (depList.length() > 0) { String[] deps = depList.split(\",\"); for (String dep : deps) { JSModule other = modulesByName.get(dep);"
+      },
+      {
+        "txt": "if (other == null) { throw new FlagUsageException(\"Module '\" + name + \"' depends on unknown module '\" + dep + \"'. Be sure to list modules in dependency order.\"); } module.addDependency(other); } } } modulesByName.put(name, module);"
+      },
+      {
+        "txt": "} if (nextJsFileIndex < totalNumJsFiles) { throw new FlagUsageException(\"Too many js files specified. Expected \" + nextJsFileIndex + \" but found \" + totalNumJsFiles); } return modulesByName.values().toArray(new JSModule[modulesByName.size()]); } static Map<String, String> parseModuleWrappers(List<String> specs, JSModule[] modules) throws FlagUsageException { Preconditions.checkState(specs != null);"
+      },
+      {
+        "txt": "Map<String, String> wrappers = Maps.newHashMapWithExpectedSize(modules.length); for (JSModule m : modules) { wrappers.put(m.getName(), \"\"); } for (String spec : specs) { int pos = spec.indexOf(':'); if (pos == -1) { throw new FlagUsageException(\"Expected module wrapper to have \" + \"<name>:<wrapper> format: \" + spec);"
+      },
+      {
+        "txt": "} String name = spec.substring(0, pos); if (!wrappers.containsKey(name)) { throw new FlagUsageException(\"Unknown module: '\" + name + \"'\"); } String wrapper = spec.substring(pos + 1); if (!wrapper.contains(\"%s\")) { throw new FlagUsageException(\"No %s placeholder in module wrapper: '\" + wrapper + \"'\"); }"
+      },
+      {
+        "txt": "wrappers.put(name, wrapper); } return wrappers; } static void writeOutput(Appendable out, Compiler compiler, String code, String wrapper, String codePlaceholder) throws IOException { int pos = wrapper.indexOf(codePlaceholder); if (pos != -1) { String prefix = \"\"; if (pos > 0) {"
+      },
+      {
+        "txt": "prefix = wrapper.substring(0, pos); out.append(prefix); } out.append(code); int suffixStart = pos + codePlaceholder.length(); if (suffixStart != wrapper.length()) { out.append(wrapper.substring(suffixStart)); } out.append('\\n'); if (compiler != null && compiler.getSourceMap() != null) {"
+      },
+      {
+        "txt": "compiler.getSourceMap().setWrapperPrefix(prefix); } } else { out.append(code); out.append('\\n'); } } private static void maybeCreateDirsForPath(String pathPrefix) { if (pathPrefix.length() > 0) { String dirName ="
+      },
+      {
+        "txt": "pathPrefix.charAt(pathPrefix.length() - 1) == File.separatorChar ? pathPrefix.substring(0, pathPrefix.length() - 1) : new File( pathPrefix).getParent(); if (dirName != null) { new File(dirName).mkdirs(); } } } protected int doRun() throws FlagUsageException, IOException { Compiler.setLoggingLevel(Level.parse(config.loggingLevel));"
+      },
+      {
+        "txt": "List<JSSourceFile> externsList = createExterns(); JSSourceFile[] externs = new JSSourceFile[externsList.size()]; externsList.toArray(externs); compiler = createCompiler(); B options = createOptions(); JSModule[] modules = null; Result result; setRunOptions(options); if (inputCharset == Charsets.UTF_8) { options.outputCharset = Charsets.US_ASCII;"
+      },
+      {
+        "txt": "} else { options.outputCharset = inputCharset; } boolean writeOutputToFile = !options.jsOutputFile.isEmpty(); if (writeOutputToFile) { out = toWriter(options.jsOutputFile, inputCharset.name()); } List<String> jsFiles = config.js; List<String> moduleSpecs = config.module; if (!moduleSpecs.isEmpty()) {"
+      },
+      {
+        "txt": "modules = createJsModules(moduleSpecs, jsFiles); result = compiler.compile(externs, modules, options); } else { List<JSSourceFile> inputList = createSourceInputs(jsFiles); JSSourceFile[] inputs = new JSSourceFile[inputList.size()]; inputList.toArray(inputs); result = compiler.compile(externs, inputs, options); } int errCode = processResults(result, modules, options); if (writeOutputToFile) {"
+      },
+      {
+        "txt": "((Writer)out).close(); } return errCode; } int processResults(Result result, JSModule[] modules, B options) throws FlagUsageException, IOException { if (config.computePhaseOrdering) { return 0; } if (config.printPassGraph) {"
+      },
+      {
+        "txt": "if (compiler.getRoot() == null) { return 1; } else { out.append(DotFormatter.toDot(compiler.getPassConfig().getPassGraph())); out.append('\\n'); return 0; } } if (config.printAst) { if (compiler.getRoot() == null) {"
+      },
+      {
+        "txt": "return 1; } else { ControlFlowGraph<Node> cfg = compiler.computeCFG(); DotFormatter.appendDot(compiler.getRoot(), cfg, out); out.append('\\n'); return 0; } } if (config.printTree) { if (compiler.getRoot() == null) {"
+      },
+      {
+        "txt": "out.append(\"Code contains errors; no tree was generated.\\n\"); return 1; } else { compiler.getRoot().appendStringTree(out); out.append(\"\\n\"); return 0; } } if (result.success) { if (modules == null) {"
+      },
+      {
+        "txt": "writeOutput(out, compiler, compiler.toSource(), config.outputWrapper, config.outputWrapperMarker); outputSourceMap(options); } else { String moduleFilePrefix = config.moduleOutputPathPrefix; maybeCreateDirsForPath(moduleFilePrefix); Map<String, String> moduleWrappers = parseModuleWrappers(config.moduleWrapper, modules); Writer mapOut = null; if (!shouldGenerateMapPerModule(options)) {"
+      },
+      {
+        "txt": "mapOut = toWriter(expandSourceMapPath(options, null)); } for (JSModule m : modules) { if (shouldGenerateMapPerModule(options)) { mapOut = toWriter(expandSourceMapPath(options, m)); } Writer writer = toWriter( moduleFilePrefix + m.getName() + \".js\"); if (options.sourceMapOutputPath != null) { compiler.getSourceMap().reset();"
+      },
+      {
+        "txt": "} writeOutput(writer, compiler, compiler.toSource(m), moduleWrappers.get( m.getName()), \"%s\"); if (options.sourceMapOutputPath != null) { compiler.getSourceMap().appendTo(mapOut, m.getName()); } writer.close(); if (shouldGenerateMapPerModule(options) && mapOut != null) { mapOut.close(); mapOut = null;"
+      },
+      {
+        "txt": "} } if (mapOut != null) { mapOut.close(); } } if (options.externExportsPath != null) { Writer eeOut = openExternExportsStream(options, options.jsOutputFile); eeOut.append(result.externExport);"
+      },
+      {
+        "txt": "eeOut.close(); } outputNameMaps(options); outputManifest(); } return Math.min(result.errors.length, 0x7f); } private Charset getInputCharset() throws FlagUsageException { if (!config.charset.isEmpty()) { if (!Charset.isSupported(config.charset)) {"
+      },
+      {
+        "txt": "\" is not a valid charset name.\"); } return Charset.forName(config.charset); } return Charsets.UTF_8; } <extra_id_0> protected List<JSSourceFile> createExterns() throws FlagUsageException, IOException { return createExternInputs(config.externs); } private boolean shouldGenerateMapPerModule(B options) { return options.sourceMapOutputPath != null"
+      },
+      {
+        "txt": "private boolean shouldGenerateMapPerModule(B options) { return options.sourceMapOutputPath != null && options.sourceMapOutputPath.contains(\"%outname%\"); } private Writer openExternExportsStream(B options, String path) throws IOException { if (options.externExportsPath == null) { return null; } String exPath = options.externExportsPath;"
+      },
+      {
+        "txt": "if (!exPath.contains(File.separator)) { File outputFile = new File(path); exPath = outputFile.getParent() + File.separatorChar + exPath; } return toWriter(exPath); } private String expandCommandLinePath( String path, JSModule forModule) { String sub; if (forModule != null) {"
+      },
+      {
+        "txt": "sub = config.moduleOutputPathPrefix + forModule.getName() + \".js\"; } else if (!config.module.isEmpty()) { sub = config.moduleOutputPathPrefix; } else { sub = config.jsOutputFile; } return path.replace(\"%outname%\", sub); } @VisibleForTesting String expandSourceMapPath(B options, JSModule forModule) {"
+      },
+      {
+        "txt": "if (Strings.isEmpty(options.sourceMapOutputPath)) { return null; } return expandCommandLinePath(options.sourceMapOutputPath, forModule); } @VisibleForTesting String expandManifest(JSModule forModule) { if (Strings.isEmpty(config.outputManifest)) { return null; }"
+      },
+      {
+        "txt": "return expandCommandLinePath(config.outputManifest, forModule); } private Writer toWriter(String fileName) throws IOException { if (fileName == null) { return null; } return new BufferedWriter(new FileWriter(fileName)); } private Writer toWriter(String fileName, String charSet) throws IOException {"
+      },
+      {
+        "txt": "if (fileName == null) { return null; } return new BufferedWriter( new OutputStreamWriter(new FileOutputStream(fileName), charSet)); } private void outputSourceMap(B options) throws IOException { if (Strings.isEmpty(options.sourceMapOutputPath)) { return;"
+      },
+      {
+        "txt": "} String outName = expandSourceMapPath(options, null); Writer out = toWriter(outName); compiler.getSourceMap().appendTo(out, outName); out.close(); } private String getMapPath(String outputFile) { String basePath = \"\"; if (outputFile.equals(\"\")) { if (!config.moduleOutputPathPrefix.equals(\"\")) {"
+      },
+      {
+        "txt": "basePath = config.moduleOutputPathPrefix; } else { basePath = \"jscompiler\"; } } else { File file = new File(outputFile); String outputFileName = file.getName(); if (outputFileName.endsWith(\".js\")) { outputFileName = outputFileName.substring(0, outputFileName.length() - 3);"
+      },
+      {
+        "txt": "} basePath = file.getParent() + File.separatorChar + outputFileName; } return basePath; } private void outputNameMaps(B options) throws FlagUsageException, IOException { String propertyMapOutputPath = null; String variableMapOutputPath = null; String functionInformationMapOutputPath = null;"
+      },
+      {
+        "txt": "if (config.createNameMapFiles) { String basePath = getMapPath(options.jsOutputFile); propertyMapOutputPath = basePath + \"_props_map.out\"; variableMapOutputPath = basePath + \"_vars_map.out\"; functionInformationMapOutputPath = basePath + \"_functions_map.out\"; } if (!config.variableMapOutputFile.equals(\"\")) { if (variableMapOutputPath != null) { throw new FlagUsageException(\"The flags variable_map_output_file and \" + \"create_name_map_files cannot both be used simultaniously.\");"
+      },
+      {
+        "txt": "} variableMapOutputPath = config.variableMapOutputFile; } if (!config.propertyMapOutputFile.equals(\"\")) { if (propertyMapOutputPath != null) { throw new FlagUsageException(\"The flags property_map_output_file and \" + \"create_name_map_files cannot both be used simultaniously.\"); } propertyMapOutputPath = config.propertyMapOutputFile; }"
+      },
+      {
+        "txt": "if (variableMapOutputPath != null) { if (compiler.getVariableMap() != null) { compiler.getVariableMap().save(variableMapOutputPath); } } if (propertyMapOutputPath != null) { if (compiler.getPropertyMap() != null) { compiler.getPropertyMap().save(propertyMapOutputPath); } }"
+      },
+      {
+        "txt": "if (functionInformationMapOutputPath != null) { if (compiler.getFunctionalInformationMap() != null) { FileOutputStream file = new FileOutputStream(functionInformationMapOutputPath); CodedOutputStream outputStream = CodedOutputStream.newInstance(file); compiler.getFunctionalInformationMap().writeTo(outputStream); outputStream.flush(); file.flush(); file.close(); }"
+      },
+      {
+        "txt": "} } @VisibleForTesting static void createDefineReplacements(List<String> definitions, CompilerOptions options) { for (String override : definitions) { String[] assignment = override.split(\"=\", 2); String defName = assignment[0]; if (defName.length() > 0) { if (assignment.length == 1) {"
+      },
+      {
+        "txt": "options.setDefineToBooleanLiteral(defName, true); continue; } else { String defValue = assignment[1]; if (defValue.equals(\"true\")) { options.setDefineToBooleanLiteral(defName, true); continue; } else if (defValue.equals(\"false\")) { options.setDefineToBooleanLiteral(defName, false); continue;"
+      },
+      {
+        "txt": "} else if (defValue.length() > 1 && ((defValue.charAt(0) == '\\'' && defValue.charAt(defValue.length() - 1) == '\\'') || (defValue.charAt(0) == '\\\"' && defValue.charAt(defValue.length() - 1) == '\\\"'))) { String maybeStringVal = defValue.substring(1, defValue.length() - 1); if (maybeStringVal.indexOf(defValue.charAt(0)) == -1) { options.setDefineToStringLiteral(defName, maybeStringVal); continue;"
+      },
+      {
+        "txt": "} } else { try { options.setDefineToDoubleLiteral(defName, Double.parseDouble(defValue)); continue; } catch (NumberFormatException e) { } } }"
+      },
+      {
+        "txt": "} throw new RuntimeException( \"--define flag syntax invalid: \" + override); } } private boolean shouldGenerateManifestPerModule() { return !config.module.isEmpty() && config.outputManifest != null && config.outputManifest.contains(\"%outname%\"); }"
+      },
+      {
+        "txt": "private void outputManifest() throws IOException { String outputManifest = config.outputManifest; if (Strings.isEmpty(outputManifest)) { return; } JSModuleGraph graph = compiler.getModuleGraph(); if (shouldGenerateManifestPerModule()) { Iterable<JSModule> modules = graph.getAllModules(); for (JSModule module : modules) { Writer out = toWriter(expandManifest(module));"
+      },
+      {
+        "txt": "printManifestTo(module.getInputs(), out); out.close(); } } else { Writer out = toWriter(expandManifest(null)); if (graph == null) { printManifestTo(compiler.getInputsInOrder(), out); } else { printModuleGraphManifestTo(graph, out); }"
+      },
+      {
+        "txt": "out.close(); } } @VisibleForTesting void printModuleGraphManifestTo( JSModuleGraph graph, Appendable out) throws IOException { Joiner commas = Joiner.on(\",\"); boolean requiresNewline = false; for (JSModule module : graph.getAllModulesInDependencyOrder()) { if (requiresNewline) {"
+      },
+      {
+        "txt": "out.append(\"\\n\"); } String dependencies = commas.join(module.getSortedDependencyNames()); out.append( String.format(\"{%s%s}\\n\", module.getName(), dependencies.isEmpty() ? \"\" : \":\" + dependencies)); printManifestTo(module.getInputs(), out); requiresNewline = true; }"
+      },
+      {
+        "txt": "} private void printManifestTo(Iterable<CompilerInput> inputs, Appendable out) throws IOException { List<String> names = Lists.newArrayList(); for (CompilerInput input : inputs) { names.add(input.getName()); } String result = Joiner.on(\"\\n\").join(names); out.append(result); out.append(\"\\n\");"
+      },
+      {
+        "txt": "} class RunTimeStats { private long bestRunTime = Long.MAX_VALUE; private long worstRunTime = Long.MIN_VALUE; long lastStartTime = 0; private List<List<String>> loopedPassesInBestRun = null; private void recordStartRun() { lastStartTime = System.currentTimeMillis(); PhaseOptimizer.clearLoopsRun(); }"
+      },
+      {
+        "txt": "private void recordEndRun() { long endTime = System.currentTimeMillis(); long length = endTime - lastStartTime; worstRunTime = Math.max(length, worstRunTime); if (length < bestRunTime) { loopedPassesInBestRun = PhaseOptimizer.getLoopsRun(); bestRunTime = length; } } private void outputBestPhaseOrdering() {"
+      },
+      {
+        "txt": "try { out.append(\"Best time: \" + bestRunTime + \"\\n\"); out.append(\"Worst time: \" + worstRunTime + \"\\n\"); int i = 1; for (List<String> loop : loopedPassesInBestRun) { out.append(\"\\nLoop \" + i + \":\\n\" + Joiner.on(\"\\n\").join(loop)+ \"\\n\"); i++; } } catch (IOException e) { throw new RuntimeException(\"unexpected exception\", e);"
+      },
+      {
+        "txt": "} } } static class CommandLineConfig { private boolean printTree = false; CommandLineConfig setPrintTree(boolean printTree) { this.printTree = printTree; return this; } private boolean computePhaseOrdering = false;"
+      },
+      {
+        "txt": "CommandLineConfig setComputePhaseOrdering(boolean computePhaseOrdering) { this.computePhaseOrdering = computePhaseOrdering; return this; } private boolean printAst = false; CommandLineConfig setPrintAst(boolean printAst) { this.printAst = printAst; return this; } private boolean printPassGraph = false;"
+      },
+      {
+        "txt": "CommandLineConfig setPrintPassGraph(boolean printPassGraph) { this.printPassGraph = printPassGraph; return this; } private CompilerOptions.DevMode jscompDevMode = CompilerOptions.DevMode.OFF; CommandLineConfig setJscompDevMode(CompilerOptions.DevMode jscompDevMode) { this.jscompDevMode = jscompDevMode; return this; } private String loggingLevel = Level.WARNING.getName();"
+      },
+      {
+        "txt": "CommandLineConfig setLoggingLevel(String loggingLevel) { this.loggingLevel = loggingLevel; return this; } private final List<String> externs = Lists.newArrayList(); CommandLineConfig setExterns(List<String> externs) { this.externs.clear(); this.externs.addAll(externs); return this; }"
+      },
+      {
+        "txt": "private final List<String> js = Lists.newArrayList(); CommandLineConfig setJs(List<String> js) { this.js.clear(); this.js.addAll(js); return this; } private String jsOutputFile = \"\"; CommandLineConfig setJsOutputFile(String jsOutputFile) { this.jsOutputFile = jsOutputFile; return this;"
+      },
+      {
+        "txt": "} private final List<String> module = Lists.newArrayList(); CommandLineConfig setModule(List<String> module) { this.module.clear(); this.module.addAll(module); return this; } private String variableMapInputFile = \"\"; CommandLineConfig setVariableMapInputFile(String variableMapInputFile) { this.variableMapInputFile = variableMapInputFile;"
+      },
+      {
+        "txt": "return this; } private String propertyMapInputFile = \"\"; CommandLineConfig setPropertyMapInputFile(String propertyMapInputFile) { this.propertyMapInputFile = propertyMapInputFile; return this; } private String variableMapOutputFile = \"\"; CommandLineConfig setVariableMapOutputFile(String variableMapOutputFile) { this.variableMapOutputFile = variableMapOutputFile;"
+      },
+      {
+        "txt": "return this; } private boolean createNameMapFiles = false; CommandLineConfig setCreateNameMapFiles(boolean createNameMapFiles) { this.createNameMapFiles = createNameMapFiles; return this; } private String propertyMapOutputFile = \"\"; CommandLineConfig setPropertyMapOutputFile(String propertyMapOutputFile) { this.propertyMapOutputFile = propertyMapOutputFile;"
+      },
+      {
+        "txt": "return this; } private CodingConvention codingConvention = new DefaultCodingConvention(); CommandLineConfig setCodingConvention(CodingConvention codingConvention) { this.codingConvention = codingConvention; return this; } private int summaryDetailLevel = 1; CommandLineConfig setSummaryDetailLevel(int summaryDetailLevel) { this.summaryDetailLevel = summaryDetailLevel;"
+      },
+      {
+        "txt": "return this; } private String outputWrapper = \"\"; CommandLineConfig setOutputWrapper(String outputWrapper) { this.outputWrapper = outputWrapper; return this; } private String outputWrapperMarker = \"\"; CommandLineConfig setOutputWrapperMarker(String outputWrapperMarker) { this.outputWrapperMarker = outputWrapperMarker;"
+      },
+      {
+        "txt": "return this; } private final List<String> moduleWrapper = Lists.newArrayList(); CommandLineConfig setModuleWrapper(List<String> moduleWrapper) { this.moduleWrapper.clear(); this.moduleWrapper.addAll(moduleWrapper); return this; } private String moduleOutputPathPrefix = \"\"; CommandLineConfig setModuleOutputPathPrefix(String moduleOutputPathPrefix) {"
+      },
+      {
+        "txt": "this.moduleOutputPathPrefix = moduleOutputPathPrefix; return this; } private String createSourceMap = \"\"; CommandLineConfig setCreateSourceMap(String createSourceMap) { this.createSourceMap = createSourceMap; return this; } private SourceMap.DetailLevel sourceMapDetailLevel = SourceMap.DetailLevel.ALL;"
+      },
+      {
+        "txt": "CommandLineConfig setSourceMapDetailLevel(SourceMap.DetailLevel level) { this.sourceMapDetailLevel = level; return this; } private final List<String> jscompError = Lists.newArrayList(); CommandLineConfig setJscompError(List<String> jscompError) { this.jscompError.clear(); this.jscompError.addAll(jscompError); return this; }"
+      },
+      {
+        "txt": "private final List<String> jscompWarning = Lists.newArrayList(); CommandLineConfig setJscompWarning(List<String> jscompWarning) { this.jscompWarning.clear(); this.jscompWarning.addAll(jscompWarning); return this; } private final List<String> jscompOff = Lists.newArrayList(); CommandLineConfig setJscompOff(List<String> jscompOff) { this.jscompOff.clear(); this.jscompOff.addAll(jscompOff);"
+      },
+      {
+        "txt": "return this; } private final List<String> define = Lists.newArrayList(); CommandLineConfig setDefine(List<String> define) { this.define.clear(); this.define.addAll(define); return this; } private String charset = \"\"; CommandLineConfig setCharset(String charset) {"
+      },
+      {
+        "txt": "this.charset = charset; return this; } private boolean manageClosureDependencies = false; CommandLineConfig setManageClosureDependencies(boolean newVal) { this.manageClosureDependencies = newVal; return this; } private String outputManifest = \"\"; CommandLineConfig setOutputManifest(String outputManifest) {"
+      },
+      {
+        "txt": "this.outputManifest = outputManifest; return this; } }"
+      }
+    ]
+  },
+  {
+    "id": 655,
+    "file_path": "src/com/google/javascript/jscomp/CommandLineRunner.java",
+    "start-bug-line": 471,
+    "end-bug-line": 471,
+    "bug": "initOptionsFromFlags(options);",
+    "fix": "[Delete]",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.google.javascript.jscomp; import com.google.common.base.Preconditions;"
+      },
+      {
+        "txt": "import com.google.common.collect.ImmutableList; import com.google.common.collect.Lists; import com.google.common.collect.Maps; import com.google.common.collect.Sets; import com.google.common.io.LimitInputStream; import org.kohsuke.args4j.CmdLineException; import org.kohsuke.args4j.CmdLineParser; import org.kohsuke.args4j.Option; import org.kohsuke.args4j.OptionDef; import org.kohsuke.args4j.spi.OptionHandler;"
+      },
+      {
+        "txt": "import org.kohsuke.args4j.spi.Parameters; import org.kohsuke.args4j.spi.Setter; import java.io.IOException; import java.io.InputStream; import java.io.PrintStream; import java.util.List; import java.util.Map; import java.util.Set; import java.util.logging.Level; import java.util.regex.Matcher;"
+      },
+      {
+        "txt": "import java.util.regex.Pattern; import java.util.zip.ZipEntry; import java.util.zip.ZipInputStream; public class CommandLineRunner extends AbstractCommandLineRunner<Compiler, CompilerOptions> { private static class Flags { @Option(name = \"--help\", usage = \"Displays this message\") private boolean display_help = false; @Option(name = \"--print_tree\","
+      },
+      {
+        "txt": "handler = BooleanOptionHandler.class, usage = \"Prints out the parse tree and exits\") private boolean print_tree = false; @Option(name = \"--compute_phase_ordering\", handler = BooleanOptionHandler.class, usage = \"Runs the compile job many times, then prints out the \" + \"best phase ordering from this run\") private boolean compute_phase_ordering = false; @Option(name = \"--print_ast\", handler = BooleanOptionHandler.class,"
+      },
+      {
+        "txt": "usage = \"Prints a dot file describing the internal abstract syntax\" + \" tree and exits\") private boolean print_ast = false; @Option(name = \"--print_pass_graph\", usage = \"Prints a dot file describing the passes that will get run\" + \" and exits\") private boolean print_pass_graph = false; @Option(name = \"--jscomp_dev_mode\", usage = \"Turns on extra sanity checks\", aliases = {\"--dev_mode\"})"
+      },
+      {
+        "txt": "private CompilerOptions.DevMode jscomp_dev_mode = CompilerOptions.DevMode.OFF; @Option(name = \"--logging_level\", usage = \"The logging level (standard java.util.logging.Level\" + \" values) for Compiler progress. Does not control errors or\" + \" warnings for the JavaScript code under compilation\") private String logging_level = Level.WARNING.getName(); @Option(name = \"--externs\", usage = \"The file containing javascript externs. You may specify\" + \" multiple\")"
+      },
+      {
+        "txt": "private List<String> externs = Lists.newArrayList(); @Option(name = \"--js\", usage = \"The javascript filename. You may specify multiple\") private List<String> js = Lists.newArrayList(); @Option(name = \"--js_output_file\", usage = \"Primary output filename. If not specified, output is \" + \"written to stdout\") private String js_output_file = \"\"; @Option(name = \"--module\", usage = \"A javascript module specification. The format is \""
+      },
+      {
+        "txt": "+ \"<name>:<num-js-files>[:[<dep>,...][:]]]. Module names must be \" + \"unique. Each dep is the name of a module that this module \" + \"depends on. Modules must be listed in dependency order, and js \" + \"source files must be listed in the corresponding order. Where \" + \"--module flags occur in relation to --js flags is unimportant\") private List<String> module = Lists.newArrayList(); @Option(name = \"--variable_map_input_file\", usage = \"File containing the serialized version of the variable \" + \"renaming map produced by a previous compilation\") private String variable_map_input_file = \"\";"
+      },
+      {
+        "txt": "@Option(name = \"--property_map_input_file\", usage = \"File containing the serialized version of the property \" + \"renaming map produced by a previous compilation\") private String property_map_input_file = \"\"; @Option(name = \"--variable_map_output_file\", usage = \"File where the serialized version of the variable \" + \"renaming map produced should be saved\") private String variable_map_output_file = \"\"; @Option(name = \"--create_name_map_files\", handler = BooleanOptionHandler.class,"
+      },
+      {
+        "txt": "usage = \"If true, variable renaming and property renaming map \" + \"files will be produced as {binary name}_vars_map.out and \" + \"{binary name}_props_map.out. Note that this flag cannot be used \" + \"in conjunction with either variable_map_output_file or \" + \"property_map_output_file\") private boolean create_name_map_files = false; @Option(name = \"--property_map_output_file\", usage = \"File where the serialized version of the property \" + \"renaming map produced should be saved\") private String property_map_output_file = \"\";"
+      },
+      {
+        "txt": "@Option(name = \"--third_party\", handler = BooleanOptionHandler.class, usage = \"Check source validity but do not enforce Closure style \" + \"rules and conventions\") private boolean third_party = false; @Option(name = \"--summary_detail_level\", usage = \"Controls how detailed the compilation summary is. Values:\" + \" 0 (never print summary), 1 (print summary only if there are \" + \"errors or warnings), 2 (print summary if type checking is on, \" + \"see --check_types), 3 (always print summary). The default level \""
+      },
+      {
+        "txt": "+ \"is 1\") private int summary_detail_level = 1; @Option(name = \"--output_wrapper\", usage = \"Interpolate output into this string at the place denoted\" + \" by the marker token %output%. See --output_wrapper_marker\") private String output_wrapper = \"\"; @Option(name = \"--output_wrapper_marker\", usage = \"Use this token as output marker in the value of\" + \" --output_wrapper\") private String output_wrapper_marker = \"%output%\";"
+      },
+      {
+        "txt": "@Option(name = \"--module_wrapper\", usage = \"An output wrapper for a javascript module (optional). \" + \"The format is <name>:<wrapper>. The module name must correspond \" + \"with a module specified using --module. The wrapper must \" + \"contain %s as the code placeholder\") private List<String> module_wrapper = Lists.newArrayList(); @Option(name = \"--module_output_path_prefix\", usage = \"Prefix for filenames of compiled js modules. \" + \"<module-name>.js will be appended to this prefix. Directories \" + \"will be created as needed. Use with --module\")"
+      },
+      {
+        "txt": "private String module_output_path_prefix = \"./\"; @Option(name = \"--create_source_map\", usage = \"If specified, a source map file mapping the generated \" + \"source files back to the original source file will be \" + \"output to the specified path. The %outname% placeholder will \" + \"expand to the name of the output file that the source map \" + \"corresponds to.\") private String create_source_map = \"\"; @Option(name = \"--jscomp_error\", usage = \"Make the named class of warnings an error. Options:\" +"
+      },
+      {
+        "txt": "DiagnosticGroups.DIAGNOSTIC_GROUP_NAMES) private List<String> jscomp_error = Lists.newArrayList(); @Option(name = \"--jscomp_warning\", usage = \"Make the named class of warnings a normal warning. \" + \"Options:\" + DiagnosticGroups.DIAGNOSTIC_GROUP_NAMES) private List<String> jscomp_warning = Lists.newArrayList(); @Option(name = \"--jscomp_off\", usage = \"Turn off the named class of warnings. Options:\" + DiagnosticGroups.DIAGNOSTIC_GROUP_NAMES) private List<String> jscomp_off = Lists.newArrayList();"
+      },
+      {
+        "txt": "@Option(name = \"--define\", aliases = {\"--D\", \"-D\"}, usage = \"Override the value of a variable annotated @define. \" + \"The format is <name>[=<val>], where <name> is the name of a @define \" + \"variable and <val> is a boolean, number, or a single-quoted string \" + \"that contains no single quotes. If [=<val>] is omitted, \" + \"the variable is marked true\") private List<String> define = Lists.newArrayList(); @Option(name = \"--charset\", usage = \"Input and output charset for all files. By default, we \" +"
+      },
+      {
+        "txt": "\"accept UTF-8 as input and output US_ASCII\") private String charset = \"\"; @Option(name = \"--compilation_level\", usage = \"Specifies the compilation level to use. Options: \" + \"WHITESPACE_ONLY, SIMPLE_OPTIMIZATIONS, ADVANCED_OPTIMIZATIONS\") private CompilationLevel compilation_level = CompilationLevel.SIMPLE_OPTIMIZATIONS; @Option(name = \"--warning_level\", usage = \"Specifies the warning level to use. Options: \" + \"QUIET, DEFAULT, VERBOSE\")"
+      },
+      {
+        "txt": "private WarningLevel warning_level = WarningLevel.DEFAULT; @Option(name = \"--use_only_custom_externs\", handler = BooleanOptionHandler.class, usage = \"Specifies whether the default externs should be excluded\") private boolean use_only_custom_externs = false; @Option(name = \"--debug\", handler = BooleanOptionHandler.class, usage = \"Enable debugging options\") private boolean debug = false; @Option(name = \"--formatting\","
+      },
+      {
+        "txt": "usage = \"Specifies which formatting options, if any, should be \" + \"applied to the output JS. Options: \" + \"PRETTY_PRINT, PRINT_INPUT_DELIMITER\") private List<FormattingOption> formatting = Lists.newArrayList(); @Option(name = \"--process_closure_primitives\", handler = BooleanOptionHandler.class, usage = \"Processes built-ins from the Closure library, such as \" + \"goog.require(), goog.provide(), and goog.exportSymbol()\") private boolean process_closure_primitives = true; @Option(name = \"--manage_closure_dependencies\","
+      },
+      {
+        "txt": "handler = BooleanOptionHandler.class, usage = \"Automatically sort dependencies so that a file that \" + \"goog.provides symbol X will always come before a file that \" + \"goog.requires symbol X. If an input provides symbols, and \" + \"those symbols are never required, then that input will not \" + \"be included in the compilation.\") private boolean manage_closure_dependencies = false; @Option(name = \"--output_manifest\", usage = \"Prints out a list of all the files in the compilation. \" + \"If --manage_closure_dependencies is on, this will not include \""
+      },
+      {
+        "txt": "+ \"files that got dropped because they were not required. \" + \"The %outname% placeholder expands to the js output file. \" + \"If you're using modularization, using %outname% will create \" + \"a manifest for each module.\") private String output_manifest = \"\"; public static class BooleanOptionHandler extends OptionHandler<Boolean> { private static final Set<String> TRUES = Sets.newHashSet(\"true\", \"on\", \"yes\", \"1\"); private static final Set<String> FALSES = Sets.newHashSet(\"false\", \"off\", \"no\", \"0\");"
+      },
+      {
+        "txt": "public BooleanOptionHandler( CmdLineParser parser, OptionDef option, Setter<? super Boolean> setter) { super(parser, option, setter); } @Override public int parseArguments(Parameters params) throws CmdLineException { String param = params.getParameter(0); if (param == null) { setter.addValue(true);"
+      },
+      {
+        "txt": "return 0; } else { String lowerParam = param.toLowerCase(); if (TRUES.contains(lowerParam)) { setter.addValue(true); } else if (FALSES.contains(lowerParam)) { setter.addValue(false); } else { throw new CmdLineException(owner, \"Illegal boolean value: \" + lowerParam);"
+      },
+      {
+        "txt": "} return 1; } } @Override public String getDefaultMetaVariable() { return null; } } }"
+      },
+      {
+        "txt": "private static enum FormattingOption { PRETTY_PRINT, PRINT_INPUT_DELIMITER, ; private void applyToOptions(CompilerOptions options) { switch (this) { case PRETTY_PRINT: options.prettyPrint = true; break; case PRINT_INPUT_DELIMITER:"
+      },
+      {
+        "txt": "options.printInputDelimiter = true; break; default: throw new RuntimeException(\"Unknown formatting option: \" + this); } } } private final Flags flags = new Flags(); private boolean isConfigValid = false; protected CommandLineRunner(String[] args) {"
+      },
+      {
+        "txt": "super(); initConfigFromFlags(args, System.err); } protected CommandLineRunner(String[] args, PrintStream out, PrintStream err) { super(out, err); initConfigFromFlags(args, err); } private void initConfigFromFlags(String[] args, PrintStream err) { Pattern argPattern = Pattern.compile(\"(--[a-zA-Z_]+)=(.*)\"); Pattern quotesPattern = Pattern.compile(\"^['\\\"](.*)['\\\"]$\");"
+      },
+      {
+        "txt": "List<String> processedArgs = Lists.newArrayList(); for (String arg : args) { Matcher matcher = argPattern.matcher(arg); if (matcher.matches()) { processedArgs.add(matcher.group(1)); String value = matcher.group(2); Matcher quotesMatcher = quotesPattern.matcher(value); if (quotesMatcher.matches()) { processedArgs.add(quotesMatcher.group(1)); } else {"
+      },
+      {
+        "txt": "processedArgs.add(value); } } else { processedArgs.add(arg); } } CmdLineParser parser = new CmdLineParser(flags); isConfigValid = true; try { parser.parseArgument(processedArgs.toArray(new String[] {}));"
+      },
+      {
+        "txt": "} catch (CmdLineException e) { err.println(e.getMessage()); isConfigValid = false; } if (!isConfigValid || flags.display_help) { isConfigValid = false; parser.printUsage(err); } else { getCommandLineConfig() .setPrintTree(flags.print_tree)"
+      },
+      {
+        "txt": ".setComputePhaseOrdering(flags.compute_phase_ordering) .setPrintAst(flags.print_ast) .setPrintPassGraph(flags.print_pass_graph) .setJscompDevMode(flags.jscomp_dev_mode) .setLoggingLevel(flags.logging_level) .setExterns(flags.externs) .setJs(flags.js) .setJsOutputFile(flags.js_output_file) .setModule(flags.module) .setVariableMapInputFile(flags.variable_map_input_file)"
+      },
+      {
+        "txt": ".setPropertyMapInputFile(flags.property_map_input_file) .setVariableMapOutputFile(flags.variable_map_output_file) .setCreateNameMapFiles(flags.create_name_map_files) .setPropertyMapOutputFile(flags.property_map_output_file) .setCodingConvention(flags.third_party ? new DefaultCodingConvention() : new ClosureCodingConvention()) .setSummaryDetailLevel(flags.summary_detail_level) .setOutputWrapper(flags.output_wrapper) .setOutputWrapperMarker(flags.output_wrapper_marker)"
+      },
+      {
+        "txt": ".setModuleWrapper(flags.module_wrapper) .setModuleOutputPathPrefix(flags.module_output_path_prefix) .setCreateSourceMap(flags.create_source_map) .setJscompError(flags.jscomp_error) .setJscompWarning(flags.jscomp_warning) .setJscompOff(flags.jscomp_off) .setDefine(flags.define) .setCharset(flags.charset) .setManageClosureDependencies(flags.manage_closure_dependencies) .setOutputManifest(flags.output_manifest);"
+      },
+      {
+        "txt": "} } @Override protected CompilerOptions createOptions() { CompilerOptions options = new CompilerOptions(); options.setCodingConvention(new ClosureCodingConvention()); CompilationLevel level = flags.compilation_level; level.setOptionsForCompilationLevel(options); if (flags.debug) { level.setDebugOptionsForCompilationLevel(options);"
+      },
+      {
+        "txt": "WarningLevel wLevel = flags.warning_level; wLevel.setOptionsForWarningLevel(options); for (FormattingOption formattingOption : flags.formatting) { formattingOption.applyToOptions(options); } options.closurePass = flags.process_closure_primitives; <extra_id_0> return options; } @Override protected Compiler createCompiler() { return new Compiler(getErrorPrintStream()); }"
+      },
+      {
+        "txt": "return new Compiler(getErrorPrintStream()); } @Override protected List<JSSourceFile> createExterns() throws FlagUsageException, IOException { List<JSSourceFile> externs = super.createExterns(); if (!flags.use_only_custom_externs) { List<JSSourceFile> defaultExterns = getDefaultExterns(); defaultExterns.addAll(externs); return defaultExterns;"
+      },
+      {
+        "txt": "} else { return externs; } } private static final List<String> DEFAULT_EXTERNS_NAMES = ImmutableList.of( \"es3.js\", \"es5.js\", \"w3c_event.js\", \"w3c_event3.js\", \"gecko_event.js\","
+      },
+      {
+        "txt": "\"ie_event.js\", \"webkit_event.js\", \"w3c_dom1.js\", \"w3c_dom2.js\", \"w3c_dom3.js\", \"gecko_dom.js\", \"ie_dom.js\", \"webkit_dom.js\", \"w3c_css.js\", \"gecko_css.js\","
+      },
+      {
+        "txt": "\"ie_css.js\", \"webkit_css.js\", \"google.js\", \"deprecated.js\", \"fileapi.js\", \"flash.js\", \"gears_symbols.js\", \"gears_types.js\", \"gecko_xml.js\", \"html5.js\","
+      },
+      {
+        "txt": "\"ie_vml.js\", \"iphone.js\", \"webstorage.js\", \"w3c_css3d.js\", \"w3c_elementtraversal.js\", \"w3c_geolocation.js\", \"w3c_range.js\", \"w3c_selectors.js\", \"w3c_xml.js\", \"window.js\","
+      },
+      {
+        "txt": "\"webkit_notifications.js\"); public static List<JSSourceFile> getDefaultExterns() throws IOException { InputStream input = CommandLineRunner.class.getResourceAsStream( \"/externs.zip\"); ZipInputStream zip = new ZipInputStream(input); Map<String, JSSourceFile> externsMap = Maps.newHashMap(); for (ZipEntry entry = null; (entry = zip.getNextEntry()) != null; ) { LimitInputStream entryStream = new LimitInputStream(zip, entry.getSize()); externsMap.put(entry.getName(), JSSourceFile.fromInputStream("
+      },
+      {
+        "txt": "\"externs.zip//\" + entry.getName(), entryStream)); } Preconditions.checkState( externsMap.keySet().equals(Sets.newHashSet(DEFAULT_EXTERNS_NAMES)), \"Externs zip must match our hard-coded list of externs.\"); List<JSSourceFile> externs = Lists.newArrayList(); for (String key : DEFAULT_EXTERNS_NAMES) { externs.add(externsMap.get(key)); }"
+      },
+      {
+        "txt": "return externs; } public boolean shouldRunCompiler() { return this.isConfigValid; } public static void main(String[] args) { CommandLineRunner runner = new CommandLineRunner(args); if (runner.shouldRunCompiler()) { runner.run(); } else {"
+      },
+      {
+        "txt": "System.exit(-1); } }"
+      }
+    ]
+  },
+  {
+    "id": 656,
+    "file_path": "src/com/google/javascript/jscomp/Compiler.java",
+    "start-bug-line": 1362,
+    "end-bug-line": 1362,
+    "bug": "Charset charset = options.outputCharset;",
+    "fix": "Charset charset = options.outputCharset != null ? Charset.forName(options.outputCharset) : null;",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.google.javascript.jscomp; import com.google.common.annotations.VisibleForTesting; import com.google.common.base.Preconditions; import com.google.common.base.Supplier; import com.google.common.collect.Lists;"
+      },
+      {
+        "txt": "import com.google.common.collect.Maps; import com.google.javascript.jscomp.CompilerOptions.DevMode; import com.google.javascript.jscomp.CompilerOptions.TracerMode; import com.google.javascript.jscomp.deps.SortedDependencies.CircularDependencyException; import com.google.javascript.jscomp.mozilla.rhino.ErrorReporter; import com.google.javascript.jscomp.parsing.Config; import com.google.javascript.jscomp.parsing.ParserRunner; import com.google.javascript.rhino.JSDocInfo; import com.google.javascript.rhino.Node; import com.google.javascript.rhino.Token;"
+      },
+      {
+        "txt": "import com.google.javascript.rhino.jstype.JSTypeRegistry; import java.io.IOException; import java.io.PrintStream; import java.io.Serializable; import java.nio.charset.Charset; import java.util.Collections; import java.util.HashMap; import java.util.List; import java.util.Map; import java.util.Set;"
+      },
+      {
+        "txt": "import java.util.concurrent.Callable; import java.util.logging.Level; import java.util.logging.Logger; public class Compiler extends AbstractCompiler { CompilerOptions options = null; private PassConfig passes = null; private List<CompilerInput> externs; private List<JSModule> modules; private JSModuleGraph moduleGraph; private List<CompilerInput> inputs;"
+      },
+      {
+        "txt": "private ErrorManager errorManager; Node externsRoot; Node jsRoot; Node externAndJsRoot; private Map<String, CompilerInput> inputsByName; private SourceMap sourceMap; private String externExports = null; private int uniqueNameId = 0; private boolean normalized = false; private boolean useThreads = true;"
+      },
+      {
+        "txt": "private boolean hasRegExpGlobalReferences = true; private FunctionInformationMap functionInformationMap; private final StringBuilder debugLog = new StringBuilder(); CodingConvention defaultCodingConvention = new GoogleCodingConvention(); private JSTypeRegistry typeRegistry; private Config parserConfig = null; private ReverseAbstractInterpreter abstractInterpreter; private TypeValidator typeValidator; public PerformanceTracker tracker; private final com.google.javascript.rhino.ErrorReporter oldErrorReporter ="
+      },
+      {
+        "txt": "RhinoErrorReporter.forOldRhino(this); private final ErrorReporter defaultErrorReporter = RhinoErrorReporter.forNewRhino(this); public static final DiagnosticType OPTIMIZE_LOOP_ERROR = DiagnosticType.error( \"JSC_OPTIMIZE_LOOP_ERROR\", \"Exceeded max number of optimization iterations: {0}\"); public static final DiagnosticType MOTION_ITERATIONS_ERROR = DiagnosticType.error(\"JSC_OPTIMIZE_LOOP_ERROR\", \"Exceeded max number of code motion iterations: {0}\"); private static final long COMPILER_STACK_SIZE = 1048576L;"
+      },
+      {
+        "txt": "private static final Logger logger = Logger.getLogger(\"com.google.javascript.jscomp\"); private final PrintStream outStream; public Compiler() { this((PrintStream) null); } public Compiler(PrintStream stream) { addChangeHandler(recentChange); outStream = stream; }"
+      },
+      {
+        "txt": "public Compiler(ErrorManager errorManager) { this(); setErrorManager(errorManager); } public void setErrorManager(ErrorManager errorManager) { Preconditions.checkNotNull( errorManager, \"the error manager cannot be null\"); this.errorManager = errorManager; } private MessageFormatter createMessageFormatter() {"
+      },
+      {
+        "txt": "boolean colorize = options.shouldColorizeErrorOutput(); return options.errorFormat.toFormatter(this, colorize); } public void initOptions(CompilerOptions options) { this.options = options; if (errorManager == null) { if (outStream == null) { setErrorManager( new LoggerErrorManager(createMessageFormatter(), logger)); } else {"
+      },
+      {
+        "txt": "PrintStreamErrorManager printer = new PrintStreamErrorManager(createMessageFormatter(), outStream); printer.setSummaryDetailLevel(options.summaryDetailLevel); setErrorManager(printer); } } } public void init(JSSourceFile[] externs, JSSourceFile[] inputs, CompilerOptions options) { init(Lists.<JSSourceFile>newArrayList(externs),"
+      },
+      {
+        "txt": "Lists.<JSSourceFile>newArrayList(inputs), options); } public void init(List<JSSourceFile> externs, List<JSSourceFile> inputs, CompilerOptions options) { JSModule module = new JSModule(\"[singleton]\"); for (JSSourceFile input : inputs) { module.add(input); } initModules(externs, Lists.newArrayList(module), options); }"
+      },
+      {
+        "txt": "static final DiagnosticType MODULE_DEPENDENCY_ERROR = DiagnosticType.error(\"JSC_MODULE_DEPENDENCY_ERROR\", \"Bad dependency: {0} -> {1}. \" + \"Modules must be listed in dependency order.\"); public void init(JSSourceFile[] externs, JSModule[] modules, CompilerOptions options) { initModules(Lists.<JSSourceFile>newArrayList(externs), Lists.<JSModule>newArrayList(modules), options); } public void initModules("
+      },
+      {
+        "txt": "List<JSSourceFile> externs, List<JSModule> modules, CompilerOptions options) { initOptions(options); checkFirstModule(modules); fillEmptyModules(modules); this.externs = makeCompilerInput(externs, true); this.modules = modules; if (modules.size() > 1) { try { this.moduleGraph = new JSModuleGraph(modules);"
+      },
+      {
+        "txt": "} catch (JSModuleGraph.ModuleDependenceException e) { report(JSError.make(MODULE_DEPENDENCY_ERROR, e.getModule().getName(), e.getDependentModule().getName())); return; } } else { this.moduleGraph = null; } this.inputs = getAllInputsFromModules(modules); initBasedOnOptions();"
+      },
+      {
+        "txt": "initInputsByNameMap(); } private void initBasedOnOptions() { if (options.sourceMapOutputPath != null) { sourceMap = new SourceMap(); } } private List<CompilerInput> makeCompilerInput( List<JSSourceFile> files, boolean isExtern) { List<CompilerInput> inputs = Lists.newArrayList();"
+      },
+      {
+        "txt": "for (JSSourceFile file : files) { inputs.add(new CompilerInput(file, isExtern)); } return inputs; } private static final DiagnosticType EMPTY_MODULE_LIST_ERROR = DiagnosticType.error(\"JSC_EMPTY_MODULE_LIST_ERROR\", \"At least one module must be provided\"); private static final DiagnosticType EMPTY_ROOT_MODULE_ERROR = DiagnosticType.error(\"JSC_EMPTY_ROOT_MODULE_ERROR\","
+      },
+      {
+        "txt": "\"Root module '{0}' must contain at least one source code input\"); private void checkFirstModule(List<JSModule> modules) { if (modules.isEmpty()) { report(JSError.make(EMPTY_MODULE_LIST_ERROR)); } else if (modules.get(0).getInputs().isEmpty() && modules.size() > 1) { report(JSError.make(EMPTY_ROOT_MODULE_ERROR, modules.get(0).getName())); } } private static void fillEmptyModules(List<JSModule> modules) {"
+      },
+      {
+        "txt": "for (JSModule module : modules) { if (module.getInputs().isEmpty()) { module.add(JSSourceFile.fromCode(\"[\" + module.getName() + \"]\", \"\")); } } } public void rebuildInputsFromModules() { inputs = getAllInputsFromModules(modules); initInputsByNameMap(); }"
+      },
+      {
+        "txt": "private static List<CompilerInput> getAllInputsFromModules( List<JSModule> modules) { List<CompilerInput> inputs = Lists.newArrayList(); Map<String, JSModule> inputMap = Maps.newHashMap(); for (JSModule module : modules) { for (CompilerInput input : module.getInputs()) { String inputName = input.getName(); inputs.add(input); inputMap.put(inputName, module); }"
+      },
+      {
+        "txt": "} return inputs; } static final DiagnosticType DUPLICATE_INPUT = DiagnosticType.error(\"JSC_DUPLICATE_INPUT\", \"Duplicate input: {0}\"); static final DiagnosticType DUPLICATE_EXTERN_INPUT = DiagnosticType.error(\"JSC_DUPLICATE_EXTERN_INPUT\", \"Duplicate extern input: {0}\"); void initInputsByNameMap() { inputsByName = new HashMap<String, CompilerInput>();"
+      },
+      {
+        "txt": "for (CompilerInput input : externs) { String name = input.getName(); if (!inputsByName.containsKey(name)) { inputsByName.put(name, input); } else { report(JSError.make(DUPLICATE_EXTERN_INPUT, name)); } } for (CompilerInput input : inputs) { String name = input.getName();"
+      },
+      {
+        "txt": "if (!inputsByName.containsKey(name)) { inputsByName.put(name, input); } else { report(JSError.make(DUPLICATE_INPUT, name)); } } } public Result compile( JSSourceFile extern, JSSourceFile input, CompilerOptions options) { return compile(extern, new JSSourceFile[] { input }, options);"
+      },
+      {
+        "txt": "} public Result compile( JSSourceFile extern, JSSourceFile[] input, CompilerOptions options) { return compile(new JSSourceFile[] { extern }, input, options); } public Result compile( JSSourceFile extern, JSModule[] modules, CompilerOptions options) { return compile(new JSSourceFile[] { extern }, modules, options); } public Result compile(JSSourceFile[] externs,"
+      },
+      {
+        "txt": "JSSourceFile[] inputs, CompilerOptions options) { return compile(Lists.<JSSourceFile>newArrayList(externs), Lists.<JSSourceFile>newArrayList(inputs), options); } public Result compile(List<JSSourceFile> externs, List<JSSourceFile> inputs, CompilerOptions options) { Preconditions.checkState(jsRoot == null); try {"
+      },
+      {
+        "txt": "init(externs, inputs, options); if (hasErrors()) { return getResult(); } return compile(); } finally { Tracer t = newTracer(\"generateReport\"); errorManager.generateReport(); stopTracer(t, \"generateReport\"); }"
+      },
+      {
+        "txt": "} public Result compile(JSSourceFile[] externs, JSModule[] modules, CompilerOptions options) { return compileModules(Lists.<JSSourceFile>newArrayList(externs), Lists.<JSModule>newArrayList(modules), options); } public Result compileModules(List<JSSourceFile> externs, List<JSModule> modules, CompilerOptions options) {"
+      },
+      {
+        "txt": "Preconditions.checkState(jsRoot == null); try { initModules(externs, modules, options); if (hasErrors()) { return getResult(); } return compile(); } finally { Tracer t = newTracer(\"generateReport\"); errorManager.generateReport();"
+      },
+      {
+        "txt": "stopTracer(t, \"generateReport\"); } } private Result compile() { return runInCompilerThread(new Callable<Result>() { public Result call() throws Exception { compileInternal(); return getResult(); } });"
+      },
+      {
+        "txt": "} public void disableThreads() { useThreads = false; } @SuppressWarnings(\"unchecked\") private <T> T runInCompilerThread(final Callable<T> callable) { final boolean dumpTraceReport = options.tracer.isOn(); final Object[] result = new Object[1]; final Throwable[] exception = new Throwable[1]; Runnable runnable = new Runnable() {"
+      },
+      {
+        "txt": "public void run() { try { if (dumpTraceReport) { Tracer.initCurrentThreadTrace(); } result[0] = callable.call(); } catch (Throwable e) { exception[0] = e; } finally { if (dumpTraceReport) {"
+      },
+      {
+        "txt": "Tracer.logAndClearCurrentThreadTrace(); } } } }; if (useThreads) { Thread th = new Thread(null, runnable, \"jscompiler\", COMPILER_STACK_SIZE); th.start(); while (true) { try {"
+      },
+      {
+        "txt": "th.join(); break; } catch (InterruptedException ignore) { } } } else { runnable.run(); } if (exception[0] != null) { throw new RuntimeException(exception[0]);"
+      },
+      {
+        "txt": "} return (T) result[0]; } private void compileInternal() { parse(); if (hasErrors()) { return; } if (!precheck()) { return;"
+      },
+      {
+        "txt": "} if (options.nameAnonymousFunctionsOnly) { check(); return; } if (!options.skipAllPasses) { check(); if (hasErrors()) { return; }"
+      },
+      {
+        "txt": "if (options.isExternExportsEnabled() || options.externExportsPath != null) { externExports(); } if (!options.ideMode) { optimize(); } } if (options.recordFunctionInformation) { recordFunctionInformation();"
+      },
+      {
+        "txt": "} if (options.devMode == DevMode.START_AND_END) { runSanityCheck(); } } public void parse() { parseInputs(); } PassConfig getPassConfig() { if (passes == null) {"
+      },
+      {
+        "txt": "passes = createPassConfigInternal(); } return passes; } PassConfig createPassConfigInternal() { return new DefaultPassConfig(options); } public void setPassConfig(PassConfig passes) { Preconditions.checkNotNull(passes); if (this.passes != null) {"
+      },
+      {
+        "txt": "throw new IllegalStateException(\"this.passes has already been assigned\"); } this.passes = passes; } boolean precheck() { return true; } public void check() { runCustomPasses(CustomPassExecutionTime.BEFORE_CHECKS); PhaseOptimizer phaseOptimizer = new PhaseOptimizer(this, tracker);"
+      },
+      {
+        "txt": "if (options.devMode == DevMode.EVERY_PASS) { phaseOptimizer.setSanityCheck(sanityCheck); } phaseOptimizer.consume(getPassConfig().getChecks()); phaseOptimizer.process(externsRoot, jsRoot); if (hasErrors()) { return; } if (options.nameAnonymousFunctionsOnly) { return;"
+      },
+      {
+        "txt": "} if (options.removeTryCatchFinally) { removeTryCatchFinally(); } if (!options.stripTypes.isEmpty() || !options.stripNameSuffixes.isEmpty() || !options.stripTypePrefixes.isEmpty() || !options.stripNamePrefixes.isEmpty()) { stripCode(options.stripTypes, options.stripNameSuffixes, options.stripTypePrefixes, options.stripNamePrefixes);"
+      },
+      {
+        "txt": "} runCustomPasses(CustomPassExecutionTime.BEFORE_OPTIMIZATIONS); } private void externExports() { logger.info(\"Creating extern file for exports\"); startPass(\"externExports\"); ExternExportsPass pass = new ExternExportsPass(this); process(pass); externExports = pass.getGeneratedExterns(); endPass();"
+      },
+      {
+        "txt": "} void process(CompilerPass p) { p.process(externsRoot, jsRoot); } private final PassFactory sanityCheck = new PassFactory(\"sanityCheck\", false) { @Override protected CompilerPass createInternal(AbstractCompiler compiler) { return new SanityCheck(compiler); }"
+      },
+      {
+        "txt": "}; private void maybeSanityCheck() { if (options.devMode == DevMode.EVERY_PASS) { runSanityCheck(); } } private void runSanityCheck() { sanityCheck.create(this).process(externsRoot, jsRoot); } void removeTryCatchFinally() {"
+      },
+      {
+        "txt": "logger.info(\"Remove try/catch/finally\"); startPass(\"removeTryCatchFinally\"); RemoveTryCatch r = new RemoveTryCatch(this); process(r); endPass(); } void stripCode(Set<String> stripTypes, Set<String> stripNameSuffixes, Set<String> stripTypePrefixes, Set<String> stripNamePrefixes) { logger.info(\"Strip code\"); startPass(\"stripCode\");"
+      },
+      {
+        "txt": "StripCode r = new StripCode(this, stripTypes, stripNameSuffixes, stripTypePrefixes, stripNamePrefixes); process(r); endPass(); } private void runCustomPasses(CustomPassExecutionTime executionTime) { if (options.customPasses != null) { Tracer t = newTracer(\"runCustomPasses\"); try { for (CompilerPass p : options.customPasses.get(executionTime)) {"
+      },
+      {
+        "txt": "process(p); } } finally { stopTracer(t, \"runCustomPasses\"); } } } private Tracer currentTracer = null; private String currentPassName = null; void startPass(String passName) {"
+      },
+      {
+        "txt": "Preconditions.checkState(currentTracer == null); currentPassName = passName; currentTracer = newTracer(passName); } void endPass() { Preconditions.checkState(currentTracer != null, \"Tracer should not be null at the end of a pass.\"); stopTracer(currentTracer, currentPassName); String passToCheck = currentPassName; currentPassName = null;"
+      },
+      {
+        "txt": "currentTracer = null; maybeSanityCheck(); } Tracer newTracer(String passName) { String comment = passName + (recentChange.hasCodeChanged() ? \" on recently changed AST\" : \"\"); if (options.tracer.isOn()) { tracker.recordPassStart(passName); } return new Tracer(\"Compiler\", comment);"
+      },
+      {
+        "txt": "} void stopTracer(Tracer t, String passName) { long result = t.stop(); if (options.tracer.isOn()) { tracker.recordPassStop(passName, result); } } public Result getResult() { PassConfig.State state = getPassConfig().getIntermediateState(); return new Result(getErrors(), getWarnings(), debugLog.toString(),"
+      },
+      {
+        "txt": "state.variableMap, state.propertyMap, state.anonymousFunctionNameMap, state.stringMap, functionInformationMap, sourceMap, externExports, state.cssNames); } public JSError[] getMessages() { return getErrors(); } public JSError[] getErrors() { return errorManager.getErrors(); }"
+      },
+      {
+        "txt": "public JSError[] getWarnings() { return errorManager.getWarnings(); } public Node getRoot() { return externAndJsRoot; } private int nextUniqueNameId() { return uniqueNameId++; } @VisibleForTesting"
+      },
+      {
+        "txt": "void resetUniqueNameId() { uniqueNameId = 0; } @Override Supplier<String> getUniqueNameIdSupplier() { final Compiler self = this; return new Supplier<String>() { public String get() { return String.valueOf(self.nextUniqueNameId()); }"
+      },
+      {
+        "txt": "}; } @Override void setNormalized() { normalized = true; } @Override void setUnnormalized() { normalized = false; }"
+      },
+      {
+        "txt": "@Override boolean isNormalized() { return normalized; } @Override boolean areNodesEqualForInlining(Node n1, Node n2) { if (options.ambiguateProperties || options.disambiguateProperties) { return n1.checkTreeTypeAwareEqualsSilent(n2); } else {"
+      },
+      {
+        "txt": "return n1.checkTreeEqualsSilent(n2); } } @Override public CompilerInput getInput(String name) { return inputsByName.get(name); } @Override public CompilerInput newExternInput(String name) { if (inputsByName.containsKey(name)) {"
+      },
+      {
+        "txt": "throw new IllegalArgumentException(\"Conflicting externs name: \" + name); } SourceAst ast = new SyntheticAst(name); CompilerInput input = new CompilerInput(ast, name, true); inputsByName.put(name, input); externsRoot.addChildToFront(ast.getAstRoot(this)); return input; } void addIncrementalSourceAst(JsAst ast) { String sourceName = ast.getSourceFile().getName();"
+      },
+      {
+        "txt": "Preconditions.checkState( getInput(sourceName) == null, \"Duplicate input of name \" + sourceName); inputsByName.put(sourceName, new CompilerInput(ast)); } @Override JSModuleGraph getModuleGraph() { return moduleGraph; } @Override"
+      },
+      {
+        "txt": "public JSTypeRegistry getTypeRegistry() { if (typeRegistry == null) { typeRegistry = new JSTypeRegistry(oldErrorReporter, options.looseTypes); } return typeRegistry; } @Override ScopeCreator getScopeCreator() { return getPassConfig().getScopeCreator(); }"
+      },
+      {
+        "txt": "@Override public Scope getTopScope() { return getPassConfig().getTopScope(); } @Override public ReverseAbstractInterpreter getReverseAbstractInterpreter() { if (abstractInterpreter == null) { ChainableReverseAbstractInterpreter interpreter = new SemanticReverseAbstractInterpreter( getCodingConvention(), getTypeRegistry());"
+      },
+      {
+        "txt": "if (options.closurePass) { interpreter = new ClosureReverseAbstractInterpreter( getCodingConvention(), getTypeRegistry()) .append(interpreter).getFirst(); } abstractInterpreter = interpreter; } return abstractInterpreter; } @Override"
+      },
+      {
+        "txt": "TypeValidator getTypeValidator() { if (typeValidator == null) { typeValidator = new TypeValidator(this); } return typeValidator; } Node parseInputs() { boolean devMode = options.devMode != DevMode.OFF; if (externsRoot != null) { externsRoot.detachChildren();"
+      },
+      {
+        "txt": "} if (jsRoot != null) { jsRoot.detachChildren(); } jsRoot = new Node(Token.BLOCK); jsRoot.setIsSyntheticBlock(true); if (options.tracer.isOn()) { tracker = new PerformanceTracker(jsRoot, options.tracer == TracerMode.ALL); addChangeHandler(tracker.getCodeChangeHandler());"
+      },
+      {
+        "txt": "} Tracer tracer = newTracer(\"parseInputs\"); try { externsRoot = new Node(Token.BLOCK); externsRoot.setIsSyntheticBlock(true); for (CompilerInput input : externs) { Node n = input.getAstRoot(this); if (hasErrors()) { return null; }"
+      },
+      {
+        "txt": "externsRoot.addChildToBack(n); } if (options.manageClosureDependencies) { for (CompilerInput input : inputs) { input.setCompiler(this); for (String provide : input.getProvides()) { getTypeRegistry().forwardDeclareType(provide); } } try {"
+      },
+      {
+        "txt": "inputs = (moduleGraph == null ? new JSModuleGraph(modules) : moduleGraph) .manageDependencies(inputs); } catch (CircularDependencyException e) { report(JSError.make( JSModule.CIRCULAR_DEPENDENCY_ERROR, e.getMessage())); return null; } } boolean staleInputs = false;"
+      },
+      {
+        "txt": "for (CompilerInput input : inputs) { Node n = input.getAstRoot(this); if (hasErrors()) { return null; } if (n == null) { continue; } if (n.getJSDocInfo() != null) { JSDocInfo info = n.getJSDocInfo();"
+      },
+      {
+        "txt": "if (info.isExterns()) { externsRoot.addChildToBack(n); input.setIsExtern(true); input.getModule().remove(input); externs.add(input); staleInputs = true; } else if (info.isNoCompile()) { input.getModule().remove(input); staleInputs = true; }"
+      },
+      {
+        "txt": "} } if (staleInputs) { fillEmptyModules(modules); rebuildInputsFromModules(); } for (CompilerInput input : inputs) { Node n = input.getAstRoot(this); if (n == null) { continue;"
+      },
+      {
+        "txt": "} if (devMode) { runSanityCheck(); if (hasErrors()) { return null; } } if (options.sourceMapOutputPath != null || options.nameReferenceReportPath != null) { SourceInformationAnnotator sia ="
+      },
+      {
+        "txt": "new SourceInformationAnnotator( input.getName(), options.devMode != DevMode.OFF); NodeTraversal.traverse(this, n, sia); } jsRoot.addChildToBack(n); } externAndJsRoot = new Node(Token.BLOCK, externsRoot, jsRoot); externAndJsRoot.setIsSyntheticBlock(true); return externAndJsRoot; } finally {"
+      },
+      {
+        "txt": "stopTracer(tracer, \"parseInputs\"); } } public Node parse(JSSourceFile file) { initCompilerOptionsIfTesting(); addToDebugLog(\"Parsing: \" + file.getName()); return new JsAst(file).getAstRoot(this); } @Override Node parseSyntheticCode(String js) {"
+      },
+      {
+        "txt": "CompilerInput input = new CompilerInput( JSSourceFile.fromCode(\" [synthetic] \", js)); inputsByName.put(input.getName(), input); return input.getAstRoot(this); } void initCompilerOptionsIfTesting() { if (options == null) { initOptions(new CompilerOptions()); } }"
+      },
+      {
+        "txt": "@Override Node parseSyntheticCode(String fileName, String js) { initCompilerOptionsIfTesting(); return parse(JSSourceFile.fromCode(fileName, js)); } Node parseTestCode(String js) { initCompilerOptionsIfTesting(); CompilerInput input = new CompilerInput( JSSourceFile.fromCode(\" [testcode] \", js)); if (inputsByName == null) {"
+      },
+      {
+        "txt": "inputsByName = Maps.newHashMap(); } inputsByName.put(input.getName(), input); return input.getAstRoot(this); } @Override ErrorReporter getDefaultErrorReporter() { return defaultErrorReporter; } public String toSource() {"
+      },
+      {
+        "txt": "return runInCompilerThread(new Callable<String>() { public String call() throws Exception { Tracer tracer = newTracer(\"toSource\"); try { CodeBuilder cb = new CodeBuilder(); if (jsRoot != null) { int i = 0; for (Node scriptNode = jsRoot.getFirstChild(); scriptNode != null; scriptNode = scriptNode.getNext()) {"
+      },
+      {
+        "txt": "toSource(cb, i++, scriptNode); } } return cb.toString(); } finally { stopTracer(tracer, \"toSource\"); } } }); }"
+      },
+      {
+        "txt": "public String[] toSourceArray() { return runInCompilerThread(new Callable<String[]>() { public String[] call() throws Exception { Tracer tracer = newTracer(\"toSourceArray\"); try { int numInputs = inputs.size(); String[] sources = new String[numInputs]; CodeBuilder cb = new CodeBuilder(); for (int i = 0; i < numInputs; i++) { Node scriptNode = inputs.get(i).getAstRoot(Compiler.this);"
+      },
+      {
+        "txt": "cb.reset(); toSource(cb, i, scriptNode); sources[i] = cb.toString(); } return sources; } finally { stopTracer(tracer, \"toSourceArray\"); } } });"
+      },
+      {
+        "txt": "} public String toSource(final JSModule module) { return runInCompilerThread(new Callable<String>() { public String call() throws Exception { List<CompilerInput> inputs = module.getInputs(); int numInputs = inputs.size(); if (numInputs == 0) { return \"\"; } CodeBuilder cb = new CodeBuilder();"
+      },
+      {
+        "txt": "for (int i = 0; i < numInputs; i++) { Node scriptNode = inputs.get(i).getAstRoot(Compiler.this); if (scriptNode == null) { throw new IllegalArgumentException( \"Bad module: \" + module.getName()); } toSource(cb, i, scriptNode); } return cb.toString(); }"
+      },
+      {
+        "txt": "}); } public String[] toSourceArray(final JSModule module) { return runInCompilerThread(new Callable<String[]>() { public String[] call() throws Exception { List<CompilerInput> inputs = module.getInputs(); int numInputs = inputs.size(); if (numInputs == 0) { return new String[0]; }"
+      },
+      {
+        "txt": "String[] sources = new String[numInputs]; CodeBuilder cb = new CodeBuilder(); for (int i = 0; i < numInputs; i++) { Node scriptNode = inputs.get(i).getAstRoot(Compiler.this); if (scriptNode == null) { throw new IllegalArgumentException( \"Bad module input: \" + inputs.get(i).getName()); } cb.reset(); toSource(cb, i, scriptNode);"
+      },
+      {
+        "txt": "sources[i] = cb.toString(); } return sources; } }); } public void toSource(final CodeBuilder cb, final int inputSeqNum, final Node root) { runInCompilerThread(new Callable<Void>() {"
+      },
+      {
+        "txt": "public Void call() throws Exception { if (options.printInputDelimiter) { if ((cb.getLength() > 0) && !cb.endsWith(\"\\n\")) { cb.append(\"\\n\"); // Make sure that the label starts on a new line } Preconditions.checkState(root.getType() == Token.SCRIPT); String delimiter = options.inputDelimiter; String sourceName = (String)root.getProp(Node.SOURCENAME_PROP); Preconditions.checkState(sourceName != null); Preconditions.checkState(!sourceName.isEmpty());"
+      },
+      {
+        "txt": "delimiter = delimiter.replaceAll(\"%name%\", sourceName) .replaceAll(\"%num%\", String.valueOf(inputSeqNum)); cb.append(delimiter) .append(\"\\n\"); } if (root.getJSDocInfo() != null && root.getJSDocInfo().getLicense() != null) { cb.append(\"/*\\n\") .append(root.getJSDocInfo().getLicense()) .append(\"*/\\n\");"
+      },
+      {
+        "txt": "} if (options.sourceMapOutputPath != null) { sourceMap.setStartingPosition( cb.getLineIndex(), cb.getColumnIndex()); } String code = toSource(root, sourceMap); if (!code.isEmpty()) { cb.append(code); if (!code.endsWith(\";\")) { cb.append(\";\");"
+      },
+      {
+        "txt": "} } return null; } }); } @Override String toSource(Node n) { initCompilerOptionsIfTesting(); return toSource(n, null);"
+      },
+      {
+        "txt": "private String toSource(Node n, SourceMap sourceMap) { CodePrinter.Builder builder = new CodePrinter.Builder(n); builder.setPrettyPrint(options.prettyPrint); builder.setLineBreak(options.lineBreak); builder.setSourceMap(sourceMap); builder.setSourceMapDetailLevel(options.sourceMapDetailLevel); <extra_id_0> builder.setOutputCharset(charset); return builder.build(); } public static class CodeBuilder { private final StringBuilder sb = new StringBuilder(); private int lineCount = 0;"
+      },
+      {
+        "txt": "private final StringBuilder sb = new StringBuilder(); private int lineCount = 0; private int colCount = 0; void reset() { sb.setLength(0); } CodeBuilder append(String str) { sb.append(str); int index = -1; int lastIndex = index;"
+      },
+      {
+        "txt": "while ((index = str.indexOf('\\n', index + 1)) >= 0) { ++lineCount; lastIndex = index; } if (lastIndex == -1) { colCount += str.length(); } else { colCount = str.length() - (lastIndex + 1); } return this;"
+      },
+      {
+        "txt": "} @Override public String toString() { return sb.toString(); } public int getLength() { return sb.length(); } int getLineIndex() { return lineCount;"
+      },
+      {
+        "txt": "} int getColumnIndex() { return colCount; } boolean endsWith(String suffix) { return (sb.length() > suffix.length()) && suffix.equals(sb.substring(sb.length() - suffix.length())); } } public void optimize() {"
+      },
+      {
+        "txt": "normalize(); PhaseOptimizer phaseOptimizer = new PhaseOptimizer(this, tracker); if (options.devMode == DevMode.EVERY_PASS) { phaseOptimizer.setSanityCheck(sanityCheck); } phaseOptimizer.consume(getPassConfig().getOptimizations()); phaseOptimizer.process(externsRoot, jsRoot); if (hasErrors()) { return; }"
+      },
+      {
+        "txt": "} @Override void setCssRenamingMap(CssRenamingMap map) { options.cssRenamingMap = map; } @Override CssRenamingMap getCssRenamingMap() { return options.cssRenamingMap; } public void processDefines() {"
+      },
+      {
+        "txt": "(new DefaultPassConfig(options)).processDefines.create(this) .process(externsRoot, jsRoot); } boolean isInliningForbidden() { return options.propertyRenaming == PropertyRenamingPolicy.HEURISTIC || options.propertyRenaming == PropertyRenamingPolicy.AGGRESSIVE_HEURISTIC; } ControlFlowGraph<Node> computeCFG() { logger.info(\"Computing Control Flow Graph\");"
+      },
+      {
+        "txt": "Tracer tracer = newTracer(\"computeCFG\"); ControlFlowAnalysis cfa = new ControlFlowAnalysis(this, true); process(cfa); stopTracer(tracer, \"computeCFG\"); return cfa.getCfg(); } public void normalize() { logger.info(\"Normalizing\"); startPass(\"normalize\"); process(new Normalize(this, false));"
+      },
+      {
+        "txt": "endPass(); } @Override void prepareAst(Node root) { Tracer tracer = newTracer(\"prepareAst\"); CompilerPass pass = new PrepareAst(this); pass.process(null, root); stopTracer(tracer, \"prepareAst\"); } void recordFunctionInformation() {"
+      },
+      {
+        "txt": "logger.info(\"Recording function information\"); startPass(\"recordFunctionInformation\"); RecordFunctionInformation recordFunctionInfoPass = new RecordFunctionInformation( this, getPassConfig().getIntermediateState().functionNames); process(recordFunctionInfoPass); functionInformationMap = recordFunctionInfoPass.getMap(); endPass(); } protected final CodeChangeHandler.RecentChange recentChange ="
+      },
+      {
+        "txt": "new CodeChangeHandler.RecentChange(); private final List<CodeChangeHandler> codeChangeHandlers = Lists.<CodeChangeHandler>newArrayList(); @Override void addChangeHandler(CodeChangeHandler handler) { codeChangeHandlers.add(handler); } @Override void removeChangeHandler(CodeChangeHandler handler) { codeChangeHandlers.remove(handler);"
+      },
+      {
+        "txt": "} @Override public void reportCodeChange() { for (CodeChangeHandler handler : codeChangeHandlers) { handler.reportChange(); } } @Override public CodingConvention getCodingConvention() { CodingConvention convention = options.getCodingConvention();"
+      },
+      {
+        "txt": "convention = convention != null ? convention : defaultCodingConvention; return convention; } @Override public boolean isIdeMode() { return options.ideMode; } @Override Config getParserConfig() { if (parserConfig == null) {"
+      },
+      {
+        "txt": "parserConfig = ParserRunner.createConfig(isIdeMode()); } return parserConfig; } @Override public boolean isTypeCheckingEnabled() { return options.checkTypes; } @Override public void report(JSError error) {"
+      },
+      {
+        "txt": "CheckLevel level = error.level; WarningsGuard guard = options.getWarningsGuard(); if (guard != null) { CheckLevel newLevel = guard.level(error); if (newLevel != null) { level = newLevel; } } if (level.isOn()) { errorManager.report(level, error);"
+      },
+      {
+        "txt": "} } @Override public CheckLevel getErrorLevel(JSError error) { Preconditions.checkNotNull(options); WarningsGuard guards = options.getWarningsGuard(); if (guards == null) { return error.level; } else { return guards.level(error);"
+      },
+      {
+        "txt": "} } @Override void throwInternalError(String message, Exception cause) { String finalMessage = \"INTERNAL COMPILER ERROR.\\n\" + \"Please report this problem.\\n\" + message; RuntimeException e = new RuntimeException(finalMessage, cause); if (cause != null) { e.setStackTrace(cause.getStackTrace());"
+      },
+      {
+        "txt": "} throw e; } public int getErrorCount() { return errorManager.getErrorCount(); } public int getWarningCount() { return errorManager.getWarningCount(); } @Override"
+      },
+      {
+        "txt": "boolean hasHaltingErrors() { return !isIdeMode() && getErrorCount() > 0; } public boolean hasErrors() { return hasHaltingErrors(); } @Override void addToDebugLog(String str) { debugLog.append(str); debugLog.append('\\n');"
+      },
+      {
+        "txt": "logger.fine(str); } private SourceFile getSourceFileByName(String sourceName) { if (inputsByName.containsKey(sourceName)) { return inputsByName.get(sourceName).getSourceFile(); } return null; } public String getSourceLine(String sourceName, int lineNumber) { if (lineNumber < 1) {"
+      },
+      {
+        "txt": "return null; } SourceFile input = getSourceFileByName(sourceName); if (input != null) { return input.getLine(lineNumber); } return null; } public Region getSourceRegion(String sourceName, int lineNumber) { if (lineNumber < 1) {"
+      },
+      {
+        "txt": "return null; } SourceFile input = getSourceFileByName(sourceName); if (input != null) { return input.getRegion(lineNumber); } return null; } @Override Node getNodeForCodeInsertion(JSModule module) {"
+      },
+      {
+        "txt": "if (module == null) { if (inputs.isEmpty()) { throw new IllegalStateException(\"No inputs\"); } return inputs.get(0).getAstRoot(this); } List<CompilerInput> moduleInputs = module.getInputs(); if (moduleInputs.size() > 0) { return moduleInputs.get(0).getAstRoot(this); }"
+      },
+      {
+        "txt": "throw new IllegalStateException(\"Root module has no inputs\"); } public SourceMap getSourceMap() { return sourceMap; } VariableMap getVariableMap() { return getPassConfig().getIntermediateState().variableMap; } VariableMap getPropertyMap() { return getPassConfig().getIntermediateState().propertyMap;"
+      },
+      {
+        "txt": "} CompilerOptions getOptions() { return options; } FunctionInformationMap getFunctionalInformationMap() { return functionInformationMap; } public static void setLoggingLevel(Level level) { logger.setLevel(level); }"
+      },
+      {
+        "txt": "public String getAstDotGraph() throws IOException { if (jsRoot != null) { ControlFlowAnalysis cfa = new ControlFlowAnalysis(this, true); cfa.process(null, jsRoot); return DotFormatter.toDot(jsRoot, cfa.getCfg()); } else { return \"\"; } } @Override"
+      },
+      {
+        "txt": "public ErrorManager getErrorManager() { if (options == null) { initOptions(new CompilerOptions()); } return errorManager; } @Override List<CompilerInput> getInputsInOrder() { return Collections.<CompilerInput>unmodifiableList(inputs); }"
+      },
+      {
+        "txt": "public static class IntermediateState implements Serializable { private static final long serialVersionUID = 1L; Node externsRoot; private Node jsRoot; private List<CompilerInput> externs; private List<CompilerInput> inputs; private List<JSModule> modules; private PassConfig.State passConfigState; private JSTypeRegistry typeRegistry; private boolean normalized;"
+      },
+      {
+        "txt": "private IntermediateState() {} } public IntermediateState getState() { IntermediateState state = new IntermediateState(); state.externsRoot = externsRoot; state.jsRoot = jsRoot; state.externs = externs; state.inputs = inputs; state.modules = modules; state.passConfigState = getPassConfig().getIntermediateState();"
+      },
+      {
+        "txt": "state.typeRegistry = typeRegistry; state.normalized = normalized; return state; } public void setState(IntermediateState state) { externsRoot = state.externsRoot; jsRoot = state.jsRoot; externs = state.externs; inputs = state.inputs; modules = state.modules;"
+      },
+      {
+        "txt": "passes = createPassConfigInternal(); getPassConfig().setIntermediateState(state.passConfigState); typeRegistry = state.typeRegistry; normalized = state.normalized; } @VisibleForTesting List<CompilerInput> getInputsForTesting() { return inputs; } @VisibleForTesting"
+      },
+      {
+        "txt": "List<CompilerInput> getExternsForTesting() { return externs; } @Override boolean hasRegExpGlobalReferences() { return hasRegExpGlobalReferences; } @Override void setHasRegExpGlobalReferences(boolean references) { hasRegExpGlobalReferences = references;"
+      }
+    ]
+  },
+  {
+    "id": 657,
+    "file_path": "src/com/google/javascript/jscomp/CompilerOptions.java",
+    "start-bug-line": 588,
+    "end-bug-line": 588,
+    "bug": "public Charset outputCharset;",
+    "fix": "String outputCharset;",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "import com.google.common.base.Preconditions; import com.google.common.collect.Lists; import com.google.common.collect.Maps; import com.google.common.collect.Multimap; import com.google.common.collect.Sets; import com.google.javascript.rhino.Node; import com.google.javascript.rhino.Token; import java.io.Serializable; import java.nio.charset.Charset; import java.util.Collections;"
+      },
+      {
+        "txt": "import java.util.List; import java.util.Map; import java.util.Set; public class CompilerOptions implements Serializable, Cloneable { private static final long serialVersionUID = 7L; public boolean ideMode; boolean skipAllPasses; boolean nameAnonymousFunctionsOnly; DevMode devMode; boolean manageClosureDependencies = false;"
+      },
+      {
+        "txt": "public transient MessageBundle messageBundle = null; public boolean checkSymbols; public CheckLevel checkShadowVars; public CheckLevel aggressiveVarCheck; public CheckLevel checkFunctions; public CheckLevel checkMethods; public boolean checkDuplicateMessages; public boolean allowLegacyJsMessages; public boolean strictMessageReplacement; public boolean checkSuspiciousCode;"
+      },
+      {
+        "txt": "public boolean checkControlStructures; public CheckLevel checkUndefinedProperties; public boolean checkUnusedPropertiesEarly; public boolean checkTypes; public boolean tightenTypes; public boolean inferTypesInGlobalScope; public boolean checkTypedPropertyCalls; public CheckLevel reportMissingOverride; public CheckLevel reportUnknownTypes; public CheckLevel checkRequires;"
+      },
+      {
+        "txt": "public CheckLevel checkProvides; public CheckLevel checkGlobalNamesLevel; public CheckLevel brokenClosureRequiresLevel; public CheckLevel checkGlobalThisLevel; public CheckLevel checkMissingGetCssNameLevel; public String checkMissingGetCssNameBlacklist; public boolean checkEs5Strict; public boolean checkCaja; public boolean foldConstants; public boolean removeConstantExpressions;"
+      },
+      {
+        "txt": "public boolean deadAssignmentElimination; public boolean inlineConstantVars; public boolean inlineFunctions; public boolean decomposeExpressions; public boolean inlineAnonymousFunctionExpressions; public boolean inlineLocalFunctions; public boolean crossModuleCodeMotion; public boolean coalesceVariableNames; public boolean crossModuleMethodMotion; public boolean inlineGetters;"
+      },
+      {
+        "txt": "public boolean inlineVariables; public boolean inlineLocalVariables; public boolean flowSensitiveInlineVariables; public boolean smartNameRemoval; public boolean removeDeadCode; public CheckLevel checkUnreachableCode; public CheckLevel checkMissingReturn; public boolean extractPrototypeMemberDeclarations; public boolean removeEmptyFunctions; public boolean removeUnusedPrototypeProperties;"
+      },
+      {
+        "txt": "public boolean removeUnusedPrototypePropertiesInExterns; public boolean removeUnusedVars; public boolean removeUnusedVarsInGlobalScope; public boolean aliasExternals; public String aliasableGlobals; public String unaliasableGlobals; public boolean collapseVariableDeclarations; public boolean groupVariableDeclarations; public boolean collapseAnonymousFunctions; public Set<String> aliasableStrings;"
+      },
+      {
+        "txt": "public String aliasStringsBlacklist; public boolean aliasAllStrings; boolean outputJsStringUsage; public boolean convertToDottedProperties; public boolean rewriteFunctionExpressions; public boolean optimizeParameters; public boolean optimizeArgumentsArray; boolean chainCalls; public VariableRenamingPolicy variableRenaming; public PropertyRenamingPolicy propertyRenaming;"
+      },
+      {
+        "txt": "public boolean labelRenaming; public boolean reserveRawExports; public boolean generatePseudoNames; public String renamePrefix; public boolean aliasKeywords; public boolean collapseProperties; boolean collapsePropertiesOnExternTypes; public boolean devirtualizePrototypeMethods; public boolean computeFunctionSideEffects; public String debugFunctionSideEffectsPath;"
+      },
+      {
+        "txt": "public boolean disambiguateProperties; public boolean ambiguateProperties; public AnonymousFunctionNamingPolicy anonymousFunctionNaming; public byte[] inputVariableMapSerialized; public byte[] inputPropertyMapSerialized; public boolean exportTestFunctions; boolean runtimeTypeCheck; String runtimeTypeCheckLogFunction; private CodingConvention codingConvention; public boolean instrumentForCoverage;"
+      },
+      {
+        "txt": "public boolean instrumentForCoverageOnly; public boolean ignoreCajaProperties; public String syntheticBlockStartMarker; public String syntheticBlockEndMarker; public String locale; public boolean markAsCompiled; public boolean removeTryCatchFinally; public boolean closurePass; boolean rewriteNewDateGoogNow; boolean removeAbstractMethods;"
+      },
+      {
+        "txt": "public boolean gatherCssNames; public Set<String> stripTypes; public Set<String> stripNameSuffixes; public Set<String> stripNamePrefixes; public Set<String> stripTypePrefixes; public transient Multimap<CustomPassExecutionTime, CompilerPass> customPasses; public boolean markNoSideEffectCalls; private Map<String, Object> defineReplacements; public boolean moveFunctionDeclarations;"
+      },
+      {
+        "txt": "public String instrumentationTemplate; public String appNameStr; public boolean recordFunctionInformation; public boolean generateExports; public CssRenamingMap cssRenamingMap; boolean processObjectPropertyString; Set<String> idGenerators; List<String> replaceStringsFunctionDescriptions; String replaceStringsPlaceholderToken; public boolean prettyPrint;"
+      },
+      {
+        "txt": "public boolean lineBreak; public boolean printInputDelimiter; public String inputDelimiter = \"// Input %num%\"; public String reportPath; public TracerMode tracer; private boolean colorizeErrorOutput; public ErrorFormat errorFormat; public String jsOutputFile; private transient ComposeWarningsGuard warningsGuard; int summaryDetailLevel = 1;"
+      },
+      {
+        "txt": "String externExportsPath; public String nameReferenceReportPath; public String nameReferenceGraphPath; public String sourceMapOutputPath; public SourceMap.DetailLevel sourceMapDetailLevel = SourceMap.DetailLevel.SYMBOLS; <extra_id_0> boolean looseTypes; public CompilerOptions() { skipAllPasses = false; nameAnonymousFunctionsOnly = false; devMode = DevMode.OFF; checkSymbols = false;"
+      },
+      {
+        "txt": "devMode = DevMode.OFF; checkSymbols = false; checkShadowVars = CheckLevel.OFF; aggressiveVarCheck = CheckLevel.OFF; checkFunctions = CheckLevel.OFF; checkMethods = CheckLevel.OFF; checkDuplicateMessages = false; allowLegacyJsMessages = false; strictMessageReplacement = false; checkSuspiciousCode = false;"
+      },
+      {
+        "txt": "checkControlStructures = false; checkUndefinedProperties = CheckLevel.OFF; checkUnusedPropertiesEarly = false; checkTypes = false; tightenTypes = false; inferTypesInGlobalScope = false; checkTypedPropertyCalls = false; reportMissingOverride = CheckLevel.OFF; reportUnknownTypes = CheckLevel.OFF; checkRequires = CheckLevel.OFF;"
+      },
+      {
+        "txt": "checkProvides = CheckLevel.OFF; checkGlobalNamesLevel = CheckLevel.OFF; brokenClosureRequiresLevel = CheckLevel.ERROR; checkGlobalThisLevel = CheckLevel.OFF; checkUnreachableCode = CheckLevel.OFF; checkMissingReturn = CheckLevel.OFF; checkMissingGetCssNameLevel = CheckLevel.OFF; checkMissingGetCssNameBlacklist = null; checkEs5Strict = false; checkCaja = false;"
+      },
+      {
+        "txt": "computeFunctionSideEffects = false; chainCalls = false; foldConstants = false; removeConstantExpressions = false; coalesceVariableNames = false; deadAssignmentElimination = false; inlineConstantVars = false; inlineFunctions = false; inlineLocalFunctions = false; crossModuleCodeMotion = false;"
+      },
+      {
+        "txt": "crossModuleMethodMotion = false; inlineGetters = false; inlineVariables = false; inlineLocalVariables = false; smartNameRemoval = false; removeDeadCode = false; extractPrototypeMemberDeclarations = false; removeUnusedPrototypeProperties = false; removeUnusedPrototypePropertiesInExterns = false; removeUnusedVars = false;"
+      },
+      {
+        "txt": "removeUnusedVarsInGlobalScope = true; aliasExternals = false; collapseVariableDeclarations = false; groupVariableDeclarations = false; collapseAnonymousFunctions = false; aliasableStrings = Collections.emptySet(); aliasStringsBlacklist = \"\"; aliasAllStrings = false; outputJsStringUsage = false; convertToDottedProperties = false;"
+      },
+      {
+        "txt": "rewriteFunctionExpressions = false; optimizeParameters = false; variableRenaming = VariableRenamingPolicy.OFF; propertyRenaming = PropertyRenamingPolicy.OFF; labelRenaming = false; generatePseudoNames = false; renamePrefix = null; aliasKeywords = false; collapseProperties = false; collapsePropertiesOnExternTypes = false;"
+      },
+      {
+        "txt": "devirtualizePrototypeMethods = false; disambiguateProperties = false; ambiguateProperties = false; anonymousFunctionNaming = AnonymousFunctionNamingPolicy.OFF; exportTestFunctions = false; runtimeTypeCheck = false; runtimeTypeCheckLogFunction = null; instrumentForCoverage = false; instrumentForCoverageOnly = false; ignoreCajaProperties = false;"
+      },
+      {
+        "txt": "syntheticBlockStartMarker = null; syntheticBlockEndMarker = null; locale = null; markAsCompiled = false; removeTryCatchFinally = false; closurePass = false; rewriteNewDateGoogNow = true; removeAbstractMethods = true; stripTypes = Collections.emptySet(); stripNameSuffixes = Collections.emptySet();"
+      },
+      {
+        "txt": "stripNamePrefixes = Collections.emptySet(); stripTypePrefixes = Collections.emptySet(); customPasses = null; markNoSideEffectCalls = false; defineReplacements = Maps.newHashMap(); moveFunctionDeclarations = false; instrumentationTemplate = null; appNameStr = \"\"; recordFunctionInformation = false; generateExports = false;"
+      },
+      {
+        "txt": "cssRenamingMap = null; processObjectPropertyString = false; idGenerators = Collections.emptySet(); replaceStringsFunctionDescriptions = Collections.emptyList(); replaceStringsPlaceholderToken = \"\"; printInputDelimiter = false; prettyPrint = false; lineBreak = false; reportPath = null; tracer = TracerMode.OFF;"
+      },
+      {
+        "txt": "colorizeErrorOutput = false; errorFormat = ErrorFormat.SINGLELINE; warningsGuard = null; debugFunctionSideEffectsPath = null; jsOutputFile = \"\"; externExports = false; nameReferenceReportPath = null; nameReferenceGraphPath = null; } public Map<String, Node> getDefineReplacements() {"
+      },
+      {
+        "txt": "Map<String, Node> map = Maps.newHashMap(); for (Map.Entry<String, Object> entry : defineReplacements.entrySet()) { String name = entry.getKey(); Object value = entry.getValue(); if (value instanceof Boolean) { map.put(name, ((Boolean) value).booleanValue() ? new Node(Token.TRUE) : new Node(Token.FALSE)); } else if (value instanceof Integer) { map.put(name, Node.newNumber(((Integer) value).intValue())); } else if (value instanceof Double) {"
+      },
+      {
+        "txt": "map.put(name, Node.newNumber(((Double) value).doubleValue())); } else { Preconditions.checkState(value instanceof String); map.put(name, Node.newString((String) value)); } } return map; } public void setDefineToBooleanLiteral(String defineName, boolean value) { defineReplacements.put(defineName, new Boolean(value));"
+      },
+      {
+        "txt": "} public void setDefineToStringLiteral(String defineName, String value) { defineReplacements.put(defineName, value); } public void setDefineToNumberLiteral(String defineName, int value) { defineReplacements.put(defineName, new Integer(value)); } public void setDefineToDoubleLiteral(String defineName, double value) { defineReplacements.put(defineName, new Double(value)); }"
+      },
+      {
+        "txt": "public void skipAllCompilerPasses() { skipAllPasses = true; } boolean enables(DiagnosticGroup type) { return warningsGuard != null && warningsGuard.enables(type); } boolean disables(DiagnosticGroup type) { return warningsGuard != null && warningsGuard.disables(type); } public void setWarningLevel(DiagnosticGroup type, CheckLevel level) {"
+      },
+      {
+        "txt": "addWarningsGuard(new DiagnosticGroupWarningsGuard(type, level)); } WarningsGuard getWarningsGuard() { return warningsGuard; } public void addWarningsGuard(WarningsGuard guard) { if (warningsGuard == null) { warningsGuard = new ComposeWarningsGuard(guard); } else { warningsGuard.addGuard(guard);"
+      },
+      {
+        "txt": "} } public void setRenamingPolicy(VariableRenamingPolicy newVariablePolicy, PropertyRenamingPolicy newPropertyPolicy) { this.variableRenaming = newVariablePolicy; this.propertyRenaming = newPropertyPolicy; } public void setCollapsePropertiesOnExternTypes(boolean collapse) { collapsePropertiesOnExternTypes = collapse; }"
+      },
+      {
+        "txt": "public void setProcessObjectPropertyString(boolean process) { processObjectPropertyString = process; } public void setIdGenerators(Set<String> idGenerators) { this.idGenerators = Sets.newHashSet(idGenerators); } public void setReplaceStringsConfiguration( String placeholderToken, List<String> functionDescriptors) { this.replaceStringsPlaceholderToken = placeholderToken; this.replaceStringsFunctionDescriptions ="
+      },
+      {
+        "txt": "Lists.newArrayList(functionDescriptors); } public void setRewriteNewDateGoogNow(boolean rewrite) { this.rewriteNewDateGoogNow = rewrite; } public void setRemoveAbstractMethods(boolean remove) { this.removeAbstractMethods = remove; } public void setNameAnonymousFunctionsOnly(boolean value) { this.nameAnonymousFunctionsOnly = value;"
+      },
+      {
+        "txt": "} public void setColorizeErrorOutput(boolean colorizeErrorOutput) { this.colorizeErrorOutput = colorizeErrorOutput; } public boolean shouldColorizeErrorOutput() { return colorizeErrorOutput; } public void setChainCalls(boolean value) { this.chainCalls = value; }"
+      },
+      {
+        "txt": "public void enableRuntimeTypeCheck(String logFunction) { this.runtimeTypeCheck = true; this.runtimeTypeCheckLogFunction = logFunction; } public void disableRuntimeTypeCheck() { this.runtimeTypeCheck = false; } public void setCodingConvention(CodingConvention codingConvention) { this.codingConvention = codingConvention; }"
+      },
+      {
+        "txt": "public CodingConvention getCodingConvention() { return codingConvention; } public void setManageClosureDependencies(boolean newVal) { manageClosureDependencies = newVal; } public void setSummaryDetailLevel(int summaryDetailLevel) { this.summaryDetailLevel = summaryDetailLevel; } public void enableExternExports(boolean enable) {"
+      },
+      {
+        "txt": "this.externExports = enable; } public boolean isExternExportsEnabled() { return externExports; } public void setLooseTypes(boolean looseTypes) { this.looseTypes = looseTypes; } @Override public Object clone() throws CloneNotSupportedException {"
+      },
+      {
+        "txt": "CompilerOptions clone = (CompilerOptions) super.clone(); return clone; } static enum DevMode { OFF, START, START_AND_END, EVERY_PASS } public static enum TracerMode {"
+      },
+      {
+        "txt": "ALL, // Collect all timing and size metrics. FAST, // Collect all timing and size metrics, except gzipped size. OFF; // Collect no timing and size metrics. boolean isOn() { return this != OFF; } }"
+      }
+    ]
+  },
+  {
+    "id": 658,
+    "file_path": "src/com/google/javascript/jscomp/CompilerOptions.java",
+    "start-bug-line": 960,
+    "end-bug-line": 960,
+    "bug": "",
+    "fix": "public void setOutputCharset(String charsetName) { this.outputCharset = charsetName; }",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "import com.google.common.base.Preconditions; import com.google.common.collect.Lists; import com.google.common.collect.Maps; import com.google.common.collect.Multimap; import com.google.common.collect.Sets; import com.google.javascript.rhino.Node; import com.google.javascript.rhino.Token; import java.io.Serializable; import java.nio.charset.Charset; import java.util.Collections;"
+      },
+      {
+        "txt": "import java.util.List; import java.util.Map; import java.util.Set; public class CompilerOptions implements Serializable, Cloneable { private static final long serialVersionUID = 7L; public boolean ideMode; boolean skipAllPasses; boolean nameAnonymousFunctionsOnly; DevMode devMode; boolean manageClosureDependencies = false;"
+      },
+      {
+        "txt": "public transient MessageBundle messageBundle = null; public boolean checkSymbols; public CheckLevel checkShadowVars; public CheckLevel aggressiveVarCheck; public CheckLevel checkFunctions; public CheckLevel checkMethods; public boolean checkDuplicateMessages; public boolean allowLegacyJsMessages; public boolean strictMessageReplacement; public boolean checkSuspiciousCode;"
+      },
+      {
+        "txt": "public boolean checkControlStructures; public CheckLevel checkUndefinedProperties; public boolean checkUnusedPropertiesEarly; public boolean checkTypes; public boolean tightenTypes; public boolean inferTypesInGlobalScope; public boolean checkTypedPropertyCalls; public CheckLevel reportMissingOverride; public CheckLevel reportUnknownTypes; public CheckLevel checkRequires;"
+      },
+      {
+        "txt": "public CheckLevel checkProvides; public CheckLevel checkGlobalNamesLevel; public CheckLevel brokenClosureRequiresLevel; public CheckLevel checkGlobalThisLevel; public CheckLevel checkMissingGetCssNameLevel; public String checkMissingGetCssNameBlacklist; public boolean checkEs5Strict; public boolean checkCaja; public boolean foldConstants; public boolean removeConstantExpressions;"
+      },
+      {
+        "txt": "public boolean deadAssignmentElimination; public boolean inlineConstantVars; public boolean inlineFunctions; public boolean decomposeExpressions; public boolean inlineAnonymousFunctionExpressions; public boolean inlineLocalFunctions; public boolean crossModuleCodeMotion; public boolean coalesceVariableNames; public boolean crossModuleMethodMotion; public boolean inlineGetters;"
+      },
+      {
+        "txt": "public boolean inlineVariables; public boolean inlineLocalVariables; public boolean flowSensitiveInlineVariables; public boolean smartNameRemoval; public boolean removeDeadCode; public CheckLevel checkUnreachableCode; public CheckLevel checkMissingReturn; public boolean extractPrototypeMemberDeclarations; public boolean removeEmptyFunctions; public boolean removeUnusedPrototypeProperties;"
+      },
+      {
+        "txt": "public boolean removeUnusedPrototypePropertiesInExterns; public boolean removeUnusedVars; public boolean removeUnusedVarsInGlobalScope; public boolean aliasExternals; public String aliasableGlobals; public String unaliasableGlobals; public boolean collapseVariableDeclarations; public boolean groupVariableDeclarations; public boolean collapseAnonymousFunctions; public Set<String> aliasableStrings;"
+      },
+      {
+        "txt": "public String aliasStringsBlacklist; public boolean aliasAllStrings; boolean outputJsStringUsage; public boolean convertToDottedProperties; public boolean rewriteFunctionExpressions; public boolean optimizeParameters; public boolean optimizeArgumentsArray; boolean chainCalls; public VariableRenamingPolicy variableRenaming; public PropertyRenamingPolicy propertyRenaming;"
+      },
+      {
+        "txt": "public boolean labelRenaming; public boolean reserveRawExports; public boolean generatePseudoNames; public String renamePrefix; public boolean aliasKeywords; public boolean collapseProperties; boolean collapsePropertiesOnExternTypes; public boolean devirtualizePrototypeMethods; public boolean computeFunctionSideEffects; public String debugFunctionSideEffectsPath;"
+      },
+      {
+        "txt": "public boolean disambiguateProperties; public boolean ambiguateProperties; public AnonymousFunctionNamingPolicy anonymousFunctionNaming; public byte[] inputVariableMapSerialized; public byte[] inputPropertyMapSerialized; public boolean exportTestFunctions; boolean runtimeTypeCheck; String runtimeTypeCheckLogFunction; private CodingConvention codingConvention; public boolean instrumentForCoverage;"
+      },
+      {
+        "txt": "public boolean instrumentForCoverageOnly; public boolean ignoreCajaProperties; public String syntheticBlockStartMarker; public String syntheticBlockEndMarker; public String locale; public boolean markAsCompiled; public boolean removeTryCatchFinally; public boolean closurePass; boolean rewriteNewDateGoogNow; boolean removeAbstractMethods;"
+      },
+      {
+        "txt": "public boolean gatherCssNames; public Set<String> stripTypes; public Set<String> stripNameSuffixes; public Set<String> stripNamePrefixes; public Set<String> stripTypePrefixes; public transient Multimap<CustomPassExecutionTime, CompilerPass> customPasses; public boolean markNoSideEffectCalls; private Map<String, Object> defineReplacements; public boolean moveFunctionDeclarations;"
+      },
+      {
+        "txt": "public String instrumentationTemplate; public String appNameStr; public boolean recordFunctionInformation; public boolean generateExports; public CssRenamingMap cssRenamingMap; boolean processObjectPropertyString; Set<String> idGenerators; List<String> replaceStringsFunctionDescriptions; String replaceStringsPlaceholderToken; public boolean prettyPrint;"
+      },
+      {
+        "txt": "public boolean lineBreak; public boolean printInputDelimiter; public String inputDelimiter = \"// Input %num%\"; public String reportPath; public TracerMode tracer; private boolean colorizeErrorOutput; public ErrorFormat errorFormat; public String jsOutputFile; private transient ComposeWarningsGuard warningsGuard; int summaryDetailLevel = 1;"
+      },
+      {
+        "txt": "private boolean externExports; String externExportsPath; public String nameReferenceReportPath; public String nameReferenceGraphPath; public String sourceMapOutputPath; public SourceMap.DetailLevel sourceMapDetailLevel = SourceMap.DetailLevel.SYMBOLS; public Charset outputCharset; boolean looseTypes; public CompilerOptions() {"
+      },
+      {
+        "txt": "skipAllPasses = false; nameAnonymousFunctionsOnly = false; devMode = DevMode.OFF; checkSymbols = false; checkShadowVars = CheckLevel.OFF; aggressiveVarCheck = CheckLevel.OFF; checkFunctions = CheckLevel.OFF; checkMethods = CheckLevel.OFF; checkDuplicateMessages = false; allowLegacyJsMessages = false;"
+      },
+      {
+        "txt": "strictMessageReplacement = false; checkSuspiciousCode = false; checkControlStructures = false; checkUndefinedProperties = CheckLevel.OFF; checkUnusedPropertiesEarly = false; checkTypes = false; tightenTypes = false; inferTypesInGlobalScope = false; checkTypedPropertyCalls = false; reportMissingOverride = CheckLevel.OFF;"
+      },
+      {
+        "txt": "reportUnknownTypes = CheckLevel.OFF; checkRequires = CheckLevel.OFF; checkProvides = CheckLevel.OFF; checkGlobalNamesLevel = CheckLevel.OFF; brokenClosureRequiresLevel = CheckLevel.ERROR; checkGlobalThisLevel = CheckLevel.OFF; checkUnreachableCode = CheckLevel.OFF; checkMissingReturn = CheckLevel.OFF; checkMissingGetCssNameLevel = CheckLevel.OFF; checkMissingGetCssNameBlacklist = null;"
+      },
+      {
+        "txt": "checkEs5Strict = false; checkCaja = false; computeFunctionSideEffects = false; chainCalls = false; foldConstants = false; removeConstantExpressions = false; coalesceVariableNames = false; deadAssignmentElimination = false; inlineConstantVars = false; inlineFunctions = false;"
+      },
+      {
+        "txt": "inlineLocalFunctions = false; crossModuleCodeMotion = false; crossModuleMethodMotion = false; inlineGetters = false; inlineVariables = false; inlineLocalVariables = false; smartNameRemoval = false; removeDeadCode = false; extractPrototypeMemberDeclarations = false; removeUnusedPrototypeProperties = false;"
+      },
+      {
+        "txt": "removeUnusedPrototypePropertiesInExterns = false; removeUnusedVars = false; removeUnusedVarsInGlobalScope = true; aliasExternals = false; collapseVariableDeclarations = false; groupVariableDeclarations = false; collapseAnonymousFunctions = false; aliasableStrings = Collections.emptySet(); aliasStringsBlacklist = \"\"; aliasAllStrings = false;"
+      },
+      {
+        "txt": "outputJsStringUsage = false; convertToDottedProperties = false; rewriteFunctionExpressions = false; optimizeParameters = false; variableRenaming = VariableRenamingPolicy.OFF; propertyRenaming = PropertyRenamingPolicy.OFF; labelRenaming = false; generatePseudoNames = false; renamePrefix = null; aliasKeywords = false;"
+      },
+      {
+        "txt": "collapseProperties = false; collapsePropertiesOnExternTypes = false; devirtualizePrototypeMethods = false; disambiguateProperties = false; ambiguateProperties = false; anonymousFunctionNaming = AnonymousFunctionNamingPolicy.OFF; exportTestFunctions = false; runtimeTypeCheck = false; runtimeTypeCheckLogFunction = null; instrumentForCoverage = false;"
+      },
+      {
+        "txt": "instrumentForCoverageOnly = false; ignoreCajaProperties = false; syntheticBlockStartMarker = null; syntheticBlockEndMarker = null; locale = null; markAsCompiled = false; removeTryCatchFinally = false; closurePass = false; rewriteNewDateGoogNow = true; removeAbstractMethods = true;"
+      },
+      {
+        "txt": "stripTypes = Collections.emptySet(); stripNameSuffixes = Collections.emptySet(); stripNamePrefixes = Collections.emptySet(); stripTypePrefixes = Collections.emptySet(); customPasses = null; markNoSideEffectCalls = false; defineReplacements = Maps.newHashMap(); moveFunctionDeclarations = false; instrumentationTemplate = null; appNameStr = \"\";"
+      },
+      {
+        "txt": "recordFunctionInformation = false; generateExports = false; cssRenamingMap = null; processObjectPropertyString = false; idGenerators = Collections.emptySet(); replaceStringsFunctionDescriptions = Collections.emptyList(); replaceStringsPlaceholderToken = \"\"; printInputDelimiter = false; prettyPrint = false; lineBreak = false;"
+      },
+      {
+        "txt": "reportPath = null; tracer = TracerMode.OFF; colorizeErrorOutput = false; errorFormat = ErrorFormat.SINGLELINE; warningsGuard = null; debugFunctionSideEffectsPath = null; jsOutputFile = \"\"; externExports = false; nameReferenceReportPath = null; nameReferenceGraphPath = null;"
+      },
+      {
+        "txt": "} public Map<String, Node> getDefineReplacements() { Map<String, Node> map = Maps.newHashMap(); for (Map.Entry<String, Object> entry : defineReplacements.entrySet()) { String name = entry.getKey(); Object value = entry.getValue(); if (value instanceof Boolean) { map.put(name, ((Boolean) value).booleanValue() ? new Node(Token.TRUE) : new Node(Token.FALSE)); } else if (value instanceof Integer) {"
+      },
+      {
+        "txt": "map.put(name, Node.newNumber(((Integer) value).intValue())); } else if (value instanceof Double) { map.put(name, Node.newNumber(((Double) value).doubleValue())); } else { Preconditions.checkState(value instanceof String); map.put(name, Node.newString((String) value)); } } return map; }"
+      },
+      {
+        "txt": "public void setDefineToBooleanLiteral(String defineName, boolean value) { defineReplacements.put(defineName, new Boolean(value)); } public void setDefineToStringLiteral(String defineName, String value) { defineReplacements.put(defineName, value); } public void setDefineToNumberLiteral(String defineName, int value) { defineReplacements.put(defineName, new Integer(value)); } public void setDefineToDoubleLiteral(String defineName, double value) {"
+      },
+      {
+        "txt": "defineReplacements.put(defineName, new Double(value)); } public void skipAllCompilerPasses() { skipAllPasses = true; } boolean enables(DiagnosticGroup type) { return warningsGuard != null && warningsGuard.enables(type); } boolean disables(DiagnosticGroup type) { return warningsGuard != null && warningsGuard.disables(type);"
+      },
+      {
+        "txt": "} public void setWarningLevel(DiagnosticGroup type, CheckLevel level) { addWarningsGuard(new DiagnosticGroupWarningsGuard(type, level)); } WarningsGuard getWarningsGuard() { return warningsGuard; } public void addWarningsGuard(WarningsGuard guard) { if (warningsGuard == null) { warningsGuard = new ComposeWarningsGuard(guard);"
+      },
+      {
+        "txt": "} else { warningsGuard.addGuard(guard); } } public void setRenamingPolicy(VariableRenamingPolicy newVariablePolicy, PropertyRenamingPolicy newPropertyPolicy) { this.variableRenaming = newVariablePolicy; this.propertyRenaming = newPropertyPolicy; } public void setCollapsePropertiesOnExternTypes(boolean collapse) {"
+      },
+      {
+        "txt": "collapsePropertiesOnExternTypes = collapse; } public void setProcessObjectPropertyString(boolean process) { processObjectPropertyString = process; } public void setIdGenerators(Set<String> idGenerators) { this.idGenerators = Sets.newHashSet(idGenerators); } public void setReplaceStringsConfiguration( String placeholderToken, List<String> functionDescriptors) {"
+      },
+      {
+        "txt": "this.replaceStringsPlaceholderToken = placeholderToken; this.replaceStringsFunctionDescriptions = Lists.newArrayList(functionDescriptors); } public void setRewriteNewDateGoogNow(boolean rewrite) { this.rewriteNewDateGoogNow = rewrite; } public void setRemoveAbstractMethods(boolean remove) { this.removeAbstractMethods = remove; }"
+      },
+      {
+        "txt": "public void setNameAnonymousFunctionsOnly(boolean value) { this.nameAnonymousFunctionsOnly = value; } public void setColorizeErrorOutput(boolean colorizeErrorOutput) { this.colorizeErrorOutput = colorizeErrorOutput; } public boolean shouldColorizeErrorOutput() { return colorizeErrorOutput; } public void setChainCalls(boolean value) {"
+      },
+      {
+        "txt": "this.chainCalls = value; } public void enableRuntimeTypeCheck(String logFunction) { this.runtimeTypeCheck = true; this.runtimeTypeCheckLogFunction = logFunction; } public void disableRuntimeTypeCheck() { this.runtimeTypeCheck = false; } public void setCodingConvention(CodingConvention codingConvention) {"
+      },
+      {
+        "txt": "this.codingConvention = codingConvention; } public CodingConvention getCodingConvention() { return codingConvention; } public void setManageClosureDependencies(boolean newVal) { manageClosureDependencies = newVal; } public void setSummaryDetailLevel(int summaryDetailLevel) { this.summaryDetailLevel = summaryDetailLevel;"
+      },
+      {
+        "txt": "public void enableExternExports(boolean enable) { this.externExports = enable; } public boolean isExternExportsEnabled() { return externExports; } <extra_id_0> public void setLooseTypes(boolean looseTypes) { this.looseTypes = looseTypes; } @Override public Object clone() throws CloneNotSupportedException { CompilerOptions clone = (CompilerOptions) super.clone();"
+      },
+      {
+        "txt": "public Object clone() throws CloneNotSupportedException { CompilerOptions clone = (CompilerOptions) super.clone(); return clone; } static enum DevMode { OFF, START, START_AND_END, EVERY_PASS }"
+      },
+      {
+        "txt": "public static enum TracerMode { ALL, // Collect all timing and size metrics. FAST, // Collect all timing and size metrics, except gzipped size. OFF; // Collect no timing and size metrics. boolean isOn() { return this != OFF; } }"
+      }
+    ]
+  }
+]

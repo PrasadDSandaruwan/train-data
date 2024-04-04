@@ -1,0 +1,1022 @@
+[
+  {
+    "id": 1657,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/introspect/POJOPropertiesCollector.java",
+    "start-bug-line": 7,
+    "end-bug-line": 7,
+    "bug": "",
+    "fix": "import com.fasterxml.jackson.annotation.JsonProperty.Access;",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind.introspect; import java.lang.reflect.Modifier; import java.util.*; import com.fasterxml.jackson.annotation.JsonAnySetter; <extra_id_0> import com.fasterxml.jackson.databind.cfg.HandlerInstantiator; import com.fasterxml.jackson.databind.cfg.MapperConfig; import com.fasterxml.jackson.databind.util.BeanUtil; import com.fasterxml.jackson.databind.util.ClassUtil; public class POJOPropertiesCollector {"
+      },
+      {
+        "txt": "public class POJOPropertiesCollector { protected final MapperConfig<?> _config; protected final boolean _forSerialization; protected final boolean _stdBeanNaming; protected final JavaType _type; protected final AnnotatedClass _classDef; protected final VisibilityChecker<?> _visibilityChecker; protected final AnnotationIntrospector _annotationIntrospector; protected final String _mutatorPrefix;"
+      },
+      {
+        "txt": "protected boolean _collected; protected LinkedHashMap<String, POJOPropertyBuilder> _properties; protected LinkedList<POJOPropertyBuilder> _creatorProperties ; protected LinkedList<AnnotatedMember> _anyGetters; protected LinkedList<AnnotatedMethod> _anySetters; protected LinkedList<AnnotatedMember> _anySetterField; protected LinkedList<AnnotatedMethod> _jsonValueGetters; protected HashSet<String> _ignoredPropertyNames; protected LinkedHashMap<Object, AnnotatedMember> _injectables; protected POJOPropertiesCollector(MapperConfig<?> config, boolean forSerialization,"
+      },
+      {
+        "txt": "JavaType type, AnnotatedClass classDef, String mutatorPrefix) { _config = config; _stdBeanNaming = config.isEnabled(MapperFeature.USE_STD_BEAN_NAMING); _forSerialization = forSerialization; _type = type; _classDef = classDef; _mutatorPrefix = (mutatorPrefix == null) ? \"set\" : mutatorPrefix; _annotationIntrospector = config.isAnnotationProcessingEnabled() ? _config.getAnnotationIntrospector() : null;"
+      },
+      {
+        "txt": "if (_annotationIntrospector == null) { _visibilityChecker = _config.getDefaultVisibilityChecker(); } else { _visibilityChecker = _annotationIntrospector.findAutoDetectVisibility(classDef, _config.getDefaultVisibilityChecker()); } } public MapperConfig<?> getConfig() { return _config; }"
+      },
+      {
+        "txt": "public JavaType getType() { return _type; } public AnnotatedClass getClassDef() { return _classDef; } public AnnotationIntrospector getAnnotationIntrospector() { return _annotationIntrospector; } public List<BeanPropertyDefinition> getProperties() {"
+      },
+      {
+        "txt": "Map<String, POJOPropertyBuilder> props = getPropertyMap(); return new ArrayList<BeanPropertyDefinition>(props.values()); } public Map<Object, AnnotatedMember> getInjectables() { if (!_collected) { collectAll(); } return _injectables; } public AnnotatedMethod getJsonValueMethod()"
+      },
+      {
+        "txt": "{ if (!_collected) { collectAll(); } if (_jsonValueGetters != null) { if (_jsonValueGetters.size() > 1) { reportProblem(\"Multiple value properties defined (\"+_jsonValueGetters.get(0)+\" vs \" +_jsonValueGetters.get(1)+\")\"); } return _jsonValueGetters.get(0);"
+      },
+      {
+        "txt": "} return null; } public AnnotatedMember getAnyGetter() { if (!_collected) { collectAll(); } if (_anyGetters != null) { if (_anyGetters.size() > 1) {"
+      },
+      {
+        "txt": "reportProblem(\"Multiple 'any-getters' defined (\"+_anyGetters.get(0)+\" vs \" +_anyGetters.get(1)+\")\"); } return _anyGetters.getFirst(); } return null; } public AnnotatedMember getAnySetterField() { if (!_collected) {"
+      },
+      {
+        "txt": "collectAll(); } if (_anySetterField != null) { if (_anySetterField.size() > 1) { reportProblem(\"Multiple 'any-Setters' defined (\"+_anySetters.get(0)+\" vs \" +_anySetterField.get(1)+\")\"); } return _anySetterField.getFirst(); } return null;"
+      },
+      {
+        "txt": "} public AnnotatedMethod getAnySetterMethod() { if (!_collected) { collectAll(); } if (_anySetters != null) { if (_anySetters.size() > 1) { reportProblem(\"Multiple 'any-setters' defined (\"+_anySetters.get(0)+\" vs \" +_anySetters.get(1)+\")\");"
+      },
+      {
+        "txt": "} return _anySetters.getFirst(); } return null; } public Set<String> getIgnoredPropertyNames() { return _ignoredPropertyNames; } public ObjectIdInfo getObjectIdInfo() {"
+      },
+      {
+        "txt": "if (_annotationIntrospector == null) { return null; } ObjectIdInfo info = _annotationIntrospector.findObjectIdInfo(_classDef); if (info != null) { // 2.1: may also have different defaults for refs: info = _annotationIntrospector.findObjectReferenceInfo(_classDef, info); } return info; } public Class<?> findPOJOBuilderClass()"
+      },
+      {
+        "txt": "{ return _annotationIntrospector.findPOJOBuilder(_classDef); } protected Map<String, POJOPropertyBuilder> getPropertyMap() { if (!_collected) { collectAll(); } return _properties; } @Deprecated"
+      },
+      {
+        "txt": "public POJOPropertiesCollector collect() { return this; } protected void collectAll() { LinkedHashMap<String, POJOPropertyBuilder> props = new LinkedHashMap<String, POJOPropertyBuilder>(); _addFields(props); _addMethods(props); if (!_classDef.isNonStaticInnerClass()) { _addCreators(props);"
+      },
+      {
+        "txt": "} _addInjectables(props); _removeUnwantedProperties(props); for (POJOPropertyBuilder property : props.values()) { property.mergeAnnotations(_forSerialization); } _removeUnwantedAccessor(props); _renameProperties(props); PropertyNamingStrategy naming = _findNamingStrategy(); if (naming != null) {"
+      },
+      {
+        "txt": "_renameUsing(props, naming); } for (POJOPropertyBuilder property : props.values()) { property.trimByVisibility(); } if (_config.isEnabled(MapperFeature.USE_WRAPPER_NAME_AS_PROPERTY_NAME)) { _renameWithWrappers(props); } _sortProperties(props); _properties = props;"
+      },
+      {
+        "txt": "_collected = true; } protected void _addFields(Map<String, POJOPropertyBuilder> props) { final AnnotationIntrospector ai = _annotationIntrospector; final boolean pruneFinalFields = !_forSerialization && !_config.isEnabled(MapperFeature.ALLOW_FINAL_FIELDS_AS_MUTATORS); final boolean transientAsIgnoral = _config.isEnabled(MapperFeature.PROPAGATE_TRANSIENT_MARKER); for (AnnotatedField f : _classDef.fields()) { String implName = (ai == null) ? null : ai.findImplicitPropertyName(f); if (implName == null) {"
+      },
+      {
+        "txt": "implName = f.getName(); } PropertyName pn; if (ai == null) { pn = null; } else if (_forSerialization) { pn = ai.findNameForSerialization(f); } else { pn = ai.findNameForDeserialization(f); }"
+      },
+      {
+        "txt": "boolean hasName = (pn != null); boolean nameExplicit = hasName; if (nameExplicit && pn.isEmpty()) { // empty String meaning \"use default name\", here just means \"same as field name\" pn = _propNameFromSimple(implName); nameExplicit = false; } boolean visible = (pn != null); if (!visible) { visible = _visibilityChecker.isFieldVisible(f); }"
+      },
+      {
+        "txt": "boolean ignored = (ai != null) && ai.hasIgnoreMarker(f); if (f.isTransient()) { if (!hasName) { visible = false; if (transientAsIgnoral) { ignored = true; } } } if (pruneFinalFields && (pn == null) && !ignored && Modifier.isFinal(f.getModifiers())) {"
+      },
+      {
+        "txt": "continue; } if(f.hasAnnotation(JsonAnySetter.class)) { if (_anySetterField == null) { _anySetterField = new LinkedList<AnnotatedMember>(); } _anySetterField.add(f); } _property(props, implName).addField(f, pn, nameExplicit, visible, ignored); }"
+      },
+      {
+        "txt": "} protected void _addCreators(Map<String, POJOPropertyBuilder> props) { if (_annotationIntrospector == null) { return; } for (AnnotatedConstructor ctor : _classDef.getConstructors()) { if (_creatorProperties == null) { _creatorProperties = new LinkedList<POJOPropertyBuilder>(); }"
+      },
+      {
+        "txt": "for (int i = 0, len = ctor.getParameterCount(); i < len; ++i) { _addCreatorParam(props, ctor.getParameter(i)); } } for (AnnotatedMethod factory : _classDef.getStaticMethods()) { if (_creatorProperties == null) { _creatorProperties = new LinkedList<POJOPropertyBuilder>(); } for (int i = 0, len = factory.getParameterCount(); i < len; ++i) { _addCreatorParam(props, factory.getParameter(i));"
+      },
+      {
+        "txt": "} } } protected void _addCreatorParam(Map<String, POJOPropertyBuilder> props, AnnotatedParameter param) { String impl = _annotationIntrospector.findImplicitPropertyName(param); if (impl == null) { impl = \"\"; }"
+      },
+      {
+        "txt": "PropertyName pn = _annotationIntrospector.findNameForDeserialization(param); boolean expl = (pn != null && !pn.isEmpty()); if (!expl) { if (impl.isEmpty()) { return; } if (!_annotationIntrospector.hasCreatorAnnotation(param.getOwner())) { return; } pn = PropertyName.construct(impl);"
+      },
+      {
+        "txt": "} POJOPropertyBuilder prop = (expl && impl.isEmpty()) ? _property(props, pn) : _property(props, impl); prop.addCtor(param, pn, expl, true, false); _creatorProperties.add(prop); } protected void _addMethods(Map<String, POJOPropertyBuilder> props) { final AnnotationIntrospector ai = _annotationIntrospector; for (AnnotatedMethod m : _classDef.memberMethods()) {"
+      },
+      {
+        "txt": "int argCount = m.getParameterCount(); if (argCount == 0) { // getters (including 'any getter') _addGetterMethod(props, m, ai); } else if (argCount == 1) { // setters _addSetterMethod(props, m, ai); } else if (argCount == 2) { // any getter? if (ai != null && ai.hasAnySetterAnnotation(m)) { if (_anySetters == null) { _anySetters = new LinkedList<AnnotatedMethod>(); }"
+      },
+      {
+        "txt": "_anySetters.add(m); } } } } protected void _addGetterMethod(Map<String, POJOPropertyBuilder> props, AnnotatedMethod m, AnnotationIntrospector ai) { if (!m.hasReturnType()) { return;"
+      },
+      {
+        "txt": "} if (ai != null) { if (ai.hasAnyGetterAnnotation(m)) { if (_anyGetters == null) { _anyGetters = new LinkedList<AnnotatedMember>(); } _anyGetters.add(m); return; } if (ai.hasAsValueAnnotation(m)) {"
+      },
+      {
+        "txt": "if (_jsonValueGetters == null) { _jsonValueGetters = new LinkedList<AnnotatedMethod>(); } _jsonValueGetters.add(m); return; } } String implName; // from naming convention boolean visible; PropertyName pn = (ai == null) ? null : ai.findNameForSerialization(m);"
+      },
+      {
+        "txt": "boolean nameExplicit = (pn != null); if (!nameExplicit) { // no explicit name; must consider implicit implName = (ai == null) ? null : ai.findImplicitPropertyName(m); if (implName == null) { implName = BeanUtil.okNameForRegularGetter(m, m.getName(), _stdBeanNaming); } if (implName == null) { // if not, must skip implName = BeanUtil.okNameForIsGetter(m, m.getName(), _stdBeanNaming); if (implName == null) { return;"
+      },
+      {
+        "txt": "} visible = _visibilityChecker.isIsGetterVisible(m); } else { visible = _visibilityChecker.isGetterVisible(m); } } else { // explicit indication of inclusion, but may be empty implName = (ai == null) ? null : ai.findImplicitPropertyName(m); if (implName == null) { implName = BeanUtil.okNameForGetter(m, _stdBeanNaming); }"
+      },
+      {
+        "txt": "if (implName == null) { implName = m.getName(); } if (pn.isEmpty()) { pn = _propNameFromSimple(implName); nameExplicit = false; } visible = true; } boolean ignore = (ai == null) ? false : ai.hasIgnoreMarker(m);"
+      },
+      {
+        "txt": "_property(props, implName).addGetter(m, pn, nameExplicit, visible, ignore); } protected void _addSetterMethod(Map<String, POJOPropertyBuilder> props, AnnotatedMethod m, AnnotationIntrospector ai) { String implName; // from naming convention boolean visible; PropertyName pn = (ai == null) ? null : ai.findNameForDeserialization(m); boolean nameExplicit = (pn != null); if (!nameExplicit) { // no explicit name; must follow naming convention"
+      },
+      {
+        "txt": "implName = (ai == null) ? null : ai.findImplicitPropertyName(m); if (implName == null) { implName = BeanUtil.okNameForMutator(m, _mutatorPrefix, _stdBeanNaming); } if (implName == null) { // if not, must skip return; } visible = _visibilityChecker.isSetterVisible(m); } else { // explicit indication of inclusion, but may be empty implName = (ai == null) ? null : ai.findImplicitPropertyName(m);"
+      },
+      {
+        "txt": "if (implName == null) { implName = BeanUtil.okNameForMutator(m, _mutatorPrefix, _stdBeanNaming); } if (implName == null) { implName = m.getName(); } if (pn.isEmpty()) { pn = _propNameFromSimple(implName); nameExplicit = false; }"
+      },
+      {
+        "txt": "visible = true; } boolean ignore = (ai == null) ? false : ai.hasIgnoreMarker(m); _property(props, implName).addSetter(m, pn, nameExplicit, visible, ignore); } protected void _addInjectables(Map<String, POJOPropertyBuilder> props) { final AnnotationIntrospector ai = _annotationIntrospector; if (ai == null) { return;"
+      },
+      {
+        "txt": "} for (AnnotatedField f : _classDef.fields()) { _doAddInjectable(ai.findInjectableValueId(f), f); } for (AnnotatedMethod m : _classDef.memberMethods()) { if (m.getParameterCount() != 1) { continue; } _doAddInjectable(ai.findInjectableValueId(m), m); }"
+      },
+      {
+        "txt": "} protected void _doAddInjectable(Object id, AnnotatedMember m) { if (id == null) { return; } if (_injectables == null) { _injectables = new LinkedHashMap<Object, AnnotatedMember>(); } AnnotatedMember prev = _injectables.put(id, m);"
+      },
+      {
+        "txt": "if (prev != null) { String type = id.getClass().getName(); throw new IllegalArgumentException(\"Duplicate injectable value with id '\" +String.valueOf(id)+\"' (of type \"+type+\")\"); } } private PropertyName _propNameFromSimple(String simpleName) { return PropertyName.construct(simpleName, null); } protected void _removeUnwantedProperties(Map<String, POJOPropertyBuilder> props)"
+      },
+      {
+        "txt": "{ Iterator<POJOPropertyBuilder> it = props.values().iterator(); while (it.hasNext()) { POJOPropertyBuilder prop = it.next(); if (!prop.anyVisible()) { it.remove(); continue; } if (prop.anyIgnorals()) { if (!prop.isExplicitlyIncluded()) {"
+      },
+      {
+        "txt": "it.remove(); _collectIgnorals(prop.getName()); continue; } prop.removeIgnored(); if (!_forSerialization && !prop.couldDeserialize()) { _collectIgnorals(prop.getName()); } } }"
+      },
+      {
+        "txt": "} protected void _removeUnwantedAccessor(Map<String, POJOPropertyBuilder> props) { final boolean inferMutators = _config.isEnabled(MapperFeature.INFER_PROPERTY_MUTATORS); Iterator<POJOPropertyBuilder> it = props.values().iterator(); while (it.hasNext()) { POJOPropertyBuilder prop = it.next(); prop.removeNonVisible(inferMutators); } }"
+      },
+      {
+        "txt": "private void _collectIgnorals(String name) { if (!_forSerialization) { if (_ignoredPropertyNames == null) { _ignoredPropertyNames = new HashSet<String>(); } _ignoredPropertyNames.add(name); } } protected void _renameProperties(Map<String, POJOPropertyBuilder> props)"
+      },
+      {
+        "txt": "{ Iterator<Map.Entry<String,POJOPropertyBuilder>> it = props.entrySet().iterator(); LinkedList<POJOPropertyBuilder> renamed = null; while (it.hasNext()) { Map.Entry<String, POJOPropertyBuilder> entry = it.next(); POJOPropertyBuilder prop = entry.getValue(); Collection<PropertyName> l = prop.findExplicitNames(); if (l.isEmpty()) { continue; }"
+      },
+      {
+        "txt": "it.remove(); // need to replace with one or more renamed if (renamed == null) { renamed = new LinkedList<POJOPropertyBuilder>(); } if (l.size() == 1) { PropertyName n = l.iterator().next(); renamed.add(prop.withName(n)); continue; } renamed.addAll(prop.explode(l));"
+      },
+      {
+        "txt": "String newName = prop.findNewName(); if (newName != null) { if (renamed == null) { renamed = new LinkedList<POJOPropertyBuilder>(); } prop = prop.withSimpleName(newName); renamed.add(prop); it.remove(); } }"
+      },
+      {
+        "txt": "if (renamed != null) { for (POJOPropertyBuilder prop : renamed) { String name = prop.getName(); POJOPropertyBuilder old = props.get(name); if (old == null) { props.put(name, prop); } else { old.addAll(prop); } _updateCreatorProperty(prop, _creatorProperties);"
+      },
+      {
+        "txt": "} } } protected void _renameUsing(Map<String, POJOPropertyBuilder> propMap, PropertyNamingStrategy naming) { POJOPropertyBuilder[] props = propMap.values().toArray(new POJOPropertyBuilder[propMap.size()]); propMap.clear(); for (POJOPropertyBuilder prop : props) { PropertyName fullName = prop.getFullName();"
+      },
+      {
+        "txt": "String rename = null; if (!prop.isExplicitlyNamed() || _config.isEnabled(MapperFeature.ALLOW_EXPLICIT_PROPERTY_RENAMING)) { if (_forSerialization) { if (prop.hasGetter()) { rename = naming.nameForGetterMethod(_config, prop.getGetter(), fullName.getSimpleName()); } else if (prop.hasField()) { rename = naming.nameForField(_config, prop.getField(), fullName.getSimpleName()); } } else { if (prop.hasSetter()) {"
+      },
+      {
+        "txt": "rename = naming.nameForSetterMethod(_config, prop.getSetter(), fullName.getSimpleName()); } else if (prop.hasConstructorParameter()) { rename = naming.nameForConstructorParameter(_config, prop.getConstructorParameter(), fullName.getSimpleName()); } else if (prop.hasField()) { rename = naming.nameForField(_config, prop.getField(), fullName.getSimpleName()); } else if (prop.hasGetter()) { rename = naming.nameForGetterMethod(_config, prop.getGetter(), fullName.getSimpleName()); } } }"
+      },
+      {
+        "txt": "final String simpleName; if (rename != null && !fullName.hasSimpleName(rename)) { prop = prop.withSimpleName(rename); simpleName = rename; } else { simpleName = fullName.getSimpleName(); } POJOPropertyBuilder old = propMap.get(simpleName); if (old == null) { propMap.put(simpleName, prop);"
+      },
+      {
+        "txt": "} else { old.addAll(prop); } _updateCreatorProperty(prop, _creatorProperties); } } protected void _renameWithWrappers(Map<String, POJOPropertyBuilder> props) { Iterator<Map.Entry<String,POJOPropertyBuilder>> it = props.entrySet().iterator(); LinkedList<POJOPropertyBuilder> renamed = null;"
+      },
+      {
+        "txt": "while (it.hasNext()) { Map.Entry<String, POJOPropertyBuilder> entry = it.next(); POJOPropertyBuilder prop = entry.getValue(); AnnotatedMember member = prop.getPrimaryMember(); if (member == null) { continue; } PropertyName wrapperName = _annotationIntrospector.findWrapperName(member); if (wrapperName == null || !wrapperName.hasSimpleName()) { continue;"
+      },
+      {
+        "txt": "} if (!wrapperName.equals(prop.getFullName())) { if (renamed == null) { renamed = new LinkedList<POJOPropertyBuilder>(); } prop = prop.withName(wrapperName); renamed.add(prop); it.remove(); } }"
+      },
+      {
+        "txt": "if (renamed != null) { for (POJOPropertyBuilder prop : renamed) { String name = prop.getName(); POJOPropertyBuilder old = props.get(name); if (old == null) { props.put(name, prop); } else { old.addAll(prop); } }"
+      },
+      {
+        "txt": "} } protected void _sortProperties(Map<String, POJOPropertyBuilder> props) { AnnotationIntrospector intr = _annotationIntrospector; Boolean alpha = (intr == null) ? null : intr.findSerializationSortAlphabetically((Annotated) _classDef); boolean sort; if (alpha == null) { sort = _config.shouldSortPropertiesAlphabetically(); } else {"
+      },
+      {
+        "txt": "sort = alpha.booleanValue(); } String[] propertyOrder = (intr == null) ? null : intr.findSerializationPropertyOrder(_classDef); if (!sort && (_creatorProperties == null) && (propertyOrder == null)) { return; } int size = props.size(); Map<String, POJOPropertyBuilder> all; if (sort) { all = new TreeMap<String,POJOPropertyBuilder>();"
+      },
+      {
+        "txt": "} else { all = new LinkedHashMap<String,POJOPropertyBuilder>(size+size); } for (POJOPropertyBuilder prop : props.values()) { all.put(prop.getName(), prop); } Map<String,POJOPropertyBuilder> ordered = new LinkedHashMap<String,POJOPropertyBuilder>(size+size); if (propertyOrder != null) { for (String name : propertyOrder) { POJOPropertyBuilder w = all.get(name);"
+      },
+      {
+        "txt": "if (w == null) { // will also allow use of \"implicit\" names for sorting for (POJOPropertyBuilder prop : props.values()) { if (name.equals(prop.getInternalName())) { w = prop; name = prop.getName(); break; } } } if (w != null) {"
+      },
+      {
+        "txt": "ordered.put(name, w); } } } if (_creatorProperties != null) { Collection<POJOPropertyBuilder> cr; if (sort) { TreeMap<String, POJOPropertyBuilder> sorted = new TreeMap<String,POJOPropertyBuilder>(); for (POJOPropertyBuilder prop : _creatorProperties) {"
+      },
+      {
+        "txt": "sorted.put(prop.getName(), prop); } cr = sorted.values(); } else { cr = _creatorProperties; } for (POJOPropertyBuilder prop : cr) { String name = prop.getName(); if (all.containsKey(name)) { ordered.put(name, prop);"
+      },
+      {
+        "txt": "} } } ordered.putAll(all); props.clear(); props.putAll(ordered); } protected void reportProblem(String msg) { throw new IllegalArgumentException(\"Problem with definition of \"+_classDef+\": \"+msg); }"
+      },
+      {
+        "txt": "protected POJOPropertyBuilder _property(Map<String, POJOPropertyBuilder> props, PropertyName name) { return _property(props, name.getSimpleName()); } protected POJOPropertyBuilder _property(Map<String, POJOPropertyBuilder> props, String implName) { POJOPropertyBuilder prop = props.get(implName); if (prop == null) { prop = new POJOPropertyBuilder(_config, _annotationIntrospector, _forSerialization,"
+      },
+      {
+        "txt": "PropertyName.construct(implName)); props.put(implName, prop); } return prop; } private PropertyNamingStrategy _findNamingStrategy() { Object namingDef = (_annotationIntrospector == null)? null : _annotationIntrospector.findNamingStrategy(_classDef); if (namingDef == null) {"
+      },
+      {
+        "txt": "return _config.getPropertyNamingStrategy(); } if (namingDef instanceof PropertyNamingStrategy) { return (PropertyNamingStrategy) namingDef; } if (!(namingDef instanceof Class)) { throw new IllegalStateException(\"AnnotationIntrospector returned PropertyNamingStrategy definition of type \" +namingDef.getClass().getName()+\"; expected type PropertyNamingStrategy or Class<PropertyNamingStrategy> instead\"); } Class<?> namingClass = (Class<?>)namingDef;"
+      },
+      {
+        "txt": "if (namingClass == PropertyNamingStrategy.class) { return null; } if (!PropertyNamingStrategy.class.isAssignableFrom(namingClass)) { throw new IllegalStateException(\"AnnotationIntrospector returned Class \" +namingClass.getName()+\"; expected Class<PropertyNamingStrategy>\"); } HandlerInstantiator hi = _config.getHandlerInstantiator(); if (hi != null) { PropertyNamingStrategy pns = hi.namingStrategyInstance(_config, _classDef, namingClass);"
+      },
+      {
+        "txt": "if (pns != null) { return pns; } } return (PropertyNamingStrategy) ClassUtil.createInstance(namingClass, _config.canOverrideAccessModifiers()); } protected void _updateCreatorProperty(POJOPropertyBuilder prop, List<POJOPropertyBuilder> creatorProperties) { if (creatorProperties != null) { for (int i = 0, len = creatorProperties.size(); i < len; ++i) {"
+      },
+      {
+        "txt": "if (creatorProperties.get(i).getInternalName().equals(prop.getInternalName())) { creatorProperties.set(i, prop); break; } } } }"
+      }
+    ]
+  },
+  {
+    "id": 1658,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/introspect/POJOPropertiesCollector.java",
+    "start-bug-line": 731,
+    "end-bug-line": 731,
+    "bug": "prop.removeNonVisible(inferMutators);",
+    "fix": "Access acc = prop.removeNonVisible(inferMutators); if (!_forSerialization && (acc == Access.READ_ONLY)) { _collectIgnorals(prop.getName()); }",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind.introspect; import java.lang.reflect.Modifier; import java.util.*; import com.fasterxml.jackson.annotation.JsonAnySetter; import com.fasterxml.jackson.databind.*; import com.fasterxml.jackson.databind.cfg.HandlerInstantiator; import com.fasterxml.jackson.databind.cfg.MapperConfig; import com.fasterxml.jackson.databind.util.BeanUtil; import com.fasterxml.jackson.databind.util.ClassUtil;"
+      },
+      {
+        "txt": "public class POJOPropertiesCollector { protected final MapperConfig<?> _config; protected final boolean _forSerialization; protected final boolean _stdBeanNaming; protected final JavaType _type; protected final AnnotatedClass _classDef; protected final VisibilityChecker<?> _visibilityChecker; protected final AnnotationIntrospector _annotationIntrospector; protected final String _mutatorPrefix;"
+      },
+      {
+        "txt": "protected boolean _collected; protected LinkedHashMap<String, POJOPropertyBuilder> _properties; protected LinkedList<POJOPropertyBuilder> _creatorProperties ; protected LinkedList<AnnotatedMember> _anyGetters; protected LinkedList<AnnotatedMethod> _anySetters; protected LinkedList<AnnotatedMember> _anySetterField; protected LinkedList<AnnotatedMethod> _jsonValueGetters; protected HashSet<String> _ignoredPropertyNames; protected LinkedHashMap<Object, AnnotatedMember> _injectables; protected POJOPropertiesCollector(MapperConfig<?> config, boolean forSerialization,"
+      },
+      {
+        "txt": "JavaType type, AnnotatedClass classDef, String mutatorPrefix) { _config = config; _stdBeanNaming = config.isEnabled(MapperFeature.USE_STD_BEAN_NAMING); _forSerialization = forSerialization; _type = type; _classDef = classDef; _mutatorPrefix = (mutatorPrefix == null) ? \"set\" : mutatorPrefix; _annotationIntrospector = config.isAnnotationProcessingEnabled() ? _config.getAnnotationIntrospector() : null;"
+      },
+      {
+        "txt": "if (_annotationIntrospector == null) { _visibilityChecker = _config.getDefaultVisibilityChecker(); } else { _visibilityChecker = _annotationIntrospector.findAutoDetectVisibility(classDef, _config.getDefaultVisibilityChecker()); } } public MapperConfig<?> getConfig() { return _config; }"
+      },
+      {
+        "txt": "public JavaType getType() { return _type; } public AnnotatedClass getClassDef() { return _classDef; } public AnnotationIntrospector getAnnotationIntrospector() { return _annotationIntrospector; } public List<BeanPropertyDefinition> getProperties() {"
+      },
+      {
+        "txt": "Map<String, POJOPropertyBuilder> props = getPropertyMap(); return new ArrayList<BeanPropertyDefinition>(props.values()); } public Map<Object, AnnotatedMember> getInjectables() { if (!_collected) { collectAll(); } return _injectables; } public AnnotatedMethod getJsonValueMethod()"
+      },
+      {
+        "txt": "{ if (!_collected) { collectAll(); } if (_jsonValueGetters != null) { if (_jsonValueGetters.size() > 1) { reportProblem(\"Multiple value properties defined (\"+_jsonValueGetters.get(0)+\" vs \" +_jsonValueGetters.get(1)+\")\"); } return _jsonValueGetters.get(0);"
+      },
+      {
+        "txt": "} return null; } public AnnotatedMember getAnyGetter() { if (!_collected) { collectAll(); } if (_anyGetters != null) { if (_anyGetters.size() > 1) {"
+      },
+      {
+        "txt": "reportProblem(\"Multiple 'any-getters' defined (\"+_anyGetters.get(0)+\" vs \" +_anyGetters.get(1)+\")\"); } return _anyGetters.getFirst(); } return null; } public AnnotatedMember getAnySetterField() { if (!_collected) {"
+      },
+      {
+        "txt": "collectAll(); } if (_anySetterField != null) { if (_anySetterField.size() > 1) { reportProblem(\"Multiple 'any-Setters' defined (\"+_anySetters.get(0)+\" vs \" +_anySetterField.get(1)+\")\"); } return _anySetterField.getFirst(); } return null;"
+      },
+      {
+        "txt": "} public AnnotatedMethod getAnySetterMethod() { if (!_collected) { collectAll(); } if (_anySetters != null) { if (_anySetters.size() > 1) { reportProblem(\"Multiple 'any-setters' defined (\"+_anySetters.get(0)+\" vs \" +_anySetters.get(1)+\")\");"
+      },
+      {
+        "txt": "} return _anySetters.getFirst(); } return null; } public Set<String> getIgnoredPropertyNames() { return _ignoredPropertyNames; } public ObjectIdInfo getObjectIdInfo() {"
+      },
+      {
+        "txt": "if (_annotationIntrospector == null) { return null; } ObjectIdInfo info = _annotationIntrospector.findObjectIdInfo(_classDef); if (info != null) { // 2.1: may also have different defaults for refs: info = _annotationIntrospector.findObjectReferenceInfo(_classDef, info); } return info; } public Class<?> findPOJOBuilderClass()"
+      },
+      {
+        "txt": "{ return _annotationIntrospector.findPOJOBuilder(_classDef); } protected Map<String, POJOPropertyBuilder> getPropertyMap() { if (!_collected) { collectAll(); } return _properties; } @Deprecated"
+      },
+      {
+        "txt": "public POJOPropertiesCollector collect() { return this; } protected void collectAll() { LinkedHashMap<String, POJOPropertyBuilder> props = new LinkedHashMap<String, POJOPropertyBuilder>(); _addFields(props); _addMethods(props); if (!_classDef.isNonStaticInnerClass()) { _addCreators(props);"
+      },
+      {
+        "txt": "} _addInjectables(props); _removeUnwantedProperties(props); for (POJOPropertyBuilder property : props.values()) { property.mergeAnnotations(_forSerialization); } _removeUnwantedAccessor(props); _renameProperties(props); PropertyNamingStrategy naming = _findNamingStrategy(); if (naming != null) {"
+      },
+      {
+        "txt": "_renameUsing(props, naming); } for (POJOPropertyBuilder property : props.values()) { property.trimByVisibility(); } if (_config.isEnabled(MapperFeature.USE_WRAPPER_NAME_AS_PROPERTY_NAME)) { _renameWithWrappers(props); } _sortProperties(props); _properties = props;"
+      },
+      {
+        "txt": "_collected = true; } protected void _addFields(Map<String, POJOPropertyBuilder> props) { final AnnotationIntrospector ai = _annotationIntrospector; final boolean pruneFinalFields = !_forSerialization && !_config.isEnabled(MapperFeature.ALLOW_FINAL_FIELDS_AS_MUTATORS); final boolean transientAsIgnoral = _config.isEnabled(MapperFeature.PROPAGATE_TRANSIENT_MARKER); for (AnnotatedField f : _classDef.fields()) { String implName = (ai == null) ? null : ai.findImplicitPropertyName(f); if (implName == null) {"
+      },
+      {
+        "txt": "implName = f.getName(); } PropertyName pn; if (ai == null) { pn = null; } else if (_forSerialization) { pn = ai.findNameForSerialization(f); } else { pn = ai.findNameForDeserialization(f); }"
+      },
+      {
+        "txt": "boolean hasName = (pn != null); boolean nameExplicit = hasName; if (nameExplicit && pn.isEmpty()) { // empty String meaning \"use default name\", here just means \"same as field name\" pn = _propNameFromSimple(implName); nameExplicit = false; } boolean visible = (pn != null); if (!visible) { visible = _visibilityChecker.isFieldVisible(f); }"
+      },
+      {
+        "txt": "boolean ignored = (ai != null) && ai.hasIgnoreMarker(f); if (f.isTransient()) { if (!hasName) { visible = false; if (transientAsIgnoral) { ignored = true; } } } if (pruneFinalFields && (pn == null) && !ignored && Modifier.isFinal(f.getModifiers())) {"
+      },
+      {
+        "txt": "continue; } if(f.hasAnnotation(JsonAnySetter.class)) { if (_anySetterField == null) { _anySetterField = new LinkedList<AnnotatedMember>(); } _anySetterField.add(f); } _property(props, implName).addField(f, pn, nameExplicit, visible, ignored); }"
+      },
+      {
+        "txt": "} protected void _addCreators(Map<String, POJOPropertyBuilder> props) { if (_annotationIntrospector == null) { return; } for (AnnotatedConstructor ctor : _classDef.getConstructors()) { if (_creatorProperties == null) { _creatorProperties = new LinkedList<POJOPropertyBuilder>(); }"
+      },
+      {
+        "txt": "for (int i = 0, len = ctor.getParameterCount(); i < len; ++i) { _addCreatorParam(props, ctor.getParameter(i)); } } for (AnnotatedMethod factory : _classDef.getStaticMethods()) { if (_creatorProperties == null) { _creatorProperties = new LinkedList<POJOPropertyBuilder>(); } for (int i = 0, len = factory.getParameterCount(); i < len; ++i) { _addCreatorParam(props, factory.getParameter(i));"
+      },
+      {
+        "txt": "} } } protected void _addCreatorParam(Map<String, POJOPropertyBuilder> props, AnnotatedParameter param) { String impl = _annotationIntrospector.findImplicitPropertyName(param); if (impl == null) { impl = \"\"; }"
+      },
+      {
+        "txt": "PropertyName pn = _annotationIntrospector.findNameForDeserialization(param); boolean expl = (pn != null && !pn.isEmpty()); if (!expl) { if (impl.isEmpty()) { return; } if (!_annotationIntrospector.hasCreatorAnnotation(param.getOwner())) { return; } pn = PropertyName.construct(impl);"
+      },
+      {
+        "txt": "} POJOPropertyBuilder prop = (expl && impl.isEmpty()) ? _property(props, pn) : _property(props, impl); prop.addCtor(param, pn, expl, true, false); _creatorProperties.add(prop); } protected void _addMethods(Map<String, POJOPropertyBuilder> props) { final AnnotationIntrospector ai = _annotationIntrospector; for (AnnotatedMethod m : _classDef.memberMethods()) {"
+      },
+      {
+        "txt": "int argCount = m.getParameterCount(); if (argCount == 0) { // getters (including 'any getter') _addGetterMethod(props, m, ai); } else if (argCount == 1) { // setters _addSetterMethod(props, m, ai); } else if (argCount == 2) { // any getter? if (ai != null && ai.hasAnySetterAnnotation(m)) { if (_anySetters == null) { _anySetters = new LinkedList<AnnotatedMethod>(); }"
+      },
+      {
+        "txt": "_anySetters.add(m); } } } } protected void _addGetterMethod(Map<String, POJOPropertyBuilder> props, AnnotatedMethod m, AnnotationIntrospector ai) { if (!m.hasReturnType()) { return;"
+      },
+      {
+        "txt": "} if (ai != null) { if (ai.hasAnyGetterAnnotation(m)) { if (_anyGetters == null) { _anyGetters = new LinkedList<AnnotatedMember>(); } _anyGetters.add(m); return; } if (ai.hasAsValueAnnotation(m)) {"
+      },
+      {
+        "txt": "if (_jsonValueGetters == null) { _jsonValueGetters = new LinkedList<AnnotatedMethod>(); } _jsonValueGetters.add(m); return; } } String implName; // from naming convention boolean visible; PropertyName pn = (ai == null) ? null : ai.findNameForSerialization(m);"
+      },
+      {
+        "txt": "boolean nameExplicit = (pn != null); if (!nameExplicit) { // no explicit name; must consider implicit implName = (ai == null) ? null : ai.findImplicitPropertyName(m); if (implName == null) { implName = BeanUtil.okNameForRegularGetter(m, m.getName(), _stdBeanNaming); } if (implName == null) { // if not, must skip implName = BeanUtil.okNameForIsGetter(m, m.getName(), _stdBeanNaming); if (implName == null) { return;"
+      },
+      {
+        "txt": "} visible = _visibilityChecker.isIsGetterVisible(m); } else { visible = _visibilityChecker.isGetterVisible(m); } } else { // explicit indication of inclusion, but may be empty implName = (ai == null) ? null : ai.findImplicitPropertyName(m); if (implName == null) { implName = BeanUtil.okNameForGetter(m, _stdBeanNaming); }"
+      },
+      {
+        "txt": "if (implName == null) { implName = m.getName(); } if (pn.isEmpty()) { pn = _propNameFromSimple(implName); nameExplicit = false; } visible = true; } boolean ignore = (ai == null) ? false : ai.hasIgnoreMarker(m);"
+      },
+      {
+        "txt": "_property(props, implName).addGetter(m, pn, nameExplicit, visible, ignore); } protected void _addSetterMethod(Map<String, POJOPropertyBuilder> props, AnnotatedMethod m, AnnotationIntrospector ai) { String implName; // from naming convention boolean visible; PropertyName pn = (ai == null) ? null : ai.findNameForDeserialization(m); boolean nameExplicit = (pn != null); if (!nameExplicit) { // no explicit name; must follow naming convention"
+      },
+      {
+        "txt": "implName = (ai == null) ? null : ai.findImplicitPropertyName(m); if (implName == null) { implName = BeanUtil.okNameForMutator(m, _mutatorPrefix, _stdBeanNaming); } if (implName == null) { // if not, must skip return; } visible = _visibilityChecker.isSetterVisible(m); } else { // explicit indication of inclusion, but may be empty implName = (ai == null) ? null : ai.findImplicitPropertyName(m);"
+      },
+      {
+        "txt": "if (implName == null) { implName = BeanUtil.okNameForMutator(m, _mutatorPrefix, _stdBeanNaming); } if (implName == null) { implName = m.getName(); } if (pn.isEmpty()) { pn = _propNameFromSimple(implName); nameExplicit = false; }"
+      },
+      {
+        "txt": "visible = true; } boolean ignore = (ai == null) ? false : ai.hasIgnoreMarker(m); _property(props, implName).addSetter(m, pn, nameExplicit, visible, ignore); } protected void _addInjectables(Map<String, POJOPropertyBuilder> props) { final AnnotationIntrospector ai = _annotationIntrospector; if (ai == null) { return;"
+      },
+      {
+        "txt": "} for (AnnotatedField f : _classDef.fields()) { _doAddInjectable(ai.findInjectableValueId(f), f); } for (AnnotatedMethod m : _classDef.memberMethods()) { if (m.getParameterCount() != 1) { continue; } _doAddInjectable(ai.findInjectableValueId(m), m); }"
+      },
+      {
+        "txt": "} protected void _doAddInjectable(Object id, AnnotatedMember m) { if (id == null) { return; } if (_injectables == null) { _injectables = new LinkedHashMap<Object, AnnotatedMember>(); } AnnotatedMember prev = _injectables.put(id, m);"
+      },
+      {
+        "txt": "if (prev != null) { String type = id.getClass().getName(); throw new IllegalArgumentException(\"Duplicate injectable value with id '\" +String.valueOf(id)+\"' (of type \"+type+\")\"); } } private PropertyName _propNameFromSimple(String simpleName) { return PropertyName.construct(simpleName, null); } protected void _removeUnwantedProperties(Map<String, POJOPropertyBuilder> props)"
+      },
+      {
+        "txt": "{ Iterator<POJOPropertyBuilder> it = props.values().iterator(); while (it.hasNext()) { POJOPropertyBuilder prop = it.next(); if (!prop.anyVisible()) { it.remove(); continue; } if (prop.anyIgnorals()) { if (!prop.isExplicitlyIncluded()) {"
+      },
+      {
+        "txt": "it.remove(); _collectIgnorals(prop.getName()); continue; } prop.removeIgnored(); if (!_forSerialization && !prop.couldDeserialize()) { _collectIgnorals(prop.getName()); } } }"
+      },
+      {
+        "txt": "protected void _removeUnwantedAccessor(Map<String, POJOPropertyBuilder> props) { final boolean inferMutators = _config.isEnabled(MapperFeature.INFER_PROPERTY_MUTATORS); Iterator<POJOPropertyBuilder> it = props.values().iterator(); while (it.hasNext()) { POJOPropertyBuilder prop = it.next(); <extra_id_0> } } private void _collectIgnorals(String name) { if (!_forSerialization) { if (_ignoredPropertyNames == null) {"
+      },
+      {
+        "txt": "if (!_forSerialization) { if (_ignoredPropertyNames == null) { _ignoredPropertyNames = new HashSet<String>(); } _ignoredPropertyNames.add(name); } } protected void _renameProperties(Map<String, POJOPropertyBuilder> props) { Iterator<Map.Entry<String,POJOPropertyBuilder>> it = props.entrySet().iterator();"
+      },
+      {
+        "txt": "LinkedList<POJOPropertyBuilder> renamed = null; while (it.hasNext()) { Map.Entry<String, POJOPropertyBuilder> entry = it.next(); POJOPropertyBuilder prop = entry.getValue(); Collection<PropertyName> l = prop.findExplicitNames(); if (l.isEmpty()) { continue; } it.remove(); // need to replace with one or more renamed if (renamed == null) {"
+      },
+      {
+        "txt": "renamed = new LinkedList<POJOPropertyBuilder>(); } if (l.size() == 1) { PropertyName n = l.iterator().next(); renamed.add(prop.withName(n)); continue; } renamed.addAll(prop.explode(l)); String newName = prop.findNewName(); if (newName != null) {"
+      },
+      {
+        "txt": "if (renamed == null) { renamed = new LinkedList<POJOPropertyBuilder>(); } prop = prop.withSimpleName(newName); renamed.add(prop); it.remove(); } } if (renamed != null) { for (POJOPropertyBuilder prop : renamed) {"
+      },
+      {
+        "txt": "String name = prop.getName(); POJOPropertyBuilder old = props.get(name); if (old == null) { props.put(name, prop); } else { old.addAll(prop); } _updateCreatorProperty(prop, _creatorProperties); } }"
+      },
+      {
+        "txt": "} protected void _renameUsing(Map<String, POJOPropertyBuilder> propMap, PropertyNamingStrategy naming) { POJOPropertyBuilder[] props = propMap.values().toArray(new POJOPropertyBuilder[propMap.size()]); propMap.clear(); for (POJOPropertyBuilder prop : props) { PropertyName fullName = prop.getFullName(); String rename = null; if (!prop.isExplicitlyNamed() || _config.isEnabled(MapperFeature.ALLOW_EXPLICIT_PROPERTY_RENAMING)) {"
+      },
+      {
+        "txt": "if (_forSerialization) { if (prop.hasGetter()) { rename = naming.nameForGetterMethod(_config, prop.getGetter(), fullName.getSimpleName()); } else if (prop.hasField()) { rename = naming.nameForField(_config, prop.getField(), fullName.getSimpleName()); } } else { if (prop.hasSetter()) { rename = naming.nameForSetterMethod(_config, prop.getSetter(), fullName.getSimpleName()); } else if (prop.hasConstructorParameter()) {"
+      },
+      {
+        "txt": "rename = naming.nameForConstructorParameter(_config, prop.getConstructorParameter(), fullName.getSimpleName()); } else if (prop.hasField()) { rename = naming.nameForField(_config, prop.getField(), fullName.getSimpleName()); } else if (prop.hasGetter()) { rename = naming.nameForGetterMethod(_config, prop.getGetter(), fullName.getSimpleName()); } } } final String simpleName; if (rename != null && !fullName.hasSimpleName(rename)) {"
+      },
+      {
+        "txt": "prop = prop.withSimpleName(rename); simpleName = rename; } else { simpleName = fullName.getSimpleName(); } POJOPropertyBuilder old = propMap.get(simpleName); if (old == null) { propMap.put(simpleName, prop); } else { old.addAll(prop);"
+      },
+      {
+        "txt": "} _updateCreatorProperty(prop, _creatorProperties); } } protected void _renameWithWrappers(Map<String, POJOPropertyBuilder> props) { Iterator<Map.Entry<String,POJOPropertyBuilder>> it = props.entrySet().iterator(); LinkedList<POJOPropertyBuilder> renamed = null; while (it.hasNext()) { Map.Entry<String, POJOPropertyBuilder> entry = it.next();"
+      },
+      {
+        "txt": "POJOPropertyBuilder prop = entry.getValue(); AnnotatedMember member = prop.getPrimaryMember(); if (member == null) { continue; } PropertyName wrapperName = _annotationIntrospector.findWrapperName(member); if (wrapperName == null || !wrapperName.hasSimpleName()) { continue; } if (!wrapperName.equals(prop.getFullName())) {"
+      },
+      {
+        "txt": "if (renamed == null) { renamed = new LinkedList<POJOPropertyBuilder>(); } prop = prop.withName(wrapperName); renamed.add(prop); it.remove(); } } if (renamed != null) { for (POJOPropertyBuilder prop : renamed) {"
+      },
+      {
+        "txt": "String name = prop.getName(); POJOPropertyBuilder old = props.get(name); if (old == null) { props.put(name, prop); } else { old.addAll(prop); } } } }"
+      },
+      {
+        "txt": "protected void _sortProperties(Map<String, POJOPropertyBuilder> props) { AnnotationIntrospector intr = _annotationIntrospector; Boolean alpha = (intr == null) ? null : intr.findSerializationSortAlphabetically((Annotated) _classDef); boolean sort; if (alpha == null) { sort = _config.shouldSortPropertiesAlphabetically(); } else { sort = alpha.booleanValue(); }"
+      },
+      {
+        "txt": "String[] propertyOrder = (intr == null) ? null : intr.findSerializationPropertyOrder(_classDef); if (!sort && (_creatorProperties == null) && (propertyOrder == null)) { return; } int size = props.size(); Map<String, POJOPropertyBuilder> all; if (sort) { all = new TreeMap<String,POJOPropertyBuilder>(); } else { all = new LinkedHashMap<String,POJOPropertyBuilder>(size+size);"
+      },
+      {
+        "txt": "} for (POJOPropertyBuilder prop : props.values()) { all.put(prop.getName(), prop); } Map<String,POJOPropertyBuilder> ordered = new LinkedHashMap<String,POJOPropertyBuilder>(size+size); if (propertyOrder != null) { for (String name : propertyOrder) { POJOPropertyBuilder w = all.get(name); if (w == null) { // will also allow use of \"implicit\" names for sorting for (POJOPropertyBuilder prop : props.values()) {"
+      },
+      {
+        "txt": "if (name.equals(prop.getInternalName())) { w = prop; name = prop.getName(); break; } } } if (w != null) { ordered.put(name, w); }"
+      },
+      {
+        "txt": "} } if (_creatorProperties != null) { Collection<POJOPropertyBuilder> cr; if (sort) { TreeMap<String, POJOPropertyBuilder> sorted = new TreeMap<String,POJOPropertyBuilder>(); for (POJOPropertyBuilder prop : _creatorProperties) { sorted.put(prop.getName(), prop); }"
+      },
+      {
+        "txt": "cr = sorted.values(); } else { cr = _creatorProperties; } for (POJOPropertyBuilder prop : cr) { String name = prop.getName(); if (all.containsKey(name)) { ordered.put(name, prop); } }"
+      },
+      {
+        "txt": "} ordered.putAll(all); props.clear(); props.putAll(ordered); } protected void reportProblem(String msg) { throw new IllegalArgumentException(\"Problem with definition of \"+_classDef+\": \"+msg); } protected POJOPropertyBuilder _property(Map<String, POJOPropertyBuilder> props, PropertyName name) {"
+      },
+      {
+        "txt": "return _property(props, name.getSimpleName()); } protected POJOPropertyBuilder _property(Map<String, POJOPropertyBuilder> props, String implName) { POJOPropertyBuilder prop = props.get(implName); if (prop == null) { prop = new POJOPropertyBuilder(_config, _annotationIntrospector, _forSerialization, PropertyName.construct(implName)); props.put(implName, prop);"
+      },
+      {
+        "txt": "} return prop; } private PropertyNamingStrategy _findNamingStrategy() { Object namingDef = (_annotationIntrospector == null)? null : _annotationIntrospector.findNamingStrategy(_classDef); if (namingDef == null) { return _config.getPropertyNamingStrategy(); }"
+      },
+      {
+        "txt": "if (namingDef instanceof PropertyNamingStrategy) { return (PropertyNamingStrategy) namingDef; } if (!(namingDef instanceof Class)) { throw new IllegalStateException(\"AnnotationIntrospector returned PropertyNamingStrategy definition of type \" +namingDef.getClass().getName()+\"; expected type PropertyNamingStrategy or Class<PropertyNamingStrategy> instead\"); } Class<?> namingClass = (Class<?>)namingDef; if (namingClass == PropertyNamingStrategy.class) { return null;"
+      },
+      {
+        "txt": "} if (!PropertyNamingStrategy.class.isAssignableFrom(namingClass)) { throw new IllegalStateException(\"AnnotationIntrospector returned Class \" +namingClass.getName()+\"; expected Class<PropertyNamingStrategy>\"); } HandlerInstantiator hi = _config.getHandlerInstantiator(); if (hi != null) { PropertyNamingStrategy pns = hi.namingStrategyInstance(_config, _classDef, namingClass); if (pns != null) { return pns;"
+      },
+      {
+        "txt": "} } return (PropertyNamingStrategy) ClassUtil.createInstance(namingClass, _config.canOverrideAccessModifiers()); } protected void _updateCreatorProperty(POJOPropertyBuilder prop, List<POJOPropertyBuilder> creatorProperties) { if (creatorProperties != null) { for (int i = 0, len = creatorProperties.size(); i < len; ++i) { if (creatorProperties.get(i).getInternalName().equals(prop.getInternalName())) { creatorProperties.set(i, prop);"
+      },
+      {
+        "txt": "break; } } } }"
+      }
+    ]
+  },
+  {
+    "id": 1659,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/introspect/POJOPropertyBuilder.java",
+    "start-bug-line": 644,
+    "end-bug-line": 644,
+    "bug": "public void removeNonVisible(boolean inferMutators)",
+    "fix": "public JsonProperty.Access removeNonVisible(boolean inferMutators)",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind.introspect; import java.util.*; import com.fasterxml.jackson.annotation.JsonInclude; import com.fasterxml.jackson.annotation.JsonProperty; import com.fasterxml.jackson.databind.*;"
+      },
+      {
+        "txt": "import com.fasterxml.jackson.databind.cfg.MapperConfig; import com.fasterxml.jackson.databind.util.ClassUtil; public class POJOPropertyBuilder extends BeanPropertyDefinition implements Comparable<POJOPropertyBuilder> { protected final boolean _forSerialization; protected final MapperConfig<?> _config; protected final AnnotationIntrospector _annotationIntrospector; protected final PropertyName _name;"
+      },
+      {
+        "txt": "protected final PropertyName _internalName; protected Linked<AnnotatedField> _fields; protected Linked<AnnotatedParameter> _ctorParameters; protected Linked<AnnotatedMethod> _getters; protected Linked<AnnotatedMethod> _setters; public POJOPropertyBuilder(MapperConfig<?> config, AnnotationIntrospector ai, boolean forSerialization, PropertyName internalName) { this(config, ai, forSerialization, internalName, internalName); } protected POJOPropertyBuilder(MapperConfig<?> config, AnnotationIntrospector ai,"
+      },
+      {
+        "txt": "boolean forSerialization, PropertyName internalName, PropertyName name) { _config = config; _annotationIntrospector = ai; _internalName = internalName; _name = name; _forSerialization = forSerialization; } public POJOPropertyBuilder(POJOPropertyBuilder src, PropertyName newName) {"
+      },
+      {
+        "txt": "_config = src._config; _annotationIntrospector = src._annotationIntrospector; _internalName = src._internalName; _name = newName; _fields = src._fields; _ctorParameters = src._ctorParameters; _getters = src._getters; _setters = src._setters; _forSerialization = src._forSerialization; }"
+      },
+      {
+        "txt": "@Override public POJOPropertyBuilder withName(PropertyName newName) { return new POJOPropertyBuilder(this, newName); } @Override public POJOPropertyBuilder withSimpleName(String newSimpleName) { PropertyName newName = _name.withSimpleName(newSimpleName); return (newName == _name) ? this : new POJOPropertyBuilder(this, newName); }"
+      },
+      {
+        "txt": "@Override public int compareTo(POJOPropertyBuilder other) { if (_ctorParameters != null) { if (other._ctorParameters == null) { return -1; } } else if (other._ctorParameters != null) { return 1; }"
+      },
+      {
+        "txt": "return getName().compareTo(other.getName()); } @Override public String getName() { return (_name == null) ? null : _name.getSimpleName(); } @Override public PropertyName getFullName() { return _name; }"
+      },
+      {
+        "txt": "@Override public boolean hasName(PropertyName name) { return _name.equals(name); } @Override public String getInternalName() { return _internalName.getSimpleName(); } @Override public PropertyName getWrapperName() { AnnotatedMember member = getPrimaryMember(); return (member == null || _annotationIntrospector == null) ? null"
+      },
+      {
+        "txt": ": _annotationIntrospector.findWrapperName(member); return fromMemberAnnotations(new WithMember<PropertyName>() { @Override public PropertyName withMember(AnnotatedMember member) { return _annotationIntrospector.findWrapperName(member); } }); } @Override public boolean isExplicitlyIncluded() {"
+      },
+      {
+        "txt": "return _anyExplicits(_fields) || _anyExplicits(_getters) || _anyExplicits(_setters) || _anyExplicitNames(_ctorParameters) ; } @Override public boolean isExplicitlyNamed() { return _anyExplicitNames(_fields) || _anyExplicitNames(_getters)"
+      },
+      {
+        "txt": "|| _anyExplicitNames(_setters) || _anyExplicitNames(_ctorParameters) ; } @Override public boolean hasGetter() { return _getters != null; } @Override public boolean hasSetter() { return _setters != null; } @Override public boolean hasField() { return _fields != null; }"
+      },
+      {
+        "txt": "@Override public boolean hasConstructorParameter() { return _ctorParameters != null; } @Override public boolean couldDeserialize() { return (_ctorParameters != null) || (_setters != null) || (_fields != null); } @Override public boolean couldSerialize() { return (_getters != null) || (_fields != null); }"
+      },
+      {
+        "txt": "@Override public AnnotatedMethod getGetter() { Linked<AnnotatedMethod> curr = _getters; if (curr == null) { return null; } Linked<AnnotatedMethod> next = curr.next; if (next == null) { return curr.value;"
+      },
+      {
+        "txt": "} for (; next != null; next = next.next) { Class<?> currClass = curr.value.getDeclaringClass(); Class<?> nextClass = next.value.getDeclaringClass(); if (currClass != nextClass) { if (currClass.isAssignableFrom(nextClass)) { // next is more specific curr = next; continue; } if (nextClass.isAssignableFrom(currClass)) { // current more specific"
+      },
+      {
+        "txt": "continue; } } int priNext = _getterPriority(next.value); int priCurr = _getterPriority(curr.value); if (priNext != priCurr) { if (priNext < priCurr) { curr = next; } continue;"
+      },
+      {
+        "txt": "} throw new IllegalArgumentException(\"Conflicting getter definitions for property \\\"\"+getName()+\"\\\": \" +curr.value.getFullName()+\" vs \"+next.value.getFullName()); } _getters = curr.withoutNext(); return curr.value; } @Override public AnnotatedMethod getSetter() {"
+      },
+      {
+        "txt": "Linked<AnnotatedMethod> curr = _setters; if (curr == null) { return null; } Linked<AnnotatedMethod> next = curr.next; if (next == null) { return curr.value; } for (; next != null; next = next.next) { Class<?> currClass = curr.value.getDeclaringClass();"
+      },
+      {
+        "txt": "Class<?> nextClass = next.value.getDeclaringClass(); if (currClass != nextClass) { if (currClass.isAssignableFrom(nextClass)) { // next is more specific curr = next; continue; } if (nextClass.isAssignableFrom(currClass)) { // current more specific continue; } }"
+      },
+      {
+        "txt": "AnnotatedMethod nextM = next.value; AnnotatedMethod currM = curr.value; int priNext = _setterPriority(nextM); int priCurr = _setterPriority(currM); if (priNext != priCurr) { if (priNext < priCurr) { curr = next; } continue; }"
+      },
+      {
+        "txt": "if (_annotationIntrospector != null) { AnnotatedMethod pref = _annotationIntrospector.resolveSetterConflict(_config, currM, nextM); if (pref == currM) { continue; } if (pref == nextM) { curr = next; continue; }"
+      },
+      {
+        "txt": "} throw new IllegalArgumentException(String.format( \"Conflicting setter definitions for property \\\"%s\\\": %s vs %s\", getName(), curr.value.getFullName(), next.value.getFullName())); } _setters = curr.withoutNext(); return curr.value; } @Override public AnnotatedField getField()"
+      },
+      {
+        "txt": "{ if (_fields == null) { return null; } AnnotatedField field = _fields.value; Linked<AnnotatedField> next = _fields.next; for (; next != null; next = next.next) { AnnotatedField nextField = next.value; Class<?> fieldClass = field.getDeclaringClass(); Class<?> nextClass = nextField.getDeclaringClass();"
+      },
+      {
+        "txt": "if (fieldClass != nextClass) { if (fieldClass.isAssignableFrom(nextClass)) { // next is more specific field = nextField; continue; } if (nextClass.isAssignableFrom(fieldClass)) { // getter more specific continue; } } throw new IllegalArgumentException(\"Multiple fields representing property \\\"\"+getName()+\"\\\": \""
+      },
+      {
+        "txt": "+field.getFullName()+\" vs \"+nextField.getFullName()); } return field; } @Override public AnnotatedParameter getConstructorParameter() { if (_ctorParameters == null) { return null; }"
+      },
+      {
+        "txt": "Linked<AnnotatedParameter> curr = _ctorParameters; do { if (curr.value.getOwner() instanceof AnnotatedConstructor) { return curr.value; } curr = curr.next; } while (curr != null); return _ctorParameters.value; } @Override"
+      },
+      {
+        "txt": "public Iterator<AnnotatedParameter> getConstructorParameters() { if (_ctorParameters == null) { return ClassUtil.emptyIterator(); } return new MemberIterator<AnnotatedParameter>(_ctorParameters); } @Override public AnnotatedMember getAccessor() { AnnotatedMember m = getGetter();"
+      },
+      {
+        "txt": "if (m == null) { m = getField(); } return m; } @Override public AnnotatedMember getMutator() { AnnotatedMember m = getConstructorParameter(); if (m == null) {"
+      },
+      {
+        "txt": "m = getSetter(); if (m == null) { m = getField(); } } return m; } @Override public AnnotatedMember getNonConstructorMutator() { AnnotatedMember m = getSetter();"
+      },
+      {
+        "txt": "if (m == null) { m = getField(); } return m; } @Override public AnnotatedMember getPrimaryMember() { if (_forSerialization) { return getAccessor(); }"
+      },
+      {
+        "txt": "return getMutator(); } protected int _getterPriority(AnnotatedMethod m) { final String name = m.getName(); if (name.startsWith(\"get\") && name.length() > 3) { return 1; } if (name.startsWith(\"is\") && name.length() > 2) { return 2;"
+      },
+      {
+        "txt": "} return 3; } protected int _setterPriority(AnnotatedMethod m) { final String name = m.getName(); if (name.startsWith(\"set\") && name.length() > 3) { return 1; } return 2;"
+      },
+      {
+        "txt": "} @Override public Class<?>[] findViews() { return fromMemberAnnotations(new WithMember<Class<?>[]>() { @Override public Class<?>[] withMember(AnnotatedMember member) { return _annotationIntrospector.findViews(member); } }); }"
+      },
+      {
+        "txt": "@Override public AnnotationIntrospector.ReferenceProperty findReferenceType() { return fromMemberAnnotations(new WithMember<AnnotationIntrospector.ReferenceProperty>() { @Override public AnnotationIntrospector.ReferenceProperty withMember(AnnotatedMember member) { return _annotationIntrospector.findReferenceType(member); } }); } @Override"
+      },
+      {
+        "txt": "public boolean isTypeId() { Boolean b = fromMemberAnnotations(new WithMember<Boolean>() { @Override public Boolean withMember(AnnotatedMember member) { return _annotationIntrospector.isTypeId(member); } }); return (b != null) && b.booleanValue(); } @Override"
+      },
+      {
+        "txt": "public PropertyMetadata getMetadata() { final Boolean b = _findRequired(); final String desc = _findDescription(); final Integer idx = _findIndex(); final String def = _findDefaultValue(); if (b == null && idx == null && def == null) { return (desc == null) ? PropertyMetadata.STD_REQUIRED_OR_OPTIONAL : PropertyMetadata.STD_REQUIRED_OR_OPTIONAL.withDescription(desc); } return PropertyMetadata.construct(b.booleanValue(), desc, idx, def);"
+      },
+      {
+        "txt": "} protected Boolean _findRequired() { return fromMemberAnnotations(new WithMember<Boolean>() { @Override public Boolean withMember(AnnotatedMember member) { return _annotationIntrospector.hasRequiredMarker(member); } }); } protected String _findDescription() {"
+      },
+      {
+        "txt": "return fromMemberAnnotations(new WithMember<String>() { @Override public String withMember(AnnotatedMember member) { return _annotationIntrospector.findPropertyDescription(member); } }); } protected Integer _findIndex() { return fromMemberAnnotations(new WithMember<Integer>() { @Override"
+      },
+      {
+        "txt": "public Integer withMember(AnnotatedMember member) { return _annotationIntrospector.findPropertyIndex(member); } }); } protected String _findDefaultValue() { return fromMemberAnnotations(new WithMember<String>() { @Override public String withMember(AnnotatedMember member) { return _annotationIntrospector.findPropertyDefaultValue(member);"
+      },
+      {
+        "txt": "} }); } @Override public ObjectIdInfo findObjectIdInfo() { return fromMemberAnnotations(new WithMember<ObjectIdInfo>() { @Override public ObjectIdInfo withMember(AnnotatedMember member) { ObjectIdInfo info = _annotationIntrospector.findObjectIdInfo(member); if (info != null) {"
+      },
+      {
+        "txt": "info = _annotationIntrospector.findObjectReferenceInfo(member, info); } return info; } }); } @Override public JsonInclude.Value findInclusion() { AnnotatedMember a = getAccessor(); JsonInclude.Value v = (_annotationIntrospector == null) ?"
+      },
+      {
+        "txt": "null : _annotationIntrospector.findPropertyInclusion(a); return (v == null) ? JsonInclude.Value.empty() : v; } public JsonProperty.Access findAccess() { return fromMemberAnnotationsExcept(new WithMember<JsonProperty.Access>() { @Override public JsonProperty.Access withMember(AnnotatedMember member) { return _annotationIntrospector.findPropertyAccess(member); } }, JsonProperty.Access.AUTO);"
+      },
+      {
+        "txt": "} public void addField(AnnotatedField a, PropertyName name, boolean explName, boolean visible, boolean ignored) { _fields = new Linked<AnnotatedField>(a, _fields, name, explName, visible, ignored); } public void addCtor(AnnotatedParameter a, PropertyName name, boolean explName, boolean visible, boolean ignored) { _ctorParameters = new Linked<AnnotatedParameter>(a, _ctorParameters, name, explName, visible, ignored); } public void addGetter(AnnotatedMethod a, PropertyName name, boolean explName, boolean visible, boolean ignored) { _getters = new Linked<AnnotatedMethod>(a, _getters, name, explName, visible, ignored); }"
+      },
+      {
+        "txt": "public void addSetter(AnnotatedMethod a, PropertyName name, boolean explName, boolean visible, boolean ignored) { _setters = new Linked<AnnotatedMethod>(a, _setters, name, explName, visible, ignored); } public void addAll(POJOPropertyBuilder src) { _fields = merge(_fields, src._fields); _ctorParameters = merge(_ctorParameters, src._ctorParameters); _getters= merge(_getters, src._getters); _setters = merge(_setters, src._setters); }"
+      },
+      {
+        "txt": "private static <T> Linked<T> merge(Linked<T> chain1, Linked<T> chain2) { if (chain1 == null) { return chain2; } if (chain2 == null) { return chain1; } return chain1.append(chain2); }"
+      },
+      {
+        "txt": "{ _fields = _removeIgnored(_fields); _getters = _removeIgnored(_getters); _setters = _removeIgnored(_setters); _ctorParameters = _removeIgnored(_ctorParameters); } <extra_id_0> { JsonProperty.Access acc = findAccess(); if (acc == null) { acc = JsonProperty.Access.AUTO; } switch (acc) {"
+      },
+      {
+        "txt": "} switch (acc) { case READ_ONLY: _setters = null; _ctorParameters = null; if (!_forSerialization) { _fields = null; } break; case READ_WRITE:"
+      },
+      {
+        "txt": "break; case WRITE_ONLY: _getters = null; if (_forSerialization) { _fields = null; } break; default: case AUTO: // the default case: base it on visibility _getters = _removeNonVisible(_getters);"
+      },
+      {
+        "txt": "_ctorParameters = _removeNonVisible(_ctorParameters); if (!inferMutators || (_getters == null)) { _fields = _removeNonVisible(_fields); _setters = _removeNonVisible(_setters); } } } public void removeConstructors() { _ctorParameters = null; }"
+      },
+      {
+        "txt": "public void trimByVisibility() { _fields = _trimByVisibility(_fields); _getters = _trimByVisibility(_getters); _setters = _trimByVisibility(_setters); _ctorParameters = _trimByVisibility(_ctorParameters); } @SuppressWarnings(\"unchecked\") public void mergeAnnotations(boolean forSerialization) {"
+      },
+      {
+        "txt": "if (forSerialization) { if (_getters != null) { AnnotationMap ann = _mergeAnnotations(0, _getters, _fields, _ctorParameters, _setters); _getters = _applyAnnotations(_getters, ann); } else if (_fields != null) { AnnotationMap ann = _mergeAnnotations(0, _fields, _ctorParameters, _setters); _fields = _applyAnnotations(_fields, ann); } } else { // for deserialization if (_ctorParameters != null) {"
+      },
+      {
+        "txt": "AnnotationMap ann = _mergeAnnotations(0, _ctorParameters, _setters, _fields, _getters); _ctorParameters = _applyAnnotations(_ctorParameters, ann); } else if (_setters != null) { AnnotationMap ann = _mergeAnnotations(0, _setters, _fields, _getters); _setters = _applyAnnotations(_setters, ann); } else if (_fields != null) { AnnotationMap ann = _mergeAnnotations(0, _fields, _getters); _fields = _applyAnnotations(_fields, ann); } }"
+      },
+      {
+        "txt": "} private AnnotationMap _mergeAnnotations(int index, Linked<? extends AnnotatedMember>... nodes) { AnnotationMap ann = _getAllAnnotations(nodes[index]); while (++index < nodes.length) { if (nodes[index] != null) { return AnnotationMap.merge(ann, _mergeAnnotations(index, nodes)); } }"
+      },
+      {
+        "txt": "return ann; } private <T extends AnnotatedMember> AnnotationMap _getAllAnnotations(Linked<T> node) { AnnotationMap ann = node.value.getAllAnnotations(); if (node.next != null) { ann = AnnotationMap.merge(ann, _getAllAnnotations(node.next)); } return ann; } private <T extends AnnotatedMember> Linked<T> _applyAnnotations(Linked<T> node, AnnotationMap ann) {"
+      },
+      {
+        "txt": "@SuppressWarnings(\"unchecked\") T value = (T) node.value.withAnnotations(ann); if (node.next != null) { node = node.withNext(_applyAnnotations(node.next, ann)); } return node.withValue(value); } private <T> Linked<T> _removeIgnored(Linked<T> node) { if (node == null) {"
+      },
+      {
+        "txt": "return node; } return node.withoutIgnored(); } private <T> Linked<T> _removeNonVisible(Linked<T> node) { if (node == null) { return node; } return node.withoutNonVisible();"
+      },
+      {
+        "txt": "} private <T> Linked<T> _trimByVisibility(Linked<T> node) { if (node == null) { return node; } return node.trimByVisibility(); } private <T> boolean _anyExplicits(Linked<T> n) {"
+      },
+      {
+        "txt": "for (; n != null; n = n.next) { if (n.name != null && n.name.hasSimpleName()) { return true; } } return false; } private <T> boolean _anyExplicitNames(Linked<T> n) { for (; n != null; n = n.next) {"
+      },
+      {
+        "txt": "if (n.name != null && n.isNameExplicit) { return true; } } return false; } public boolean anyVisible() { return _anyVisible(_fields) || _anyVisible(_getters) || _anyVisible(_setters)"
+      },
+      {
+        "txt": "|| _anyVisible(_ctorParameters) ; } private <T> boolean _anyVisible(Linked<T> n) { for (; n != null; n = n.next) { if (n.isVisible) { return true; } }"
+      },
+      {
+        "txt": "return false; } public boolean anyIgnorals() { return _anyIgnorals(_fields) || _anyIgnorals(_getters) || _anyIgnorals(_setters) || _anyIgnorals(_ctorParameters) ; } private <T> boolean _anyIgnorals(Linked<T> n)"
+      },
+      {
+        "txt": "{ for (; n != null; n = n.next) { if (n.isMarkedIgnored) { return true; } } return false; } public Set<PropertyName> findExplicitNames() {"
+      },
+      {
+        "txt": "Set<PropertyName> renamed = null; renamed = _findExplicitNames(_fields, renamed); renamed = _findExplicitNames(_getters, renamed); renamed = _findExplicitNames(_setters, renamed); renamed = _findExplicitNames(_ctorParameters, renamed); if (renamed == null) { return Collections.emptySet(); } return renamed; }"
+      },
+      {
+        "txt": "public Collection<POJOPropertyBuilder> explode(Collection<PropertyName> newNames) { HashMap<PropertyName,POJOPropertyBuilder> props = new HashMap<PropertyName,POJOPropertyBuilder>(); _explode(newNames, props, _fields); _explode(newNames, props, _getters); _explode(newNames, props, _setters); _explode(newNames, props, _ctorParameters); return props.values(); } @SuppressWarnings(\"unchecked\")"
+      },
+      {
+        "txt": "private void _explode(Collection<PropertyName> newNames, Map<PropertyName,POJOPropertyBuilder> props, Linked<?> accessors) { final Linked<?> firstAcc = accessors; // clumsy, part 1 for (Linked<?> node = accessors; node != null; node = node.next) { PropertyName name = node.name; if (!node.isNameExplicit || name == null) { // no explicit name -- problem! if (!node.isVisible) { continue;"
+      },
+      {
+        "txt": "} throw new IllegalStateException(\"Conflicting/ambiguous property name definitions (implicit name '\" +_name+\"'): found multiple explicit names: \" +newNames+\", but also implicit accessor: \"+node); } POJOPropertyBuilder prop = props.get(name); if (prop == null) { prop = new POJOPropertyBuilder(_config, _annotationIntrospector, _forSerialization, _internalName, name); props.put(name, prop);"
+      },
+      {
+        "txt": "} if (firstAcc == _fields) { Linked<AnnotatedField> n2 = (Linked<AnnotatedField>) node; prop._fields = n2.withNext(prop._fields); } else if (firstAcc == _getters) { Linked<AnnotatedMethod> n2 = (Linked<AnnotatedMethod>) node; prop._getters = n2.withNext(prop._getters); } else if (firstAcc == _setters) { Linked<AnnotatedMethod> n2 = (Linked<AnnotatedMethod>) node; prop._setters = n2.withNext(prop._setters);"
+      },
+      {
+        "txt": "} else if (firstAcc == _ctorParameters) { Linked<AnnotatedParameter> n2 = (Linked<AnnotatedParameter>) node; prop._ctorParameters = n2.withNext(prop._ctorParameters); } else { throw new IllegalStateException(\"Internal error: mismatched accessors, property: \"+this); } } } private Set<PropertyName> _findExplicitNames(Linked<? extends AnnotatedMember> node, Set<PropertyName> renamed)"
+      },
+      {
+        "txt": "{ for (; node != null; node = node.next) { if (!node.isNameExplicit || node.name == null) { continue; } if (renamed == null) { renamed = new HashSet<PropertyName>(); } renamed.add(node.name); }"
+      },
+      {
+        "txt": "return renamed; } @Override public String toString() { StringBuilder sb = new StringBuilder(); sb.append(\"[Property '\").append(_name) .append(\"'; ctors: \").append(_ctorParameters) .append(\", field(s): \").append(_fields) .append(\", getter(s): \").append(_getters)"
+      },
+      {
+        "txt": ".append(\", setter(s): \").append(_setters) ; sb.append(\"]\"); return sb.toString(); } protected <T> T fromMemberAnnotations(WithMember<T> func) { T result = null; if (_annotationIntrospector != null) { if (_forSerialization) {"
+      },
+      {
+        "txt": "if (_getters != null) { result = func.withMember(_getters.value); } } else { if (_ctorParameters != null) { result = func.withMember(_ctorParameters.value); } if (result == null && _setters != null) { result = func.withMember(_setters.value); }"
+      },
+      {
+        "txt": "} if (result == null && _fields != null) { result = func.withMember(_fields.value); } } return result; } protected <T> T fromMemberAnnotationsExcept(WithMember<T> func, T defaultValue) { if (_annotationIntrospector == null) {"
+      },
+      {
+        "txt": "return null; } if (_forSerialization) { if (_getters != null) { T result = func.withMember(_getters.value); if ((result != null) && (result != defaultValue)) { return result; } } if (_fields != null) {"
+      },
+      {
+        "txt": "T result = func.withMember(_fields.value); if ((result != null) && (result != defaultValue)) { return result; } } if (_ctorParameters != null) { T result = func.withMember(_ctorParameters.value); if ((result != null) && (result != defaultValue)) { return result; }"
+      },
+      {
+        "txt": "} if (_setters != null) { T result = func.withMember(_setters.value); if ((result != null) && (result != defaultValue)) { return result; } } return null; } if (_ctorParameters != null) {"
+      },
+      {
+        "txt": "T result = func.withMember(_ctorParameters.value); if ((result != null) && (result != defaultValue)) { return result; } } if (_setters != null) { T result = func.withMember(_setters.value); if ((result != null) && (result != defaultValue)) { return result; }"
+      },
+      {
+        "txt": "} if (_fields != null) { T result = func.withMember(_fields.value); if ((result != null) && (result != defaultValue)) { return result; } } if (_getters != null) { T result = func.withMember(_getters.value); if ((result != null) && (result != defaultValue)) {"
+      },
+      {
+        "txt": "return result; } } return null; } private interface WithMember<T> { public T withMember(AnnotatedMember member); } protected static class MemberIterator<T extends AnnotatedMember> implements Iterator<T>"
+      },
+      {
+        "txt": "{ private Linked<T> next; public MemberIterator(Linked<T> first) { next = first; } @Override public boolean hasNext() { return (next != null); } @Override"
+      },
+      {
+        "txt": "public T next() { if (next == null) throw new NoSuchElementException(); T result = next.value; next = next.next; return result; } @Override public void remove() { throw new UnsupportedOperationException(); }"
+      },
+      {
+        "txt": "} protected final static class Linked<T> { public final T value; public final Linked<T> next; public final PropertyName name; public final boolean isNameExplicit; public final boolean isVisible; public final boolean isMarkedIgnored; public Linked(T v, Linked<T> n,"
+      },
+      {
+        "txt": "PropertyName name, boolean explName, boolean visible, boolean ignored) { value = v; next = n; this.name = (name == null || name.isEmpty()) ? null : name; if (explName) { if (this.name == null) { // sanity check to catch internal problems throw new IllegalArgumentException(\"Can not pass true for 'explName' if name is null/empty\"); } if (!name.hasSimpleName()) {"
+      },
+      {
+        "txt": "explName = false; } } isNameExplicit = explName; isVisible = visible; isMarkedIgnored = ignored; } public Linked<T> withoutNext() { if (next == null) { return this;"
+      },
+      {
+        "txt": "} return new Linked<T>(value, null, name, isNameExplicit, isVisible, isMarkedIgnored); } public Linked<T> withValue(T newValue) { if (newValue == value) { return this; } return new Linked<T>(newValue, next, name, isNameExplicit, isVisible, isMarkedIgnored); } public Linked<T> withNext(Linked<T> newNext) {"
+      },
+      {
+        "txt": "if (newNext == next) { return this; } return new Linked<T>(value, newNext, name, isNameExplicit, isVisible, isMarkedIgnored); } public Linked<T> withoutIgnored() { if (isMarkedIgnored) { return (next == null) ? null : next.withoutIgnored(); } if (next != null) {"
+      },
+      {
+        "txt": "Linked<T> newNext = next.withoutIgnored(); if (newNext != next) { return withNext(newNext); } } return this; } public Linked<T> withoutNonVisible() { Linked<T> newNext = (next == null) ? null : next.withoutNonVisible(); return isVisible ? withNext(newNext) : newNext;"
+      },
+      {
+        "txt": "} protected Linked<T> append(Linked<T> appendable) { if (next == null) { return withNext(appendable); } return withNext(next.append(appendable)); } public Linked<T> trimByVisibility() { if (next == null) { return this;"
+      },
+      {
+        "txt": "} Linked<T> newNext = next.trimByVisibility(); if (name != null) { // this already has highest; how about next one? if (newNext.name == null) { // next one not, drop it return withNext(null); } return withNext(newNext); } if (newNext.name != null) { // next one has higher, return it... return newNext;"
+      },
+      {
+        "txt": "} if (isVisible == newNext.isVisible) { // same; keep both in current order return withNext(newNext); } return isVisible ? withNext(null) : newNext; } @Override public String toString() { String msg = value.toString()+\"[visible=\"+isVisible+\",ignore=\"+isMarkedIgnored +\",explicitName=\"+isNameExplicit+\"]\";"
+      },
+      {
+        "txt": "if (next != null) { msg = msg + \", \"+next.toString(); } return msg; } }"
+      }
+    ]
+  },
+  {
+    "id": 1660,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/introspect/POJOPropertyBuilder.java",
+    "start-bug-line": 683,
+    "end-bug-line": 683,
+    "bug": "",
+    "fix": "return acc;",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind.introspect; import java.util.*; import com.fasterxml.jackson.annotation.JsonInclude; import com.fasterxml.jackson.annotation.JsonProperty; import com.fasterxml.jackson.databind.*; import com.fasterxml.jackson.databind.cfg.MapperConfig;"
+      },
+      {
+        "txt": "import com.fasterxml.jackson.databind.util.ClassUtil; public class POJOPropertyBuilder extends BeanPropertyDefinition implements Comparable<POJOPropertyBuilder> { protected final boolean _forSerialization; protected final MapperConfig<?> _config; protected final AnnotationIntrospector _annotationIntrospector; protected final PropertyName _name; protected final PropertyName _internalName;"
+      },
+      {
+        "txt": "protected Linked<AnnotatedField> _fields; protected Linked<AnnotatedParameter> _ctorParameters; protected Linked<AnnotatedMethod> _getters; protected Linked<AnnotatedMethod> _setters; public POJOPropertyBuilder(MapperConfig<?> config, AnnotationIntrospector ai, boolean forSerialization, PropertyName internalName) { this(config, ai, forSerialization, internalName, internalName); } protected POJOPropertyBuilder(MapperConfig<?> config, AnnotationIntrospector ai, boolean forSerialization, PropertyName internalName, PropertyName name)"
+      },
+      {
+        "txt": "{ _config = config; _annotationIntrospector = ai; _internalName = internalName; _name = name; _forSerialization = forSerialization; } public POJOPropertyBuilder(POJOPropertyBuilder src, PropertyName newName) { _config = src._config;"
+      },
+      {
+        "txt": "_annotationIntrospector = src._annotationIntrospector; _internalName = src._internalName; _name = newName; _fields = src._fields; _ctorParameters = src._ctorParameters; _getters = src._getters; _setters = src._setters; _forSerialization = src._forSerialization; } @Override"
+      },
+      {
+        "txt": "public POJOPropertyBuilder withName(PropertyName newName) { return new POJOPropertyBuilder(this, newName); } @Override public POJOPropertyBuilder withSimpleName(String newSimpleName) { PropertyName newName = _name.withSimpleName(newSimpleName); return (newName == _name) ? this : new POJOPropertyBuilder(this, newName); } @Override"
+      },
+      {
+        "txt": "public int compareTo(POJOPropertyBuilder other) { if (_ctorParameters != null) { if (other._ctorParameters == null) { return -1; } } else if (other._ctorParameters != null) { return 1; } return getName().compareTo(other.getName());"
+      },
+      {
+        "txt": "} @Override public String getName() { return (_name == null) ? null : _name.getSimpleName(); } @Override public PropertyName getFullName() { return _name; } @Override"
+      },
+      {
+        "txt": "public boolean hasName(PropertyName name) { return _name.equals(name); } @Override public String getInternalName() { return _internalName.getSimpleName(); } @Override public PropertyName getWrapperName() { AnnotatedMember member = getPrimaryMember(); return (member == null || _annotationIntrospector == null) ? null : _annotationIntrospector.findWrapperName(member);"
+      },
+      {
+        "txt": "return fromMemberAnnotations(new WithMember<PropertyName>() { @Override public PropertyName withMember(AnnotatedMember member) { return _annotationIntrospector.findWrapperName(member); } }); } @Override public boolean isExplicitlyIncluded() { return _anyExplicits(_fields)"
+      },
+      {
+        "txt": "|| _anyExplicits(_getters) || _anyExplicits(_setters) || _anyExplicitNames(_ctorParameters) ; } @Override public boolean isExplicitlyNamed() { return _anyExplicitNames(_fields) || _anyExplicitNames(_getters) || _anyExplicitNames(_setters)"
+      },
+      {
+        "txt": "|| _anyExplicitNames(_ctorParameters) ; } @Override public boolean hasGetter() { return _getters != null; } @Override public boolean hasSetter() { return _setters != null; } @Override public boolean hasField() { return _fields != null; } @Override"
+      },
+      {
+        "txt": "public boolean hasConstructorParameter() { return _ctorParameters != null; } @Override public boolean couldDeserialize() { return (_ctorParameters != null) || (_setters != null) || (_fields != null); } @Override public boolean couldSerialize() { return (_getters != null) || (_fields != null); } @Override"
+      },
+      {
+        "txt": "public AnnotatedMethod getGetter() { Linked<AnnotatedMethod> curr = _getters; if (curr == null) { return null; } Linked<AnnotatedMethod> next = curr.next; if (next == null) { return curr.value; }"
+      },
+      {
+        "txt": "for (; next != null; next = next.next) { Class<?> currClass = curr.value.getDeclaringClass(); Class<?> nextClass = next.value.getDeclaringClass(); if (currClass != nextClass) { if (currClass.isAssignableFrom(nextClass)) { // next is more specific curr = next; continue; } if (nextClass.isAssignableFrom(currClass)) { // current more specific continue;"
+      },
+      {
+        "txt": "} } int priNext = _getterPriority(next.value); int priCurr = _getterPriority(curr.value); if (priNext != priCurr) { if (priNext < priCurr) { curr = next; } continue; }"
+      },
+      {
+        "txt": "throw new IllegalArgumentException(\"Conflicting getter definitions for property \\\"\"+getName()+\"\\\": \" +curr.value.getFullName()+\" vs \"+next.value.getFullName()); } _getters = curr.withoutNext(); return curr.value; } @Override public AnnotatedMethod getSetter() { Linked<AnnotatedMethod> curr = _setters;"
+      },
+      {
+        "txt": "if (curr == null) { return null; } Linked<AnnotatedMethod> next = curr.next; if (next == null) { return curr.value; } for (; next != null; next = next.next) { Class<?> currClass = curr.value.getDeclaringClass(); Class<?> nextClass = next.value.getDeclaringClass();"
+      },
+      {
+        "txt": "if (currClass != nextClass) { if (currClass.isAssignableFrom(nextClass)) { // next is more specific curr = next; continue; } if (nextClass.isAssignableFrom(currClass)) { // current more specific continue; } } AnnotatedMethod nextM = next.value;"
+      },
+      {
+        "txt": "AnnotatedMethod currM = curr.value; int priNext = _setterPriority(nextM); int priCurr = _setterPriority(currM); if (priNext != priCurr) { if (priNext < priCurr) { curr = next; } continue; } if (_annotationIntrospector != null) {"
+      },
+      {
+        "txt": "AnnotatedMethod pref = _annotationIntrospector.resolveSetterConflict(_config, currM, nextM); if (pref == currM) { continue; } if (pref == nextM) { curr = next; continue; } }"
+      },
+      {
+        "txt": "throw new IllegalArgumentException(String.format( \"Conflicting setter definitions for property \\\"%s\\\": %s vs %s\", getName(), curr.value.getFullName(), next.value.getFullName())); } _setters = curr.withoutNext(); return curr.value; } @Override public AnnotatedField getField() {"
+      },
+      {
+        "txt": "if (_fields == null) { return null; } AnnotatedField field = _fields.value; Linked<AnnotatedField> next = _fields.next; for (; next != null; next = next.next) { AnnotatedField nextField = next.value; Class<?> fieldClass = field.getDeclaringClass(); Class<?> nextClass = nextField.getDeclaringClass(); if (fieldClass != nextClass) {"
+      },
+      {
+        "txt": "if (fieldClass.isAssignableFrom(nextClass)) { // next is more specific field = nextField; continue; } if (nextClass.isAssignableFrom(fieldClass)) { // getter more specific continue; } } throw new IllegalArgumentException(\"Multiple fields representing property \\\"\"+getName()+\"\\\": \" +field.getFullName()+\" vs \"+nextField.getFullName());"
+      },
+      {
+        "txt": "} return field; } @Override public AnnotatedParameter getConstructorParameter() { if (_ctorParameters == null) { return null; } Linked<AnnotatedParameter> curr = _ctorParameters;"
+      },
+      {
+        "txt": "do { if (curr.value.getOwner() instanceof AnnotatedConstructor) { return curr.value; } curr = curr.next; } while (curr != null); return _ctorParameters.value; } @Override public Iterator<AnnotatedParameter> getConstructorParameters() {"
+      },
+      {
+        "txt": "if (_ctorParameters == null) { return ClassUtil.emptyIterator(); } return new MemberIterator<AnnotatedParameter>(_ctorParameters); } @Override public AnnotatedMember getAccessor() { AnnotatedMember m = getGetter(); if (m == null) {"
+      },
+      {
+        "txt": "m = getField(); } return m; } @Override public AnnotatedMember getMutator() { AnnotatedMember m = getConstructorParameter(); if (m == null) { m = getSetter();"
+      },
+      {
+        "txt": "if (m == null) { m = getField(); } } return m; } @Override public AnnotatedMember getNonConstructorMutator() { AnnotatedMember m = getSetter(); if (m == null) {"
+      },
+      {
+        "txt": "m = getField(); } return m; } @Override public AnnotatedMember getPrimaryMember() { if (_forSerialization) { return getAccessor(); } return getMutator();"
+      },
+      {
+        "txt": "} protected int _getterPriority(AnnotatedMethod m) { final String name = m.getName(); if (name.startsWith(\"get\") && name.length() > 3) { return 1; } if (name.startsWith(\"is\") && name.length() > 2) { return 2; }"
+      },
+      {
+        "txt": "return 3; } protected int _setterPriority(AnnotatedMethod m) { final String name = m.getName(); if (name.startsWith(\"set\") && name.length() > 3) { return 1; } return 2; }"
+      },
+      {
+        "txt": "@Override public Class<?>[] findViews() { return fromMemberAnnotations(new WithMember<Class<?>[]>() { @Override public Class<?>[] withMember(AnnotatedMember member) { return _annotationIntrospector.findViews(member); } }); } @Override"
+      },
+      {
+        "txt": "public AnnotationIntrospector.ReferenceProperty findReferenceType() { return fromMemberAnnotations(new WithMember<AnnotationIntrospector.ReferenceProperty>() { @Override public AnnotationIntrospector.ReferenceProperty withMember(AnnotatedMember member) { return _annotationIntrospector.findReferenceType(member); } }); } @Override public boolean isTypeId() {"
+      },
+      {
+        "txt": "Boolean b = fromMemberAnnotations(new WithMember<Boolean>() { @Override public Boolean withMember(AnnotatedMember member) { return _annotationIntrospector.isTypeId(member); } }); return (b != null) && b.booleanValue(); } @Override public PropertyMetadata getMetadata() {"
+      },
+      {
+        "txt": "final Boolean b = _findRequired(); final String desc = _findDescription(); final Integer idx = _findIndex(); final String def = _findDefaultValue(); if (b == null && idx == null && def == null) { return (desc == null) ? PropertyMetadata.STD_REQUIRED_OR_OPTIONAL : PropertyMetadata.STD_REQUIRED_OR_OPTIONAL.withDescription(desc); } return PropertyMetadata.construct(b.booleanValue(), desc, idx, def); }"
+      },
+      {
+        "txt": "protected Boolean _findRequired() { return fromMemberAnnotations(new WithMember<Boolean>() { @Override public Boolean withMember(AnnotatedMember member) { return _annotationIntrospector.hasRequiredMarker(member); } }); } protected String _findDescription() { return fromMemberAnnotations(new WithMember<String>() {"
+      },
+      {
+        "txt": "@Override public String withMember(AnnotatedMember member) { return _annotationIntrospector.findPropertyDescription(member); } }); } protected Integer _findIndex() { return fromMemberAnnotations(new WithMember<Integer>() { @Override public Integer withMember(AnnotatedMember member) {"
+      },
+      {
+        "txt": "return _annotationIntrospector.findPropertyIndex(member); } }); } protected String _findDefaultValue() { return fromMemberAnnotations(new WithMember<String>() { @Override public String withMember(AnnotatedMember member) { return _annotationIntrospector.findPropertyDefaultValue(member); }"
+      },
+      {
+        "txt": "}); } @Override public ObjectIdInfo findObjectIdInfo() { return fromMemberAnnotations(new WithMember<ObjectIdInfo>() { @Override public ObjectIdInfo withMember(AnnotatedMember member) { ObjectIdInfo info = _annotationIntrospector.findObjectIdInfo(member); if (info != null) { info = _annotationIntrospector.findObjectReferenceInfo(member, info);"
+      },
+      {
+        "txt": "} return info; } }); } @Override public JsonInclude.Value findInclusion() { AnnotatedMember a = getAccessor(); JsonInclude.Value v = (_annotationIntrospector == null) ? null : _annotationIntrospector.findPropertyInclusion(a);"
+      },
+      {
+        "txt": "return (v == null) ? JsonInclude.Value.empty() : v; } public JsonProperty.Access findAccess() { return fromMemberAnnotationsExcept(new WithMember<JsonProperty.Access>() { @Override public JsonProperty.Access withMember(AnnotatedMember member) { return _annotationIntrospector.findPropertyAccess(member); } }, JsonProperty.Access.AUTO); }"
+      },
+      {
+        "txt": "public void addField(AnnotatedField a, PropertyName name, boolean explName, boolean visible, boolean ignored) { _fields = new Linked<AnnotatedField>(a, _fields, name, explName, visible, ignored); } public void addCtor(AnnotatedParameter a, PropertyName name, boolean explName, boolean visible, boolean ignored) { _ctorParameters = new Linked<AnnotatedParameter>(a, _ctorParameters, name, explName, visible, ignored); } public void addGetter(AnnotatedMethod a, PropertyName name, boolean explName, boolean visible, boolean ignored) { _getters = new Linked<AnnotatedMethod>(a, _getters, name, explName, visible, ignored); } public void addSetter(AnnotatedMethod a, PropertyName name, boolean explName, boolean visible, boolean ignored) {"
+      },
+      {
+        "txt": "_setters = new Linked<AnnotatedMethod>(a, _setters, name, explName, visible, ignored); } public void addAll(POJOPropertyBuilder src) { _fields = merge(_fields, src._fields); _ctorParameters = merge(_ctorParameters, src._ctorParameters); _getters= merge(_getters, src._getters); _setters = merge(_setters, src._setters); } private static <T> Linked<T> merge(Linked<T> chain1, Linked<T> chain2)"
+      },
+      {
+        "txt": "{ if (chain1 == null) { return chain2; } if (chain2 == null) { return chain1; } return chain1.append(chain2); } public void removeIgnored()"
+      },
+      {
+        "txt": "{ _fields = _removeIgnored(_fields); _getters = _removeIgnored(_getters); _setters = _removeIgnored(_setters); _ctorParameters = _removeIgnored(_ctorParameters); } public void removeNonVisible(boolean inferMutators) { JsonProperty.Access acc = findAccess(); if (acc == null) {"
+      },
+      {
+        "txt": "acc = JsonProperty.Access.AUTO; } switch (acc) { case READ_ONLY: _setters = null; _ctorParameters = null; if (!_forSerialization) { _fields = null; } break;"
+      },
+      {
+        "txt": "case READ_WRITE: break; case WRITE_ONLY: _getters = null; if (_forSerialization) { _fields = null; } break; default: case AUTO: // the default case: base it on visibility"
+      },
+      {
+        "txt": "_ctorParameters = _removeNonVisible(_ctorParameters); if (!inferMutators || (_getters == null)) { _fields = _removeNonVisible(_fields); _setters = _removeNonVisible(_setters); } } <extra_id_0> public void removeConstructors() { _ctorParameters = null; } public void trimByVisibility() { _fields = _trimByVisibility(_fields);"
+      },
+      {
+        "txt": "{ _fields = _trimByVisibility(_fields); _getters = _trimByVisibility(_getters); _setters = _trimByVisibility(_setters); _ctorParameters = _trimByVisibility(_ctorParameters); } @SuppressWarnings(\"unchecked\") public void mergeAnnotations(boolean forSerialization) { if (forSerialization) {"
+      },
+      {
+        "txt": "if (_getters != null) { AnnotationMap ann = _mergeAnnotations(0, _getters, _fields, _ctorParameters, _setters); _getters = _applyAnnotations(_getters, ann); } else if (_fields != null) { AnnotationMap ann = _mergeAnnotations(0, _fields, _ctorParameters, _setters); _fields = _applyAnnotations(_fields, ann); } } else { // for deserialization if (_ctorParameters != null) { AnnotationMap ann = _mergeAnnotations(0, _ctorParameters, _setters, _fields, _getters);"
+      },
+      {
+        "txt": "_ctorParameters = _applyAnnotations(_ctorParameters, ann); } else if (_setters != null) { AnnotationMap ann = _mergeAnnotations(0, _setters, _fields, _getters); _setters = _applyAnnotations(_setters, ann); } else if (_fields != null) { AnnotationMap ann = _mergeAnnotations(0, _fields, _getters); _fields = _applyAnnotations(_fields, ann); } } }"
+      },
+      {
+        "txt": "private AnnotationMap _mergeAnnotations(int index, Linked<? extends AnnotatedMember>... nodes) { AnnotationMap ann = _getAllAnnotations(nodes[index]); while (++index < nodes.length) { if (nodes[index] != null) { return AnnotationMap.merge(ann, _mergeAnnotations(index, nodes)); } } return ann;"
+      },
+      {
+        "txt": "} private <T extends AnnotatedMember> AnnotationMap _getAllAnnotations(Linked<T> node) { AnnotationMap ann = node.value.getAllAnnotations(); if (node.next != null) { ann = AnnotationMap.merge(ann, _getAllAnnotations(node.next)); } return ann; } private <T extends AnnotatedMember> Linked<T> _applyAnnotations(Linked<T> node, AnnotationMap ann) { @SuppressWarnings(\"unchecked\")"
+      },
+      {
+        "txt": "T value = (T) node.value.withAnnotations(ann); if (node.next != null) { node = node.withNext(_applyAnnotations(node.next, ann)); } return node.withValue(value); } private <T> Linked<T> _removeIgnored(Linked<T> node) { if (node == null) { return node;"
+      },
+      {
+        "txt": "} return node.withoutIgnored(); } private <T> Linked<T> _removeNonVisible(Linked<T> node) { if (node == null) { return node; } return node.withoutNonVisible(); }"
+      },
+      {
+        "txt": "private <T> Linked<T> _trimByVisibility(Linked<T> node) { if (node == null) { return node; } return node.trimByVisibility(); } private <T> boolean _anyExplicits(Linked<T> n) { for (; n != null; n = n.next) {"
+      },
+      {
+        "txt": "if (n.name != null && n.name.hasSimpleName()) { return true; } } return false; } private <T> boolean _anyExplicitNames(Linked<T> n) { for (; n != null; n = n.next) { if (n.name != null && n.isNameExplicit) {"
+      },
+      {
+        "txt": "return true; } } return false; } public boolean anyVisible() { return _anyVisible(_fields) || _anyVisible(_getters) || _anyVisible(_setters) || _anyVisible(_ctorParameters)"
+      },
+      {
+        "txt": "; } private <T> boolean _anyVisible(Linked<T> n) { for (; n != null; n = n.next) { if (n.isVisible) { return true; } } return false;"
+      },
+      {
+        "txt": "} public boolean anyIgnorals() { return _anyIgnorals(_fields) || _anyIgnorals(_getters) || _anyIgnorals(_setters) || _anyIgnorals(_ctorParameters) ; } private <T> boolean _anyIgnorals(Linked<T> n) {"
+      },
+      {
+        "txt": "for (; n != null; n = n.next) { if (n.isMarkedIgnored) { return true; } } return false; } public Set<PropertyName> findExplicitNames() { Set<PropertyName> renamed = null;"
+      },
+      {
+        "txt": "renamed = _findExplicitNames(_fields, renamed); renamed = _findExplicitNames(_getters, renamed); renamed = _findExplicitNames(_setters, renamed); renamed = _findExplicitNames(_ctorParameters, renamed); if (renamed == null) { return Collections.emptySet(); } return renamed; } public Collection<POJOPropertyBuilder> explode(Collection<PropertyName> newNames)"
+      },
+      {
+        "txt": "{ HashMap<PropertyName,POJOPropertyBuilder> props = new HashMap<PropertyName,POJOPropertyBuilder>(); _explode(newNames, props, _fields); _explode(newNames, props, _getters); _explode(newNames, props, _setters); _explode(newNames, props, _ctorParameters); return props.values(); } @SuppressWarnings(\"unchecked\") private void _explode(Collection<PropertyName> newNames,"
+      },
+      {
+        "txt": "Map<PropertyName,POJOPropertyBuilder> props, Linked<?> accessors) { final Linked<?> firstAcc = accessors; // clumsy, part 1 for (Linked<?> node = accessors; node != null; node = node.next) { PropertyName name = node.name; if (!node.isNameExplicit || name == null) { // no explicit name -- problem! if (!node.isVisible) { continue; }"
+      },
+      {
+        "txt": "throw new IllegalStateException(\"Conflicting/ambiguous property name definitions (implicit name '\" +_name+\"'): found multiple explicit names: \" +newNames+\", but also implicit accessor: \"+node); } POJOPropertyBuilder prop = props.get(name); if (prop == null) { prop = new POJOPropertyBuilder(_config, _annotationIntrospector, _forSerialization, _internalName, name); props.put(name, prop); }"
+      },
+      {
+        "txt": "if (firstAcc == _fields) { Linked<AnnotatedField> n2 = (Linked<AnnotatedField>) node; prop._fields = n2.withNext(prop._fields); } else if (firstAcc == _getters) { Linked<AnnotatedMethod> n2 = (Linked<AnnotatedMethod>) node; prop._getters = n2.withNext(prop._getters); } else if (firstAcc == _setters) { Linked<AnnotatedMethod> n2 = (Linked<AnnotatedMethod>) node; prop._setters = n2.withNext(prop._setters); } else if (firstAcc == _ctorParameters) {"
+      },
+      {
+        "txt": "Linked<AnnotatedParameter> n2 = (Linked<AnnotatedParameter>) node; prop._ctorParameters = n2.withNext(prop._ctorParameters); } else { throw new IllegalStateException(\"Internal error: mismatched accessors, property: \"+this); } } } private Set<PropertyName> _findExplicitNames(Linked<? extends AnnotatedMember> node, Set<PropertyName> renamed) {"
+      },
+      {
+        "txt": "for (; node != null; node = node.next) { if (!node.isNameExplicit || node.name == null) { continue; } if (renamed == null) { renamed = new HashSet<PropertyName>(); } renamed.add(node.name); } return renamed;"
+      },
+      {
+        "txt": "} @Override public String toString() { StringBuilder sb = new StringBuilder(); sb.append(\"[Property '\").append(_name) .append(\"'; ctors: \").append(_ctorParameters) .append(\", field(s): \").append(_fields) .append(\", getter(s): \").append(_getters) .append(\", setter(s): \").append(_setters)"
+      },
+      {
+        "txt": "; sb.append(\"]\"); return sb.toString(); } protected <T> T fromMemberAnnotations(WithMember<T> func) { T result = null; if (_annotationIntrospector != null) { if (_forSerialization) { if (_getters != null) {"
+      },
+      {
+        "txt": "result = func.withMember(_getters.value); } } else { if (_ctorParameters != null) { result = func.withMember(_ctorParameters.value); } if (result == null && _setters != null) { result = func.withMember(_setters.value); } }"
+      },
+      {
+        "txt": "if (result == null && _fields != null) { result = func.withMember(_fields.value); } } return result; } protected <T> T fromMemberAnnotationsExcept(WithMember<T> func, T defaultValue) { if (_annotationIntrospector == null) { return null;"
+      },
+      {
+        "txt": "} if (_forSerialization) { if (_getters != null) { T result = func.withMember(_getters.value); if ((result != null) && (result != defaultValue)) { return result; } } if (_fields != null) { T result = func.withMember(_fields.value);"
+      },
+      {
+        "txt": "if ((result != null) && (result != defaultValue)) { return result; } } if (_ctorParameters != null) { T result = func.withMember(_ctorParameters.value); if ((result != null) && (result != defaultValue)) { return result; } }"
+      },
+      {
+        "txt": "if (_setters != null) { T result = func.withMember(_setters.value); if ((result != null) && (result != defaultValue)) { return result; } } return null; } if (_ctorParameters != null) { T result = func.withMember(_ctorParameters.value);"
+      },
+      {
+        "txt": "if ((result != null) && (result != defaultValue)) { return result; } } if (_setters != null) { T result = func.withMember(_setters.value); if ((result != null) && (result != defaultValue)) { return result; } }"
+      },
+      {
+        "txt": "if (_fields != null) { T result = func.withMember(_fields.value); if ((result != null) && (result != defaultValue)) { return result; } } if (_getters != null) { T result = func.withMember(_getters.value); if ((result != null) && (result != defaultValue)) { return result;"
+      },
+      {
+        "txt": "} } return null; } private interface WithMember<T> { public T withMember(AnnotatedMember member); } protected static class MemberIterator<T extends AnnotatedMember> implements Iterator<T> {"
+      },
+      {
+        "txt": "private Linked<T> next; public MemberIterator(Linked<T> first) { next = first; } @Override public boolean hasNext() { return (next != null); } @Override public T next() {"
+      },
+      {
+        "txt": "if (next == null) throw new NoSuchElementException(); T result = next.value; next = next.next; return result; } @Override public void remove() { throw new UnsupportedOperationException(); } }"
+      },
+      {
+        "txt": "protected final static class Linked<T> { public final T value; public final Linked<T> next; public final PropertyName name; public final boolean isNameExplicit; public final boolean isVisible; public final boolean isMarkedIgnored; public Linked(T v, Linked<T> n, PropertyName name, boolean explName, boolean visible, boolean ignored)"
+      },
+      {
+        "txt": "{ value = v; next = n; this.name = (name == null || name.isEmpty()) ? null : name; if (explName) { if (this.name == null) { // sanity check to catch internal problems throw new IllegalArgumentException(\"Can not pass true for 'explName' if name is null/empty\"); } if (!name.hasSimpleName()) { explName = false;"
+      },
+      {
+        "txt": "} } isNameExplicit = explName; isVisible = visible; isMarkedIgnored = ignored; } public Linked<T> withoutNext() { if (next == null) { return this; }"
+      },
+      {
+        "txt": "return new Linked<T>(value, null, name, isNameExplicit, isVisible, isMarkedIgnored); } public Linked<T> withValue(T newValue) { if (newValue == value) { return this; } return new Linked<T>(newValue, next, name, isNameExplicit, isVisible, isMarkedIgnored); } public Linked<T> withNext(Linked<T> newNext) { if (newNext == next) {"
+      },
+      {
+        "txt": "return this; } return new Linked<T>(value, newNext, name, isNameExplicit, isVisible, isMarkedIgnored); } public Linked<T> withoutIgnored() { if (isMarkedIgnored) { return (next == null) ? null : next.withoutIgnored(); } if (next != null) { Linked<T> newNext = next.withoutIgnored();"
+      },
+      {
+        "txt": "if (newNext != next) { return withNext(newNext); } } return this; } public Linked<T> withoutNonVisible() { Linked<T> newNext = (next == null) ? null : next.withoutNonVisible(); return isVisible ? withNext(newNext) : newNext; }"
+      },
+      {
+        "txt": "protected Linked<T> append(Linked<T> appendable) { if (next == null) { return withNext(appendable); } return withNext(next.append(appendable)); } public Linked<T> trimByVisibility() { if (next == null) { return this; }"
+      },
+      {
+        "txt": "Linked<T> newNext = next.trimByVisibility(); if (name != null) { // this already has highest; how about next one? if (newNext.name == null) { // next one not, drop it return withNext(null); } return withNext(newNext); } if (newNext.name != null) { // next one has higher, return it... return newNext; }"
+      },
+      {
+        "txt": "if (isVisible == newNext.isVisible) { // same; keep both in current order return withNext(newNext); } return isVisible ? withNext(null) : newNext; } @Override public String toString() { String msg = value.toString()+\"[visible=\"+isVisible+\",ignore=\"+isMarkedIgnored +\",explicitName=\"+isNameExplicit+\"]\"; if (next != null) {"
+      },
+      {
+        "txt": "msg = msg + \", \"+next.toString(); } return msg; } }"
+      }
+    ]
+  }
+]

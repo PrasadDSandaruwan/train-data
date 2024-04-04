@@ -1,0 +1,1541 @@
+[
+  {
+    "id": 494,
+    "file_path": "src/com/google/javascript/jscomp/AmbiguateProperties.java",
+    "start-bug-line": 210,
+    "end-bug-line": 210,
+    "bug": "computeRelatedTypes(p.type);",
+    "fix": "[Delete]",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.google.javascript.jscomp; import com.google.common.base.Joiner; import com.google.common.base.Preconditions;"
+      },
+      {
+        "txt": "import com.google.common.collect.BiMap; import com.google.common.collect.HashBiMap; import com.google.common.collect.Lists; import com.google.common.collect.Maps; import com.google.common.collect.Sets; import com.google.javascript.jscomp.NodeTraversal.AbstractPostOrderCallback; import com.google.javascript.jscomp.TypeValidator.TypeMismatch; import com.google.javascript.jscomp.graph.AdjacencyGraph; import com.google.javascript.jscomp.graph.Annotation; import com.google.javascript.jscomp.graph.GraphColoring;"
+      },
+      {
+        "txt": "import com.google.javascript.jscomp.graph.GraphColoring.GreedyGraphColoring; import com.google.javascript.jscomp.graph.GraphNode; import com.google.javascript.jscomp.graph.SubGraph; import com.google.javascript.rhino.Node; import com.google.javascript.rhino.Token; import com.google.javascript.rhino.jstype.FunctionPrototypeType; import com.google.javascript.rhino.jstype.FunctionType; import com.google.javascript.rhino.jstype.InstanceObjectType; import com.google.javascript.rhino.jstype.JSType; import com.google.javascript.rhino.jstype.JSTypeNative;"
+      },
+      {
+        "txt": "import com.google.javascript.rhino.jstype.JSTypeRegistry; import com.google.javascript.rhino.jstype.ObjectType; import com.google.javascript.rhino.jstype.UnionType; import java.util.BitSet; import java.util.Collection; import java.util.Comparator; import java.util.HashSet; import java.util.List; import java.util.Map; import java.util.Set;"
+      },
+      {
+        "txt": "import java.util.TreeSet; import java.util.logging.Logger; class AmbiguateProperties implements CompilerPass { private static final Logger logger = Logger.getLogger( AmbiguateProperties.class.getName()); private final AbstractCompiler compiler; private final List<Node> stringNodesToRename = Lists.newArrayList(); private final char[] reservedCharacters; private final Map<String, Property> propertyMap = Maps.newHashMap(); private final Set<String> externedNames = Sets.newHashSet();"
+      },
+      {
+        "txt": "private final Set<String> quotedNames = Sets.newHashSet(); private final Map<String, String> renamingMap = Maps.newHashMap(); private final Map<Integer, String> colorMap = Maps.newHashMap(); private static final Comparator<Property> FREQUENCY_COMPARATOR = new Comparator<Property>() { public int compare(Property p1, Property p2) { if (p1.numOccurrences != p2.numOccurrences) { return p2.numOccurrences - p1.numOccurrences; } return p1.oldName.compareTo(p2.oldName);"
+      },
+      {
+        "txt": "} }; private BiMap<JSType, Integer> intForType = HashBiMap.create(); private Map<JSType, JSTypeBitSet> relatedBitsets = Maps.newHashMap(); private final Set<JSType> invalidatingTypes; static final String SKIP_PREFIX = \"JSAbstractCompiler\"; AmbiguateProperties(AbstractCompiler compiler, char[] reservedCharacters) { this.compiler = compiler; this.reservedCharacters = reservedCharacters;"
+      },
+      {
+        "txt": "JSTypeRegistry r = compiler.getTypeRegistry(); invalidatingTypes = Sets.newHashSet( r.getNativeType(JSTypeNative.ALL_TYPE), r.getNativeType(JSTypeNative.NO_OBJECT_TYPE), r.getNativeType(JSTypeNative.NO_TYPE), r.getNativeType(JSTypeNative.NULL_TYPE), r.getNativeType(JSTypeNative.VOID_TYPE), r.getNativeType(JSTypeNative.FUNCTION_FUNCTION_TYPE), r.getNativeType(JSTypeNative.FUNCTION_PROTOTYPE), r.getNativeType(JSTypeNative.GLOBAL_THIS),"
+      },
+      {
+        "txt": "r.getNativeType(JSTypeNative.OBJECT_TYPE), r.getNativeType(JSTypeNative.OBJECT_PROTOTYPE), r.getNativeType(JSTypeNative.OBJECT_FUNCTION_TYPE), r.getNativeType(JSTypeNative.TOP_LEVEL_PROTOTYPE), r.getNativeType(JSTypeNative.UNKNOWN_TYPE)); for (TypeMismatch mis : compiler.getTypeValidator().getMismatches()) { addInvalidatingType(mis.first); addInvalidatingType(mis.second); } }"
+      },
+      {
+        "txt": "private void addInvalidatingType(JSType type) { type = type.restrictByNotNullOrUndefined(); if (type instanceof UnionType) { for (JSType alt : ((UnionType) type).getAlternates()) { addInvalidatingType(alt); } } invalidatingTypes.add(type); ObjectType objType = ObjectType.cast(type); if (objType instanceof InstanceObjectType) {"
+      },
+      {
+        "txt": "invalidatingTypes.add(objType.getImplicitPrototype()); } } Map<String, String> getRenamingMap() { return renamingMap; } private int getIntForType(JSType type) { if (intForType.containsKey(type)) { return intForType.get(type).intValue(); }"
+      },
+      {
+        "txt": "int newInt = intForType.size() + 1; intForType.put(type, newInt); return newInt; } public void process(Node externs, Node root) { NodeTraversal.traverse(compiler, externs, new ProcessExterns()); NodeTraversal.traverse(compiler, root, new ProcessProperties()); Set<String> reservedNames = new HashSet<String>(externedNames.size() + quotedNames.size()); reservedNames.addAll(externedNames);"
+      },
+      {
+        "txt": "int numRenamedPropertyNames = 0; int numSkippedPropertyNames = 0; Set<Property> propsByFreq = new TreeSet<Property>(FREQUENCY_COMPARATOR); for (Property p : propertyMap.values()) { if (!p.skipAmbiguating) { ++numRenamedPropertyNames; <extra_id_0> propsByFreq.add(p); } else { ++numSkippedPropertyNames; reservedNames.add(p.oldName); } }"
+      },
+      {
+        "txt": "} } PropertyGraph graph = new PropertyGraph(Lists.newLinkedList(propsByFreq)); GraphColoring<Property, Void> coloring = new GreedyGraphColoring<Property, Void>(graph, FREQUENCY_COMPARATOR); int numNewPropertyNames = coloring.color(); NameGenerator nameGen = new NameGenerator( reservedNames, \"\", reservedCharacters); for (int i = 0; i < numNewPropertyNames; ++i) { colorMap.put(i, nameGen.generateNextName());"
+      },
+      {
+        "txt": "} for (GraphNode<Property, Void> node : graph.getNodes()) { node.getValue().newName = colorMap.get(node.getAnnotation().hashCode()); renamingMap.put(node.getValue().oldName, node.getValue().newName); } for (Node n : stringNodesToRename) { String oldName = n.getString(); Property p = propertyMap.get(oldName); if (p != null && p.newName != null) { Preconditions.checkState(oldName.equals(p.oldName));"
+      },
+      {
+        "txt": "if (!p.newName.equals(oldName)) { n.setString(p.newName); compiler.reportCodeChange(); } } } logger.info(\"Collapsed \" + numRenamedPropertyNames + \" properties into \" + numNewPropertyNames + \" and skipped renaming \" + numSkippedPropertyNames + \" properties.\"); }"
+      },
+      {
+        "txt": "private BitSet getRelatedTypesOnNonUnion(JSType type) { if (relatedBitsets.containsKey(type)) { return relatedBitsets.get(type); } else { throw new RuntimeException(\"Related types should have been computed for\" + \" type: \" + type + \" but have not been.\"); } } private void computeRelatedTypes(JSType type) { if (type instanceof UnionType) {"
+      },
+      {
+        "txt": "type = type.restrictByNotNullOrUndefined(); if (type instanceof UnionType) { for (JSType alt : ((UnionType) type).getAlternates()) { computeRelatedTypes(alt); } return; } } if (relatedBitsets.containsKey(type)) { return;"
+      },
+      {
+        "txt": "} JSTypeBitSet related = new JSTypeBitSet(intForType.size()); relatedBitsets.put(type, related); ObjectType parentType = type.toObjectType(); while (parentType != null) { related.set(getIntForType(parentType)); parentType = parentType.getImplicitPrototype(); } FunctionType constructor = null; if (type instanceof FunctionType) {"
+      },
+      {
+        "txt": "constructor = (FunctionType) type; } else if (type instanceof FunctionPrototypeType) { constructor = ((FunctionPrototypeType) type).getOwnerFunction(); } else { constructor = type.toObjectType().getConstructor(); } if (constructor != null) { for (ObjectType itype : constructor.getAllImplementedInterfaces()) { related.set(getIntForType(itype)); }"
+      },
+      {
+        "txt": "} } class PropertyGraph implements AdjacencyGraph<Property, Void> { protected final Map<Property, PropertyGraphNode> nodes = Maps.newHashMap(); PropertyGraph(Collection<Property> props) { for (Property prop : props) { nodes.put(prop, new PropertyGraphNode(prop)); } } public List<GraphNode<Property, Void>> getNodes() {"
+      },
+      {
+        "txt": "return Lists.<GraphNode<Property, Void>>newArrayList(nodes.values()); } public GraphNode<Property, Void> getNode(Property property) { return nodes.get(property); } public SubGraph<Property, Void> newSubGraph() { return new PropertySubGraph(); } public void clearNodeAnnotations() { for (PropertyGraphNode node : nodes.values()) {"
+      },
+      {
+        "txt": "node.setAnnotation(null); } } public int getWeight(Property value) { return value.numOccurrences; } } class PropertySubGraph implements SubGraph<Property, Void> { JSTypeBitSet typesInSet = new JSTypeBitSet(intForType.size()); JSTypeBitSet typesRelatedToSet = new JSTypeBitSet(intForType.size());"
+      },
+      {
+        "txt": "public boolean isIndependentOf(Property prop) { if (typesRelatedToSet.intersects(prop.typesSet)) { return false; } return !getRelated(prop.type).intersects(typesInSet); } public void addNode(Property prop) { typesInSet.or(prop.typesSet); typesRelatedToSet.or(getRelated(prop.type)); }"
+      },
+      {
+        "txt": "private JSTypeBitSet getRelated(JSType type) { JSTypeBitSet relatedTypes = new JSTypeBitSet(intForType.size()); if (type instanceof UnionType) { for (JSType alt : ((UnionType) type).getAlternates()) { intersectRelatedTypesOnNonUnion(alt, relatedTypes); } } else { intersectRelatedTypesOnNonUnion(type, relatedTypes); } return relatedTypes;"
+      },
+      {
+        "txt": "} private void intersectRelatedTypesOnNonUnion( JSType type, JSTypeBitSet relatedTypes) { relatedTypes.or(getRelatedTypesOnNonUnion(type)); } } class PropertyGraphNode implements GraphNode<Property, Void> { Property property; protected Annotation annotation; PropertyGraphNode(Property property) {"
+      },
+      {
+        "txt": "this.property = property; } public Property getValue() { return property; } @SuppressWarnings(\"unchecked\") public <A extends Annotation> A getAnnotation() { return (A) annotation; } public void setAnnotation(Annotation data) {"
+      },
+      {
+        "txt": "annotation = data; } } private class ProcessExterns extends AbstractPostOrderCallback { public void visit(NodeTraversal t, Node n, Node parent) { switch (n.getType()) { case Token.GETPROP: Node dest = n.getFirstChild().getNext(); externedNames.add(dest.getString()); break;"
+      },
+      {
+        "txt": "case Token.OBJECTLIT: for (Node child = n.getFirstChild(); child != null; child = child.getNext().getNext()) { if (child.getType() == Token.STRING) { externedNames.add(child.getString()); } } break; }"
+      },
+      {
+        "txt": "} } private class ProcessProperties extends AbstractPostOrderCallback { public void visit(NodeTraversal t, Node n, Node parent) { switch (n.getType()) { case Token.GETPROP: { Node propNode = n.getFirstChild().getNext(); JSType jstype = getJSType(n.getFirstChild()); maybeMarkCandidate(propNode, jstype, t); break;"
+      },
+      {
+        "txt": "} case Token.OBJECTLIT: for (Node key = n.getFirstChild(); key != null; key = key.getNext().getNext()) { if (key.getType() == Token.STRING) { if (!key.isQuotedString()) { JSType jstype = getJSType(n.getFirstChild()); maybeMarkCandidate(key, jstype, t); } else { quotedNames.add(key.getString());"
+      },
+      {
+        "txt": "} } } break; case Token.GETELEM: Node child = n.getLastChild(); if (child.getType() == Token.STRING) { quotedNames.add(child.getString()); } break;"
+      },
+      {
+        "txt": "} } private void maybeMarkCandidate(Node n, JSType type, NodeTraversal t) { String name = n.getString(); if (!externedNames.contains(name)) { stringNodesToRename.add(n); recordProperty(name, type); } } private Property recordProperty(String name, JSType type) {"
+      },
+      {
+        "txt": "Property prop = getProperty(name); prop.addType(type); return prop; } } private boolean isInvalidatingType(JSType type) { if (type instanceof UnionType) { type = type.restrictByNotNullOrUndefined(); if (type instanceof UnionType) { for (JSType alt : ((UnionType) type).getAlternates()) {"
+      },
+      {
+        "txt": "if (isInvalidatingType(alt)) { return true; } } return false; } } ObjectType objType = ObjectType.cast(type); return objType == null || invalidatingTypes.contains(objType)"
+      },
+      {
+        "txt": "|| !objType.hasReferenceName() || (objType.isNamedType() && objType.isUnknownType()) || objType.isEnumType() || objType.autoboxesTo() != null; } private Property getProperty(String name) { Property prop = propertyMap.get(name); if (prop == null) { prop = new Property(name); propertyMap.put(name, prop); }"
+      },
+      {
+        "txt": "return prop; } private JSType getJSType(Node n) { JSType jsType = n.getJSType(); if (jsType == null) { return compiler.getTypeRegistry().getNativeType( JSTypeNative.UNKNOWN_TYPE); } else { return jsType; }"
+      },
+      {
+        "txt": "} private class Property { final String oldName; JSType type; String newName; int numOccurrences; boolean skipAmbiguating; JSTypeBitSet typesSet = new JSTypeBitSet(intForType.size()); Property(String name) { this.oldName = name;"
+      },
+      {
+        "txt": "if (name.startsWith(SKIP_PREFIX)) { skipAmbiguating = true; } } void addType(JSType newType) { if (skipAmbiguating) { return; } ++numOccurrences; if (newType instanceof UnionType) {"
+      },
+      {
+        "txt": "newType = newType.restrictByNotNullOrUndefined(); if (newType instanceof UnionType) { for (JSType alt : ((UnionType) newType).getAlternates()) { addNonUnionType(alt); } return; } } addNonUnionType(newType); }"
+      },
+      {
+        "txt": "private void addNonUnionType(JSType newType) { if (skipAmbiguating || isInvalidatingType(newType)) { skipAmbiguating = true; return; } if (type == null) { type = newType; } else { type = type.getLeastSupertype(newType); }"
+      },
+      {
+        "txt": "typesSet.set(getIntForType(newType)); } } private class JSTypeBitSet extends BitSet { private static final long serialVersionUID = 1L; private JSTypeBitSet(int size) { super(size); } private JSTypeBitSet() { super();"
+      },
+      {
+        "txt": "} @Override public String toString() { int from = 0; int current = 0; List<String> types = Lists.newArrayList(); while (-1 != (current = nextSetBit(from))) { types.add(intForType.inverse().get(current).toString()); from = current + 1; }"
+      },
+      {
+        "txt": "return Joiner.on(\" && \").join(types); } }"
+      }
+    ]
+  },
+  {
+    "id": 495,
+    "file_path": "src/com/google/javascript/jscomp/AmbiguateProperties.java",
+    "start-bug-line": 356,
+    "end-bug-line": 356,
+    "bug": "return !getRelated(prop.type).intersects(typesInSet);",
+    "fix": "return !prop.relatedTypesSet.intersects(typesInSet);",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.google.javascript.jscomp; import com.google.common.base.Joiner;"
+      },
+      {
+        "txt": "import com.google.common.base.Preconditions; import com.google.common.collect.BiMap; import com.google.common.collect.HashBiMap; import com.google.common.collect.Lists; import com.google.common.collect.Maps; import com.google.common.collect.Sets; import com.google.javascript.jscomp.NodeTraversal.AbstractPostOrderCallback; import com.google.javascript.jscomp.TypeValidator.TypeMismatch; import com.google.javascript.jscomp.graph.AdjacencyGraph; import com.google.javascript.jscomp.graph.Annotation;"
+      },
+      {
+        "txt": "import com.google.javascript.jscomp.graph.GraphColoring; import com.google.javascript.jscomp.graph.GraphColoring.GreedyGraphColoring; import com.google.javascript.jscomp.graph.GraphNode; import com.google.javascript.jscomp.graph.SubGraph; import com.google.javascript.rhino.Node; import com.google.javascript.rhino.Token; import com.google.javascript.rhino.jstype.FunctionPrototypeType; import com.google.javascript.rhino.jstype.FunctionType; import com.google.javascript.rhino.jstype.InstanceObjectType; import com.google.javascript.rhino.jstype.JSType;"
+      },
+      {
+        "txt": "import com.google.javascript.rhino.jstype.JSTypeNative; import com.google.javascript.rhino.jstype.JSTypeRegistry; import com.google.javascript.rhino.jstype.ObjectType; import com.google.javascript.rhino.jstype.UnionType; import java.util.BitSet; import java.util.Collection; import java.util.Comparator; import java.util.HashSet; import java.util.List; import java.util.Map;"
+      },
+      {
+        "txt": "import java.util.Set; import java.util.TreeSet; import java.util.logging.Logger; class AmbiguateProperties implements CompilerPass { private static final Logger logger = Logger.getLogger( AmbiguateProperties.class.getName()); private final AbstractCompiler compiler; private final List<Node> stringNodesToRename = Lists.newArrayList(); private final char[] reservedCharacters; private final Map<String, Property> propertyMap = Maps.newHashMap();"
+      },
+      {
+        "txt": "private final Set<String> externedNames = Sets.newHashSet(); private final Set<String> quotedNames = Sets.newHashSet(); private final Map<String, String> renamingMap = Maps.newHashMap(); private final Map<Integer, String> colorMap = Maps.newHashMap(); private static final Comparator<Property> FREQUENCY_COMPARATOR = new Comparator<Property>() { public int compare(Property p1, Property p2) { if (p1.numOccurrences != p2.numOccurrences) { return p2.numOccurrences - p1.numOccurrences; }"
+      },
+      {
+        "txt": "return p1.oldName.compareTo(p2.oldName); } }; private BiMap<JSType, Integer> intForType = HashBiMap.create(); private Map<JSType, JSTypeBitSet> relatedBitsets = Maps.newHashMap(); private final Set<JSType> invalidatingTypes; static final String SKIP_PREFIX = \"JSAbstractCompiler\"; AmbiguateProperties(AbstractCompiler compiler, char[] reservedCharacters) { this.compiler = compiler;"
+      },
+      {
+        "txt": "this.reservedCharacters = reservedCharacters; JSTypeRegistry r = compiler.getTypeRegistry(); invalidatingTypes = Sets.newHashSet( r.getNativeType(JSTypeNative.ALL_TYPE), r.getNativeType(JSTypeNative.NO_OBJECT_TYPE), r.getNativeType(JSTypeNative.NO_TYPE), r.getNativeType(JSTypeNative.NULL_TYPE), r.getNativeType(JSTypeNative.VOID_TYPE), r.getNativeType(JSTypeNative.FUNCTION_FUNCTION_TYPE), r.getNativeType(JSTypeNative.FUNCTION_PROTOTYPE),"
+      },
+      {
+        "txt": "r.getNativeType(JSTypeNative.GLOBAL_THIS), r.getNativeType(JSTypeNative.OBJECT_TYPE), r.getNativeType(JSTypeNative.OBJECT_PROTOTYPE), r.getNativeType(JSTypeNative.OBJECT_FUNCTION_TYPE), r.getNativeType(JSTypeNative.TOP_LEVEL_PROTOTYPE), r.getNativeType(JSTypeNative.UNKNOWN_TYPE)); for (TypeMismatch mis : compiler.getTypeValidator().getMismatches()) { addInvalidatingType(mis.first); addInvalidatingType(mis.second); }"
+      },
+      {
+        "txt": "} private void addInvalidatingType(JSType type) { type = type.restrictByNotNullOrUndefined(); if (type instanceof UnionType) { for (JSType alt : ((UnionType) type).getAlternates()) { addInvalidatingType(alt); } } invalidatingTypes.add(type); ObjectType objType = ObjectType.cast(type);"
+      },
+      {
+        "txt": "if (objType instanceof InstanceObjectType) { invalidatingTypes.add(objType.getImplicitPrototype()); } } Map<String, String> getRenamingMap() { return renamingMap; } private int getIntForType(JSType type) { if (intForType.containsKey(type)) { return intForType.get(type).intValue();"
+      },
+      {
+        "txt": "} int newInt = intForType.size() + 1; intForType.put(type, newInt); return newInt; } public void process(Node externs, Node root) { NodeTraversal.traverse(compiler, externs, new ProcessExterns()); NodeTraversal.traverse(compiler, root, new ProcessProperties()); Set<String> reservedNames = new HashSet<String>(externedNames.size() + quotedNames.size());"
+      },
+      {
+        "txt": "reservedNames.addAll(externedNames); reservedNames.addAll(quotedNames); int numRenamedPropertyNames = 0; int numSkippedPropertyNames = 0; Set<Property> propsByFreq = new TreeSet<Property>(FREQUENCY_COMPARATOR); for (Property p : propertyMap.values()) { if (!p.skipAmbiguating) { ++numRenamedPropertyNames; computeRelatedTypes(p.type); propsByFreq.add(p);"
+      },
+      {
+        "txt": "} else { ++numSkippedPropertyNames; reservedNames.add(p.oldName); } } PropertyGraph graph = new PropertyGraph(Lists.newLinkedList(propsByFreq)); GraphColoring<Property, Void> coloring = new GreedyGraphColoring<Property, Void>(graph, FREQUENCY_COMPARATOR); int numNewPropertyNames = coloring.color(); NameGenerator nameGen = new NameGenerator("
+      },
+      {
+        "txt": "reservedNames, \"\", reservedCharacters); for (int i = 0; i < numNewPropertyNames; ++i) { colorMap.put(i, nameGen.generateNextName()); } for (GraphNode<Property, Void> node : graph.getNodes()) { node.getValue().newName = colorMap.get(node.getAnnotation().hashCode()); renamingMap.put(node.getValue().oldName, node.getValue().newName); } for (Node n : stringNodesToRename) { String oldName = n.getString();"
+      },
+      {
+        "txt": "Property p = propertyMap.get(oldName); if (p != null && p.newName != null) { Preconditions.checkState(oldName.equals(p.oldName)); if (!p.newName.equals(oldName)) { n.setString(p.newName); compiler.reportCodeChange(); } } } logger.info(\"Collapsed \" + numRenamedPropertyNames + \" properties into \""
+      },
+      {
+        "txt": "+ numNewPropertyNames + \" and skipped renaming \" + numSkippedPropertyNames + \" properties.\"); } private BitSet getRelatedTypesOnNonUnion(JSType type) { if (relatedBitsets.containsKey(type)) { return relatedBitsets.get(type); } else { throw new RuntimeException(\"Related types should have been computed for\" + \" type: \" + type + \" but have not been.\"); }"
+      },
+      {
+        "txt": "} private void computeRelatedTypes(JSType type) { if (type instanceof UnionType) { type = type.restrictByNotNullOrUndefined(); if (type instanceof UnionType) { for (JSType alt : ((UnionType) type).getAlternates()) { computeRelatedTypes(alt); } return; }"
+      },
+      {
+        "txt": "} if (relatedBitsets.containsKey(type)) { return; } JSTypeBitSet related = new JSTypeBitSet(intForType.size()); relatedBitsets.put(type, related); ObjectType parentType = type.toObjectType(); while (parentType != null) { related.set(getIntForType(parentType)); parentType = parentType.getImplicitPrototype();"
+      },
+      {
+        "txt": "} FunctionType constructor = null; if (type instanceof FunctionType) { constructor = (FunctionType) type; } else if (type instanceof FunctionPrototypeType) { constructor = ((FunctionPrototypeType) type).getOwnerFunction(); } else { constructor = type.toObjectType().getConstructor(); } if (constructor != null) {"
+      },
+      {
+        "txt": "for (ObjectType itype : constructor.getAllImplementedInterfaces()) { related.set(getIntForType(itype)); } } } class PropertyGraph implements AdjacencyGraph<Property, Void> { protected final Map<Property, PropertyGraphNode> nodes = Maps.newHashMap(); PropertyGraph(Collection<Property> props) { for (Property prop : props) { nodes.put(prop, new PropertyGraphNode(prop));"
+      },
+      {
+        "txt": "} } public List<GraphNode<Property, Void>> getNodes() { return Lists.<GraphNode<Property, Void>>newArrayList(nodes.values()); } public GraphNode<Property, Void> getNode(Property property) { return nodes.get(property); } public SubGraph<Property, Void> newSubGraph() { return new PropertySubGraph();"
+      },
+      {
+        "txt": "} public void clearNodeAnnotations() { for (PropertyGraphNode node : nodes.values()) { node.setAnnotation(null); } } public int getWeight(Property value) { return value.numOccurrences; } }"
+      },
+      {
+        "txt": "JSTypeBitSet typesInSet = new JSTypeBitSet(intForType.size()); JSTypeBitSet typesRelatedToSet = new JSTypeBitSet(intForType.size()); public boolean isIndependentOf(Property prop) { if (typesRelatedToSet.intersects(prop.typesSet)) { return false; } <extra_id_0> } public void addNode(Property prop) { typesInSet.or(prop.typesSet); typesRelatedToSet.or(getRelated(prop.type)); } private JSTypeBitSet getRelated(JSType type) {"
+      },
+      {
+        "txt": "} private JSTypeBitSet getRelated(JSType type) { JSTypeBitSet relatedTypes = new JSTypeBitSet(intForType.size()); if (type instanceof UnionType) { for (JSType alt : ((UnionType) type).getAlternates()) { intersectRelatedTypesOnNonUnion(alt, relatedTypes); } } else { intersectRelatedTypesOnNonUnion(type, relatedTypes); }"
+      },
+      {
+        "txt": "return relatedTypes; } private void intersectRelatedTypesOnNonUnion( JSType type, JSTypeBitSet relatedTypes) { relatedTypes.or(getRelatedTypesOnNonUnion(type)); } } class PropertyGraphNode implements GraphNode<Property, Void> { Property property; protected Annotation annotation;"
+      },
+      {
+        "txt": "PropertyGraphNode(Property property) { this.property = property; } public Property getValue() { return property; } @SuppressWarnings(\"unchecked\") public <A extends Annotation> A getAnnotation() { return (A) annotation; }"
+      },
+      {
+        "txt": "public void setAnnotation(Annotation data) { annotation = data; } } private class ProcessExterns extends AbstractPostOrderCallback { public void visit(NodeTraversal t, Node n, Node parent) { switch (n.getType()) { case Token.GETPROP: Node dest = n.getFirstChild().getNext(); externedNames.add(dest.getString());"
+      },
+      {
+        "txt": "break; case Token.OBJECTLIT: for (Node child = n.getFirstChild(); child != null; child = child.getNext().getNext()) { if (child.getType() == Token.STRING) { externedNames.add(child.getString()); } } break;"
+      },
+      {
+        "txt": "} } } private class ProcessProperties extends AbstractPostOrderCallback { public void visit(NodeTraversal t, Node n, Node parent) { switch (n.getType()) { case Token.GETPROP: { Node propNode = n.getFirstChild().getNext(); JSType jstype = getJSType(n.getFirstChild()); maybeMarkCandidate(propNode, jstype, t);"
+      },
+      {
+        "txt": "break; } case Token.OBJECTLIT: for (Node key = n.getFirstChild(); key != null; key = key.getNext().getNext()) { if (key.getType() == Token.STRING) { if (!key.isQuotedString()) { JSType jstype = getJSType(n.getFirstChild()); maybeMarkCandidate(key, jstype, t); } else {"
+      },
+      {
+        "txt": "quotedNames.add(key.getString()); } } } break; case Token.GETELEM: Node child = n.getLastChild(); if (child.getType() == Token.STRING) { quotedNames.add(child.getString()); }"
+      },
+      {
+        "txt": "break; } } private void maybeMarkCandidate(Node n, JSType type, NodeTraversal t) { String name = n.getString(); if (!externedNames.contains(name)) { stringNodesToRename.add(n); recordProperty(name, type); } }"
+      },
+      {
+        "txt": "private Property recordProperty(String name, JSType type) { Property prop = getProperty(name); prop.addType(type); return prop; } } private boolean isInvalidatingType(JSType type) { if (type instanceof UnionType) { type = type.restrictByNotNullOrUndefined(); if (type instanceof UnionType) {"
+      },
+      {
+        "txt": "for (JSType alt : ((UnionType) type).getAlternates()) { if (isInvalidatingType(alt)) { return true; } } return false; } } ObjectType objType = ObjectType.cast(type); return objType == null"
+      },
+      {
+        "txt": "|| invalidatingTypes.contains(objType) || !objType.hasReferenceName() || (objType.isNamedType() && objType.isUnknownType()) || objType.isEnumType() || objType.autoboxesTo() != null; } private Property getProperty(String name) { Property prop = propertyMap.get(name); if (prop == null) { prop = new Property(name); propertyMap.put(name, prop);"
+      },
+      {
+        "txt": "} return prop; } private JSType getJSType(Node n) { JSType jsType = n.getJSType(); if (jsType == null) { return compiler.getTypeRegistry().getNativeType( JSTypeNative.UNKNOWN_TYPE); } else { return jsType;"
+      },
+      {
+        "txt": "} } private class Property { final String oldName; JSType type; String newName; int numOccurrences; boolean skipAmbiguating; JSTypeBitSet typesSet = new JSTypeBitSet(intForType.size()); Property(String name) {"
+      },
+      {
+        "txt": "this.oldName = name; if (name.startsWith(SKIP_PREFIX)) { skipAmbiguating = true; } } void addType(JSType newType) { if (skipAmbiguating) { return; } ++numOccurrences;"
+      },
+      {
+        "txt": "if (newType instanceof UnionType) { newType = newType.restrictByNotNullOrUndefined(); if (newType instanceof UnionType) { for (JSType alt : ((UnionType) newType).getAlternates()) { addNonUnionType(alt); } return; } } addNonUnionType(newType);"
+      },
+      {
+        "txt": "} private void addNonUnionType(JSType newType) { if (skipAmbiguating || isInvalidatingType(newType)) { skipAmbiguating = true; return; } if (type == null) { type = newType; } else { type = type.getLeastSupertype(newType);"
+      },
+      {
+        "txt": "} typesSet.set(getIntForType(newType)); } } private class JSTypeBitSet extends BitSet { private static final long serialVersionUID = 1L; private JSTypeBitSet(int size) { super(size); } private JSTypeBitSet() {"
+      },
+      {
+        "txt": "super(); } @Override public String toString() { int from = 0; int current = 0; List<String> types = Lists.newArrayList(); while (-1 != (current = nextSetBit(from))) { types.add(intForType.inverse().get(current).toString()); from = current + 1;"
+      },
+      {
+        "txt": "} return Joiner.on(\" && \").join(types); } }"
+      }
+    ]
+  },
+  {
+    "id": 496,
+    "file_path": "src/com/google/javascript/jscomp/AmbiguateProperties.java",
+    "start-bug-line": 366,
+    "end-bug-line": 366,
+    "bug": "typesRelatedToSet.or(getRelated(prop.type));",
+    "fix": "typesRelatedToSet.or(prop.relatedTypesSet);",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.google.javascript.jscomp; import com.google.common.base.Joiner; import com.google.common.base.Preconditions; import com.google.common.collect.BiMap; import com.google.common.collect.HashBiMap; import com.google.common.collect.Lists;"
+      },
+      {
+        "txt": "import com.google.common.collect.Maps; import com.google.common.collect.Sets; import com.google.javascript.jscomp.NodeTraversal.AbstractPostOrderCallback; import com.google.javascript.jscomp.TypeValidator.TypeMismatch; import com.google.javascript.jscomp.graph.AdjacencyGraph; import com.google.javascript.jscomp.graph.Annotation; import com.google.javascript.jscomp.graph.GraphColoring; import com.google.javascript.jscomp.graph.GraphColoring.GreedyGraphColoring; import com.google.javascript.jscomp.graph.GraphNode; import com.google.javascript.jscomp.graph.SubGraph;"
+      },
+      {
+        "txt": "import com.google.javascript.rhino.Node; import com.google.javascript.rhino.Token; import com.google.javascript.rhino.jstype.FunctionPrototypeType; import com.google.javascript.rhino.jstype.FunctionType; import com.google.javascript.rhino.jstype.InstanceObjectType; import com.google.javascript.rhino.jstype.JSType; import com.google.javascript.rhino.jstype.JSTypeNative; import com.google.javascript.rhino.jstype.JSTypeRegistry; import com.google.javascript.rhino.jstype.ObjectType; import com.google.javascript.rhino.jstype.UnionType;"
+      },
+      {
+        "txt": "import java.util.BitSet; import java.util.Collection; import java.util.Comparator; import java.util.HashSet; import java.util.List; import java.util.Map; import java.util.Set; import java.util.TreeSet; import java.util.logging.Logger; class AmbiguateProperties implements CompilerPass {"
+      },
+      {
+        "txt": "private static final Logger logger = Logger.getLogger( AmbiguateProperties.class.getName()); private final AbstractCompiler compiler; private final List<Node> stringNodesToRename = Lists.newArrayList(); private final char[] reservedCharacters; private final Map<String, Property> propertyMap = Maps.newHashMap(); private final Set<String> externedNames = Sets.newHashSet(); private final Set<String> quotedNames = Sets.newHashSet(); private final Map<String, String> renamingMap = Maps.newHashMap(); private final Map<Integer, String> colorMap = Maps.newHashMap();"
+      },
+      {
+        "txt": "private static final Comparator<Property> FREQUENCY_COMPARATOR = new Comparator<Property>() { public int compare(Property p1, Property p2) { if (p1.numOccurrences != p2.numOccurrences) { return p2.numOccurrences - p1.numOccurrences; } return p1.oldName.compareTo(p2.oldName); } }; private BiMap<JSType, Integer> intForType = HashBiMap.create();"
+      },
+      {
+        "txt": "private Map<JSType, JSTypeBitSet> relatedBitsets = Maps.newHashMap(); private final Set<JSType> invalidatingTypes; static final String SKIP_PREFIX = \"JSAbstractCompiler\"; AmbiguateProperties(AbstractCompiler compiler, char[] reservedCharacters) { this.compiler = compiler; this.reservedCharacters = reservedCharacters; JSTypeRegistry r = compiler.getTypeRegistry(); invalidatingTypes = Sets.newHashSet( r.getNativeType(JSTypeNative.ALL_TYPE),"
+      },
+      {
+        "txt": "r.getNativeType(JSTypeNative.NO_OBJECT_TYPE), r.getNativeType(JSTypeNative.NO_TYPE), r.getNativeType(JSTypeNative.NULL_TYPE), r.getNativeType(JSTypeNative.VOID_TYPE), r.getNativeType(JSTypeNative.FUNCTION_FUNCTION_TYPE), r.getNativeType(JSTypeNative.FUNCTION_PROTOTYPE), r.getNativeType(JSTypeNative.GLOBAL_THIS), r.getNativeType(JSTypeNative.OBJECT_TYPE), r.getNativeType(JSTypeNative.OBJECT_PROTOTYPE), r.getNativeType(JSTypeNative.OBJECT_FUNCTION_TYPE),"
+      },
+      {
+        "txt": "r.getNativeType(JSTypeNative.TOP_LEVEL_PROTOTYPE), r.getNativeType(JSTypeNative.UNKNOWN_TYPE)); for (TypeMismatch mis : compiler.getTypeValidator().getMismatches()) { addInvalidatingType(mis.first); addInvalidatingType(mis.second); } } private void addInvalidatingType(JSType type) { type = type.restrictByNotNullOrUndefined(); if (type instanceof UnionType) {"
+      },
+      {
+        "txt": "for (JSType alt : ((UnionType) type).getAlternates()) { addInvalidatingType(alt); } } invalidatingTypes.add(type); ObjectType objType = ObjectType.cast(type); if (objType instanceof InstanceObjectType) { invalidatingTypes.add(objType.getImplicitPrototype()); } }"
+      },
+      {
+        "txt": "Map<String, String> getRenamingMap() { return renamingMap; } private int getIntForType(JSType type) { if (intForType.containsKey(type)) { return intForType.get(type).intValue(); } int newInt = intForType.size() + 1; intForType.put(type, newInt); return newInt;"
+      },
+      {
+        "txt": "} public void process(Node externs, Node root) { NodeTraversal.traverse(compiler, externs, new ProcessExterns()); NodeTraversal.traverse(compiler, root, new ProcessProperties()); Set<String> reservedNames = new HashSet<String>(externedNames.size() + quotedNames.size()); reservedNames.addAll(externedNames); reservedNames.addAll(quotedNames); int numRenamedPropertyNames = 0; int numSkippedPropertyNames = 0;"
+      },
+      {
+        "txt": "Set<Property> propsByFreq = new TreeSet<Property>(FREQUENCY_COMPARATOR); for (Property p : propertyMap.values()) { if (!p.skipAmbiguating) { ++numRenamedPropertyNames; computeRelatedTypes(p.type); propsByFreq.add(p); } else { ++numSkippedPropertyNames; reservedNames.add(p.oldName); }"
+      },
+      {
+        "txt": "} PropertyGraph graph = new PropertyGraph(Lists.newLinkedList(propsByFreq)); GraphColoring<Property, Void> coloring = new GreedyGraphColoring<Property, Void>(graph, FREQUENCY_COMPARATOR); int numNewPropertyNames = coloring.color(); NameGenerator nameGen = new NameGenerator( reservedNames, \"\", reservedCharacters); for (int i = 0; i < numNewPropertyNames; ++i) { colorMap.put(i, nameGen.generateNextName()); }"
+      },
+      {
+        "txt": "for (GraphNode<Property, Void> node : graph.getNodes()) { node.getValue().newName = colorMap.get(node.getAnnotation().hashCode()); renamingMap.put(node.getValue().oldName, node.getValue().newName); } for (Node n : stringNodesToRename) { String oldName = n.getString(); Property p = propertyMap.get(oldName); if (p != null && p.newName != null) { Preconditions.checkState(oldName.equals(p.oldName)); if (!p.newName.equals(oldName)) {"
+      },
+      {
+        "txt": "n.setString(p.newName); compiler.reportCodeChange(); } } } logger.info(\"Collapsed \" + numRenamedPropertyNames + \" properties into \" + numNewPropertyNames + \" and skipped renaming \" + numSkippedPropertyNames + \" properties.\"); } private BitSet getRelatedTypesOnNonUnion(JSType type) {"
+      },
+      {
+        "txt": "if (relatedBitsets.containsKey(type)) { return relatedBitsets.get(type); } else { throw new RuntimeException(\"Related types should have been computed for\" + \" type: \" + type + \" but have not been.\"); } } private void computeRelatedTypes(JSType type) { if (type instanceof UnionType) { type = type.restrictByNotNullOrUndefined();"
+      },
+      {
+        "txt": "if (type instanceof UnionType) { for (JSType alt : ((UnionType) type).getAlternates()) { computeRelatedTypes(alt); } return; } } if (relatedBitsets.containsKey(type)) { return; }"
+      },
+      {
+        "txt": "JSTypeBitSet related = new JSTypeBitSet(intForType.size()); relatedBitsets.put(type, related); ObjectType parentType = type.toObjectType(); while (parentType != null) { related.set(getIntForType(parentType)); parentType = parentType.getImplicitPrototype(); } FunctionType constructor = null; if (type instanceof FunctionType) { constructor = (FunctionType) type;"
+      },
+      {
+        "txt": "} else if (type instanceof FunctionPrototypeType) { constructor = ((FunctionPrototypeType) type).getOwnerFunction(); } else { constructor = type.toObjectType().getConstructor(); } if (constructor != null) { for (ObjectType itype : constructor.getAllImplementedInterfaces()) { related.set(getIntForType(itype)); } }"
+      },
+      {
+        "txt": "} class PropertyGraph implements AdjacencyGraph<Property, Void> { protected final Map<Property, PropertyGraphNode> nodes = Maps.newHashMap(); PropertyGraph(Collection<Property> props) { for (Property prop : props) { nodes.put(prop, new PropertyGraphNode(prop)); } } public List<GraphNode<Property, Void>> getNodes() { return Lists.<GraphNode<Property, Void>>newArrayList(nodes.values());"
+      },
+      {
+        "txt": "} public GraphNode<Property, Void> getNode(Property property) { return nodes.get(property); } public SubGraph<Property, Void> newSubGraph() { return new PropertySubGraph(); } public void clearNodeAnnotations() { for (PropertyGraphNode node : nodes.values()) { node.setAnnotation(null);"
+      },
+      {
+        "txt": "} } public int getWeight(Property value) { return value.numOccurrences; } } class PropertySubGraph implements SubGraph<Property, Void> { JSTypeBitSet typesInSet = new JSTypeBitSet(intForType.size()); JSTypeBitSet typesRelatedToSet = new JSTypeBitSet(intForType.size()); public boolean isIndependentOf(Property prop) {"
+      },
+      {
+        "txt": "return false; } return !getRelated(prop.type).intersects(typesInSet); } public void addNode(Property prop) { typesInSet.or(prop.typesSet); <extra_id_0> } private JSTypeBitSet getRelated(JSType type) { JSTypeBitSet relatedTypes = new JSTypeBitSet(intForType.size()); if (type instanceof UnionType) { for (JSType alt : ((UnionType) type).getAlternates()) { intersectRelatedTypesOnNonUnion(alt, relatedTypes);"
+      },
+      {
+        "txt": "for (JSType alt : ((UnionType) type).getAlternates()) { intersectRelatedTypesOnNonUnion(alt, relatedTypes); } } else { intersectRelatedTypesOnNonUnion(type, relatedTypes); } return relatedTypes; } private void intersectRelatedTypesOnNonUnion( JSType type, JSTypeBitSet relatedTypes) {"
+      },
+      {
+        "txt": "relatedTypes.or(getRelatedTypesOnNonUnion(type)); } } class PropertyGraphNode implements GraphNode<Property, Void> { Property property; protected Annotation annotation; PropertyGraphNode(Property property) { this.property = property; } public Property getValue() {"
+      },
+      {
+        "txt": "return property; } @SuppressWarnings(\"unchecked\") public <A extends Annotation> A getAnnotation() { return (A) annotation; } public void setAnnotation(Annotation data) { annotation = data; } }"
+      },
+      {
+        "txt": "private class ProcessExterns extends AbstractPostOrderCallback { public void visit(NodeTraversal t, Node n, Node parent) { switch (n.getType()) { case Token.GETPROP: Node dest = n.getFirstChild().getNext(); externedNames.add(dest.getString()); break; case Token.OBJECTLIT: for (Node child = n.getFirstChild(); child != null;"
+      },
+      {
+        "txt": "child = child.getNext().getNext()) { if (child.getType() == Token.STRING) { externedNames.add(child.getString()); } } break; } } } private class ProcessProperties extends AbstractPostOrderCallback {"
+      },
+      {
+        "txt": "public void visit(NodeTraversal t, Node n, Node parent) { switch (n.getType()) { case Token.GETPROP: { Node propNode = n.getFirstChild().getNext(); JSType jstype = getJSType(n.getFirstChild()); maybeMarkCandidate(propNode, jstype, t); break; } case Token.OBJECTLIT: for (Node key = n.getFirstChild(); key != null;"
+      },
+      {
+        "txt": "key = key.getNext().getNext()) { if (key.getType() == Token.STRING) { if (!key.isQuotedString()) { JSType jstype = getJSType(n.getFirstChild()); maybeMarkCandidate(key, jstype, t); } else { quotedNames.add(key.getString()); } } }"
+      },
+      {
+        "txt": "break; case Token.GETELEM: Node child = n.getLastChild(); if (child.getType() == Token.STRING) { quotedNames.add(child.getString()); } break; } } private void maybeMarkCandidate(Node n, JSType type, NodeTraversal t) {"
+      },
+      {
+        "txt": "String name = n.getString(); if (!externedNames.contains(name)) { stringNodesToRename.add(n); recordProperty(name, type); } } private Property recordProperty(String name, JSType type) { Property prop = getProperty(name); prop.addType(type); return prop;"
+      },
+      {
+        "txt": "} } private boolean isInvalidatingType(JSType type) { if (type instanceof UnionType) { type = type.restrictByNotNullOrUndefined(); if (type instanceof UnionType) { for (JSType alt : ((UnionType) type).getAlternates()) { if (isInvalidatingType(alt)) { return true; }"
+      },
+      {
+        "txt": "} return false; } } ObjectType objType = ObjectType.cast(type); return objType == null || invalidatingTypes.contains(objType) || !objType.hasReferenceName() || (objType.isNamedType() && objType.isUnknownType()) || objType.isEnumType() || objType.autoboxesTo() != null;"
+      },
+      {
+        "txt": "} private Property getProperty(String name) { Property prop = propertyMap.get(name); if (prop == null) { prop = new Property(name); propertyMap.put(name, prop); } return prop; } private JSType getJSType(Node n) {"
+      },
+      {
+        "txt": "JSType jsType = n.getJSType(); if (jsType == null) { return compiler.getTypeRegistry().getNativeType( JSTypeNative.UNKNOWN_TYPE); } else { return jsType; } } private class Property { final String oldName;"
+      },
+      {
+        "txt": "JSType type; String newName; int numOccurrences; boolean skipAmbiguating; JSTypeBitSet typesSet = new JSTypeBitSet(intForType.size()); Property(String name) { this.oldName = name; if (name.startsWith(SKIP_PREFIX)) { skipAmbiguating = true; }"
+      },
+      {
+        "txt": "} void addType(JSType newType) { if (skipAmbiguating) { return; } ++numOccurrences; if (newType instanceof UnionType) { newType = newType.restrictByNotNullOrUndefined(); if (newType instanceof UnionType) { for (JSType alt : ((UnionType) newType).getAlternates()) {"
+      },
+      {
+        "txt": "addNonUnionType(alt); } return; } } addNonUnionType(newType); } private void addNonUnionType(JSType newType) { if (skipAmbiguating || isInvalidatingType(newType)) { skipAmbiguating = true;"
+      },
+      {
+        "txt": "return; } if (type == null) { type = newType; } else { type = type.getLeastSupertype(newType); } typesSet.set(getIntForType(newType)); } }"
+      },
+      {
+        "txt": "private class JSTypeBitSet extends BitSet { private static final long serialVersionUID = 1L; private JSTypeBitSet(int size) { super(size); } private JSTypeBitSet() { super(); } @Override public String toString() {"
+      },
+      {
+        "txt": "int from = 0; int current = 0; List<String> types = Lists.newArrayList(); while (-1 != (current = nextSetBit(from))) { types.add(intForType.inverse().get(current).toString()); from = current + 1; } return Joiner.on(\" && \").join(types); } }"
+      }
+    ]
+  },
+  {
+    "id": 497,
+    "file_path": "src/com/google/javascript/jscomp/AmbiguateProperties.java",
+    "start-bug-line": 553,
+    "end-bug-line": 553,
+    "bug": "JSType type;",
+    "fix": "[Delete]",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "import com.google.common.base.Joiner; import com.google.common.base.Preconditions; import com.google.common.collect.BiMap; import com.google.common.collect.HashBiMap; import com.google.common.collect.Lists; import com.google.common.collect.Maps; import com.google.common.collect.Sets; import com.google.javascript.jscomp.NodeTraversal.AbstractPostOrderCallback; import com.google.javascript.jscomp.TypeValidator.TypeMismatch; import com.google.javascript.jscomp.graph.AdjacencyGraph;"
+      },
+      {
+        "txt": "import com.google.javascript.jscomp.graph.Annotation; import com.google.javascript.jscomp.graph.GraphColoring; import com.google.javascript.jscomp.graph.GraphColoring.GreedyGraphColoring; import com.google.javascript.jscomp.graph.GraphNode; import com.google.javascript.jscomp.graph.SubGraph; import com.google.javascript.rhino.Node; import com.google.javascript.rhino.Token; import com.google.javascript.rhino.jstype.FunctionPrototypeType; import com.google.javascript.rhino.jstype.FunctionType; import com.google.javascript.rhino.jstype.InstanceObjectType;"
+      },
+      {
+        "txt": "import com.google.javascript.rhino.jstype.JSType; import com.google.javascript.rhino.jstype.JSTypeNative; import com.google.javascript.rhino.jstype.JSTypeRegistry; import com.google.javascript.rhino.jstype.ObjectType; import com.google.javascript.rhino.jstype.UnionType; import java.util.BitSet; import java.util.Collection; import java.util.Comparator; import java.util.HashSet; import java.util.List;"
+      },
+      {
+        "txt": "import java.util.Map; import java.util.Set; import java.util.TreeSet; import java.util.logging.Logger; class AmbiguateProperties implements CompilerPass { private static final Logger logger = Logger.getLogger( AmbiguateProperties.class.getName()); private final AbstractCompiler compiler; private final List<Node> stringNodesToRename = Lists.newArrayList(); private final char[] reservedCharacters;"
+      },
+      {
+        "txt": "private final Map<String, Property> propertyMap = Maps.newHashMap(); private final Set<String> externedNames = Sets.newHashSet(); private final Set<String> quotedNames = Sets.newHashSet(); private final Map<String, String> renamingMap = Maps.newHashMap(); private final Map<Integer, String> colorMap = Maps.newHashMap(); private static final Comparator<Property> FREQUENCY_COMPARATOR = new Comparator<Property>() { public int compare(Property p1, Property p2) { if (p1.numOccurrences != p2.numOccurrences) { return p2.numOccurrences - p1.numOccurrences;"
+      },
+      {
+        "txt": "} return p1.oldName.compareTo(p2.oldName); } }; private BiMap<JSType, Integer> intForType = HashBiMap.create(); private Map<JSType, JSTypeBitSet> relatedBitsets = Maps.newHashMap(); private final Set<JSType> invalidatingTypes; static final String SKIP_PREFIX = \"JSAbstractCompiler\"; AmbiguateProperties(AbstractCompiler compiler, char[] reservedCharacters) {"
+      },
+      {
+        "txt": "this.compiler = compiler; this.reservedCharacters = reservedCharacters; JSTypeRegistry r = compiler.getTypeRegistry(); invalidatingTypes = Sets.newHashSet( r.getNativeType(JSTypeNative.ALL_TYPE), r.getNativeType(JSTypeNative.NO_OBJECT_TYPE), r.getNativeType(JSTypeNative.NO_TYPE), r.getNativeType(JSTypeNative.NULL_TYPE), r.getNativeType(JSTypeNative.VOID_TYPE), r.getNativeType(JSTypeNative.FUNCTION_FUNCTION_TYPE),"
+      },
+      {
+        "txt": "r.getNativeType(JSTypeNative.FUNCTION_PROTOTYPE), r.getNativeType(JSTypeNative.GLOBAL_THIS), r.getNativeType(JSTypeNative.OBJECT_TYPE), r.getNativeType(JSTypeNative.OBJECT_PROTOTYPE), r.getNativeType(JSTypeNative.OBJECT_FUNCTION_TYPE), r.getNativeType(JSTypeNative.TOP_LEVEL_PROTOTYPE), r.getNativeType(JSTypeNative.UNKNOWN_TYPE)); for (TypeMismatch mis : compiler.getTypeValidator().getMismatches()) { addInvalidatingType(mis.first); addInvalidatingType(mis.second);"
+      },
+      {
+        "txt": "} } private void addInvalidatingType(JSType type) { type = type.restrictByNotNullOrUndefined(); if (type instanceof UnionType) { for (JSType alt : ((UnionType) type).getAlternates()) { addInvalidatingType(alt); } } invalidatingTypes.add(type);"
+      },
+      {
+        "txt": "ObjectType objType = ObjectType.cast(type); if (objType instanceof InstanceObjectType) { invalidatingTypes.add(objType.getImplicitPrototype()); } } Map<String, String> getRenamingMap() { return renamingMap; } private int getIntForType(JSType type) { if (intForType.containsKey(type)) {"
+      },
+      {
+        "txt": "return intForType.get(type).intValue(); } int newInt = intForType.size() + 1; intForType.put(type, newInt); return newInt; } public void process(Node externs, Node root) { NodeTraversal.traverse(compiler, externs, new ProcessExterns()); NodeTraversal.traverse(compiler, root, new ProcessProperties()); Set<String> reservedNames ="
+      },
+      {
+        "txt": "new HashSet<String>(externedNames.size() + quotedNames.size()); reservedNames.addAll(externedNames); reservedNames.addAll(quotedNames); int numRenamedPropertyNames = 0; int numSkippedPropertyNames = 0; Set<Property> propsByFreq = new TreeSet<Property>(FREQUENCY_COMPARATOR); for (Property p : propertyMap.values()) { if (!p.skipAmbiguating) { ++numRenamedPropertyNames; computeRelatedTypes(p.type);"
+      },
+      {
+        "txt": "propsByFreq.add(p); } else { ++numSkippedPropertyNames; reservedNames.add(p.oldName); } } PropertyGraph graph = new PropertyGraph(Lists.newLinkedList(propsByFreq)); GraphColoring<Property, Void> coloring = new GreedyGraphColoring<Property, Void>(graph, FREQUENCY_COMPARATOR); int numNewPropertyNames = coloring.color();"
+      },
+      {
+        "txt": "NameGenerator nameGen = new NameGenerator( reservedNames, \"\", reservedCharacters); for (int i = 0; i < numNewPropertyNames; ++i) { colorMap.put(i, nameGen.generateNextName()); } for (GraphNode<Property, Void> node : graph.getNodes()) { node.getValue().newName = colorMap.get(node.getAnnotation().hashCode()); renamingMap.put(node.getValue().oldName, node.getValue().newName); } for (Node n : stringNodesToRename) {"
+      },
+      {
+        "txt": "String oldName = n.getString(); Property p = propertyMap.get(oldName); if (p != null && p.newName != null) { Preconditions.checkState(oldName.equals(p.oldName)); if (!p.newName.equals(oldName)) { n.setString(p.newName); compiler.reportCodeChange(); } } }"
+      },
+      {
+        "txt": "logger.info(\"Collapsed \" + numRenamedPropertyNames + \" properties into \" + numNewPropertyNames + \" and skipped renaming \" + numSkippedPropertyNames + \" properties.\"); } private BitSet getRelatedTypesOnNonUnion(JSType type) { if (relatedBitsets.containsKey(type)) { return relatedBitsets.get(type); } else { throw new RuntimeException(\"Related types should have been computed for\" + \" type: \" + type + \" but have not been.\");"
+      },
+      {
+        "txt": "} } private void computeRelatedTypes(JSType type) { if (type instanceof UnionType) { type = type.restrictByNotNullOrUndefined(); if (type instanceof UnionType) { for (JSType alt : ((UnionType) type).getAlternates()) { computeRelatedTypes(alt); } return;"
+      },
+      {
+        "txt": "} } if (relatedBitsets.containsKey(type)) { return; } JSTypeBitSet related = new JSTypeBitSet(intForType.size()); relatedBitsets.put(type, related); ObjectType parentType = type.toObjectType(); while (parentType != null) { related.set(getIntForType(parentType));"
+      },
+      {
+        "txt": "parentType = parentType.getImplicitPrototype(); } FunctionType constructor = null; if (type instanceof FunctionType) { constructor = (FunctionType) type; } else if (type instanceof FunctionPrototypeType) { constructor = ((FunctionPrototypeType) type).getOwnerFunction(); } else { constructor = type.toObjectType().getConstructor(); }"
+      },
+      {
+        "txt": "if (constructor != null) { for (ObjectType itype : constructor.getAllImplementedInterfaces()) { related.set(getIntForType(itype)); } } } class PropertyGraph implements AdjacencyGraph<Property, Void> { protected final Map<Property, PropertyGraphNode> nodes = Maps.newHashMap(); PropertyGraph(Collection<Property> props) { for (Property prop : props) {"
+      },
+      {
+        "txt": "nodes.put(prop, new PropertyGraphNode(prop)); } } public List<GraphNode<Property, Void>> getNodes() { return Lists.<GraphNode<Property, Void>>newArrayList(nodes.values()); } public GraphNode<Property, Void> getNode(Property property) { return nodes.get(property); } public SubGraph<Property, Void> newSubGraph() {"
+      },
+      {
+        "txt": "return new PropertySubGraph(); } public void clearNodeAnnotations() { for (PropertyGraphNode node : nodes.values()) { node.setAnnotation(null); } } public int getWeight(Property value) { return value.numOccurrences; }"
+      },
+      {
+        "txt": "} class PropertySubGraph implements SubGraph<Property, Void> { JSTypeBitSet typesInSet = new JSTypeBitSet(intForType.size()); JSTypeBitSet typesRelatedToSet = new JSTypeBitSet(intForType.size()); public boolean isIndependentOf(Property prop) { if (typesRelatedToSet.intersects(prop.typesSet)) { return false; } return !getRelated(prop.type).intersects(typesInSet); }"
+      },
+      {
+        "txt": "public void addNode(Property prop) { typesInSet.or(prop.typesSet); typesRelatedToSet.or(getRelated(prop.type)); } private JSTypeBitSet getRelated(JSType type) { JSTypeBitSet relatedTypes = new JSTypeBitSet(intForType.size()); if (type instanceof UnionType) { for (JSType alt : ((UnionType) type).getAlternates()) { intersectRelatedTypesOnNonUnion(alt, relatedTypes); }"
+      },
+      {
+        "txt": "} else { intersectRelatedTypesOnNonUnion(type, relatedTypes); } return relatedTypes; } private void intersectRelatedTypesOnNonUnion( JSType type, JSTypeBitSet relatedTypes) { relatedTypes.or(getRelatedTypesOnNonUnion(type)); } }"
+      },
+      {
+        "txt": "class PropertyGraphNode implements GraphNode<Property, Void> { Property property; protected Annotation annotation; PropertyGraphNode(Property property) { this.property = property; } public Property getValue() { return property; } @SuppressWarnings(\"unchecked\")"
+      },
+      {
+        "txt": "public <A extends Annotation> A getAnnotation() { return (A) annotation; } public void setAnnotation(Annotation data) { annotation = data; } } private class ProcessExterns extends AbstractPostOrderCallback { public void visit(NodeTraversal t, Node n, Node parent) { switch (n.getType()) {"
+      },
+      {
+        "txt": "case Token.GETPROP: Node dest = n.getFirstChild().getNext(); externedNames.add(dest.getString()); break; case Token.OBJECTLIT: for (Node child = n.getFirstChild(); child != null; child = child.getNext().getNext()) { if (child.getType() == Token.STRING) { externedNames.add(child.getString());"
+      },
+      {
+        "txt": "} } break; } } } private class ProcessProperties extends AbstractPostOrderCallback { public void visit(NodeTraversal t, Node n, Node parent) { switch (n.getType()) { case Token.GETPROP: {"
+      },
+      {
+        "txt": "Node propNode = n.getFirstChild().getNext(); JSType jstype = getJSType(n.getFirstChild()); maybeMarkCandidate(propNode, jstype, t); break; } case Token.OBJECTLIT: for (Node key = n.getFirstChild(); key != null; key = key.getNext().getNext()) { if (key.getType() == Token.STRING) { if (!key.isQuotedString()) {"
+      },
+      {
+        "txt": "JSType jstype = getJSType(n.getFirstChild()); maybeMarkCandidate(key, jstype, t); } else { quotedNames.add(key.getString()); } } } break; case Token.GETELEM: Node child = n.getLastChild();"
+      },
+      {
+        "txt": "if (child.getType() == Token.STRING) { quotedNames.add(child.getString()); } break; } } private void maybeMarkCandidate(Node n, JSType type, NodeTraversal t) { String name = n.getString(); if (!externedNames.contains(name)) { stringNodesToRename.add(n);"
+      },
+      {
+        "txt": "recordProperty(name, type); } } private Property recordProperty(String name, JSType type) { Property prop = getProperty(name); prop.addType(type); return prop; } } private boolean isInvalidatingType(JSType type) {"
+      },
+      {
+        "txt": "if (type instanceof UnionType) { type = type.restrictByNotNullOrUndefined(); if (type instanceof UnionType) { for (JSType alt : ((UnionType) type).getAlternates()) { if (isInvalidatingType(alt)) { return true; } } return false; }"
+      },
+      {
+        "txt": "} ObjectType objType = ObjectType.cast(type); return objType == null || invalidatingTypes.contains(objType) || !objType.hasReferenceName() || (objType.isNamedType() && objType.isUnknownType()) || objType.isEnumType() || objType.autoboxesTo() != null; } private Property getProperty(String name) { Property prop = propertyMap.get(name);"
+      },
+      {
+        "txt": "if (prop == null) { prop = new Property(name); propertyMap.put(name, prop); } return prop; } private JSType getJSType(Node n) { JSType jsType = n.getJSType(); if (jsType == null) { return compiler.getTypeRegistry().getNativeType("
+      },
+      {
+        "txt": "} else { return jsType; } } private class Property { final String oldName; <extra_id_0> String newName; int numOccurrences; boolean skipAmbiguating; JSTypeBitSet typesSet = new JSTypeBitSet(intForType.size()); Property(String name) { this.oldName = name;"
+      },
+      {
+        "txt": "Property(String name) { this.oldName = name; if (name.startsWith(SKIP_PREFIX)) { skipAmbiguating = true; } } void addType(JSType newType) { if (skipAmbiguating) { return; }"
+      },
+      {
+        "txt": "++numOccurrences; if (newType instanceof UnionType) { newType = newType.restrictByNotNullOrUndefined(); if (newType instanceof UnionType) { for (JSType alt : ((UnionType) newType).getAlternates()) { addNonUnionType(alt); } return; } }"
+      },
+      {
+        "txt": "addNonUnionType(newType); } private void addNonUnionType(JSType newType) { if (skipAmbiguating || isInvalidatingType(newType)) { skipAmbiguating = true; return; } if (type == null) { type = newType; } else {"
+      },
+      {
+        "txt": "type = type.getLeastSupertype(newType); } typesSet.set(getIntForType(newType)); } } private class JSTypeBitSet extends BitSet { private static final long serialVersionUID = 1L; private JSTypeBitSet(int size) { super(size); }"
+      },
+      {
+        "txt": "private JSTypeBitSet() { super(); } @Override public String toString() { int from = 0; int current = 0; List<String> types = Lists.newArrayList(); while (-1 != (current = nextSetBit(from))) { types.add(intForType.inverse().get(current).toString());"
+      },
+      {
+        "txt": "from = current + 1; } return Joiner.on(\" && \").join(types); } }"
+      }
+    ]
+  },
+  {
+    "id": 498,
+    "file_path": "src/com/google/javascript/jscomp/AmbiguateProperties.java",
+    "start-bug-line": 558,
+    "end-bug-line": 558,
+    "bug": "",
+    "fix": "JSTypeBitSet relatedTypesSet = new JSTypeBitSet(intForType.size());",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.google.javascript.jscomp; import com.google.common.base.Joiner; import com.google.common.base.Preconditions; import com.google.common.collect.BiMap; import com.google.common.collect.HashBiMap; import com.google.common.collect.Lists;"
+      },
+      {
+        "txt": "import com.google.common.collect.Maps; import com.google.common.collect.Sets; import com.google.javascript.jscomp.NodeTraversal.AbstractPostOrderCallback; import com.google.javascript.jscomp.TypeValidator.TypeMismatch; import com.google.javascript.jscomp.graph.AdjacencyGraph; import com.google.javascript.jscomp.graph.Annotation; import com.google.javascript.jscomp.graph.GraphColoring; import com.google.javascript.jscomp.graph.GraphColoring.GreedyGraphColoring; import com.google.javascript.jscomp.graph.GraphNode; import com.google.javascript.jscomp.graph.SubGraph;"
+      },
+      {
+        "txt": "import com.google.javascript.rhino.Node; import com.google.javascript.rhino.Token; import com.google.javascript.rhino.jstype.FunctionPrototypeType; import com.google.javascript.rhino.jstype.FunctionType; import com.google.javascript.rhino.jstype.InstanceObjectType; import com.google.javascript.rhino.jstype.JSType; import com.google.javascript.rhino.jstype.JSTypeNative; import com.google.javascript.rhino.jstype.JSTypeRegistry; import com.google.javascript.rhino.jstype.ObjectType; import com.google.javascript.rhino.jstype.UnionType;"
+      },
+      {
+        "txt": "import java.util.BitSet; import java.util.Collection; import java.util.Comparator; import java.util.HashSet; import java.util.List; import java.util.Map; import java.util.Set; import java.util.TreeSet; import java.util.logging.Logger; class AmbiguateProperties implements CompilerPass {"
+      },
+      {
+        "txt": "private static final Logger logger = Logger.getLogger( AmbiguateProperties.class.getName()); private final AbstractCompiler compiler; private final List<Node> stringNodesToRename = Lists.newArrayList(); private final char[] reservedCharacters; private final Map<String, Property> propertyMap = Maps.newHashMap(); private final Set<String> externedNames = Sets.newHashSet(); private final Set<String> quotedNames = Sets.newHashSet(); private final Map<String, String> renamingMap = Maps.newHashMap(); private final Map<Integer, String> colorMap = Maps.newHashMap();"
+      },
+      {
+        "txt": "private static final Comparator<Property> FREQUENCY_COMPARATOR = new Comparator<Property>() { public int compare(Property p1, Property p2) { if (p1.numOccurrences != p2.numOccurrences) { return p2.numOccurrences - p1.numOccurrences; } return p1.oldName.compareTo(p2.oldName); } }; private BiMap<JSType, Integer> intForType = HashBiMap.create();"
+      },
+      {
+        "txt": "private Map<JSType, JSTypeBitSet> relatedBitsets = Maps.newHashMap(); private final Set<JSType> invalidatingTypes; static final String SKIP_PREFIX = \"JSAbstractCompiler\"; AmbiguateProperties(AbstractCompiler compiler, char[] reservedCharacters) { this.compiler = compiler; this.reservedCharacters = reservedCharacters; JSTypeRegistry r = compiler.getTypeRegistry(); invalidatingTypes = Sets.newHashSet( r.getNativeType(JSTypeNative.ALL_TYPE),"
+      },
+      {
+        "txt": "r.getNativeType(JSTypeNative.NO_OBJECT_TYPE), r.getNativeType(JSTypeNative.NO_TYPE), r.getNativeType(JSTypeNative.NULL_TYPE), r.getNativeType(JSTypeNative.VOID_TYPE), r.getNativeType(JSTypeNative.FUNCTION_FUNCTION_TYPE), r.getNativeType(JSTypeNative.FUNCTION_PROTOTYPE), r.getNativeType(JSTypeNative.GLOBAL_THIS), r.getNativeType(JSTypeNative.OBJECT_TYPE), r.getNativeType(JSTypeNative.OBJECT_PROTOTYPE), r.getNativeType(JSTypeNative.OBJECT_FUNCTION_TYPE),"
+      },
+      {
+        "txt": "r.getNativeType(JSTypeNative.TOP_LEVEL_PROTOTYPE), r.getNativeType(JSTypeNative.UNKNOWN_TYPE)); for (TypeMismatch mis : compiler.getTypeValidator().getMismatches()) { addInvalidatingType(mis.first); addInvalidatingType(mis.second); } } private void addInvalidatingType(JSType type) { type = type.restrictByNotNullOrUndefined(); if (type instanceof UnionType) {"
+      },
+      {
+        "txt": "for (JSType alt : ((UnionType) type).getAlternates()) { addInvalidatingType(alt); } } invalidatingTypes.add(type); ObjectType objType = ObjectType.cast(type); if (objType instanceof InstanceObjectType) { invalidatingTypes.add(objType.getImplicitPrototype()); } }"
+      },
+      {
+        "txt": "Map<String, String> getRenamingMap() { return renamingMap; } private int getIntForType(JSType type) { if (intForType.containsKey(type)) { return intForType.get(type).intValue(); } int newInt = intForType.size() + 1; intForType.put(type, newInt); return newInt;"
+      },
+      {
+        "txt": "} public void process(Node externs, Node root) { NodeTraversal.traverse(compiler, externs, new ProcessExterns()); NodeTraversal.traverse(compiler, root, new ProcessProperties()); Set<String> reservedNames = new HashSet<String>(externedNames.size() + quotedNames.size()); reservedNames.addAll(externedNames); reservedNames.addAll(quotedNames); int numRenamedPropertyNames = 0; int numSkippedPropertyNames = 0;"
+      },
+      {
+        "txt": "Set<Property> propsByFreq = new TreeSet<Property>(FREQUENCY_COMPARATOR); for (Property p : propertyMap.values()) { if (!p.skipAmbiguating) { ++numRenamedPropertyNames; computeRelatedTypes(p.type); propsByFreq.add(p); } else { ++numSkippedPropertyNames; reservedNames.add(p.oldName); }"
+      },
+      {
+        "txt": "} PropertyGraph graph = new PropertyGraph(Lists.newLinkedList(propsByFreq)); GraphColoring<Property, Void> coloring = new GreedyGraphColoring<Property, Void>(graph, FREQUENCY_COMPARATOR); int numNewPropertyNames = coloring.color(); NameGenerator nameGen = new NameGenerator( reservedNames, \"\", reservedCharacters); for (int i = 0; i < numNewPropertyNames; ++i) { colorMap.put(i, nameGen.generateNextName()); }"
+      },
+      {
+        "txt": "for (GraphNode<Property, Void> node : graph.getNodes()) { node.getValue().newName = colorMap.get(node.getAnnotation().hashCode()); renamingMap.put(node.getValue().oldName, node.getValue().newName); } for (Node n : stringNodesToRename) { String oldName = n.getString(); Property p = propertyMap.get(oldName); if (p != null && p.newName != null) { Preconditions.checkState(oldName.equals(p.oldName)); if (!p.newName.equals(oldName)) {"
+      },
+      {
+        "txt": "n.setString(p.newName); compiler.reportCodeChange(); } } } logger.info(\"Collapsed \" + numRenamedPropertyNames + \" properties into \" + numNewPropertyNames + \" and skipped renaming \" + numSkippedPropertyNames + \" properties.\"); } private BitSet getRelatedTypesOnNonUnion(JSType type) {"
+      },
+      {
+        "txt": "if (relatedBitsets.containsKey(type)) { return relatedBitsets.get(type); } else { throw new RuntimeException(\"Related types should have been computed for\" + \" type: \" + type + \" but have not been.\"); } } private void computeRelatedTypes(JSType type) { if (type instanceof UnionType) { type = type.restrictByNotNullOrUndefined();"
+      },
+      {
+        "txt": "if (type instanceof UnionType) { for (JSType alt : ((UnionType) type).getAlternates()) { computeRelatedTypes(alt); } return; } } if (relatedBitsets.containsKey(type)) { return; }"
+      },
+      {
+        "txt": "JSTypeBitSet related = new JSTypeBitSet(intForType.size()); relatedBitsets.put(type, related); ObjectType parentType = type.toObjectType(); while (parentType != null) { related.set(getIntForType(parentType)); parentType = parentType.getImplicitPrototype(); } FunctionType constructor = null; if (type instanceof FunctionType) { constructor = (FunctionType) type;"
+      },
+      {
+        "txt": "} else if (type instanceof FunctionPrototypeType) { constructor = ((FunctionPrototypeType) type).getOwnerFunction(); } else { constructor = type.toObjectType().getConstructor(); } if (constructor != null) { for (ObjectType itype : constructor.getAllImplementedInterfaces()) { related.set(getIntForType(itype)); } }"
+      },
+      {
+        "txt": "} class PropertyGraph implements AdjacencyGraph<Property, Void> { protected final Map<Property, PropertyGraphNode> nodes = Maps.newHashMap(); PropertyGraph(Collection<Property> props) { for (Property prop : props) { nodes.put(prop, new PropertyGraphNode(prop)); } } public List<GraphNode<Property, Void>> getNodes() { return Lists.<GraphNode<Property, Void>>newArrayList(nodes.values());"
+      },
+      {
+        "txt": "} public GraphNode<Property, Void> getNode(Property property) { return nodes.get(property); } public SubGraph<Property, Void> newSubGraph() { return new PropertySubGraph(); } public void clearNodeAnnotations() { for (PropertyGraphNode node : nodes.values()) { node.setAnnotation(null);"
+      },
+      {
+        "txt": "} } public int getWeight(Property value) { return value.numOccurrences; } } class PropertySubGraph implements SubGraph<Property, Void> { JSTypeBitSet typesInSet = new JSTypeBitSet(intForType.size()); JSTypeBitSet typesRelatedToSet = new JSTypeBitSet(intForType.size()); public boolean isIndependentOf(Property prop) {"
+      },
+      {
+        "txt": "if (typesRelatedToSet.intersects(prop.typesSet)) { return false; } return !getRelated(prop.type).intersects(typesInSet); } public void addNode(Property prop) { typesInSet.or(prop.typesSet); typesRelatedToSet.or(getRelated(prop.type)); } private JSTypeBitSet getRelated(JSType type) {"
+      },
+      {
+        "txt": "JSTypeBitSet relatedTypes = new JSTypeBitSet(intForType.size()); if (type instanceof UnionType) { for (JSType alt : ((UnionType) type).getAlternates()) { intersectRelatedTypesOnNonUnion(alt, relatedTypes); } } else { intersectRelatedTypesOnNonUnion(type, relatedTypes); } return relatedTypes; }"
+      },
+      {
+        "txt": "private void intersectRelatedTypesOnNonUnion( JSType type, JSTypeBitSet relatedTypes) { relatedTypes.or(getRelatedTypesOnNonUnion(type)); } } class PropertyGraphNode implements GraphNode<Property, Void> { Property property; protected Annotation annotation; PropertyGraphNode(Property property) { this.property = property;"
+      },
+      {
+        "txt": "} public Property getValue() { return property; } @SuppressWarnings(\"unchecked\") public <A extends Annotation> A getAnnotation() { return (A) annotation; } public void setAnnotation(Annotation data) { annotation = data;"
+      },
+      {
+        "txt": "} } private class ProcessExterns extends AbstractPostOrderCallback { public void visit(NodeTraversal t, Node n, Node parent) { switch (n.getType()) { case Token.GETPROP: Node dest = n.getFirstChild().getNext(); externedNames.add(dest.getString()); break; case Token.OBJECTLIT:"
+      },
+      {
+        "txt": "for (Node child = n.getFirstChild(); child != null; child = child.getNext().getNext()) { if (child.getType() == Token.STRING) { externedNames.add(child.getString()); } } break; } }"
+      },
+      {
+        "txt": "} private class ProcessProperties extends AbstractPostOrderCallback { public void visit(NodeTraversal t, Node n, Node parent) { switch (n.getType()) { case Token.GETPROP: { Node propNode = n.getFirstChild().getNext(); JSType jstype = getJSType(n.getFirstChild()); maybeMarkCandidate(propNode, jstype, t); break; }"
+      },
+      {
+        "txt": "case Token.OBJECTLIT: for (Node key = n.getFirstChild(); key != null; key = key.getNext().getNext()) { if (key.getType() == Token.STRING) { if (!key.isQuotedString()) { JSType jstype = getJSType(n.getFirstChild()); maybeMarkCandidate(key, jstype, t); } else { quotedNames.add(key.getString()); }"
+      },
+      {
+        "txt": "} } break; case Token.GETELEM: Node child = n.getLastChild(); if (child.getType() == Token.STRING) { quotedNames.add(child.getString()); } break; }"
+      },
+      {
+        "txt": "} private void maybeMarkCandidate(Node n, JSType type, NodeTraversal t) { String name = n.getString(); if (!externedNames.contains(name)) { stringNodesToRename.add(n); recordProperty(name, type); } } private Property recordProperty(String name, JSType type) { Property prop = getProperty(name);"
+      },
+      {
+        "txt": "prop.addType(type); return prop; } } private boolean isInvalidatingType(JSType type) { if (type instanceof UnionType) { type = type.restrictByNotNullOrUndefined(); if (type instanceof UnionType) { for (JSType alt : ((UnionType) type).getAlternates()) { if (isInvalidatingType(alt)) {"
+      },
+      {
+        "txt": "return true; } } return false; } } ObjectType objType = ObjectType.cast(type); return objType == null || invalidatingTypes.contains(objType) || !objType.hasReferenceName()"
+      },
+      {
+        "txt": "|| (objType.isNamedType() && objType.isUnknownType()) || objType.isEnumType() || objType.autoboxesTo() != null; } private Property getProperty(String name) { Property prop = propertyMap.get(name); if (prop == null) { prop = new Property(name); propertyMap.put(name, prop); } return prop;"
+      },
+      {
+        "txt": "} private JSType getJSType(Node n) { JSType jsType = n.getJSType(); if (jsType == null) { return compiler.getTypeRegistry().getNativeType( JSTypeNative.UNKNOWN_TYPE); } else { return jsType; } }"
+      },
+      {
+        "txt": "final String oldName; JSType type; String newName; int numOccurrences; boolean skipAmbiguating; JSTypeBitSet typesSet = new JSTypeBitSet(intForType.size()); <extra_id_0> Property(String name) { this.oldName = name; if (name.startsWith(SKIP_PREFIX)) { skipAmbiguating = true; } }"
+      },
+      {
+        "txt": "} } void addType(JSType newType) { if (skipAmbiguating) { return; } ++numOccurrences; if (newType instanceof UnionType) { newType = newType.restrictByNotNullOrUndefined(); if (newType instanceof UnionType) {"
+      },
+      {
+        "txt": "for (JSType alt : ((UnionType) newType).getAlternates()) { addNonUnionType(alt); } return; } } addNonUnionType(newType); } private void addNonUnionType(JSType newType) { if (skipAmbiguating || isInvalidatingType(newType)) {"
+      },
+      {
+        "txt": "skipAmbiguating = true; return; } if (type == null) { type = newType; } else { type = type.getLeastSupertype(newType); } typesSet.set(getIntForType(newType)); }"
+      },
+      {
+        "txt": "} private class JSTypeBitSet extends BitSet { private static final long serialVersionUID = 1L; private JSTypeBitSet(int size) { super(size); } private JSTypeBitSet() { super(); } @Override"
+      },
+      {
+        "txt": "public String toString() { int from = 0; int current = 0; List<String> types = Lists.newArrayList(); while (-1 != (current = nextSetBit(from))) { types.add(intForType.inverse().get(current).toString()); from = current + 1; } return Joiner.on(\" && \").join(types); }"
+      }
+    ]
+  },
+  {
+    "id": 499,
+    "file_path": "src/com/google/javascript/jscomp/AmbiguateProperties.java",
+    "start-bug-line": 594,
+    "end-bug-line": 597,
+    "bug": "if (type == null) { type = newType; } else { type = type.getLeastSupertype(newType);",
+    "fix": "int typeInt = getIntForType(newType); if (!typesSet.get(typeInt)) { computeRelatedTypes(newType); typesSet.set(typeInt); relatedTypesSet.or(getRelatedTypesOnNonUnion(newType));",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.google.javascript.jscomp; import com.google.common.base.Joiner; import com.google.common.base.Preconditions;"
+      },
+      {
+        "txt": "import com.google.common.collect.BiMap; import com.google.common.collect.HashBiMap; import com.google.common.collect.Lists; import com.google.common.collect.Maps; import com.google.common.collect.Sets; import com.google.javascript.jscomp.NodeTraversal.AbstractPostOrderCallback; import com.google.javascript.jscomp.TypeValidator.TypeMismatch; import com.google.javascript.jscomp.graph.AdjacencyGraph; import com.google.javascript.jscomp.graph.Annotation; import com.google.javascript.jscomp.graph.GraphColoring;"
+      },
+      {
+        "txt": "import com.google.javascript.jscomp.graph.GraphColoring.GreedyGraphColoring; import com.google.javascript.jscomp.graph.GraphNode; import com.google.javascript.jscomp.graph.SubGraph; import com.google.javascript.rhino.Node; import com.google.javascript.rhino.Token; import com.google.javascript.rhino.jstype.FunctionPrototypeType; import com.google.javascript.rhino.jstype.FunctionType; import com.google.javascript.rhino.jstype.InstanceObjectType; import com.google.javascript.rhino.jstype.JSType; import com.google.javascript.rhino.jstype.JSTypeNative;"
+      },
+      {
+        "txt": "import com.google.javascript.rhino.jstype.JSTypeRegistry; import com.google.javascript.rhino.jstype.ObjectType; import com.google.javascript.rhino.jstype.UnionType; import java.util.BitSet; import java.util.Collection; import java.util.Comparator; import java.util.HashSet; import java.util.List; import java.util.Map; import java.util.Set;"
+      },
+      {
+        "txt": "import java.util.TreeSet; import java.util.logging.Logger; class AmbiguateProperties implements CompilerPass { private static final Logger logger = Logger.getLogger( AmbiguateProperties.class.getName()); private final AbstractCompiler compiler; private final List<Node> stringNodesToRename = Lists.newArrayList(); private final char[] reservedCharacters; private final Map<String, Property> propertyMap = Maps.newHashMap(); private final Set<String> externedNames = Sets.newHashSet();"
+      },
+      {
+        "txt": "private final Set<String> quotedNames = Sets.newHashSet(); private final Map<String, String> renamingMap = Maps.newHashMap(); private final Map<Integer, String> colorMap = Maps.newHashMap(); private static final Comparator<Property> FREQUENCY_COMPARATOR = new Comparator<Property>() { public int compare(Property p1, Property p2) { if (p1.numOccurrences != p2.numOccurrences) { return p2.numOccurrences - p1.numOccurrences; } return p1.oldName.compareTo(p2.oldName);"
+      },
+      {
+        "txt": "} }; private BiMap<JSType, Integer> intForType = HashBiMap.create(); private Map<JSType, JSTypeBitSet> relatedBitsets = Maps.newHashMap(); private final Set<JSType> invalidatingTypes; static final String SKIP_PREFIX = \"JSAbstractCompiler\"; AmbiguateProperties(AbstractCompiler compiler, char[] reservedCharacters) { this.compiler = compiler; this.reservedCharacters = reservedCharacters;"
+      },
+      {
+        "txt": "JSTypeRegistry r = compiler.getTypeRegistry(); invalidatingTypes = Sets.newHashSet( r.getNativeType(JSTypeNative.ALL_TYPE), r.getNativeType(JSTypeNative.NO_OBJECT_TYPE), r.getNativeType(JSTypeNative.NO_TYPE), r.getNativeType(JSTypeNative.NULL_TYPE), r.getNativeType(JSTypeNative.VOID_TYPE), r.getNativeType(JSTypeNative.FUNCTION_FUNCTION_TYPE), r.getNativeType(JSTypeNative.FUNCTION_PROTOTYPE), r.getNativeType(JSTypeNative.GLOBAL_THIS),"
+      },
+      {
+        "txt": "r.getNativeType(JSTypeNative.OBJECT_TYPE), r.getNativeType(JSTypeNative.OBJECT_PROTOTYPE), r.getNativeType(JSTypeNative.OBJECT_FUNCTION_TYPE), r.getNativeType(JSTypeNative.TOP_LEVEL_PROTOTYPE), r.getNativeType(JSTypeNative.UNKNOWN_TYPE)); for (TypeMismatch mis : compiler.getTypeValidator().getMismatches()) { addInvalidatingType(mis.first); addInvalidatingType(mis.second); } }"
+      },
+      {
+        "txt": "private void addInvalidatingType(JSType type) { type = type.restrictByNotNullOrUndefined(); if (type instanceof UnionType) { for (JSType alt : ((UnionType) type).getAlternates()) { addInvalidatingType(alt); } } invalidatingTypes.add(type); ObjectType objType = ObjectType.cast(type); if (objType instanceof InstanceObjectType) {"
+      },
+      {
+        "txt": "invalidatingTypes.add(objType.getImplicitPrototype()); } } Map<String, String> getRenamingMap() { return renamingMap; } private int getIntForType(JSType type) { if (intForType.containsKey(type)) { return intForType.get(type).intValue(); }"
+      },
+      {
+        "txt": "int newInt = intForType.size() + 1; intForType.put(type, newInt); return newInt; } public void process(Node externs, Node root) { NodeTraversal.traverse(compiler, externs, new ProcessExterns()); NodeTraversal.traverse(compiler, root, new ProcessProperties()); Set<String> reservedNames = new HashSet<String>(externedNames.size() + quotedNames.size()); reservedNames.addAll(externedNames);"
+      },
+      {
+        "txt": "reservedNames.addAll(quotedNames); int numRenamedPropertyNames = 0; int numSkippedPropertyNames = 0; Set<Property> propsByFreq = new TreeSet<Property>(FREQUENCY_COMPARATOR); for (Property p : propertyMap.values()) { if (!p.skipAmbiguating) { ++numRenamedPropertyNames; computeRelatedTypes(p.type); propsByFreq.add(p); } else {"
+      },
+      {
+        "txt": "++numSkippedPropertyNames; reservedNames.add(p.oldName); } } PropertyGraph graph = new PropertyGraph(Lists.newLinkedList(propsByFreq)); GraphColoring<Property, Void> coloring = new GreedyGraphColoring<Property, Void>(graph, FREQUENCY_COMPARATOR); int numNewPropertyNames = coloring.color(); NameGenerator nameGen = new NameGenerator( reservedNames, \"\", reservedCharacters);"
+      },
+      {
+        "txt": "for (int i = 0; i < numNewPropertyNames; ++i) { colorMap.put(i, nameGen.generateNextName()); } for (GraphNode<Property, Void> node : graph.getNodes()) { node.getValue().newName = colorMap.get(node.getAnnotation().hashCode()); renamingMap.put(node.getValue().oldName, node.getValue().newName); } for (Node n : stringNodesToRename) { String oldName = n.getString(); Property p = propertyMap.get(oldName);"
+      },
+      {
+        "txt": "if (p != null && p.newName != null) { Preconditions.checkState(oldName.equals(p.oldName)); if (!p.newName.equals(oldName)) { n.setString(p.newName); compiler.reportCodeChange(); } } } logger.info(\"Collapsed \" + numRenamedPropertyNames + \" properties into \" + numNewPropertyNames + \" and skipped renaming \""
+      },
+      {
+        "txt": "+ numSkippedPropertyNames + \" properties.\"); } private BitSet getRelatedTypesOnNonUnion(JSType type) { if (relatedBitsets.containsKey(type)) { return relatedBitsets.get(type); } else { throw new RuntimeException(\"Related types should have been computed for\" + \" type: \" + type + \" but have not been.\"); } }"
+      },
+      {
+        "txt": "private void computeRelatedTypes(JSType type) { if (type instanceof UnionType) { type = type.restrictByNotNullOrUndefined(); if (type instanceof UnionType) { for (JSType alt : ((UnionType) type).getAlternates()) { computeRelatedTypes(alt); } return; } }"
+      },
+      {
+        "txt": "if (relatedBitsets.containsKey(type)) { return; } JSTypeBitSet related = new JSTypeBitSet(intForType.size()); relatedBitsets.put(type, related); ObjectType parentType = type.toObjectType(); while (parentType != null) { related.set(getIntForType(parentType)); parentType = parentType.getImplicitPrototype(); }"
+      },
+      {
+        "txt": "FunctionType constructor = null; if (type instanceof FunctionType) { constructor = (FunctionType) type; } else if (type instanceof FunctionPrototypeType) { constructor = ((FunctionPrototypeType) type).getOwnerFunction(); } else { constructor = type.toObjectType().getConstructor(); } if (constructor != null) { for (ObjectType itype : constructor.getAllImplementedInterfaces()) {"
+      },
+      {
+        "txt": "related.set(getIntForType(itype)); } } } class PropertyGraph implements AdjacencyGraph<Property, Void> { protected final Map<Property, PropertyGraphNode> nodes = Maps.newHashMap(); PropertyGraph(Collection<Property> props) { for (Property prop : props) { nodes.put(prop, new PropertyGraphNode(prop)); }"
+      },
+      {
+        "txt": "} public List<GraphNode<Property, Void>> getNodes() { return Lists.<GraphNode<Property, Void>>newArrayList(nodes.values()); } public GraphNode<Property, Void> getNode(Property property) { return nodes.get(property); } public SubGraph<Property, Void> newSubGraph() { return new PropertySubGraph(); }"
+      },
+      {
+        "txt": "public void clearNodeAnnotations() { for (PropertyGraphNode node : nodes.values()) { node.setAnnotation(null); } } public int getWeight(Property value) { return value.numOccurrences; } } class PropertySubGraph implements SubGraph<Property, Void> {"
+      },
+      {
+        "txt": "JSTypeBitSet typesInSet = new JSTypeBitSet(intForType.size()); JSTypeBitSet typesRelatedToSet = new JSTypeBitSet(intForType.size()); public boolean isIndependentOf(Property prop) { if (typesRelatedToSet.intersects(prop.typesSet)) { return false; } return !getRelated(prop.type).intersects(typesInSet); } public void addNode(Property prop) { typesInSet.or(prop.typesSet);"
+      },
+      {
+        "txt": "typesRelatedToSet.or(getRelated(prop.type)); } private JSTypeBitSet getRelated(JSType type) { JSTypeBitSet relatedTypes = new JSTypeBitSet(intForType.size()); if (type instanceof UnionType) { for (JSType alt : ((UnionType) type).getAlternates()) { intersectRelatedTypesOnNonUnion(alt, relatedTypes); } } else { intersectRelatedTypesOnNonUnion(type, relatedTypes);"
+      },
+      {
+        "txt": "} return relatedTypes; } private void intersectRelatedTypesOnNonUnion( JSType type, JSTypeBitSet relatedTypes) { relatedTypes.or(getRelatedTypesOnNonUnion(type)); } } class PropertyGraphNode implements GraphNode<Property, Void> { Property property;"
+      },
+      {
+        "txt": "protected Annotation annotation; PropertyGraphNode(Property property) { this.property = property; } public Property getValue() { return property; } @SuppressWarnings(\"unchecked\") public <A extends Annotation> A getAnnotation() { return (A) annotation;"
+      },
+      {
+        "txt": "} public void setAnnotation(Annotation data) { annotation = data; } } private class ProcessExterns extends AbstractPostOrderCallback { public void visit(NodeTraversal t, Node n, Node parent) { switch (n.getType()) { case Token.GETPROP: Node dest = n.getFirstChild().getNext();"
+      },
+      {
+        "txt": "externedNames.add(dest.getString()); break; case Token.OBJECTLIT: for (Node child = n.getFirstChild(); child != null; child = child.getNext().getNext()) { if (child.getType() == Token.STRING) { externedNames.add(child.getString()); } }"
+      },
+      {
+        "txt": "break; } } } private class ProcessProperties extends AbstractPostOrderCallback { public void visit(NodeTraversal t, Node n, Node parent) { switch (n.getType()) { case Token.GETPROP: { Node propNode = n.getFirstChild().getNext(); JSType jstype = getJSType(n.getFirstChild());"
+      },
+      {
+        "txt": "maybeMarkCandidate(propNode, jstype, t); break; } case Token.OBJECTLIT: for (Node key = n.getFirstChild(); key != null; key = key.getNext().getNext()) { if (key.getType() == Token.STRING) { if (!key.isQuotedString()) { JSType jstype = getJSType(n.getFirstChild()); maybeMarkCandidate(key, jstype, t);"
+      },
+      {
+        "txt": "} else { quotedNames.add(key.getString()); } } } break; case Token.GETELEM: Node child = n.getLastChild(); if (child.getType() == Token.STRING) { quotedNames.add(child.getString());"
+      },
+      {
+        "txt": "} break; } } private void maybeMarkCandidate(Node n, JSType type, NodeTraversal t) { String name = n.getString(); if (!externedNames.contains(name)) { stringNodesToRename.add(n); recordProperty(name, type); }"
+      },
+      {
+        "txt": "} private Property recordProperty(String name, JSType type) { Property prop = getProperty(name); prop.addType(type); return prop; } } private boolean isInvalidatingType(JSType type) { if (type instanceof UnionType) { type = type.restrictByNotNullOrUndefined();"
+      },
+      {
+        "txt": "if (type instanceof UnionType) { for (JSType alt : ((UnionType) type).getAlternates()) { if (isInvalidatingType(alt)) { return true; } } return false; } } ObjectType objType = ObjectType.cast(type);"
+      },
+      {
+        "txt": "return objType == null || invalidatingTypes.contains(objType) || !objType.hasReferenceName() || (objType.isNamedType() && objType.isUnknownType()) || objType.isEnumType() || objType.autoboxesTo() != null; } private Property getProperty(String name) { Property prop = propertyMap.get(name); if (prop == null) { prop = new Property(name);"
+      },
+      {
+        "txt": "propertyMap.put(name, prop); } return prop; } private JSType getJSType(Node n) { JSType jsType = n.getJSType(); if (jsType == null) { return compiler.getTypeRegistry().getNativeType( JSTypeNative.UNKNOWN_TYPE); } else {"
+      },
+      {
+        "txt": "return jsType; } } private class Property { final String oldName; JSType type; String newName; int numOccurrences; boolean skipAmbiguating; JSTypeBitSet typesSet = new JSTypeBitSet(intForType.size());"
+      },
+      {
+        "txt": "Property(String name) { this.oldName = name; if (name.startsWith(SKIP_PREFIX)) { skipAmbiguating = true; } } void addType(JSType newType) { if (skipAmbiguating) { return; }"
+      },
+      {
+        "txt": "++numOccurrences; if (newType instanceof UnionType) { newType = newType.restrictByNotNullOrUndefined(); if (newType instanceof UnionType) { for (JSType alt : ((UnionType) newType).getAlternates()) { addNonUnionType(alt); } return; } }"
+      },
+      {
+        "txt": "} private void addNonUnionType(JSType newType) { if (skipAmbiguating || isInvalidatingType(newType)) { skipAmbiguating = true; return; } <extra_id_0> } typesSet.set(getIntForType(newType)); } } private class JSTypeBitSet extends BitSet { private static final long serialVersionUID = 1L;"
+      },
+      {
+        "txt": "private class JSTypeBitSet extends BitSet { private static final long serialVersionUID = 1L; private JSTypeBitSet(int size) { super(size); } private JSTypeBitSet() { super(); } @Override public String toString() {"
+      },
+      {
+        "txt": "int from = 0; int current = 0; List<String> types = Lists.newArrayList(); while (-1 != (current = nextSetBit(from))) { types.add(intForType.inverse().get(current).toString()); from = current + 1; } return Joiner.on(\" && \").join(types); } }"
+      }
+    ]
+  },
+  {
+    "id": 500,
+    "file_path": "src/com/google/javascript/jscomp/AmbiguateProperties.java",
+    "start-bug-line": 599,
+    "end-bug-line": 599,
+    "bug": "typesSet.set(getIntForType(newType));",
+    "fix": "[Delete]",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.google.javascript.jscomp; import com.google.common.base.Joiner; import com.google.common.base.Preconditions; import com.google.common.collect.BiMap; import com.google.common.collect.HashBiMap; import com.google.common.collect.Lists; import com.google.common.collect.Maps; import com.google.common.collect.Sets;"
+      },
+      {
+        "txt": "import com.google.javascript.jscomp.NodeTraversal.AbstractPostOrderCallback; import com.google.javascript.jscomp.TypeValidator.TypeMismatch; import com.google.javascript.jscomp.graph.AdjacencyGraph; import com.google.javascript.jscomp.graph.Annotation; import com.google.javascript.jscomp.graph.GraphColoring; import com.google.javascript.jscomp.graph.GraphColoring.GreedyGraphColoring; import com.google.javascript.jscomp.graph.GraphNode; import com.google.javascript.jscomp.graph.SubGraph; import com.google.javascript.rhino.Node; import com.google.javascript.rhino.Token;"
+      },
+      {
+        "txt": "import com.google.javascript.rhino.jstype.FunctionPrototypeType; import com.google.javascript.rhino.jstype.FunctionType; import com.google.javascript.rhino.jstype.InstanceObjectType; import com.google.javascript.rhino.jstype.JSType; import com.google.javascript.rhino.jstype.JSTypeNative; import com.google.javascript.rhino.jstype.JSTypeRegistry; import com.google.javascript.rhino.jstype.ObjectType; import com.google.javascript.rhino.jstype.UnionType; import java.util.BitSet; import java.util.Collection;"
+      },
+      {
+        "txt": "import java.util.Comparator; import java.util.HashSet; import java.util.List; import java.util.Map; import java.util.Set; import java.util.TreeSet; import java.util.logging.Logger; class AmbiguateProperties implements CompilerPass { private static final Logger logger = Logger.getLogger( AmbiguateProperties.class.getName());"
+      },
+      {
+        "txt": "private final AbstractCompiler compiler; private final List<Node> stringNodesToRename = Lists.newArrayList(); private final char[] reservedCharacters; private final Map<String, Property> propertyMap = Maps.newHashMap(); private final Set<String> externedNames = Sets.newHashSet(); private final Set<String> quotedNames = Sets.newHashSet(); private final Map<String, String> renamingMap = Maps.newHashMap(); private final Map<Integer, String> colorMap = Maps.newHashMap(); private static final Comparator<Property> FREQUENCY_COMPARATOR = new Comparator<Property>() {"
+      },
+      {
+        "txt": "public int compare(Property p1, Property p2) { if (p1.numOccurrences != p2.numOccurrences) { return p2.numOccurrences - p1.numOccurrences; } return p1.oldName.compareTo(p2.oldName); } }; private BiMap<JSType, Integer> intForType = HashBiMap.create(); private Map<JSType, JSTypeBitSet> relatedBitsets = Maps.newHashMap(); private final Set<JSType> invalidatingTypes;"
+      },
+      {
+        "txt": "static final String SKIP_PREFIX = \"JSAbstractCompiler\"; AmbiguateProperties(AbstractCompiler compiler, char[] reservedCharacters) { this.compiler = compiler; this.reservedCharacters = reservedCharacters; JSTypeRegistry r = compiler.getTypeRegistry(); invalidatingTypes = Sets.newHashSet( r.getNativeType(JSTypeNative.ALL_TYPE), r.getNativeType(JSTypeNative.NO_OBJECT_TYPE), r.getNativeType(JSTypeNative.NO_TYPE),"
+      },
+      {
+        "txt": "r.getNativeType(JSTypeNative.NULL_TYPE), r.getNativeType(JSTypeNative.VOID_TYPE), r.getNativeType(JSTypeNative.FUNCTION_FUNCTION_TYPE), r.getNativeType(JSTypeNative.FUNCTION_PROTOTYPE), r.getNativeType(JSTypeNative.GLOBAL_THIS), r.getNativeType(JSTypeNative.OBJECT_TYPE), r.getNativeType(JSTypeNative.OBJECT_PROTOTYPE), r.getNativeType(JSTypeNative.OBJECT_FUNCTION_TYPE), r.getNativeType(JSTypeNative.TOP_LEVEL_PROTOTYPE), r.getNativeType(JSTypeNative.UNKNOWN_TYPE));"
+      },
+      {
+        "txt": "for (TypeMismatch mis : compiler.getTypeValidator().getMismatches()) { addInvalidatingType(mis.first); addInvalidatingType(mis.second); } } private void addInvalidatingType(JSType type) { type = type.restrictByNotNullOrUndefined(); if (type instanceof UnionType) { for (JSType alt : ((UnionType) type).getAlternates()) { addInvalidatingType(alt);"
+      },
+      {
+        "txt": "} } invalidatingTypes.add(type); ObjectType objType = ObjectType.cast(type); if (objType instanceof InstanceObjectType) { invalidatingTypes.add(objType.getImplicitPrototype()); } } Map<String, String> getRenamingMap() { return renamingMap;"
+      },
+      {
+        "txt": "} private int getIntForType(JSType type) { if (intForType.containsKey(type)) { return intForType.get(type).intValue(); } int newInt = intForType.size() + 1; intForType.put(type, newInt); return newInt; } public void process(Node externs, Node root) {"
+      },
+      {
+        "txt": "NodeTraversal.traverse(compiler, externs, new ProcessExterns()); NodeTraversal.traverse(compiler, root, new ProcessProperties()); Set<String> reservedNames = new HashSet<String>(externedNames.size() + quotedNames.size()); reservedNames.addAll(externedNames); reservedNames.addAll(quotedNames); int numRenamedPropertyNames = 0; int numSkippedPropertyNames = 0; Set<Property> propsByFreq = new TreeSet<Property>(FREQUENCY_COMPARATOR); for (Property p : propertyMap.values()) {"
+      },
+      {
+        "txt": "if (!p.skipAmbiguating) { ++numRenamedPropertyNames; computeRelatedTypes(p.type); propsByFreq.add(p); } else { ++numSkippedPropertyNames; reservedNames.add(p.oldName); } } PropertyGraph graph = new PropertyGraph(Lists.newLinkedList(propsByFreq));"
+      },
+      {
+        "txt": "GraphColoring<Property, Void> coloring = new GreedyGraphColoring<Property, Void>(graph, FREQUENCY_COMPARATOR); int numNewPropertyNames = coloring.color(); NameGenerator nameGen = new NameGenerator( reservedNames, \"\", reservedCharacters); for (int i = 0; i < numNewPropertyNames; ++i) { colorMap.put(i, nameGen.generateNextName()); } for (GraphNode<Property, Void> node : graph.getNodes()) { node.getValue().newName = colorMap.get(node.getAnnotation().hashCode());"
+      },
+      {
+        "txt": "renamingMap.put(node.getValue().oldName, node.getValue().newName); } for (Node n : stringNodesToRename) { String oldName = n.getString(); Property p = propertyMap.get(oldName); if (p != null && p.newName != null) { Preconditions.checkState(oldName.equals(p.oldName)); if (!p.newName.equals(oldName)) { n.setString(p.newName); compiler.reportCodeChange();"
+      },
+      {
+        "txt": "} } } logger.info(\"Collapsed \" + numRenamedPropertyNames + \" properties into \" + numNewPropertyNames + \" and skipped renaming \" + numSkippedPropertyNames + \" properties.\"); } private BitSet getRelatedTypesOnNonUnion(JSType type) { if (relatedBitsets.containsKey(type)) { return relatedBitsets.get(type);"
+      },
+      {
+        "txt": "} else { throw new RuntimeException(\"Related types should have been computed for\" + \" type: \" + type + \" but have not been.\"); } } private void computeRelatedTypes(JSType type) { if (type instanceof UnionType) { type = type.restrictByNotNullOrUndefined(); if (type instanceof UnionType) { for (JSType alt : ((UnionType) type).getAlternates()) {"
+      },
+      {
+        "txt": "computeRelatedTypes(alt); } return; } } if (relatedBitsets.containsKey(type)) { return; } JSTypeBitSet related = new JSTypeBitSet(intForType.size()); relatedBitsets.put(type, related);"
+      },
+      {
+        "txt": "ObjectType parentType = type.toObjectType(); while (parentType != null) { related.set(getIntForType(parentType)); parentType = parentType.getImplicitPrototype(); } FunctionType constructor = null; if (type instanceof FunctionType) { constructor = (FunctionType) type; } else if (type instanceof FunctionPrototypeType) { constructor = ((FunctionPrototypeType) type).getOwnerFunction();"
+      },
+      {
+        "txt": "} else { constructor = type.toObjectType().getConstructor(); } if (constructor != null) { for (ObjectType itype : constructor.getAllImplementedInterfaces()) { related.set(getIntForType(itype)); } } } class PropertyGraph implements AdjacencyGraph<Property, Void> {"
+      },
+      {
+        "txt": "protected final Map<Property, PropertyGraphNode> nodes = Maps.newHashMap(); PropertyGraph(Collection<Property> props) { for (Property prop : props) { nodes.put(prop, new PropertyGraphNode(prop)); } } public List<GraphNode<Property, Void>> getNodes() { return Lists.<GraphNode<Property, Void>>newArrayList(nodes.values()); } public GraphNode<Property, Void> getNode(Property property) {"
+      },
+      {
+        "txt": "return nodes.get(property); } public SubGraph<Property, Void> newSubGraph() { return new PropertySubGraph(); } public void clearNodeAnnotations() { for (PropertyGraphNode node : nodes.values()) { node.setAnnotation(null); } }"
+      },
+      {
+        "txt": "public int getWeight(Property value) { return value.numOccurrences; } } class PropertySubGraph implements SubGraph<Property, Void> { JSTypeBitSet typesInSet = new JSTypeBitSet(intForType.size()); JSTypeBitSet typesRelatedToSet = new JSTypeBitSet(intForType.size()); public boolean isIndependentOf(Property prop) { if (typesRelatedToSet.intersects(prop.typesSet)) { return false;"
+      },
+      {
+        "txt": "} return !getRelated(prop.type).intersects(typesInSet); } public void addNode(Property prop) { typesInSet.or(prop.typesSet); typesRelatedToSet.or(getRelated(prop.type)); } private JSTypeBitSet getRelated(JSType type) { JSTypeBitSet relatedTypes = new JSTypeBitSet(intForType.size()); if (type instanceof UnionType) {"
+      },
+      {
+        "txt": "for (JSType alt : ((UnionType) type).getAlternates()) { intersectRelatedTypesOnNonUnion(alt, relatedTypes); } } else { intersectRelatedTypesOnNonUnion(type, relatedTypes); } return relatedTypes; } private void intersectRelatedTypesOnNonUnion( JSType type, JSTypeBitSet relatedTypes) {"
+      },
+      {
+        "txt": "relatedTypes.or(getRelatedTypesOnNonUnion(type)); } } class PropertyGraphNode implements GraphNode<Property, Void> { Property property; protected Annotation annotation; PropertyGraphNode(Property property) { this.property = property; } public Property getValue() {"
+      },
+      {
+        "txt": "return property; } @SuppressWarnings(\"unchecked\") public <A extends Annotation> A getAnnotation() { return (A) annotation; } public void setAnnotation(Annotation data) { annotation = data; } }"
+      },
+      {
+        "txt": "private class ProcessExterns extends AbstractPostOrderCallback { public void visit(NodeTraversal t, Node n, Node parent) { switch (n.getType()) { case Token.GETPROP: Node dest = n.getFirstChild().getNext(); externedNames.add(dest.getString()); break; case Token.OBJECTLIT: for (Node child = n.getFirstChild(); child != null;"
+      },
+      {
+        "txt": "child = child.getNext().getNext()) { if (child.getType() == Token.STRING) { externedNames.add(child.getString()); } } break; } } } private class ProcessProperties extends AbstractPostOrderCallback {"
+      },
+      {
+        "txt": "public void visit(NodeTraversal t, Node n, Node parent) { switch (n.getType()) { case Token.GETPROP: { Node propNode = n.getFirstChild().getNext(); JSType jstype = getJSType(n.getFirstChild()); maybeMarkCandidate(propNode, jstype, t); break; } case Token.OBJECTLIT: for (Node key = n.getFirstChild(); key != null;"
+      },
+      {
+        "txt": "key = key.getNext().getNext()) { if (key.getType() == Token.STRING) { if (!key.isQuotedString()) { JSType jstype = getJSType(n.getFirstChild()); maybeMarkCandidate(key, jstype, t); } else { quotedNames.add(key.getString()); } } }"
+      },
+      {
+        "txt": "break; case Token.GETELEM: Node child = n.getLastChild(); if (child.getType() == Token.STRING) { quotedNames.add(child.getString()); } break; } } private void maybeMarkCandidate(Node n, JSType type, NodeTraversal t) {"
+      },
+      {
+        "txt": "String name = n.getString(); if (!externedNames.contains(name)) { stringNodesToRename.add(n); recordProperty(name, type); } } private Property recordProperty(String name, JSType type) { Property prop = getProperty(name); prop.addType(type); return prop;"
+      },
+      {
+        "txt": "} } private boolean isInvalidatingType(JSType type) { if (type instanceof UnionType) { type = type.restrictByNotNullOrUndefined(); if (type instanceof UnionType) { for (JSType alt : ((UnionType) type).getAlternates()) { if (isInvalidatingType(alt)) { return true; }"
+      },
+      {
+        "txt": "} return false; } } ObjectType objType = ObjectType.cast(type); return objType == null || invalidatingTypes.contains(objType) || !objType.hasReferenceName() || (objType.isNamedType() && objType.isUnknownType()) || objType.isEnumType() || objType.autoboxesTo() != null;"
+      },
+      {
+        "txt": "} private Property getProperty(String name) { Property prop = propertyMap.get(name); if (prop == null) { prop = new Property(name); propertyMap.put(name, prop); } return prop; } private JSType getJSType(Node n) {"
+      },
+      {
+        "txt": "JSType jsType = n.getJSType(); if (jsType == null) { return compiler.getTypeRegistry().getNativeType( JSTypeNative.UNKNOWN_TYPE); } else { return jsType; } } private class Property { final String oldName;"
+      },
+      {
+        "txt": "JSType type; String newName; int numOccurrences; boolean skipAmbiguating; JSTypeBitSet typesSet = new JSTypeBitSet(intForType.size()); Property(String name) { this.oldName = name; if (name.startsWith(SKIP_PREFIX)) { skipAmbiguating = true; }"
+      },
+      {
+        "txt": "} void addType(JSType newType) { if (skipAmbiguating) { return; } ++numOccurrences; if (newType instanceof UnionType) { newType = newType.restrictByNotNullOrUndefined(); if (newType instanceof UnionType) { for (JSType alt : ((UnionType) newType).getAlternates()) {"
+      },
+      {
+        "txt": "addNonUnionType(alt); } return; } } addNonUnionType(newType); } private void addNonUnionType(JSType newType) { if (skipAmbiguating || isInvalidatingType(newType)) { skipAmbiguating = true;"
+      },
+      {
+        "txt": "} if (type == null) { type = newType; } else { type = type.getLeastSupertype(newType); } <extra_id_0> } } private class JSTypeBitSet extends BitSet { private static final long serialVersionUID = 1L; private JSTypeBitSet(int size) { super(size);"
+      },
+      {
+        "txt": "private JSTypeBitSet(int size) { super(size); } private JSTypeBitSet() { super(); } @Override public String toString() { int from = 0; int current = 0;"
+      },
+      {
+        "txt": "List<String> types = Lists.newArrayList(); while (-1 != (current = nextSetBit(from))) { types.add(intForType.inverse().get(current).toString()); from = current + 1; } return Joiner.on(\" && \").join(types); } }"
+      }
+    ]
+  },
+  {
+    "id": 501,
+    "file_path": "src/com/google/javascript/jscomp/TypedScopeCreator.java",
+    "start-bug-line": 560,
+    "end-bug-line": 560,
+    "bug": "}",
+    "fix": "} else {",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.google.javascript.jscomp; import static com.google.javascript.jscomp.TypeCheck.ENUM_DUP; import static com.google.javascript.jscomp.TypeCheck.ENUM_NOT_CONSTANT; import static com.google.javascript.jscomp.TypeCheck.MULTIPLE_VAR_DEF; import static com.google.javascript.rhino.jstype.JSTypeNative.ARRAY_FUNCTION_TYPE; import static com.google.javascript.rhino.jstype.JSTypeNative.BOOLEAN_TYPE; import static com.google.javascript.rhino.jstype.JSTypeNative.BOOLEAN_OBJECT_FUNCTION_TYPE;"
+      },
+      {
+        "txt": "import static com.google.javascript.rhino.jstype.JSTypeNative.DATE_FUNCTION_TYPE; import static com.google.javascript.rhino.jstype.JSTypeNative.ERROR_FUNCTION_TYPE; import static com.google.javascript.rhino.jstype.JSTypeNative.EVAL_ERROR_FUNCTION_TYPE; import static com.google.javascript.rhino.jstype.JSTypeNative.FUNCTION_FUNCTION_TYPE; import static com.google.javascript.rhino.jstype.JSTypeNative.OBJECT_TYPE; import static com.google.javascript.rhino.jstype.JSTypeNative.NO_OBJECT_TYPE; import static com.google.javascript.rhino.jstype.JSTypeNative.NO_TYPE; import static com.google.javascript.rhino.jstype.JSTypeNative.NUMBER_OBJECT_FUNCTION_TYPE; import static com.google.javascript.rhino.jstype.JSTypeNative.OBJECT_FUNCTION_TYPE; import static com.google.javascript.rhino.jstype.JSTypeNative.RANGE_ERROR_FUNCTION_TYPE;"
+      },
+      {
+        "txt": "import static com.google.javascript.rhino.jstype.JSTypeNative.REFERENCE_ERROR_FUNCTION_TYPE; import static com.google.javascript.rhino.jstype.JSTypeNative.REGEXP_FUNCTION_TYPE; import static com.google.javascript.rhino.jstype.JSTypeNative.STRING_OBJECT_FUNCTION_TYPE; import static com.google.javascript.rhino.jstype.JSTypeNative.SYNTAX_ERROR_FUNCTION_TYPE; import static com.google.javascript.rhino.jstype.JSTypeNative.TYPE_ERROR_FUNCTION_TYPE; import static com.google.javascript.rhino.jstype.JSTypeNative.UNKNOWN_TYPE; import static com.google.javascript.rhino.jstype.JSTypeNative.URI_ERROR_FUNCTION_TYPE; import static com.google.javascript.rhino.jstype.JSTypeNative.U2U_CONSTRUCTOR_TYPE; import static com.google.javascript.rhino.jstype.JSTypeNative.VOID_TYPE; import com.google.common.annotations.VisibleForTesting;"
+      },
+      {
+        "txt": "import javax.annotation.Nullable; import com.google.common.base.Preconditions; import com.google.common.collect.Lists; import com.google.common.collect.Maps; import com.google.javascript.jscomp.CodingConvention.DelegateRelationship; import com.google.javascript.jscomp.CodingConvention.ObjectLiteralCast; import com.google.javascript.jscomp.CodingConvention.SubclassRelationship; import com.google.javascript.jscomp.CodingConvention.SubclassType; import com.google.javascript.jscomp.NodeTraversal.AbstractShallowCallback; import com.google.javascript.jscomp.Scope.Var;"
+      },
+      {
+        "txt": "import com.google.javascript.rhino.JSDocInfo; import com.google.javascript.rhino.Node; import com.google.javascript.rhino.Token; import com.google.javascript.rhino.jstype.EnumType; import com.google.javascript.rhino.jstype.FunctionParamBuilder; import com.google.javascript.rhino.jstype.FunctionType; import com.google.javascript.rhino.jstype.JSType; import com.google.javascript.rhino.jstype.JSTypeNative; import com.google.javascript.rhino.jstype.JSTypeRegistry; import com.google.javascript.rhino.jstype.ObjectType;"
+      },
+      {
+        "txt": "import java.util.List; import java.util.Map; final class TypedScopeCreator implements ScopeCreator { static final DiagnosticType MALFORMED_TYPEDEF = DiagnosticType.warning( \"JSC_MALFORMED_TYPEDEF\", \"Typedef for {0} does not have any type information\"); static final DiagnosticType ENUM_INITIALIZER = DiagnosticType.warning( \"JSC_ENUM_INITIALIZER_NOT_ENUM\","
+      },
+      {
+        "txt": "\"enum initializer must be an object literal or an enum\"); static final DiagnosticType CONSTRUCTOR_EXPECTED = DiagnosticType.warning( \"JSC_REFLECT_CONSTRUCTOR_EXPECTED\", \"Constructor expected as first argument\"); private final AbstractCompiler compiler; private final TypeValidator validator; private final CodingConvention codingConvention; private final JSTypeRegistry typeRegistry; private Map<ObjectType, ObjectType> delegateProxyMap = Maps.newHashMap();"
+      },
+      {
+        "txt": "TypedScopeCreator(AbstractCompiler compiler) { this(compiler, compiler.getCodingConvention()); } TypedScopeCreator(AbstractCompiler compiler, CodingConvention codingConvention) { this.compiler = compiler; this.validator = compiler.getTypeValidator(); this.codingConvention = codingConvention; this.typeRegistry = compiler.getTypeRegistry(); }"
+      },
+      {
+        "txt": "public Scope createScope(Node root, Scope parent) { Scope newScope = null; if (parent == null) { newScope = createInitialScope(root); GlobalScopeBuilder scopeBuilder = new GlobalScopeBuilder(newScope); NodeTraversal.traverse(compiler, root, scopeBuilder); scopeBuilder.resolveStubDeclarations(); for (Node functionNode : scopeBuilder.nonExternFunctions) { JSType type = functionNode.getJSType(); if (type != null && type instanceof FunctionType) {"
+      },
+      {
+        "txt": "FunctionType fnType = (FunctionType) type; ObjectType fnThisType = fnType.getTypeOfThis(); if (!fnThisType.isUnknownType()) { NodeTraversal.traverse(compiler, functionNode.getLastChild(), scopeBuilder.new CollectProperties(fnThisType)); } } } codingConvention.defineDelegateProxyProperties( typeRegistry, newScope, delegateProxyMap);"
+      },
+      {
+        "txt": "} else { newScope = new Scope(parent, root); (new LocalScopeBuilder(newScope)).build(); } typeRegistry.resolveTypesInScope(newScope); return newScope; } @VisibleForTesting Scope createInitialScope(Node root) { Scope s = new Scope(root, compiler);"
+      },
+      {
+        "txt": "declareNativeFunctionType(s, ARRAY_FUNCTION_TYPE); declareNativeFunctionType(s, BOOLEAN_OBJECT_FUNCTION_TYPE); declareNativeFunctionType(s, DATE_FUNCTION_TYPE); declareNativeFunctionType(s, ERROR_FUNCTION_TYPE); declareNativeFunctionType(s, EVAL_ERROR_FUNCTION_TYPE); declareNativeFunctionType(s, FUNCTION_FUNCTION_TYPE); declareNativeFunctionType(s, NUMBER_OBJECT_FUNCTION_TYPE); declareNativeFunctionType(s, OBJECT_FUNCTION_TYPE); declareNativeFunctionType(s, RANGE_ERROR_FUNCTION_TYPE); declareNativeFunctionType(s, REFERENCE_ERROR_FUNCTION_TYPE);"
+      },
+      {
+        "txt": "declareNativeFunctionType(s, REGEXP_FUNCTION_TYPE); declareNativeFunctionType(s, STRING_OBJECT_FUNCTION_TYPE); declareNativeFunctionType(s, SYNTAX_ERROR_FUNCTION_TYPE); declareNativeFunctionType(s, TYPE_ERROR_FUNCTION_TYPE); declareNativeFunctionType(s, URI_ERROR_FUNCTION_TYPE); declareNativeValueType(s, \"undefined\", VOID_TYPE); declareNativeValueType(s, \"goog.typedef\", NO_TYPE); declareNativeValueType(s, \"ActiveXObject\", NO_OBJECT_TYPE); return s; }"
+      },
+      {
+        "txt": "private void declareNativeFunctionType(Scope scope, JSTypeNative tId) { FunctionType t = typeRegistry.getNativeFunctionType(tId); declareNativeType(scope, t.getInstanceType().getReferenceName(), t); declareNativeType( scope, t.getPrototype().getReferenceName(), t.getPrototype()); } private void declareNativeValueType(Scope scope, String name, JSTypeNative tId) { declareNativeType(scope, name, typeRegistry.getNativeType(tId)); }"
+      },
+      {
+        "txt": "private void declareNativeType(Scope scope, String name, JSType t) { scope.declare(name, null, t, null, false); } private static Node getPrototypePropertyOwner(Node n) { if (n.getType() == Token.GETPROP) { Node firstChild = n.getFirstChild(); if (firstChild.getType() == Token.GETPROP && firstChild.getLastChild().getString().equals(\"prototype\")) { Node maybeOwner = firstChild.getFirstChild(); if (maybeOwner.isQualifiedName()) {"
+      },
+      {
+        "txt": "return maybeOwner; } } } return null; } private abstract class AbstractScopeBuilder implements NodeTraversal.Callback { final Scope scope; private String sourceName = null;"
+      },
+      {
+        "txt": "private AbstractScopeBuilder(Scope scope) { this.scope = scope; } @Override public final boolean shouldTraverse(NodeTraversal nodeTraversal, Node n, Node parent) { if (n.getType() == Token.FUNCTION || n.getType() == Token.SCRIPT) { sourceName = (String) n.getProp(Node.SOURCENAME_PROP); }"
+      },
+      {
+        "txt": "return parent == null || parent.getType() != Token.FUNCTION || n == parent.getFirstChild() || parent == scope.getRootNode(); } @Override public abstract void visit(NodeTraversal t, Node n, Node parent); JSType getDeclaredTypeInAnnotation( NodeTraversal t, Node node, JSDocInfo info) { return getDeclaredTypeInAnnotation(t.getSourceName(), node, info); } JSType getDeclaredTypeInAnnotation(String sourceName,"
+      },
+      {
+        "txt": "Node node, JSDocInfo info) { JSType jsType = null; Node objNode = node.getType() == Token.GETPROP ? node.getFirstChild() : null; if (info != null) { if (info.hasType()) { jsType = info.getType().evaluate(scope); } else if (FunctionTypeBuilder.isFunctionTypeDeclaration(info)) { String fnName = node.getQualifiedName(); if (info.isConstructor() && typeRegistry.getType(fnName) != null) {"
+      },
+      {
+        "txt": "return null; } FunctionTypeBuilder builder = new FunctionTypeBuilder( fnName, compiler, node, sourceName, scope) .inferTemplateTypeName(info) .inferReturnType(info) .inferParameterTypes(info) .inferInheritance(info); boolean searchedForThisType = false;"
+      },
+      {
+        "txt": "if (objNode != null) { if (objNode.getType() == Token.GETPROP && objNode.getLastChild().getString().equals(\"prototype\")) { builder.inferThisType(info, objNode.getFirstChild()); searchedForThisType = true; } else if (objNode.getType() == Token.THIS) { builder.inferThisType(info, objNode.getJSType()); searchedForThisType = true; } }"
+      },
+      {
+        "txt": "if (!searchedForThisType) { builder.inferThisType(info, (Node) null); } jsType = builder.buildAndRegister(); } } return jsType; } void define(Node n, Node parent) { Preconditions.checkState(sourceName != null);"
+      },
+      {
+        "txt": "JSDocInfo info = n.getJSDocInfo(); switch (n.getType()) { case Token.CATCH: Node catchName = n.getFirstChild(); defineSlot(catchName, n, null); break; case Token.VAR: if (n.getChildCount() > 1) { if (info != null) { compiler.report(JSError.make(sourceName, n, MULTIPLE_VAR_DEF));"
+      },
+      {
+        "txt": "} for (Node name : n.children()) { defineName(name, n, parent, name.getJSDocInfo()); } } else { Node name = n.getFirstChild(); defineName(name, n, parent, (info != null) ? info : name.getJSDocInfo()); } break;"
+      },
+      {
+        "txt": "case Token.FUNCTION: int parentType = parent.getType(); Preconditions.checkState( (scope.isLocal() || parentType != Token.ASSIGN) && parentType != Token.NAME, \"function defined as standalone function when it is being \" + \"assigned\"); String functionName = n.getFirstChild().getString(); FunctionType functionType = getFunctionType(functionName, n, info, null);"
+      },
+      {
+        "txt": "if (NodeUtil.isFunctionDeclaration(n)) { defineSlot(n.getFirstChild(), n, functionType); } break; case Token.ASSIGN: Node rvalue = n.getLastChild(); Node lvalue = n.getFirstChild(); info = (info != null) ? info : rvalue.getJSDocInfo(); if (rvalue.getType() == Token.FUNCTION || info != null && info.isConstructor()) {"
+      },
+      {
+        "txt": "getFunctionType(lvalue.getQualifiedName(), rvalue, info, lvalue); } else if (info != null && info.hasEnumParameterType()) { lvalue.setJSType( getEnumType(lvalue.getQualifiedName(), n, rvalue, info.getEnumParameterType().evaluate(scope))); } break; default: throw new IllegalStateException(Integer.toString(n.getType()));"
+      },
+      {
+        "txt": "} } private void defineName(Node name, Node var, Node parent, JSDocInfo info) { Node value = name.getFirstChild(); if (value != null && value.getType() == Token.FUNCTION) { String functionName = name.getString(); FunctionType functionType = getFunctionType(functionName, value, info, null); defineSlot(name, var, functionType); } else {"
+      },
+      {
+        "txt": "JSType type = null; if (info == null) { CompilerInput input = compiler.getInput(sourceName); Preconditions.checkNotNull(input, sourceName); type = input.isExtern() ? typeRegistry.getNativeType(UNKNOWN_TYPE) : null; } else if (info.hasEnumParameterType()) { type = getEnumType(name.getString(), var, value, info.getEnumParameterType().evaluate(scope)); } else if (info.isConstructor()) {"
+      },
+      {
+        "txt": "type = getFunctionType(name.getString(), value, info, name); } else { type = getDeclaredTypeInAnnotation(sourceName, name, info); } defineSlot(name, var, type); } } private FunctionType getFunctionType(String name, Node rValue, JSDocInfo info, @Nullable Node lvalueNode) { FunctionType functionType = null;"
+      },
+      {
+        "txt": "if (rValue != null && rValue.isQualifiedName()) { Var var = scope.getVar(rValue.getQualifiedName()); if (var != null && var.getType() instanceof FunctionType) { functionType = (FunctionType) var.getType(); if (functionType != null && functionType.isConstructor()) { typeRegistry.declareType(name, functionType.getInstanceType()); } } return functionType; }"
+      },
+      {
+        "txt": "Node owner = null; if (lvalueNode != null) { owner = getPrototypePropertyOwner(lvalueNode); } Node errorRoot = rValue == null ? lvalueNode : rValue; boolean isFnLiteral = rValue != null && rValue.getType() == Token.FUNCTION; Node fnRoot = isFnLiteral ? rValue : null; Node parametersNode = isFnLiteral ? rValue.getFirstChild().getNext() : null;"
+      },
+      {
+        "txt": "if (functionType == null && info != null && info.hasType()) { JSType type = info.getType().evaluate(scope); type = type.restrictByNotNullOrUndefined(); if (type.isFunctionType()) { functionType = (FunctionType) type; functionType.setJSDocInfo(info); } } if (functionType == null) { if (info == null ||"
+      },
+      {
+        "txt": "!FunctionTypeBuilder.isFunctionTypeDeclaration(info)) { if (lvalueNode != null && lvalueNode.getType() == Token.GETPROP && lvalueNode.isQualifiedName()) { Var var = scope.getVar( lvalueNode.getFirstChild().getQualifiedName()); if (var != null) { ObjectType ownerType = ObjectType.cast(var.getType()); FunctionType propType = null; if (ownerType != null) { propType = findOverriddenFunction("
+      },
+      {
+        "txt": "ownerType, lvalueNode.getLastChild().getString()); } if (propType != null) { functionType = new FunctionTypeBuilder( name, compiler, errorRoot, sourceName, scope) .setSourceNode(fnRoot) .inferFromOverriddenFunction(propType, parametersNode) .inferThisType(info, owner) .buildAndRegister();"
+      },
+      {
+        "txt": "} } } } } // end if (functionType == null) if (functionType == null) { functionType = new FunctionTypeBuilder(name, compiler, errorRoot, sourceName, scope) .setSourceNode(fnRoot)"
+      },
+      {
+        "txt": ".inferTemplateTypeName(info) .inferReturnType(info) .inferInheritance(info) .inferThisType(info, owner) .inferParameterTypes(parametersNode, info) .buildAndRegister(); } if (rValue != null) { rValue.setJSType(functionType); }"
+      },
+      {
+        "txt": "} private FunctionType findOverriddenFunction( ObjectType ownerType, String propName) { JSType propType = ownerType.getPropertyType(propName); if (propType instanceof FunctionType) { return (FunctionType) propType; <extra_id_0> return null; } private EnumType getEnumType(String name, Node parent, Node value, JSType elementsType) { EnumType enumType = null; if (value != null) {"
+      },
+      {
+        "txt": "EnumType enumType = null; if (value != null) { if (value.getType() == Token.OBJECTLIT) { enumType = typeRegistry.createEnumType(name, elementsType); Node key = value.getFirstChild(); while (key != null) { String keyName = NodeUtil.getStringValue(key); if (enumType.hasOwnProperty(keyName)) { compiler.report(JSError.make(sourceName, key, ENUM_DUP, keyName)); } else if (!codingConvention.isValidEnumKey(keyName)) {"
+      },
+      {
+        "txt": "compiler.report( JSError.make(sourceName, key, ENUM_NOT_CONSTANT, keyName)); } else { enumType.defineElement(keyName); } key = key.getNext(); key = (key == null) ? null : key.getNext(); } } else if (value.isQualifiedName()) { Var var = scope.getVar(value.getQualifiedName());"
+      },
+      {
+        "txt": "if (var != null && var.getType() instanceof EnumType) { enumType = (EnumType) var.getType(); } } } if (enumType == null) { compiler.report(JSError.make(sourceName, parent, ENUM_INITIALIZER)); } else if (scope.isGlobal()) { if (name != null && !name.isEmpty()) { typeRegistry.declareType(name, enumType.getElementsType());"
+      },
+      {
+        "txt": "} } return enumType; } private void defineSlot(Node name, Node parent, JSType type) { defineSlot(name, parent, type, type == null); } void defineSlot(Node n, Node parent, JSType type, boolean inferred) { Preconditions.checkArgument(inferred || type != null); boolean shouldDeclareOnGlobalThis = false;"
+      },
+      {
+        "txt": "if (n.getType() == Token.NAME) { Preconditions.checkArgument( parent.getType() == Token.FUNCTION || parent.getType() == Token.VAR || parent.getType() == Token.LP || parent.getType() == Token.CATCH); shouldDeclareOnGlobalThis = scope.isGlobal() && (parent.getType() == Token.VAR || parent.getType() == Token.FUNCTION); } else {"
+      },
+      {
+        "txt": "Preconditions.checkArgument( n.getType() == Token.GETPROP && (parent.getType() == Token.ASSIGN || parent.getType() == Token.EXPR_RESULT)); } String variableName = n.getQualifiedName(); Preconditions.checkArgument(!variableName.isEmpty()); if (scope.isDeclared(variableName, false)) { Var oldVar = scope.getVar(variableName); validator.expectUndeclaredVariable("
+      },
+      {
+        "txt": "sourceName, n, parent, oldVar, variableName, type); } else { if (!inferred) { n.setJSType(type); } CompilerInput input = compiler.getInput(sourceName); scope.declare(variableName, n, type, input, inferred); if (shouldDeclareOnGlobalThis) { ObjectType globalThis = typeRegistry.getNativeObjectType(JSTypeNative.GLOBAL_THIS);"
+      },
+      {
+        "txt": "boolean isExtern = input.isExtern(); if (inferred) { globalThis.defineInferredProperty(variableName, type == null ? typeRegistry.getNativeType(JSTypeNative.NO_TYPE) : type, isExtern); } else { globalThis.defineDeclaredProperty(variableName, type, isExtern); }"
+      },
+      {
+        "txt": "} if (scope.isGlobal() && type instanceof FunctionType) { FunctionType fnType = (FunctionType) type; if (fnType.isConstructor() || fnType.isInterface()) { FunctionType superClassCtor = fnType.getSuperClassConstructor(); scope.declare(variableName + \".prototype\", n, fnType.getPrototype(), compiler.getInput(sourceName), superClassCtor == null || superClassCtor.getInstanceType().equals( typeRegistry.getNativeType(OBJECT_TYPE)));"
+      },
+      {
+        "txt": "} } } } } private final class GlobalScopeBuilder extends AbstractScopeBuilder { private final List<Node> nonExternFunctions = Lists.newArrayList(); private final List<StubDeclaration> stubDeclarations = Lists.newArrayList(); private GlobalScopeBuilder(Scope scope) {"
+      },
+      {
+        "txt": "super(scope); } @Override public void visit(NodeTraversal t, Node n, Node parent) { switch (n.getType()) { case Token.CALL: SubclassRelationship relationship = codingConvention.getClassesDefinedByCall(n); if (relationship != null) { ObjectType superClass = ObjectType.cast( typeRegistry.getType(relationship.superclassName));"
+      },
+      {
+        "txt": "ObjectType subClass = ObjectType.cast( typeRegistry.getType(relationship.subclassName)); if (superClass != null && subClass != null) { FunctionType superCtor = superClass.getConstructor(); FunctionType subCtor = subClass.getConstructor(); if (relationship.type == SubclassType.INHERITS) { validator.expectSuperType(t, n, superClass, subClass); } if (superCtor != null && subCtor != null) { codingConvention.applySubclassRelationship("
+      },
+      {
+        "txt": "superCtor, subCtor, relationship.type); } } } String singletonGetterClassName = codingConvention.getSingletonGetterClassName(n); if (singletonGetterClassName != null) { ObjectType objectType = ObjectType.cast( typeRegistry.getType(singletonGetterClassName)); if (objectType != null) {"
+      },
+      {
+        "txt": "FunctionType functionType = objectType.getConstructor(); if (functionType != null) { FunctionType getterType = new FunctionType( typeRegistry, null, null, new FunctionParamBuilder(typeRegistry).build(), objectType, null); codingConvention.applySingletonGetter(functionType, getterType, objectType); } }"
+      },
+      {
+        "txt": "} DelegateRelationship delegateRelationship = codingConvention.getDelegateRelationship(n); if (delegateRelationship != null) { ObjectType delegatorObject = ObjectType.cast( typeRegistry.getType(delegateRelationship.delegator)); ObjectType delegateBaseObject = ObjectType.cast( typeRegistry.getType(delegateRelationship.delegateBase)); ObjectType delegateSuperObject = ObjectType.cast( typeRegistry.getType("
+      },
+      {
+        "txt": "codingConvention.getDelegateSuperclassName())); if (delegatorObject != null && delegateBaseObject != null && delegateSuperObject != null) { FunctionType delegatorCtor = delegatorObject.getConstructor(); FunctionType delegateBaseCtor = delegateBaseObject.getConstructor(); FunctionType delegateSuperCtor = delegateSuperObject.getConstructor(); if (delegatorCtor != null && delegateBaseCtor != null &&"
+      },
+      {
+        "txt": "delegateSuperCtor != null) { FunctionParamBuilder functionParamBuilder = new FunctionParamBuilder(typeRegistry); functionParamBuilder.addRequiredParams( typeRegistry.getNativeType(U2U_CONSTRUCTOR_TYPE)); FunctionType findDelegate = new FunctionType( typeRegistry, null, null, functionParamBuilder.build(), typeRegistry.createNullableType(delegateBaseObject), null); FunctionType delegateProxy = typeRegistry.createConstructorType("
+      },
+      {
+        "txt": "delegateBaseObject.getReferenceName(), null, null, null); delegateProxy.setPrototypeBasedOn(delegateBaseCtor); codingConvention.applyDelegateRelationship( delegateSuperObject, delegateBaseObject, delegatorObject, delegateProxy, findDelegate); delegateProxyMap.put( delegateProxy.getPrototype(), delegateBaseCtor.getPrototype()); }"
+      },
+      {
+        "txt": "} } ObjectLiteralCast objectLiteralCast = codingConvention.getObjectLiteralCast(t, n); if (objectLiteralCast != null) { ObjectType type = ObjectType.cast( typeRegistry.getType(objectLiteralCast.typeName)); if (type != null && type.getConstructor() != null) { objectLiteralCast.objectNode.setJSType(type); } else {"
+      },
+      {
+        "txt": "compiler.report(JSError.make(t.getSourceName(), n, CONSTRUCTOR_EXPECTED)); } } break; case Token.FUNCTION: if (!t.getInput().isExtern()) { nonExternFunctions.add(n); } if (parent.getType() == Token.ASSIGN ||"
+      },
+      {
+        "txt": "parent.getType() == Token.NAME) { return; } define(n, parent); break; case Token.ASSIGN: define(n, parent); checkForOldStyleTypedef(t, n); Node firstChild = n.getFirstChild(); if (firstChild.getType() == Token.GETPROP &&"
+      },
+      {
+        "txt": "firstChild.isQualifiedName()) { maybeDeclareQualifiedName(t, n.getJSDocInfo(), firstChild, n, firstChild.getNext()); } break; case Token.CATCH: define(n, parent); break; case Token.VAR: define(n, parent);"
+      },
+      {
+        "txt": "if (n.hasOneChild()) { checkForOldStyleTypedef(t, n); checkForTypedef(t, n.getFirstChild(), n.getJSDocInfo()); } break; case Token.GETPROP: if (parent.getType() == Token.EXPR_RESULT && n.isQualifiedName()) { checkForTypedef(t, n, n.getJSDocInfo()); maybeDeclareQualifiedName(t, n.getJSDocInfo(), n, parent, null);"
+      },
+      {
+        "txt": "} break; } } private void checkForTypedef( NodeTraversal t, Node candidate, JSDocInfo info) { if (info == null || !info.hasTypedefType()) { return; } String typedef = candidate.getQualifiedName();"
+      },
+      {
+        "txt": "if (typedef == null) { return; } typeRegistry.forwardDeclareType(typedef); JSType realType = info.getTypedefType().evaluate(scope); if (realType == null) { compiler.report( JSError.make( t.getSourceName(), candidate, MALFORMED_TYPEDEF, typedef)); }"
+      },
+      {
+        "txt": "typeRegistry.declareType(typedef, realType); if (candidate.getType() == Token.GETPROP) { defineSlot(candidate, candidate.getParent(), typeRegistry.getNativeType(NO_TYPE), false); } } private void checkForOldStyleTypedef(NodeTraversal t, Node candidate) { String typedef = codingConvention.identifyTypeDefAssign(candidate); if (typedef != null) { typeRegistry.forwardDeclareType(typedef);"
+      },
+      {
+        "txt": "JSDocInfo info = candidate.getJSDocInfo(); JSType realType = info == null ? null : info.getType().evaluate(scope); if (realType == null) { compiler.report( JSError.make( t.getSourceName(), candidate, MALFORMED_TYPEDEF, typedef)); } typeRegistry.declareType(typedef, realType); }"
+      },
+      {
+        "txt": "} private void maybeDeclareQualifiedName(NodeTraversal t, JSDocInfo info, Node n, Node parent, Node rhsValue) { Node ownerNode = n.getFirstChild(); String ownerName = ownerNode.getQualifiedName(); String qName = n.getQualifiedName(); String propName = n.getLastChild().getString(); Preconditions.checkArgument(qName != null && ownerName != null); if (\"prototype\".equals(propName)) { Var qVar = scope.getVar(qName);"
+      },
+      {
+        "txt": "if (qVar != null) { if (!qVar.isTypeInferred()) { return; } scope.undeclare(qVar); } } JSType valueType = getDeclaredGetPropType(t, info, n, rhsValue); if (valueType == null && rhsValue != null) { valueType = rhsValue.getJSType();"
+      },
+      {
+        "txt": "} if (valueType == null) { if (parent.getType() == Token.EXPR_RESULT) { stubDeclarations.add(new StubDeclaration( n, t.getInput().isExtern(), ownerName)); } else if (rhsValue != null && rhsValue.getType() == Token.TRUE) { ObjectType ownerType = getObjectSlot(ownerName); if (ownerType instanceof FunctionType) { JSType ownerTypeOfThis = ((FunctionType) ownerType).getTypeOfThis();"
+      },
+      {
+        "txt": "String delegateName = codingConvention.getDelegateSuperclassName(); JSType delegateType = delegateName == null ? null : typeRegistry.getType(delegateName); if (delegateType != null && ownerTypeOfThis.isSubtype(delegateType)) { defineSlot(n, parent, typeRegistry.getNativeType(BOOLEAN_TYPE), true); } } }"
+      },
+      {
+        "txt": "return; } boolean inferred = true; if (info != null) { inferred = !(info.hasType() || info.hasEnumParameterType() || FunctionTypeBuilder.isFunctionTypeDeclaration(info)); } if (inferred) { inferred = !(rhsValue != null && rhsValue.getType() == Token.FUNCTION &&"
+      },
+      {
+        "txt": "!scope.isDeclared(qName, false)); } if (!inferred) { ObjectType ownerType = getObjectSlot(ownerName); if (ownerType != null) { boolean isExtern = t.getInput().isExtern(); if ((!ownerType.hasOwnProperty(propName) || ownerType.isPropertyTypeInferred(propName)) && ((isExtern && !ownerType.isNativeObjectType()) || !ownerType.isInstanceType())) {"
+      },
+      {
+        "txt": "ownerType.defineDeclaredProperty(propName, valueType, isExtern); } } defineSlot(n, parent, valueType, inferred); } } private ObjectType getObjectSlot(String slotName) { Var ownerVar = scope.getVar(slotName); if (ownerVar != null) { JSType ownerVarType = ownerVar.getType();"
+      },
+      {
+        "txt": "return ObjectType.cast(ownerVarType == null ? null : ownerVarType.restrictByNotNullOrUndefined()); } return null; } private JSType getDeclaredGetPropType(NodeTraversal t, JSDocInfo info, Node n, Node rhsValue) { if (info != null && info.hasType()) { return getDeclaredTypeInAnnotation(t, n, info); } else if (info != null && info.hasEnumParameterType()) {"
+      },
+      {
+        "txt": "return n.getJSType(); } else if (rhsValue != null && rhsValue.getType() == Token.FUNCTION) { return rhsValue.getJSType(); } else { return getDeclaredTypeInAnnotation(t, n, info); } } private void resolveStubDeclarations() { for (StubDeclaration stub : stubDeclarations) {"
+      },
+      {
+        "txt": "Node n = stub.node; Node parent = n.getParent(); String qName = n.getQualifiedName(); String propName = n.getLastChild().getString(); String ownerName = stub.ownerName; boolean isExtern = stub.isExtern; if (scope.isDeclared(qName, false)) { continue; } ObjectType ownerType = getObjectSlot(ownerName);"
+      },
+      {
+        "txt": "ObjectType unknownType = typeRegistry.getNativeObjectType(UNKNOWN_TYPE); defineSlot(n, parent, unknownType, true); if (ownerType != null && (isExtern || ownerType.isFunctionPrototypeType())) { ownerType.defineInferredProperty( propName, unknownType, isExtern); } else { typeRegistry.registerPropertyOnType( propName, ownerType == null ? unknownType : ownerType); }"
+      },
+      {
+        "txt": "} } private final class StubDeclaration { private final Node node; private final boolean isExtern; private final String ownerName; private StubDeclaration(Node node, boolean isExtern, String ownerName) { this.node = node; this.isExtern = isExtern; this.ownerName = ownerName;"
+      },
+      {
+        "txt": "} } private final class CollectProperties extends AbstractShallowCallback { private final ObjectType thisType; CollectProperties(ObjectType thisType) { this.thisType = thisType; } public void visit(NodeTraversal t, Node n, Node parent) { if (parent != null && parent.getType() == Token.EXPR_RESULT) {"
+      },
+      {
+        "txt": "switch (n.getType()) { case Token.ASSIGN: maybeCollectMember(t, n.getFirstChild(), n); break; case Token.GETPROP: maybeCollectMember(t, n, n); break; } } }"
+      },
+      {
+        "txt": "private void maybeCollectMember(NodeTraversal t, Node member, Node nodeWithJsDocInfo) { JSDocInfo info = nodeWithJsDocInfo.getJSDocInfo(); if (info == null || member.getType() != Token.GETPROP || member.getFirstChild().getType() != Token.THIS) { return; } member.getFirstChild().setJSType(thisType); JSType jsType = getDeclaredTypeInAnnotation(t, member, info);"
+      },
+      {
+        "txt": "Node name = member.getLastChild(); if (jsType != null && (name.getType() == Token.NAME || name.getType() == Token.STRING)) { thisType.defineDeclaredProperty( name.getString(), jsType, false /* functions with implementations are not in externs */); } } } // end CollectProperties"
+      },
+      {
+        "txt": "} // end GlobalScopeBuilder private final class LocalScopeBuilder extends AbstractScopeBuilder { private LocalScopeBuilder(Scope scope) { super(scope); } void build() { NodeTraversal.traverse(compiler, scope.getRootNode(), this); } @Override public void visit(NodeTraversal t, Node n, Node parent) { if (n == scope.getRootNode()) return;"
+      },
+      {
+        "txt": "if (n.getType() == Token.LP && parent == scope.getRootNode()) { handleFunctionInputs(parent); return; } switch (n.getType()) { case Token.FUNCTION: if (parent.getType() == Token.NAME) { return; } define(n, parent);"
+      },
+      {
+        "txt": "break; case Token.CATCH: case Token.VAR: define(n, parent); break; } } private void handleFunctionInputs(Node fnNode) { Node fnNameNode = fnNode.getFirstChild(); String fnName = fnNameNode.getString();"
+      },
+      {
+        "txt": "if (!fnName.isEmpty()) { Scope.Var fnVar = scope.getVar(fnName); if (fnVar == null || (fnVar.getNameNode() != null && fnVar.getInitialValue() != fnNode)) { defineSlot(fnNameNode, fnNode, fnNode.getJSType(), false); } } declareArguments(fnNode); }"
+      },
+      {
+        "txt": "private void declareArguments(Node functionNode) { Node astParameters = functionNode.getFirstChild().getNext(); Node body = astParameters.getNext(); FunctionType functionType = (FunctionType) functionNode.getJSType(); if (functionType != null) { Node jsDocParameters = functionType.getParametersNode(); if (jsDocParameters != null) { Node jsDocParameter = jsDocParameters.getFirstChild(); for (Node astParameter : astParameters.children()) { if (jsDocParameter != null) {"
+      },
+      {
+        "txt": "defineSlot(astParameter, functionNode, jsDocParameter.getJSType(), true); jsDocParameter = jsDocParameter.getNext(); } else { defineSlot(astParameter, functionNode, null, true); } } } } } // end declareArguments"
+      }
+    ]
+  },
+  {
+    "id": 502,
+    "file_path": "src/com/google/javascript/jscomp/TypedScopeCreator.java",
+    "start-bug-line": 563,
+    "end-bug-line": 563,
+    "bug": "",
+    "fix": "for (ObjectType iface : ownerType.getCtorImplementedInterfaces()) { propType = iface.getPropertyType(propName); if (propType instanceof FunctionType) { return (FunctionType) propType; } } }",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.google.javascript.jscomp; import static com.google.javascript.jscomp.TypeCheck.ENUM_DUP; import static com.google.javascript.jscomp.TypeCheck.ENUM_NOT_CONSTANT; import static com.google.javascript.jscomp.TypeCheck.MULTIPLE_VAR_DEF; import static com.google.javascript.rhino.jstype.JSTypeNative.ARRAY_FUNCTION_TYPE; import static com.google.javascript.rhino.jstype.JSTypeNative.BOOLEAN_TYPE; import static com.google.javascript.rhino.jstype.JSTypeNative.BOOLEAN_OBJECT_FUNCTION_TYPE; import static com.google.javascript.rhino.jstype.JSTypeNative.DATE_FUNCTION_TYPE;"
+      },
+      {
+        "txt": "import static com.google.javascript.rhino.jstype.JSTypeNative.ERROR_FUNCTION_TYPE; import static com.google.javascript.rhino.jstype.JSTypeNative.EVAL_ERROR_FUNCTION_TYPE; import static com.google.javascript.rhino.jstype.JSTypeNative.FUNCTION_FUNCTION_TYPE; import static com.google.javascript.rhino.jstype.JSTypeNative.OBJECT_TYPE; import static com.google.javascript.rhino.jstype.JSTypeNative.NO_OBJECT_TYPE; import static com.google.javascript.rhino.jstype.JSTypeNative.NO_TYPE; import static com.google.javascript.rhino.jstype.JSTypeNative.NUMBER_OBJECT_FUNCTION_TYPE; import static com.google.javascript.rhino.jstype.JSTypeNative.OBJECT_FUNCTION_TYPE; import static com.google.javascript.rhino.jstype.JSTypeNative.RANGE_ERROR_FUNCTION_TYPE; import static com.google.javascript.rhino.jstype.JSTypeNative.REFERENCE_ERROR_FUNCTION_TYPE;"
+      },
+      {
+        "txt": "import static com.google.javascript.rhino.jstype.JSTypeNative.REGEXP_FUNCTION_TYPE; import static com.google.javascript.rhino.jstype.JSTypeNative.STRING_OBJECT_FUNCTION_TYPE; import static com.google.javascript.rhino.jstype.JSTypeNative.SYNTAX_ERROR_FUNCTION_TYPE; import static com.google.javascript.rhino.jstype.JSTypeNative.TYPE_ERROR_FUNCTION_TYPE; import static com.google.javascript.rhino.jstype.JSTypeNative.UNKNOWN_TYPE; import static com.google.javascript.rhino.jstype.JSTypeNative.URI_ERROR_FUNCTION_TYPE; import static com.google.javascript.rhino.jstype.JSTypeNative.U2U_CONSTRUCTOR_TYPE; import static com.google.javascript.rhino.jstype.JSTypeNative.VOID_TYPE; import com.google.common.annotations.VisibleForTesting; import javax.annotation.Nullable;"
+      },
+      {
+        "txt": "import com.google.common.base.Preconditions; import com.google.common.collect.Lists; import com.google.common.collect.Maps; import com.google.javascript.jscomp.CodingConvention.DelegateRelationship; import com.google.javascript.jscomp.CodingConvention.ObjectLiteralCast; import com.google.javascript.jscomp.CodingConvention.SubclassRelationship; import com.google.javascript.jscomp.CodingConvention.SubclassType; import com.google.javascript.jscomp.NodeTraversal.AbstractShallowCallback; import com.google.javascript.jscomp.Scope.Var; import com.google.javascript.rhino.JSDocInfo;"
+      },
+      {
+        "txt": "import com.google.javascript.rhino.Node; import com.google.javascript.rhino.Token; import com.google.javascript.rhino.jstype.EnumType; import com.google.javascript.rhino.jstype.FunctionParamBuilder; import com.google.javascript.rhino.jstype.FunctionType; import com.google.javascript.rhino.jstype.JSType; import com.google.javascript.rhino.jstype.JSTypeNative; import com.google.javascript.rhino.jstype.JSTypeRegistry; import com.google.javascript.rhino.jstype.ObjectType; import java.util.List;"
+      },
+      {
+        "txt": "import java.util.Map; final class TypedScopeCreator implements ScopeCreator { static final DiagnosticType MALFORMED_TYPEDEF = DiagnosticType.warning( \"JSC_MALFORMED_TYPEDEF\", \"Typedef for {0} does not have any type information\"); static final DiagnosticType ENUM_INITIALIZER = DiagnosticType.warning( \"JSC_ENUM_INITIALIZER_NOT_ENUM\", \"enum initializer must be an object literal or an enum\");"
+      },
+      {
+        "txt": "static final DiagnosticType CONSTRUCTOR_EXPECTED = DiagnosticType.warning( \"JSC_REFLECT_CONSTRUCTOR_EXPECTED\", \"Constructor expected as first argument\"); private final AbstractCompiler compiler; private final TypeValidator validator; private final CodingConvention codingConvention; private final JSTypeRegistry typeRegistry; private Map<ObjectType, ObjectType> delegateProxyMap = Maps.newHashMap(); TypedScopeCreator(AbstractCompiler compiler) {"
+      },
+      {
+        "txt": "this(compiler, compiler.getCodingConvention()); } TypedScopeCreator(AbstractCompiler compiler, CodingConvention codingConvention) { this.compiler = compiler; this.validator = compiler.getTypeValidator(); this.codingConvention = codingConvention; this.typeRegistry = compiler.getTypeRegistry(); } public Scope createScope(Node root, Scope parent) {"
+      },
+      {
+        "txt": "Scope newScope = null; if (parent == null) { newScope = createInitialScope(root); GlobalScopeBuilder scopeBuilder = new GlobalScopeBuilder(newScope); NodeTraversal.traverse(compiler, root, scopeBuilder); scopeBuilder.resolveStubDeclarations(); for (Node functionNode : scopeBuilder.nonExternFunctions) { JSType type = functionNode.getJSType(); if (type != null && type instanceof FunctionType) { FunctionType fnType = (FunctionType) type;"
+      },
+      {
+        "txt": "ObjectType fnThisType = fnType.getTypeOfThis(); if (!fnThisType.isUnknownType()) { NodeTraversal.traverse(compiler, functionNode.getLastChild(), scopeBuilder.new CollectProperties(fnThisType)); } } } codingConvention.defineDelegateProxyProperties( typeRegistry, newScope, delegateProxyMap); } else {"
+      },
+      {
+        "txt": "newScope = new Scope(parent, root); (new LocalScopeBuilder(newScope)).build(); } typeRegistry.resolveTypesInScope(newScope); return newScope; } @VisibleForTesting Scope createInitialScope(Node root) { Scope s = new Scope(root, compiler); declareNativeFunctionType(s, ARRAY_FUNCTION_TYPE);"
+      },
+      {
+        "txt": "declareNativeFunctionType(s, BOOLEAN_OBJECT_FUNCTION_TYPE); declareNativeFunctionType(s, DATE_FUNCTION_TYPE); declareNativeFunctionType(s, ERROR_FUNCTION_TYPE); declareNativeFunctionType(s, EVAL_ERROR_FUNCTION_TYPE); declareNativeFunctionType(s, FUNCTION_FUNCTION_TYPE); declareNativeFunctionType(s, NUMBER_OBJECT_FUNCTION_TYPE); declareNativeFunctionType(s, OBJECT_FUNCTION_TYPE); declareNativeFunctionType(s, RANGE_ERROR_FUNCTION_TYPE); declareNativeFunctionType(s, REFERENCE_ERROR_FUNCTION_TYPE); declareNativeFunctionType(s, REGEXP_FUNCTION_TYPE);"
+      },
+      {
+        "txt": "declareNativeFunctionType(s, STRING_OBJECT_FUNCTION_TYPE); declareNativeFunctionType(s, SYNTAX_ERROR_FUNCTION_TYPE); declareNativeFunctionType(s, TYPE_ERROR_FUNCTION_TYPE); declareNativeFunctionType(s, URI_ERROR_FUNCTION_TYPE); declareNativeValueType(s, \"undefined\", VOID_TYPE); declareNativeValueType(s, \"goog.typedef\", NO_TYPE); declareNativeValueType(s, \"ActiveXObject\", NO_OBJECT_TYPE); return s; } private void declareNativeFunctionType(Scope scope, JSTypeNative tId) {"
+      },
+      {
+        "txt": "FunctionType t = typeRegistry.getNativeFunctionType(tId); declareNativeType(scope, t.getInstanceType().getReferenceName(), t); declareNativeType( scope, t.getPrototype().getReferenceName(), t.getPrototype()); } private void declareNativeValueType(Scope scope, String name, JSTypeNative tId) { declareNativeType(scope, name, typeRegistry.getNativeType(tId)); } private void declareNativeType(Scope scope, String name, JSType t) {"
+      },
+      {
+        "txt": "scope.declare(name, null, t, null, false); } private static Node getPrototypePropertyOwner(Node n) { if (n.getType() == Token.GETPROP) { Node firstChild = n.getFirstChild(); if (firstChild.getType() == Token.GETPROP && firstChild.getLastChild().getString().equals(\"prototype\")) { Node maybeOwner = firstChild.getFirstChild(); if (maybeOwner.isQualifiedName()) { return maybeOwner;"
+      },
+      {
+        "txt": "} } } return null; } private abstract class AbstractScopeBuilder implements NodeTraversal.Callback { final Scope scope; private String sourceName = null; private AbstractScopeBuilder(Scope scope) {"
+      },
+      {
+        "txt": "this.scope = scope; } @Override public final boolean shouldTraverse(NodeTraversal nodeTraversal, Node n, Node parent) { if (n.getType() == Token.FUNCTION || n.getType() == Token.SCRIPT) { sourceName = (String) n.getProp(Node.SOURCENAME_PROP); } return parent == null || parent.getType() != Token.FUNCTION ||"
+      },
+      {
+        "txt": "n == parent.getFirstChild() || parent == scope.getRootNode(); } @Override public abstract void visit(NodeTraversal t, Node n, Node parent); JSType getDeclaredTypeInAnnotation( NodeTraversal t, Node node, JSDocInfo info) { return getDeclaredTypeInAnnotation(t.getSourceName(), node, info); } JSType getDeclaredTypeInAnnotation(String sourceName, Node node, JSDocInfo info) {"
+      },
+      {
+        "txt": "JSType jsType = null; Node objNode = node.getType() == Token.GETPROP ? node.getFirstChild() : null; if (info != null) { if (info.hasType()) { jsType = info.getType().evaluate(scope); } else if (FunctionTypeBuilder.isFunctionTypeDeclaration(info)) { String fnName = node.getQualifiedName(); if (info.isConstructor() && typeRegistry.getType(fnName) != null) { return null;"
+      },
+      {
+        "txt": "} FunctionTypeBuilder builder = new FunctionTypeBuilder( fnName, compiler, node, sourceName, scope) .inferTemplateTypeName(info) .inferReturnType(info) .inferParameterTypes(info) .inferInheritance(info); boolean searchedForThisType = false; if (objNode != null) {"
+      },
+      {
+        "txt": "if (objNode.getType() == Token.GETPROP && objNode.getLastChild().getString().equals(\"prototype\")) { builder.inferThisType(info, objNode.getFirstChild()); searchedForThisType = true; } else if (objNode.getType() == Token.THIS) { builder.inferThisType(info, objNode.getJSType()); searchedForThisType = true; } } if (!searchedForThisType) {"
+      },
+      {
+        "txt": "builder.inferThisType(info, (Node) null); } jsType = builder.buildAndRegister(); } } return jsType; } void define(Node n, Node parent) { Preconditions.checkState(sourceName != null); JSDocInfo info = n.getJSDocInfo();"
+      },
+      {
+        "txt": "switch (n.getType()) { case Token.CATCH: Node catchName = n.getFirstChild(); defineSlot(catchName, n, null); break; case Token.VAR: if (n.getChildCount() > 1) { if (info != null) { compiler.report(JSError.make(sourceName, n, MULTIPLE_VAR_DEF)); }"
+      },
+      {
+        "txt": "for (Node name : n.children()) { defineName(name, n, parent, name.getJSDocInfo()); } } else { Node name = n.getFirstChild(); defineName(name, n, parent, (info != null) ? info : name.getJSDocInfo()); } break; case Token.FUNCTION:"
+      },
+      {
+        "txt": "int parentType = parent.getType(); Preconditions.checkState( (scope.isLocal() || parentType != Token.ASSIGN) && parentType != Token.NAME, \"function defined as standalone function when it is being \" + \"assigned\"); String functionName = n.getFirstChild().getString(); FunctionType functionType = getFunctionType(functionName, n, info, null); if (NodeUtil.isFunctionDeclaration(n)) {"
+      },
+      {
+        "txt": "defineSlot(n.getFirstChild(), n, functionType); } break; case Token.ASSIGN: Node rvalue = n.getLastChild(); Node lvalue = n.getFirstChild(); info = (info != null) ? info : rvalue.getJSDocInfo(); if (rvalue.getType() == Token.FUNCTION || info != null && info.isConstructor()) { getFunctionType(lvalue.getQualifiedName(), rvalue, info,"
+      },
+      {
+        "txt": "lvalue); } else if (info != null && info.hasEnumParameterType()) { lvalue.setJSType( getEnumType(lvalue.getQualifiedName(), n, rvalue, info.getEnumParameterType().evaluate(scope))); } break; default: throw new IllegalStateException(Integer.toString(n.getType())); }"
+      },
+      {
+        "txt": "} private void defineName(Node name, Node var, Node parent, JSDocInfo info) { Node value = name.getFirstChild(); if (value != null && value.getType() == Token.FUNCTION) { String functionName = name.getString(); FunctionType functionType = getFunctionType(functionName, value, info, null); defineSlot(name, var, functionType); } else { JSType type = null;"
+      },
+      {
+        "txt": "if (info == null) { CompilerInput input = compiler.getInput(sourceName); Preconditions.checkNotNull(input, sourceName); type = input.isExtern() ? typeRegistry.getNativeType(UNKNOWN_TYPE) : null; } else if (info.hasEnumParameterType()) { type = getEnumType(name.getString(), var, value, info.getEnumParameterType().evaluate(scope)); } else if (info.isConstructor()) { type = getFunctionType(name.getString(), value, info, name);"
+      },
+      {
+        "txt": "} else { type = getDeclaredTypeInAnnotation(sourceName, name, info); } defineSlot(name, var, type); } } private FunctionType getFunctionType(String name, Node rValue, JSDocInfo info, @Nullable Node lvalueNode) { FunctionType functionType = null; if (rValue != null && rValue.isQualifiedName()) {"
+      },
+      {
+        "txt": "Var var = scope.getVar(rValue.getQualifiedName()); if (var != null && var.getType() instanceof FunctionType) { functionType = (FunctionType) var.getType(); if (functionType != null && functionType.isConstructor()) { typeRegistry.declareType(name, functionType.getInstanceType()); } } return functionType; } Node owner = null;"
+      },
+      {
+        "txt": "if (lvalueNode != null) { owner = getPrototypePropertyOwner(lvalueNode); } Node errorRoot = rValue == null ? lvalueNode : rValue; boolean isFnLiteral = rValue != null && rValue.getType() == Token.FUNCTION; Node fnRoot = isFnLiteral ? rValue : null; Node parametersNode = isFnLiteral ? rValue.getFirstChild().getNext() : null; if (functionType == null && info != null && info.hasType()) {"
+      },
+      {
+        "txt": "JSType type = info.getType().evaluate(scope); type = type.restrictByNotNullOrUndefined(); if (type.isFunctionType()) { functionType = (FunctionType) type; functionType.setJSDocInfo(info); } } if (functionType == null) { if (info == null || !FunctionTypeBuilder.isFunctionTypeDeclaration(info)) {"
+      },
+      {
+        "txt": "if (lvalueNode != null && lvalueNode.getType() == Token.GETPROP && lvalueNode.isQualifiedName()) { Var var = scope.getVar( lvalueNode.getFirstChild().getQualifiedName()); if (var != null) { ObjectType ownerType = ObjectType.cast(var.getType()); FunctionType propType = null; if (ownerType != null) { propType = findOverriddenFunction( ownerType, lvalueNode.getLastChild().getString());"
+      },
+      {
+        "txt": "} if (propType != null) { functionType = new FunctionTypeBuilder( name, compiler, errorRoot, sourceName, scope) .setSourceNode(fnRoot) .inferFromOverriddenFunction(propType, parametersNode) .inferThisType(info, owner) .buildAndRegister(); }"
+      },
+      {
+        "txt": "} } } } // end if (functionType == null) if (functionType == null) { functionType = new FunctionTypeBuilder(name, compiler, errorRoot, sourceName, scope) .setSourceNode(fnRoot) .inferTemplateTypeName(info)"
+      },
+      {
+        "txt": ".inferReturnType(info) .inferInheritance(info) .inferThisType(info, owner) .inferParameterTypes(parametersNode, info) .buildAndRegister(); } if (rValue != null) { rValue.setJSType(functionType); } return functionType;"
+      },
+      {
+        "txt": "private FunctionType findOverriddenFunction( ObjectType ownerType, String propName) { JSType propType = ownerType.getPropertyType(propName); if (propType instanceof FunctionType) { return (FunctionType) propType; } <extra_id_0> return null; } private EnumType getEnumType(String name, Node parent, Node value, JSType elementsType) { EnumType enumType = null; if (value != null) {"
+      },
+      {
+        "txt": "EnumType enumType = null; if (value != null) { if (value.getType() == Token.OBJECTLIT) { enumType = typeRegistry.createEnumType(name, elementsType); Node key = value.getFirstChild(); while (key != null) { String keyName = NodeUtil.getStringValue(key); if (enumType.hasOwnProperty(keyName)) { compiler.report(JSError.make(sourceName, key, ENUM_DUP, keyName)); } else if (!codingConvention.isValidEnumKey(keyName)) {"
+      },
+      {
+        "txt": "compiler.report( JSError.make(sourceName, key, ENUM_NOT_CONSTANT, keyName)); } else { enumType.defineElement(keyName); } key = key.getNext(); key = (key == null) ? null : key.getNext(); } } else if (value.isQualifiedName()) { Var var = scope.getVar(value.getQualifiedName());"
+      },
+      {
+        "txt": "if (var != null && var.getType() instanceof EnumType) { enumType = (EnumType) var.getType(); } } } if (enumType == null) { compiler.report(JSError.make(sourceName, parent, ENUM_INITIALIZER)); } else if (scope.isGlobal()) { if (name != null && !name.isEmpty()) { typeRegistry.declareType(name, enumType.getElementsType());"
+      },
+      {
+        "txt": "} } return enumType; } private void defineSlot(Node name, Node parent, JSType type) { defineSlot(name, parent, type, type == null); } void defineSlot(Node n, Node parent, JSType type, boolean inferred) { Preconditions.checkArgument(inferred || type != null); boolean shouldDeclareOnGlobalThis = false;"
+      },
+      {
+        "txt": "if (n.getType() == Token.NAME) { Preconditions.checkArgument( parent.getType() == Token.FUNCTION || parent.getType() == Token.VAR || parent.getType() == Token.LP || parent.getType() == Token.CATCH); shouldDeclareOnGlobalThis = scope.isGlobal() && (parent.getType() == Token.VAR || parent.getType() == Token.FUNCTION); } else {"
+      },
+      {
+        "txt": "Preconditions.checkArgument( n.getType() == Token.GETPROP && (parent.getType() == Token.ASSIGN || parent.getType() == Token.EXPR_RESULT)); } String variableName = n.getQualifiedName(); Preconditions.checkArgument(!variableName.isEmpty()); if (scope.isDeclared(variableName, false)) { Var oldVar = scope.getVar(variableName); validator.expectUndeclaredVariable("
+      },
+      {
+        "txt": "sourceName, n, parent, oldVar, variableName, type); } else { if (!inferred) { n.setJSType(type); } CompilerInput input = compiler.getInput(sourceName); scope.declare(variableName, n, type, input, inferred); if (shouldDeclareOnGlobalThis) { ObjectType globalThis = typeRegistry.getNativeObjectType(JSTypeNative.GLOBAL_THIS);"
+      },
+      {
+        "txt": "boolean isExtern = input.isExtern(); if (inferred) { globalThis.defineInferredProperty(variableName, type == null ? typeRegistry.getNativeType(JSTypeNative.NO_TYPE) : type, isExtern); } else { globalThis.defineDeclaredProperty(variableName, type, isExtern); }"
+      },
+      {
+        "txt": "} if (scope.isGlobal() && type instanceof FunctionType) { FunctionType fnType = (FunctionType) type; if (fnType.isConstructor() || fnType.isInterface()) { FunctionType superClassCtor = fnType.getSuperClassConstructor(); scope.declare(variableName + \".prototype\", n, fnType.getPrototype(), compiler.getInput(sourceName), superClassCtor == null || superClassCtor.getInstanceType().equals( typeRegistry.getNativeType(OBJECT_TYPE)));"
+      },
+      {
+        "txt": "} } } } } private final class GlobalScopeBuilder extends AbstractScopeBuilder { private final List<Node> nonExternFunctions = Lists.newArrayList(); private final List<StubDeclaration> stubDeclarations = Lists.newArrayList(); private GlobalScopeBuilder(Scope scope) {"
+      },
+      {
+        "txt": "super(scope); } @Override public void visit(NodeTraversal t, Node n, Node parent) { switch (n.getType()) { case Token.CALL: SubclassRelationship relationship = codingConvention.getClassesDefinedByCall(n); if (relationship != null) { ObjectType superClass = ObjectType.cast( typeRegistry.getType(relationship.superclassName));"
+      },
+      {
+        "txt": "ObjectType subClass = ObjectType.cast( typeRegistry.getType(relationship.subclassName)); if (superClass != null && subClass != null) { FunctionType superCtor = superClass.getConstructor(); FunctionType subCtor = subClass.getConstructor(); if (relationship.type == SubclassType.INHERITS) { validator.expectSuperType(t, n, superClass, subClass); } if (superCtor != null && subCtor != null) { codingConvention.applySubclassRelationship("
+      },
+      {
+        "txt": "superCtor, subCtor, relationship.type); } } } String singletonGetterClassName = codingConvention.getSingletonGetterClassName(n); if (singletonGetterClassName != null) { ObjectType objectType = ObjectType.cast( typeRegistry.getType(singletonGetterClassName)); if (objectType != null) {"
+      },
+      {
+        "txt": "FunctionType functionType = objectType.getConstructor(); if (functionType != null) { FunctionType getterType = new FunctionType( typeRegistry, null, null, new FunctionParamBuilder(typeRegistry).build(), objectType, null); codingConvention.applySingletonGetter(functionType, getterType, objectType); } }"
+      },
+      {
+        "txt": "} DelegateRelationship delegateRelationship = codingConvention.getDelegateRelationship(n); if (delegateRelationship != null) { ObjectType delegatorObject = ObjectType.cast( typeRegistry.getType(delegateRelationship.delegator)); ObjectType delegateBaseObject = ObjectType.cast( typeRegistry.getType(delegateRelationship.delegateBase)); ObjectType delegateSuperObject = ObjectType.cast( typeRegistry.getType("
+      },
+      {
+        "txt": "codingConvention.getDelegateSuperclassName())); if (delegatorObject != null && delegateBaseObject != null && delegateSuperObject != null) { FunctionType delegatorCtor = delegatorObject.getConstructor(); FunctionType delegateBaseCtor = delegateBaseObject.getConstructor(); FunctionType delegateSuperCtor = delegateSuperObject.getConstructor(); if (delegatorCtor != null && delegateBaseCtor != null &&"
+      },
+      {
+        "txt": "delegateSuperCtor != null) { FunctionParamBuilder functionParamBuilder = new FunctionParamBuilder(typeRegistry); functionParamBuilder.addRequiredParams( typeRegistry.getNativeType(U2U_CONSTRUCTOR_TYPE)); FunctionType findDelegate = new FunctionType( typeRegistry, null, null, functionParamBuilder.build(), typeRegistry.createNullableType(delegateBaseObject), null); FunctionType delegateProxy = typeRegistry.createConstructorType("
+      },
+      {
+        "txt": "delegateBaseObject.getReferenceName(), null, null, null); delegateProxy.setPrototypeBasedOn(delegateBaseCtor); codingConvention.applyDelegateRelationship( delegateSuperObject, delegateBaseObject, delegatorObject, delegateProxy, findDelegate); delegateProxyMap.put( delegateProxy.getPrototype(), delegateBaseCtor.getPrototype()); }"
+      },
+      {
+        "txt": "} } ObjectLiteralCast objectLiteralCast = codingConvention.getObjectLiteralCast(t, n); if (objectLiteralCast != null) { ObjectType type = ObjectType.cast( typeRegistry.getType(objectLiteralCast.typeName)); if (type != null && type.getConstructor() != null) { objectLiteralCast.objectNode.setJSType(type); } else {"
+      },
+      {
+        "txt": "compiler.report(JSError.make(t.getSourceName(), n, CONSTRUCTOR_EXPECTED)); } } break; case Token.FUNCTION: if (!t.getInput().isExtern()) { nonExternFunctions.add(n); } if (parent.getType() == Token.ASSIGN ||"
+      },
+      {
+        "txt": "parent.getType() == Token.NAME) { return; } define(n, parent); break; case Token.ASSIGN: define(n, parent); checkForOldStyleTypedef(t, n); Node firstChild = n.getFirstChild(); if (firstChild.getType() == Token.GETPROP &&"
+      },
+      {
+        "txt": "firstChild.isQualifiedName()) { maybeDeclareQualifiedName(t, n.getJSDocInfo(), firstChild, n, firstChild.getNext()); } break; case Token.CATCH: define(n, parent); break; case Token.VAR: define(n, parent);"
+      },
+      {
+        "txt": "if (n.hasOneChild()) { checkForOldStyleTypedef(t, n); checkForTypedef(t, n.getFirstChild(), n.getJSDocInfo()); } break; case Token.GETPROP: if (parent.getType() == Token.EXPR_RESULT && n.isQualifiedName()) { checkForTypedef(t, n, n.getJSDocInfo()); maybeDeclareQualifiedName(t, n.getJSDocInfo(), n, parent, null);"
+      },
+      {
+        "txt": "} break; } } private void checkForTypedef( NodeTraversal t, Node candidate, JSDocInfo info) { if (info == null || !info.hasTypedefType()) { return; } String typedef = candidate.getQualifiedName();"
+      },
+      {
+        "txt": "if (typedef == null) { return; } typeRegistry.forwardDeclareType(typedef); JSType realType = info.getTypedefType().evaluate(scope); if (realType == null) { compiler.report( JSError.make( t.getSourceName(), candidate, MALFORMED_TYPEDEF, typedef)); }"
+      },
+      {
+        "txt": "typeRegistry.declareType(typedef, realType); if (candidate.getType() == Token.GETPROP) { defineSlot(candidate, candidate.getParent(), typeRegistry.getNativeType(NO_TYPE), false); } } private void checkForOldStyleTypedef(NodeTraversal t, Node candidate) { String typedef = codingConvention.identifyTypeDefAssign(candidate); if (typedef != null) { typeRegistry.forwardDeclareType(typedef);"
+      },
+      {
+        "txt": "JSDocInfo info = candidate.getJSDocInfo(); JSType realType = info == null ? null : info.getType().evaluate(scope); if (realType == null) { compiler.report( JSError.make( t.getSourceName(), candidate, MALFORMED_TYPEDEF, typedef)); } typeRegistry.declareType(typedef, realType); }"
+      },
+      {
+        "txt": "} private void maybeDeclareQualifiedName(NodeTraversal t, JSDocInfo info, Node n, Node parent, Node rhsValue) { Node ownerNode = n.getFirstChild(); String ownerName = ownerNode.getQualifiedName(); String qName = n.getQualifiedName(); String propName = n.getLastChild().getString(); Preconditions.checkArgument(qName != null && ownerName != null); if (\"prototype\".equals(propName)) { Var qVar = scope.getVar(qName);"
+      },
+      {
+        "txt": "if (qVar != null) { if (!qVar.isTypeInferred()) { return; } scope.undeclare(qVar); } } JSType valueType = getDeclaredGetPropType(t, info, n, rhsValue); if (valueType == null && rhsValue != null) { valueType = rhsValue.getJSType();"
+      },
+      {
+        "txt": "} if (valueType == null) { if (parent.getType() == Token.EXPR_RESULT) { stubDeclarations.add(new StubDeclaration( n, t.getInput().isExtern(), ownerName)); } else if (rhsValue != null && rhsValue.getType() == Token.TRUE) { ObjectType ownerType = getObjectSlot(ownerName); if (ownerType instanceof FunctionType) { JSType ownerTypeOfThis = ((FunctionType) ownerType).getTypeOfThis();"
+      },
+      {
+        "txt": "String delegateName = codingConvention.getDelegateSuperclassName(); JSType delegateType = delegateName == null ? null : typeRegistry.getType(delegateName); if (delegateType != null && ownerTypeOfThis.isSubtype(delegateType)) { defineSlot(n, parent, typeRegistry.getNativeType(BOOLEAN_TYPE), true); } } }"
+      },
+      {
+        "txt": "return; } boolean inferred = true; if (info != null) { inferred = !(info.hasType() || info.hasEnumParameterType() || FunctionTypeBuilder.isFunctionTypeDeclaration(info)); } if (inferred) { inferred = !(rhsValue != null && rhsValue.getType() == Token.FUNCTION &&"
+      },
+      {
+        "txt": "!scope.isDeclared(qName, false)); } if (!inferred) { ObjectType ownerType = getObjectSlot(ownerName); if (ownerType != null) { boolean isExtern = t.getInput().isExtern(); if ((!ownerType.hasOwnProperty(propName) || ownerType.isPropertyTypeInferred(propName)) && ((isExtern && !ownerType.isNativeObjectType()) || !ownerType.isInstanceType())) {"
+      },
+      {
+        "txt": "ownerType.defineDeclaredProperty(propName, valueType, isExtern); } } defineSlot(n, parent, valueType, inferred); } } private ObjectType getObjectSlot(String slotName) { Var ownerVar = scope.getVar(slotName); if (ownerVar != null) { JSType ownerVarType = ownerVar.getType();"
+      },
+      {
+        "txt": "return ObjectType.cast(ownerVarType == null ? null : ownerVarType.restrictByNotNullOrUndefined()); } return null; } private JSType getDeclaredGetPropType(NodeTraversal t, JSDocInfo info, Node n, Node rhsValue) { if (info != null && info.hasType()) { return getDeclaredTypeInAnnotation(t, n, info); } else if (info != null && info.hasEnumParameterType()) {"
+      },
+      {
+        "txt": "return n.getJSType(); } else if (rhsValue != null && rhsValue.getType() == Token.FUNCTION) { return rhsValue.getJSType(); } else { return getDeclaredTypeInAnnotation(t, n, info); } } private void resolveStubDeclarations() { for (StubDeclaration stub : stubDeclarations) {"
+      },
+      {
+        "txt": "Node n = stub.node; Node parent = n.getParent(); String qName = n.getQualifiedName(); String propName = n.getLastChild().getString(); String ownerName = stub.ownerName; boolean isExtern = stub.isExtern; if (scope.isDeclared(qName, false)) { continue; } ObjectType ownerType = getObjectSlot(ownerName);"
+      },
+      {
+        "txt": "ObjectType unknownType = typeRegistry.getNativeObjectType(UNKNOWN_TYPE); defineSlot(n, parent, unknownType, true); if (ownerType != null && (isExtern || ownerType.isFunctionPrototypeType())) { ownerType.defineInferredProperty( propName, unknownType, isExtern); } else { typeRegistry.registerPropertyOnType( propName, ownerType == null ? unknownType : ownerType); }"
+      },
+      {
+        "txt": "} } private final class StubDeclaration { private final Node node; private final boolean isExtern; private final String ownerName; private StubDeclaration(Node node, boolean isExtern, String ownerName) { this.node = node; this.isExtern = isExtern; this.ownerName = ownerName;"
+      },
+      {
+        "txt": "} } private final class CollectProperties extends AbstractShallowCallback { private final ObjectType thisType; CollectProperties(ObjectType thisType) { this.thisType = thisType; } public void visit(NodeTraversal t, Node n, Node parent) { if (parent != null && parent.getType() == Token.EXPR_RESULT) {"
+      },
+      {
+        "txt": "switch (n.getType()) { case Token.ASSIGN: maybeCollectMember(t, n.getFirstChild(), n); break; case Token.GETPROP: maybeCollectMember(t, n, n); break; } } }"
+      },
+      {
+        "txt": "private void maybeCollectMember(NodeTraversal t, Node member, Node nodeWithJsDocInfo) { JSDocInfo info = nodeWithJsDocInfo.getJSDocInfo(); if (info == null || member.getType() != Token.GETPROP || member.getFirstChild().getType() != Token.THIS) { return; } member.getFirstChild().setJSType(thisType); JSType jsType = getDeclaredTypeInAnnotation(t, member, info);"
+      },
+      {
+        "txt": "Node name = member.getLastChild(); if (jsType != null && (name.getType() == Token.NAME || name.getType() == Token.STRING)) { thisType.defineDeclaredProperty( name.getString(), jsType, false /* functions with implementations are not in externs */); } } } // end CollectProperties"
+      },
+      {
+        "txt": "} // end GlobalScopeBuilder private final class LocalScopeBuilder extends AbstractScopeBuilder { private LocalScopeBuilder(Scope scope) { super(scope); } void build() { NodeTraversal.traverse(compiler, scope.getRootNode(), this); } @Override public void visit(NodeTraversal t, Node n, Node parent) { if (n == scope.getRootNode()) return;"
+      },
+      {
+        "txt": "if (n.getType() == Token.LP && parent == scope.getRootNode()) { handleFunctionInputs(parent); return; } switch (n.getType()) { case Token.FUNCTION: if (parent.getType() == Token.NAME) { return; } define(n, parent);"
+      },
+      {
+        "txt": "break; case Token.CATCH: case Token.VAR: define(n, parent); break; } } private void handleFunctionInputs(Node fnNode) { Node fnNameNode = fnNode.getFirstChild(); String fnName = fnNameNode.getString();"
+      },
+      {
+        "txt": "if (!fnName.isEmpty()) { Scope.Var fnVar = scope.getVar(fnName); if (fnVar == null || (fnVar.getNameNode() != null && fnVar.getInitialValue() != fnNode)) { defineSlot(fnNameNode, fnNode, fnNode.getJSType(), false); } } declareArguments(fnNode); }"
+      },
+      {
+        "txt": "private void declareArguments(Node functionNode) { Node astParameters = functionNode.getFirstChild().getNext(); Node body = astParameters.getNext(); FunctionType functionType = (FunctionType) functionNode.getJSType(); if (functionType != null) { Node jsDocParameters = functionType.getParametersNode(); if (jsDocParameters != null) { Node jsDocParameter = jsDocParameters.getFirstChild(); for (Node astParameter : astParameters.children()) { if (jsDocParameter != null) {"
+      },
+      {
+        "txt": "defineSlot(astParameter, functionNode, jsDocParameter.getJSType(), true); jsDocParameter = jsDocParameter.getNext(); } else { defineSlot(astParameter, functionNode, null, true); } } } } } // end declareArguments"
+      }
+    ]
+  }
+]

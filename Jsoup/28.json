@@ -1,0 +1,455 @@
+[
+  {
+    "id": 1923,
+    "file_path": "src/main/java/org/jsoup/nodes/Entities.java",
+    "start-bug-line": 3,
+    "end-bug-line": 3,
+    "bug": "",
+    "fix": "import org.jsoup.parser.Parser;",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.jsoup.nodes; <extra_id_0> import java.io.IOException; import java.io.InputStream; import java.nio.charset.CharsetEncoder; import java.util.*; import java.util.regex.Matcher; import java.util.regex.Pattern;"
+      },
+      {
+        "txt": "import java.util.regex.Matcher; import java.util.regex.Pattern; public class Entities { public enum EscapeMode { xhtml(xhtmlByVal), base(baseByVal), extended(fullByVal); private Map<Character, String> map; EscapeMode(Map<Character, String> map) { this.map = map;"
+      },
+      {
+        "txt": "} public Map<Character, String> getMap() { return map; } } private static final Map<String, Character> full; private static final Map<Character, String> xhtmlByVal; private static final Map<String, Character> base; private static final Map<Character, String> baseByVal; private static final Map<Character, String> fullByVal;"
+      },
+      {
+        "txt": "private static final Pattern unescapePattern = Pattern.compile(\"&(#(x|X)?([0-9a-fA-F]+)|[a-zA-Z]+\\\\d*);?\"); private static final Pattern strictUnescapePattern = Pattern.compile(\"&(#(x|X)?([0-9a-fA-F]+)|[a-zA-Z]+\\\\d*);\"); private Entities() {} public static boolean isNamedEntity(String name) { return full.containsKey(name); } public static Character getCharacterByName(String name) { return full.get(name); } static String escape(String string, Document.OutputSettings out) {"
+      },
+      {
+        "txt": "return escape(string, out.encoder(), out.escapeMode()); } static String escape(String string, CharsetEncoder encoder, EscapeMode escapeMode) { StringBuilder accum = new StringBuilder(string.length() * 2); Map<Character, String> map = escapeMode.getMap(); for (int pos = 0; pos < string.length(); pos++) { Character c = string.charAt(pos); if (map.containsKey(c)) accum.append('&').append(map.get(c)).append(';'); else if (encoder.canEncode(c))"
+      },
+      {
+        "txt": "accum.append(c.charValue()); else accum.append(\"&#\").append((int) c).append(';'); } return accum.toString(); } static String unescape(String string) { return unescape(string, false); } static String unescape(String string, boolean strict) {"
+      },
+      {
+        "txt": "if (!string.contains(\"&\")) return string; Matcher m = strict? strictUnescapePattern.matcher(string) : unescapePattern.matcher(string); StringBuffer accum = new StringBuffer(string.length()); while (m.find()) { int charval = -1; String num = m.group(3); if (num != null) { try { int base = m.group(2) != null ? 16 : 10;"
+      },
+      {
+        "txt": "charval = Integer.valueOf(num, base); } catch (NumberFormatException e) { } } else { String name = m.group(1); if (full.containsKey(name)) charval = full.get(name); } if (charval != -1 || charval > 0xFFFF) { String c = Character.toString((char) charval);"
+      },
+      {
+        "txt": "m.appendReplacement(accum, Matcher.quoteReplacement(c)); } else { m.appendReplacement(accum, Matcher.quoteReplacement(m.group(0))); } } m.appendTail(accum); return accum.toString(); } private static final Object[][] xhtmlArray = { {\"quot\", 0x00022},"
+      },
+      {
+        "txt": "{\"amp\", 0x00026}, {\"apos\", 0x00027}, {\"lt\", 0x0003C}, {\"gt\", 0x0003E} }; static { xhtmlByVal = new HashMap<Character, String>(); base = loadEntities(\"entities-base.properties\"); // most common / default baseByVal = toCharacterKey(base); full = loadEntities(\"entities-full.properties\"); // extended and overblown."
+      },
+      {
+        "txt": "fullByVal = toCharacterKey(full); for (Object[] entity : xhtmlArray) { Character c = Character.valueOf((char) ((Integer) entity[1]).intValue()); xhtmlByVal.put(c, ((String) entity[0])); } } private static Map<String, Character> loadEntities(String filename) { Properties properties = new Properties(); Map<String, Character> entities = new HashMap<String, Character>(); try {"
+      },
+      {
+        "txt": "InputStream in = Entities.class.getResourceAsStream(filename); properties.load(in); in.close(); } catch (IOException e) { throw new MissingResourceException(\"Error loading entities resource: \" + e.getMessage(), \"Entities\", filename); } for (Map.Entry entry: properties.entrySet()) { Character val = Character.valueOf((char) Integer.parseInt((String) entry.getValue(), 16)); String name = (String) entry.getKey(); entities.put(name, val);"
+      },
+      {
+        "txt": "} return entities; } private static Map<Character, String> toCharacterKey(Map<String, Character> inMap) { Map<Character, String> outMap = new HashMap<Character, String>(); for (Map.Entry<String, Character> entry: inMap.entrySet()) { Character character = entry.getValue(); String name = entry.getKey(); if (outMap.containsKey(character)) { if (name.toLowerCase().equals(name))"
+      },
+      {
+        "txt": "outMap.put(character, name); } else { outMap.put(character, name); } } return outMap; }"
+      }
+    ]
+  },
+  {
+    "id": 1924,
+    "file_path": "src/main/java/org/jsoup/nodes/Entities.java",
+    "start-bug-line": 61,
+    "end-bug-line": 61,
+    "bug": "",
+    "fix": "public static boolean isBaseNamedEntity(String name) { return base.containsKey(name); }",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.jsoup.nodes; import java.io.IOException; import java.io.InputStream; import java.nio.charset.CharsetEncoder;"
+      },
+      {
+        "txt": "import java.util.*; import java.util.regex.Matcher; import java.util.regex.Pattern; public class Entities { public enum EscapeMode { xhtml(xhtmlByVal), base(baseByVal), extended(fullByVal); private Map<Character, String> map; EscapeMode(Map<Character, String> map) {"
+      },
+      {
+        "txt": "this.map = map; } public Map<Character, String> getMap() { return map; } } private static final Map<String, Character> full; private static final Map<Character, String> xhtmlByVal; private static final Map<String, Character> base; private static final Map<Character, String> baseByVal;"
+      },
+      {
+        "txt": "private static final Pattern unescapePattern = Pattern.compile(\"&(#(x|X)?([0-9a-fA-F]+)|[a-zA-Z]+\\\\d*);?\"); private static final Pattern strictUnescapePattern = Pattern.compile(\"&(#(x|X)?([0-9a-fA-F]+)|[a-zA-Z]+\\\\d*);\"); private Entities() {} public static boolean isNamedEntity(String name) { return full.containsKey(name); } <extra_id_0> public static Character getCharacterByName(String name) { return full.get(name); } static String escape(String string, Document.OutputSettings out) { return escape(string, out.encoder(), out.escapeMode()); }"
+      },
+      {
+        "txt": "return escape(string, out.encoder(), out.escapeMode()); } static String escape(String string, CharsetEncoder encoder, EscapeMode escapeMode) { StringBuilder accum = new StringBuilder(string.length() * 2); Map<Character, String> map = escapeMode.getMap(); for (int pos = 0; pos < string.length(); pos++) { Character c = string.charAt(pos); if (map.containsKey(c)) accum.append('&').append(map.get(c)).append(';'); else if (encoder.canEncode(c))"
+      },
+      {
+        "txt": "accum.append(c.charValue()); else accum.append(\"&#\").append((int) c).append(';'); } return accum.toString(); } static String unescape(String string) { return unescape(string, false); } static String unescape(String string, boolean strict) {"
+      },
+      {
+        "txt": "if (!string.contains(\"&\")) return string; Matcher m = strict? strictUnescapePattern.matcher(string) : unescapePattern.matcher(string); StringBuffer accum = new StringBuffer(string.length()); while (m.find()) { int charval = -1; String num = m.group(3); if (num != null) { try { int base = m.group(2) != null ? 16 : 10;"
+      },
+      {
+        "txt": "charval = Integer.valueOf(num, base); } catch (NumberFormatException e) { } } else { String name = m.group(1); if (full.containsKey(name)) charval = full.get(name); } if (charval != -1 || charval > 0xFFFF) { String c = Character.toString((char) charval);"
+      },
+      {
+        "txt": "m.appendReplacement(accum, Matcher.quoteReplacement(c)); } else { m.appendReplacement(accum, Matcher.quoteReplacement(m.group(0))); } } m.appendTail(accum); return accum.toString(); } private static final Object[][] xhtmlArray = { {\"quot\", 0x00022},"
+      },
+      {
+        "txt": "{\"amp\", 0x00026}, {\"apos\", 0x00027}, {\"lt\", 0x0003C}, {\"gt\", 0x0003E} }; static { xhtmlByVal = new HashMap<Character, String>(); base = loadEntities(\"entities-base.properties\"); // most common / default baseByVal = toCharacterKey(base); full = loadEntities(\"entities-full.properties\"); // extended and overblown."
+      },
+      {
+        "txt": "fullByVal = toCharacterKey(full); for (Object[] entity : xhtmlArray) { Character c = Character.valueOf((char) ((Integer) entity[1]).intValue()); xhtmlByVal.put(c, ((String) entity[0])); } } private static Map<String, Character> loadEntities(String filename) { Properties properties = new Properties(); Map<String, Character> entities = new HashMap<String, Character>(); try {"
+      },
+      {
+        "txt": "InputStream in = Entities.class.getResourceAsStream(filename); properties.load(in); in.close(); } catch (IOException e) { throw new MissingResourceException(\"Error loading entities resource: \" + e.getMessage(), \"Entities\", filename); } for (Map.Entry entry: properties.entrySet()) { Character val = Character.valueOf((char) Integer.parseInt((String) entry.getValue(), 16)); String name = (String) entry.getKey(); entities.put(name, val);"
+      },
+      {
+        "txt": "} return entities; } private static Map<Character, String> toCharacterKey(Map<String, Character> inMap) { Map<Character, String> outMap = new HashMap<Character, String>(); for (Map.Entry<String, Character> entry: inMap.entrySet()) { Character character = entry.getValue(); String name = entry.getKey(); if (outMap.containsKey(character)) { if (name.toLowerCase().equals(name))"
+      },
+      {
+        "txt": "outMap.put(character, name); } else { outMap.put(character, name); } } return outMap; }"
+      }
+    ]
+  },
+  {
+    "id": 1925,
+    "file_path": "src/main/java/org/jsoup/nodes/Entities.java",
+    "start-bug-line": 103,
+    "end-bug-line": 129,
+    "bug": "if (!string.contains(\"&\")) return string; Matcher m = strict? strictUnescapePattern.matcher(string) : unescapePattern.matcher(string); StringBuffer accum = new StringBuffer(string.length()); while (m.find()) { int charval = -1; String num = m.group(3); if (num != null) { try { int base = m.group(2) != null ? 16 : 10; charval = Integer.valueOf(num, base); } catch (NumberFormatException e) { } } else { String name = m.group(1); if (full.containsKey(name)) charval = full.get(name); } if (charval != -1 || charval > 0xFFFF) { String c = Character.toString((char) charval); m.appendReplacement(accum, Matcher.quoteReplacement(c)); } else { m.appendReplacement(accum, Matcher.quoteReplacement(m.group(0))); } } m.appendTail(accum); return accum.toString();",
+    "fix": "return Parser.unescapeEntities(string, strict);",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.jsoup.nodes; import java.io.IOException; import java.io.InputStream; import java.nio.charset.CharsetEncoder; import java.util.*; import java.util.regex.Matcher; import java.util.regex.Pattern; public class Entities {"
+      },
+      {
+        "txt": "public enum EscapeMode { xhtml(xhtmlByVal), base(baseByVal), extended(fullByVal); private Map<Character, String> map; EscapeMode(Map<Character, String> map) { this.map = map; } public Map<Character, String> getMap() { return map;"
+      },
+      {
+        "txt": "} } private static final Map<String, Character> full; private static final Map<Character, String> xhtmlByVal; private static final Map<String, Character> base; private static final Map<Character, String> baseByVal; private static final Map<Character, String> fullByVal; private static final Pattern unescapePattern = Pattern.compile(\"&(#(x|X)?([0-9a-fA-F]+)|[a-zA-Z]+\\\\d*);?\"); private static final Pattern strictUnescapePattern = Pattern.compile(\"&(#(x|X)?([0-9a-fA-F]+)|[a-zA-Z]+\\\\d*);\"); private Entities() {}"
+      },
+      {
+        "txt": "public static boolean isNamedEntity(String name) { return full.containsKey(name); } public static Character getCharacterByName(String name) { return full.get(name); } static String escape(String string, Document.OutputSettings out) { return escape(string, out.encoder(), out.escapeMode()); } static String escape(String string, CharsetEncoder encoder, EscapeMode escapeMode) {"
+      },
+      {
+        "txt": "StringBuilder accum = new StringBuilder(string.length() * 2); Map<Character, String> map = escapeMode.getMap(); for (int pos = 0; pos < string.length(); pos++) { Character c = string.charAt(pos); if (map.containsKey(c)) accum.append('&').append(map.get(c)).append(';'); else if (encoder.canEncode(c)) accum.append(c.charValue()); else accum.append(\"&#\").append((int) c).append(';');"
+      },
+      {
+        "txt": "return accum.toString(); } static String unescape(String string) { return unescape(string, false); } static String unescape(String string, boolean strict) { <extra_id_0> } private static final Object[][] xhtmlArray = { {\"quot\", 0x00022}, {\"amp\", 0x00026}, {\"apos\", 0x00027}, {\"lt\", 0x0003C},"
+      },
+      {
+        "txt": "{\"apos\", 0x00027}, {\"lt\", 0x0003C}, {\"gt\", 0x0003E} }; static { xhtmlByVal = new HashMap<Character, String>(); base = loadEntities(\"entities-base.properties\"); // most common / default baseByVal = toCharacterKey(base); full = loadEntities(\"entities-full.properties\"); // extended and overblown. fullByVal = toCharacterKey(full);"
+      },
+      {
+        "txt": "for (Object[] entity : xhtmlArray) { Character c = Character.valueOf((char) ((Integer) entity[1]).intValue()); xhtmlByVal.put(c, ((String) entity[0])); } } private static Map<String, Character> loadEntities(String filename) { Properties properties = new Properties(); Map<String, Character> entities = new HashMap<String, Character>(); try { InputStream in = Entities.class.getResourceAsStream(filename);"
+      },
+      {
+        "txt": "properties.load(in); in.close(); } catch (IOException e) { throw new MissingResourceException(\"Error loading entities resource: \" + e.getMessage(), \"Entities\", filename); } for (Map.Entry entry: properties.entrySet()) { Character val = Character.valueOf((char) Integer.parseInt((String) entry.getValue(), 16)); String name = (String) entry.getKey(); entities.put(name, val); }"
+      },
+      {
+        "txt": "return entities; } private static Map<Character, String> toCharacterKey(Map<String, Character> inMap) { Map<Character, String> outMap = new HashMap<Character, String>(); for (Map.Entry<String, Character> entry: inMap.entrySet()) { Character character = entry.getValue(); String name = entry.getKey(); if (outMap.containsKey(character)) { if (name.toLowerCase().equals(name)) outMap.put(character, name);"
+      },
+      {
+        "txt": "} else { outMap.put(character, name); } } return outMap; }"
+      }
+    ]
+  },
+  {
+    "id": 1926,
+    "file_path": "src/main/java/org/jsoup/parser/Parser.java",
+    "start-bug-line": 133,
+    "end-bug-line": 133,
+    "bug": "",
+    "fix": "public static String unescapeEntities(String string, boolean inAttribute) { Tokeniser tokeniser = new Tokeniser(new CharacterReader(string), ParseErrorList.noTracking()); return tokeniser.unescapeEntities(inAttribute); }",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.jsoup.parser; import org.jsoup.nodes.Document; import org.jsoup.nodes.Element; import org.jsoup.nodes.Node; import java.util.List; public class Parser {"
+      },
+      {
+        "txt": "private static final int DEFAULT_MAX_ERRORS = 0; // by default, error tracking is disabled. private TreeBuilder treeBuilder; private int maxErrors = DEFAULT_MAX_ERRORS; private ParseErrorList errors; public Parser(TreeBuilder treeBuilder) { this.treeBuilder = treeBuilder; } public Document parseInput(String html, String baseUri) { errors = isTrackErrors() ? ParseErrorList.tracking(maxErrors) : ParseErrorList.noTracking(); Document doc = treeBuilder.parse(html, baseUri, errors);"
+      },
+      {
+        "txt": "return doc; } public TreeBuilder getTreeBuilder() { return treeBuilder; } public Parser setTreeBuilder(TreeBuilder treeBuilder) { this.treeBuilder = treeBuilder; return this; } public boolean isTrackErrors() {"
+      },
+      {
+        "txt": "return maxErrors > 0; } public Parser setTrackErrors(int maxErrors) { this.maxErrors = maxErrors; return this; } public List<ParseError> getErrors() { return errors; } public static Document parse(String html, String baseUri) {"
+      },
+      {
+        "txt": "TreeBuilder treeBuilder = new HtmlTreeBuilder(); return treeBuilder.parse(html, baseUri, ParseErrorList.noTracking()); } public static List<Node> parseFragment(String fragmentHtml, Element context, String baseUri) { HtmlTreeBuilder treeBuilder = new HtmlTreeBuilder(); return treeBuilder.parseFragment(fragmentHtml, context, baseUri, ParseErrorList.noTracking()); } public static Document parseBodyFragment(String bodyHtml, String baseUri) { Document doc = Document.createShell(baseUri); Element body = doc.body();"
+      },
+      {
+        "txt": "Node[] nodes = nodeList.toArray(new Node[nodeList.size()]); // the node list gets modified when re-parented for (Node node : nodes) { body.appendChild(node); } return doc; } <extra_id_0> public static Document parseBodyFragmentRelaxed(String bodyHtml, String baseUri) { return parse(bodyHtml, baseUri); } public static Parser htmlParser() { return new Parser(new HtmlTreeBuilder()); }"
+      },
+      {
+        "txt": "return new Parser(new HtmlTreeBuilder()); } public static Parser xmlParser() { return new Parser(new XmlTreeBuilder()); }"
+      }
+    ]
+  },
+  {
+    "id": 1927,
+    "file_path": "src/main/java/org/jsoup/parser/Tokeniser.java",
+    "start-bug-line": 136,
+    "end-bug-line": 136,
+    "bug": "String origNameRef = new String(nameRef);",
+    "fix": "[Delete]",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.jsoup.parser; import org.jsoup.helper.Validate; import org.jsoup.nodes.Entities; import java.util.ArrayList; import java.util.List; class Tokeniser { static final char replacementChar = '\\uFFFD'; // replaces null character private CharacterReader reader; // html input"
+      },
+      {
+        "txt": "private ParseErrorList errors; // errors found while tokenising private TokeniserState state = TokeniserState.Data; // current tokenisation state private Token emitPending; // the token we are about to emit on next read private boolean isEmitPending = false; private StringBuilder charBuffer = new StringBuilder(); // buffers characters to output as one token StringBuilder dataBuffer; // buffers data looking for </script> Token.Tag tagPending; // tag we are building up Token.Doctype doctypePending; // doctype building up Token.Comment commentPending; // comment building up private Token.StartTag lastStartTag; // the last start tag emitted, to test appropriate end tag"
+      },
+      {
+        "txt": "private boolean selfClosingFlagAcknowledged = true; Tokeniser(CharacterReader reader, ParseErrorList errors) { this.reader = reader; this.errors = errors; } Token read() { if (!selfClosingFlagAcknowledged) { error(\"Self closing flag not acknowledged\"); selfClosingFlagAcknowledged = true; }"
+      },
+      {
+        "txt": "while (!isEmitPending) state.read(this, reader); if (charBuffer.length() > 0) { String str = charBuffer.toString(); charBuffer.delete(0, charBuffer.length()); return new Token.Character(str); } else { isEmitPending = false; return emitPending; }"
+      },
+      {
+        "txt": "} void emit(Token token) { Validate.isFalse(isEmitPending, \"There is an unread token pending!\"); emitPending = token; isEmitPending = true; if (token.type == Token.TokenType.StartTag) { Token.StartTag startTag = (Token.StartTag) token; lastStartTag = startTag; if (startTag.selfClosing) selfClosingFlagAcknowledged = false;"
+      },
+      {
+        "txt": "} else if (token.type == Token.TokenType.EndTag) { Token.EndTag endTag = (Token.EndTag) token; if (endTag.attributes != null) error(\"Attributes incorrectly present on end tag\"); } } void emit(String str) { charBuffer.append(str); } void emit(char c) {"
+      },
+      {
+        "txt": "charBuffer.append(c); } TokeniserState getState() { return state; } void transition(TokeniserState state) { this.state = state; } void advanceTransition(TokeniserState state) { reader.advance();"
+      },
+      {
+        "txt": "this.state = state; } void acknowledgeSelfClosingFlag() { selfClosingFlagAcknowledged = true; } Character consumeCharacterReference(Character additionalAllowedCharacter, boolean inAttribute) { if (reader.isEmpty()) return null; if (additionalAllowedCharacter != null && additionalAllowedCharacter == reader.current()) return null;"
+      },
+      {
+        "txt": "if (reader.matchesAny('\\t', '\\n', '\\r', '\\f', ' ', '<', '&')) return null; reader.mark(); if (reader.matchConsume(\"#\")) { // numbered boolean isHexMode = reader.matchConsumeIgnoreCase(\"X\"); String numRef = isHexMode ? reader.consumeHexSequence() : reader.consumeDigitSequence(); if (numRef.length() == 0) { // didn't match anything characterReferenceError(\"numeric reference with no numerals\"); reader.rewindToMark(); return null;"
+      },
+      {
+        "txt": "} if (!reader.matchConsume(\";\")) characterReferenceError(\"missing semicolon\"); // missing semi int charval = -1; try { int base = isHexMode ? 16 : 10; charval = Integer.valueOf(numRef, base); } catch (NumberFormatException e) { } // skip if (charval == -1 || (charval >= 0xD800 && charval <= 0xDFFF) || charval > 0x10FFFF) {"
+      },
+      {
+        "txt": "return replacementChar; } else { return (char) charval; } } else { // named String nameRef = reader.consumeLetterThenDigitSequence(); <extra_id_0> boolean looksLegit = reader.matches(';'); boolean found = false; while (nameRef.length() > 0 && !found) { if (Entities.isNamedEntity(nameRef)) found = true; else {"
+      },
+      {
+        "txt": "found = true; else { nameRef = nameRef.substring(0, nameRef.length()-1); reader.unconsume(); } } if (!found) { reader.rewindToMark(); if (looksLegit) // named with semicolon characterReferenceError(String.format(\"invalid named referenece '%s'\", origNameRef));"
+      },
+      {
+        "txt": "return null; } if (inAttribute && (reader.matchesLetter() || reader.matchesDigit() || reader.matchesAny('=', '-', '_'))) { reader.rewindToMark(); return null; } if (!reader.matchConsume(\";\")) characterReferenceError(\"missing semicolon\"); // missing semi return Entities.getCharacterByName(nameRef); }"
+      },
+      {
+        "txt": "} Token.Tag createTagPending(boolean start) { tagPending = start ? new Token.StartTag() : new Token.EndTag(); return tagPending; } void emitTagPending() { tagPending.finaliseTag(); emit(tagPending); } void createCommentPending() {"
+      },
+      {
+        "txt": "commentPending = new Token.Comment(); } void emitCommentPending() { emit(commentPending); } void createDoctypePending() { doctypePending = new Token.Doctype(); } void emitDoctypePending() { emit(doctypePending);"
+      },
+      {
+        "txt": "} void createTempBuffer() { dataBuffer = new StringBuilder(); } boolean isAppropriateEndTagToken() { if (lastStartTag == null) return false; return tagPending.tagName.equals(lastStartTag.tagName); } String appropriateEndTagName() {"
+      },
+      {
+        "txt": "return lastStartTag.tagName; } void error(TokeniserState state) { if (errors.canAddError()) errors.add(new ParseError(reader.pos(), \"Unexpected character '%s' in input state [%s]\", reader.current(), state)); } void eofError(TokeniserState state) { if (errors.canAddError()) errors.add(new ParseError(reader.pos(), \"Unexpectedly reached end of file (EOF) in input state [%s]\", state)); }"
+      },
+      {
+        "txt": "private void characterReferenceError(String message) { if (errors.canAddError()) errors.add(new ParseError(reader.pos(), \"Invalid character reference: %s\", message)); } private void error(String errorMsg) { if (errors.canAddError()) errors.add(new ParseError(reader.pos(), errorMsg)); } boolean currentNodeInHtmlNS() { return true;"
+      }
+    ]
+  },
+  {
+    "id": 1928,
+    "file_path": "src/main/java/org/jsoup/parser/Tokeniser.java",
+    "start-bug-line": 139,
+    "end-bug-line": 147,
+    "bug": "boolean found = false; while (nameRef.length() > 0 && !found) { if (Entities.isNamedEntity(nameRef)) found = true; else { nameRef = nameRef.substring(0, nameRef.length()-1); reader.unconsume(); } }",
+    "fix": "boolean found = (Entities.isBaseNamedEntity(nameRef) || (Entities.isNamedEntity(nameRef) && looksLegit));",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.jsoup.parser; import org.jsoup.helper.Validate; import org.jsoup.nodes.Entities; import java.util.ArrayList; import java.util.List; class Tokeniser { static final char replacementChar = '\\uFFFD'; // replaces null character private CharacterReader reader; // html input private ParseErrorList errors; // errors found while tokenising private TokeniserState state = TokeniserState.Data; // current tokenisation state"
+      },
+      {
+        "txt": "private Token emitPending; // the token we are about to emit on next read private boolean isEmitPending = false; private StringBuilder charBuffer = new StringBuilder(); // buffers characters to output as one token StringBuilder dataBuffer; // buffers data looking for </script> Token.Tag tagPending; // tag we are building up Token.Doctype doctypePending; // doctype building up Token.Comment commentPending; // comment building up private Token.StartTag lastStartTag; // the last start tag emitted, to test appropriate end tag private boolean selfClosingFlagAcknowledged = true; Tokeniser(CharacterReader reader, ParseErrorList errors) {"
+      },
+      {
+        "txt": "this.reader = reader; this.errors = errors; } Token read() { if (!selfClosingFlagAcknowledged) { error(\"Self closing flag not acknowledged\"); selfClosingFlagAcknowledged = true; } while (!isEmitPending) state.read(this, reader);"
+      },
+      {
+        "txt": "if (charBuffer.length() > 0) { String str = charBuffer.toString(); charBuffer.delete(0, charBuffer.length()); return new Token.Character(str); } else { isEmitPending = false; return emitPending; } } void emit(Token token) {"
+      },
+      {
+        "txt": "Validate.isFalse(isEmitPending, \"There is an unread token pending!\"); emitPending = token; isEmitPending = true; if (token.type == Token.TokenType.StartTag) { Token.StartTag startTag = (Token.StartTag) token; lastStartTag = startTag; if (startTag.selfClosing) selfClosingFlagAcknowledged = false; } else if (token.type == Token.TokenType.EndTag) { Token.EndTag endTag = (Token.EndTag) token;"
+      },
+      {
+        "txt": "if (endTag.attributes != null) error(\"Attributes incorrectly present on end tag\"); } } void emit(String str) { charBuffer.append(str); } void emit(char c) { charBuffer.append(c); }"
+      },
+      {
+        "txt": "TokeniserState getState() { return state; } void transition(TokeniserState state) { this.state = state; } void advanceTransition(TokeniserState state) { reader.advance(); this.state = state; }"
+      },
+      {
+        "txt": "void acknowledgeSelfClosingFlag() { selfClosingFlagAcknowledged = true; } Character consumeCharacterReference(Character additionalAllowedCharacter, boolean inAttribute) { if (reader.isEmpty()) return null; if (additionalAllowedCharacter != null && additionalAllowedCharacter == reader.current()) return null; if (reader.matchesAny('\\t', '\\n', '\\r', '\\f', ' ', '<', '&')) return null;"
+      },
+      {
+        "txt": "reader.mark(); if (reader.matchConsume(\"#\")) { // numbered boolean isHexMode = reader.matchConsumeIgnoreCase(\"X\"); String numRef = isHexMode ? reader.consumeHexSequence() : reader.consumeDigitSequence(); if (numRef.length() == 0) { // didn't match anything characterReferenceError(\"numeric reference with no numerals\"); reader.rewindToMark(); return null; } if (!reader.matchConsume(\";\"))"
+      },
+      {
+        "txt": "characterReferenceError(\"missing semicolon\"); // missing semi int charval = -1; try { int base = isHexMode ? 16 : 10; charval = Integer.valueOf(numRef, base); } catch (NumberFormatException e) { } // skip if (charval == -1 || (charval >= 0xD800 && charval <= 0xDFFF) || charval > 0x10FFFF) { characterReferenceError(\"character outside of valid range\"); return replacementChar;"
+      },
+      {
+        "txt": "return (char) charval; } } else { // named String nameRef = reader.consumeLetterThenDigitSequence(); String origNameRef = new String(nameRef); boolean looksLegit = reader.matches(';'); <extra_id_0> if (!found) { reader.rewindToMark(); if (looksLegit) // named with semicolon characterReferenceError(String.format(\"invalid named referenece '%s'\", origNameRef)); return null; }"
+      },
+      {
+        "txt": "return null; } if (inAttribute && (reader.matchesLetter() || reader.matchesDigit() || reader.matchesAny('=', '-', '_'))) { reader.rewindToMark(); return null; } if (!reader.matchConsume(\";\")) characterReferenceError(\"missing semicolon\"); // missing semi return Entities.getCharacterByName(nameRef); }"
+      },
+      {
+        "txt": "} Token.Tag createTagPending(boolean start) { tagPending = start ? new Token.StartTag() : new Token.EndTag(); return tagPending; } void emitTagPending() { tagPending.finaliseTag(); emit(tagPending); } void createCommentPending() {"
+      },
+      {
+        "txt": "commentPending = new Token.Comment(); } void emitCommentPending() { emit(commentPending); } void createDoctypePending() { doctypePending = new Token.Doctype(); } void emitDoctypePending() { emit(doctypePending);"
+      },
+      {
+        "txt": "} void createTempBuffer() { dataBuffer = new StringBuilder(); } boolean isAppropriateEndTagToken() { if (lastStartTag == null) return false; return tagPending.tagName.equals(lastStartTag.tagName); } String appropriateEndTagName() {"
+      },
+      {
+        "txt": "return lastStartTag.tagName; } void error(TokeniserState state) { if (errors.canAddError()) errors.add(new ParseError(reader.pos(), \"Unexpected character '%s' in input state [%s]\", reader.current(), state)); } void eofError(TokeniserState state) { if (errors.canAddError()) errors.add(new ParseError(reader.pos(), \"Unexpectedly reached end of file (EOF) in input state [%s]\", state)); }"
+      },
+      {
+        "txt": "private void characterReferenceError(String message) { if (errors.canAddError()) errors.add(new ParseError(reader.pos(), \"Invalid character reference: %s\", message)); } private void error(String errorMsg) { if (errors.canAddError()) errors.add(new ParseError(reader.pos(), errorMsg)); } boolean currentNodeInHtmlNS() { return true;"
+      }
+    ]
+  },
+  {
+    "id": 1929,
+    "file_path": "src/main/java/org/jsoup/parser/Tokeniser.java",
+    "start-bug-line": 152,
+    "end-bug-line": 152,
+    "bug": "characterReferenceError(String.format(\"invalid named referenece '%s'\", origNameRef));",
+    "fix": "characterReferenceError(String.format(\"invalid named referenece '%s'\", nameRef));",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.jsoup.parser; import org.jsoup.helper.Validate;"
+      },
+      {
+        "txt": "import org.jsoup.nodes.Entities; import java.util.ArrayList; import java.util.List; class Tokeniser { static final char replacementChar = '\\uFFFD'; // replaces null character private CharacterReader reader; // html input private ParseErrorList errors; // errors found while tokenising private TokeniserState state = TokeniserState.Data; // current tokenisation state private Token emitPending; // the token we are about to emit on next read private boolean isEmitPending = false;"
+      },
+      {
+        "txt": "private StringBuilder charBuffer = new StringBuilder(); // buffers characters to output as one token StringBuilder dataBuffer; // buffers data looking for </script> Token.Tag tagPending; // tag we are building up Token.Doctype doctypePending; // doctype building up Token.Comment commentPending; // comment building up private Token.StartTag lastStartTag; // the last start tag emitted, to test appropriate end tag private boolean selfClosingFlagAcknowledged = true; Tokeniser(CharacterReader reader, ParseErrorList errors) { this.reader = reader; this.errors = errors;"
+      },
+      {
+        "txt": "} Token read() { if (!selfClosingFlagAcknowledged) { error(\"Self closing flag not acknowledged\"); selfClosingFlagAcknowledged = true; } while (!isEmitPending) state.read(this, reader); if (charBuffer.length() > 0) { String str = charBuffer.toString();"
+      },
+      {
+        "txt": "charBuffer.delete(0, charBuffer.length()); return new Token.Character(str); } else { isEmitPending = false; return emitPending; } } void emit(Token token) { Validate.isFalse(isEmitPending, \"There is an unread token pending!\"); emitPending = token;"
+      },
+      {
+        "txt": "isEmitPending = true; if (token.type == Token.TokenType.StartTag) { Token.StartTag startTag = (Token.StartTag) token; lastStartTag = startTag; if (startTag.selfClosing) selfClosingFlagAcknowledged = false; } else if (token.type == Token.TokenType.EndTag) { Token.EndTag endTag = (Token.EndTag) token; if (endTag.attributes != null) error(\"Attributes incorrectly present on end tag\");"
+      },
+      {
+        "txt": "} } void emit(String str) { charBuffer.append(str); } void emit(char c) { charBuffer.append(c); } TokeniserState getState() { return state;"
+      },
+      {
+        "txt": "} void transition(TokeniserState state) { this.state = state; } void advanceTransition(TokeniserState state) { reader.advance(); this.state = state; } void acknowledgeSelfClosingFlag() { selfClosingFlagAcknowledged = true;"
+      },
+      {
+        "txt": "} Character consumeCharacterReference(Character additionalAllowedCharacter, boolean inAttribute) { if (reader.isEmpty()) return null; if (additionalAllowedCharacter != null && additionalAllowedCharacter == reader.current()) return null; if (reader.matchesAny('\\t', '\\n', '\\r', '\\f', ' ', '<', '&')) return null; reader.mark(); if (reader.matchConsume(\"#\")) { // numbered"
+      },
+      {
+        "txt": "boolean isHexMode = reader.matchConsumeIgnoreCase(\"X\"); String numRef = isHexMode ? reader.consumeHexSequence() : reader.consumeDigitSequence(); if (numRef.length() == 0) { // didn't match anything characterReferenceError(\"numeric reference with no numerals\"); reader.rewindToMark(); return null; } if (!reader.matchConsume(\";\")) characterReferenceError(\"missing semicolon\"); // missing semi int charval = -1;"
+      },
+      {
+        "txt": "try { int base = isHexMode ? 16 : 10; charval = Integer.valueOf(numRef, base); } catch (NumberFormatException e) { } // skip if (charval == -1 || (charval >= 0xD800 && charval <= 0xDFFF) || charval > 0x10FFFF) { characterReferenceError(\"character outside of valid range\"); return replacementChar; } else { return (char) charval;"
+      },
+      {
+        "txt": "} } else { // named String nameRef = reader.consumeLetterThenDigitSequence(); String origNameRef = new String(nameRef); boolean looksLegit = reader.matches(';'); boolean found = false; while (nameRef.length() > 0 && !found) { if (Entities.isNamedEntity(nameRef)) found = true; else {"
+      },
+      {
+        "txt": "reader.unconsume(); } } if (!found) { reader.rewindToMark(); if (looksLegit) // named with semicolon <extra_id_0> return null; } if (inAttribute && (reader.matchesLetter() || reader.matchesDigit() || reader.matchesAny('=', '-', '_'))) { reader.rewindToMark(); return null; }"
+      },
+      {
+        "txt": "return null; } if (!reader.matchConsume(\";\")) characterReferenceError(\"missing semicolon\"); // missing semi return Entities.getCharacterByName(nameRef); } } Token.Tag createTagPending(boolean start) { tagPending = start ? new Token.StartTag() : new Token.EndTag(); return tagPending;"
+      },
+      {
+        "txt": "} void emitTagPending() { tagPending.finaliseTag(); emit(tagPending); } void createCommentPending() { commentPending = new Token.Comment(); } void emitCommentPending() { emit(commentPending);"
+      },
+      {
+        "txt": "} void createDoctypePending() { doctypePending = new Token.Doctype(); } void emitDoctypePending() { emit(doctypePending); } void createTempBuffer() { dataBuffer = new StringBuilder(); }"
+      },
+      {
+        "txt": "boolean isAppropriateEndTagToken() { if (lastStartTag == null) return false; return tagPending.tagName.equals(lastStartTag.tagName); } String appropriateEndTagName() { return lastStartTag.tagName; } void error(TokeniserState state) { if (errors.canAddError())"
+      },
+      {
+        "txt": "errors.add(new ParseError(reader.pos(), \"Unexpected character '%s' in input state [%s]\", reader.current(), state)); } void eofError(TokeniserState state) { if (errors.canAddError()) errors.add(new ParseError(reader.pos(), \"Unexpectedly reached end of file (EOF) in input state [%s]\", state)); } private void characterReferenceError(String message) { if (errors.canAddError()) errors.add(new ParseError(reader.pos(), \"Invalid character reference: %s\", message)); }"
+      },
+      {
+        "txt": "private void error(String errorMsg) { if (errors.canAddError()) errors.add(new ParseError(reader.pos(), errorMsg)); } boolean currentNodeInHtmlNS() { return true; }"
+      }
+    ]
+  },
+  {
+    "id": 1930,
+    "file_path": "src/main/java/org/jsoup/parser/Tokeniser.java",
+    "start-bug-line": 238,
+    "end-bug-line": 238,
+    "bug": "",
+    "fix": "String unescapeEntities(boolean inAttribute) { StringBuilder builder = new StringBuilder(); while (!reader.isEmpty()) { builder.append(reader.consumeTo('&')); if (reader.matches('&')) { reader.consume(); Character c = consumeCharacterReference(null, inAttribute); if (c == null) builder.append('&'); else builder.append(c); } } return builder.toString(); }",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.jsoup.parser; import org.jsoup.helper.Validate; import org.jsoup.nodes.Entities; import java.util.ArrayList;"
+      },
+      {
+        "txt": "import java.util.List; class Tokeniser { static final char replacementChar = '\\uFFFD'; // replaces null character private CharacterReader reader; // html input private ParseErrorList errors; // errors found while tokenising private TokeniserState state = TokeniserState.Data; // current tokenisation state private Token emitPending; // the token we are about to emit on next read private boolean isEmitPending = false; private StringBuilder charBuffer = new StringBuilder(); // buffers characters to output as one token StringBuilder dataBuffer; // buffers data looking for </script>"
+      },
+      {
+        "txt": "Token.Tag tagPending; // tag we are building up Token.Doctype doctypePending; // doctype building up Token.Comment commentPending; // comment building up private Token.StartTag lastStartTag; // the last start tag emitted, to test appropriate end tag private boolean selfClosingFlagAcknowledged = true; Tokeniser(CharacterReader reader, ParseErrorList errors) { this.reader = reader; this.errors = errors; } Token read() {"
+      },
+      {
+        "txt": "if (!selfClosingFlagAcknowledged) { error(\"Self closing flag not acknowledged\"); selfClosingFlagAcknowledged = true; } while (!isEmitPending) state.read(this, reader); if (charBuffer.length() > 0) { String str = charBuffer.toString(); charBuffer.delete(0, charBuffer.length()); return new Token.Character(str);"
+      },
+      {
+        "txt": "} else { isEmitPending = false; return emitPending; } } void emit(Token token) { Validate.isFalse(isEmitPending, \"There is an unread token pending!\"); emitPending = token; isEmitPending = true; if (token.type == Token.TokenType.StartTag) {"
+      },
+      {
+        "txt": "Token.StartTag startTag = (Token.StartTag) token; lastStartTag = startTag; if (startTag.selfClosing) selfClosingFlagAcknowledged = false; } else if (token.type == Token.TokenType.EndTag) { Token.EndTag endTag = (Token.EndTag) token; if (endTag.attributes != null) error(\"Attributes incorrectly present on end tag\"); } }"
+      },
+      {
+        "txt": "void emit(String str) { charBuffer.append(str); } void emit(char c) { charBuffer.append(c); } TokeniserState getState() { return state; } void transition(TokeniserState state) {"
+      },
+      {
+        "txt": "this.state = state; } void advanceTransition(TokeniserState state) { reader.advance(); this.state = state; } void acknowledgeSelfClosingFlag() { selfClosingFlagAcknowledged = true; } Character consumeCharacterReference(Character additionalAllowedCharacter, boolean inAttribute) {"
+      },
+      {
+        "txt": "if (reader.isEmpty()) return null; if (additionalAllowedCharacter != null && additionalAllowedCharacter == reader.current()) return null; if (reader.matchesAny('\\t', '\\n', '\\r', '\\f', ' ', '<', '&')) return null; reader.mark(); if (reader.matchConsume(\"#\")) { // numbered boolean isHexMode = reader.matchConsumeIgnoreCase(\"X\"); String numRef = isHexMode ? reader.consumeHexSequence() : reader.consumeDigitSequence();"
+      },
+      {
+        "txt": "if (numRef.length() == 0) { // didn't match anything characterReferenceError(\"numeric reference with no numerals\"); reader.rewindToMark(); return null; } if (!reader.matchConsume(\";\")) characterReferenceError(\"missing semicolon\"); // missing semi int charval = -1; try { int base = isHexMode ? 16 : 10;"
+      },
+      {
+        "txt": "charval = Integer.valueOf(numRef, base); } catch (NumberFormatException e) { } // skip if (charval == -1 || (charval >= 0xD800 && charval <= 0xDFFF) || charval > 0x10FFFF) { characterReferenceError(\"character outside of valid range\"); return replacementChar; } else { return (char) charval; } } else { // named"
+      },
+      {
+        "txt": "String nameRef = reader.consumeLetterThenDigitSequence(); String origNameRef = new String(nameRef); boolean looksLegit = reader.matches(';'); boolean found = false; while (nameRef.length() > 0 && !found) { if (Entities.isNamedEntity(nameRef)) found = true; else { nameRef = nameRef.substring(0, nameRef.length()-1); reader.unconsume();"
+      },
+      {
+        "txt": "} } if (!found) { reader.rewindToMark(); if (looksLegit) // named with semicolon characterReferenceError(String.format(\"invalid named referenece '%s'\", origNameRef)); return null; } if (inAttribute && (reader.matchesLetter() || reader.matchesDigit() || reader.matchesAny('=', '-', '_'))) { reader.rewindToMark();"
+      },
+      {
+        "txt": "return null; } if (!reader.matchConsume(\";\")) characterReferenceError(\"missing semicolon\"); // missing semi return Entities.getCharacterByName(nameRef); } } Token.Tag createTagPending(boolean start) { tagPending = start ? new Token.StartTag() : new Token.EndTag(); return tagPending;"
+      },
+      {
+        "txt": "} void emitTagPending() { tagPending.finaliseTag(); emit(tagPending); } void createCommentPending() { commentPending = new Token.Comment(); } void emitCommentPending() { emit(commentPending);"
+      },
+      {
+        "txt": "} void createDoctypePending() { doctypePending = new Token.Doctype(); } void emitDoctypePending() { emit(doctypePending); } void createTempBuffer() { dataBuffer = new StringBuilder(); }"
+      },
+      {
+        "txt": "boolean isAppropriateEndTagToken() { if (lastStartTag == null) return false; return tagPending.tagName.equals(lastStartTag.tagName); } String appropriateEndTagName() { return lastStartTag.tagName; } void error(TokeniserState state) { if (errors.canAddError())"
+      },
+      {
+        "txt": "errors.add(new ParseError(reader.pos(), \"Unexpected character '%s' in input state [%s]\", reader.current(), state)); } void eofError(TokeniserState state) { if (errors.canAddError()) errors.add(new ParseError(reader.pos(), \"Unexpectedly reached end of file (EOF) in input state [%s]\", state)); } private void characterReferenceError(String message) { if (errors.canAddError()) errors.add(new ParseError(reader.pos(), \"Invalid character reference: %s\", message)); }"
+      },
+      {
+        "txt": "if (errors.canAddError()) errors.add(new ParseError(reader.pos(), errorMsg)); } boolean currentNodeInHtmlNS() { return true; } <extra_id_0>"
+      }
+    ]
+  }
+]

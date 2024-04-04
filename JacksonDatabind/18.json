@@ -1,0 +1,1613 @@
+[
+  {
+    "id": 1373,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/MappingIterator.java",
+    "start-bug-line": 28,
+    "end-bug-line": 28,
+    "bug": "",
+    "fix": "protected final static int STATE_CLOSED = 0;",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind; import java.io.Closeable;"
+      },
+      {
+        "txt": "import java.util.*; import com.fasterxml.jackson.core.*; public class MappingIterator<T> implements Iterator<T>, Closeable { protected final static MappingIterator<?> EMPTY_ITERATOR = new MappingIterator<Object>(null, null, null, null, false, null); <extra_id_0> protected final JavaType _type; protected final DeserializationContext _context; protected final JsonDeserializer<T> _deserializer; protected JsonParser _parser; protected final T _updatedValue; protected final boolean _closeParser;"
+      },
+      {
+        "txt": "protected final T _updatedValue; protected final boolean _closeParser; protected boolean _hasNextChecked; @SuppressWarnings(\"unchecked\") protected MappingIterator(JavaType type, JsonParser p, DeserializationContext ctxt, JsonDeserializer<?> deser, boolean managedParser, Object valueToUpdate) { _type = type; _parser = p;"
+      },
+      {
+        "txt": "_context = ctxt; _deserializer = (JsonDeserializer<T>) deser; _closeParser = managedParser; if (valueToUpdate == null) { _updatedValue = null; } else { _updatedValue = (T) valueToUpdate; } if (managedParser && (p != null) && p.isExpectedStartArrayToken()) { p.clearCurrentToken();"
+      },
+      {
+        "txt": "} } @SuppressWarnings(\"unchecked\") protected static <T> MappingIterator<T> emptyIterator() { return (MappingIterator<T>) EMPTY_ITERATOR; } @Override public boolean hasNext() { try {"
+      },
+      {
+        "txt": "return hasNextValue(); } catch (JsonMappingException e) { return (Boolean) _handleMappingException(e); } catch (IOException e) { return (Boolean) _handleIOException(e); } } @Override public T next() {"
+      },
+      {
+        "txt": "try { return nextValue(); } catch (JsonMappingException e) { throw new RuntimeJsonMappingException(e.getMessage(), e); } catch (IOException e) { throw new RuntimeException(e.getMessage(), e); } } @Override public void remove() {"
+      },
+      {
+        "txt": "throw new UnsupportedOperationException(); } @Override public void close() throws IOException { if (_parser != null) { _parser.close(); } } public boolean hasNextValue() throws IOException {"
+      },
+      {
+        "txt": "if (_parser == null) { return false; } if (!_hasNextChecked) { JsonToken t = _parser.getCurrentToken(); _hasNextChecked = true; if (t == null) { // un-initialized or cleared; find next t = _parser.nextToken(); if (t == null || t == JsonToken.END_ARRAY) { JsonParser jp = _parser;"
+      },
+      {
+        "txt": "_parser = null; if (_closeParser) { jp.close(); } return false; } } } return true; }"
+      },
+      {
+        "txt": "public T nextValue() throws IOException { if (!_hasNextChecked) { if (!hasNextValue()) { return _throwNoSuchElement(); } } if (_parser == null) { return _throwNoSuchElement(); }"
+      },
+      {
+        "txt": "_hasNextChecked = false; try { T value; if (_updatedValue == null) { value = _deserializer.deserialize(_parser, _context); } else{ _deserializer.deserialize(_parser, _context, _updatedValue); value = _updatedValue; } return value;"
+      },
+      {
+        "txt": "} finally { _parser.clearCurrentToken(); } } public List<T> readAll() throws IOException { return readAll(new ArrayList<T>()); } public <L extends List<? super T>> L readAll(L resultList) throws IOException { while (hasNextValue()) {"
+      },
+      {
+        "txt": "resultList.add(nextValue()); } return resultList; } public <C extends Collection<? super T>> C readAll(C results) throws IOException { while (hasNextValue()) { results.add(nextValue()); } return results;"
+      },
+      {
+        "txt": "} public JsonParser getParser() { return _parser; } public FormatSchema getParserSchema() { return _parser.getSchema(); } public JsonLocation getCurrentLocation() { return _parser.getCurrentLocation(); }"
+      },
+      {
+        "txt": "protected <R> R _throwNoSuchElement() { throw new NoSuchElementException(); } protected <R> R _handleMappingException(JsonMappingException e) { throw new RuntimeJsonMappingException(e.getMessage(), e); } protected <R> R _handleIOException(IOException e) { throw new RuntimeException(e.getMessage(), e); }"
+      }
+    ]
+  },
+  {
+    "id": 1374,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/MappingIterator.java",
+    "start-bug-line": 32,
+    "end-bug-line": 32,
+    "bug": "",
+    "fix": "protected final static int STATE_NEED_RESYNC = 1;",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind; import java.io.Closeable;"
+      },
+      {
+        "txt": "import java.util.*; import com.fasterxml.jackson.core.*; public class MappingIterator<T> implements Iterator<T>, Closeable { protected final static MappingIterator<?> EMPTY_ITERATOR = new MappingIterator<Object>(null, null, null, null, false, null); <extra_id_0> protected final JavaType _type; protected final DeserializationContext _context; protected final JsonDeserializer<T> _deserializer; protected JsonParser _parser; protected final T _updatedValue; protected final boolean _closeParser;"
+      },
+      {
+        "txt": "protected final T _updatedValue; protected final boolean _closeParser; protected boolean _hasNextChecked; @SuppressWarnings(\"unchecked\") protected MappingIterator(JavaType type, JsonParser p, DeserializationContext ctxt, JsonDeserializer<?> deser, boolean managedParser, Object valueToUpdate) { _type = type; _parser = p;"
+      },
+      {
+        "txt": "_context = ctxt; _deserializer = (JsonDeserializer<T>) deser; _closeParser = managedParser; if (valueToUpdate == null) { _updatedValue = null; } else { _updatedValue = (T) valueToUpdate; } if (managedParser && (p != null) && p.isExpectedStartArrayToken()) { p.clearCurrentToken();"
+      },
+      {
+        "txt": "} } @SuppressWarnings(\"unchecked\") protected static <T> MappingIterator<T> emptyIterator() { return (MappingIterator<T>) EMPTY_ITERATOR; } @Override public boolean hasNext() { try {"
+      },
+      {
+        "txt": "return hasNextValue(); } catch (JsonMappingException e) { return (Boolean) _handleMappingException(e); } catch (IOException e) { return (Boolean) _handleIOException(e); } } @Override public T next() {"
+      },
+      {
+        "txt": "try { return nextValue(); } catch (JsonMappingException e) { throw new RuntimeJsonMappingException(e.getMessage(), e); } catch (IOException e) { throw new RuntimeException(e.getMessage(), e); } } @Override public void remove() {"
+      },
+      {
+        "txt": "throw new UnsupportedOperationException(); } @Override public void close() throws IOException { if (_parser != null) { _parser.close(); } } public boolean hasNextValue() throws IOException {"
+      },
+      {
+        "txt": "if (_parser == null) { return false; } if (!_hasNextChecked) { JsonToken t = _parser.getCurrentToken(); _hasNextChecked = true; if (t == null) { // un-initialized or cleared; find next t = _parser.nextToken(); if (t == null || t == JsonToken.END_ARRAY) { JsonParser jp = _parser;"
+      },
+      {
+        "txt": "_parser = null; if (_closeParser) { jp.close(); } return false; } } } return true; }"
+      },
+      {
+        "txt": "public T nextValue() throws IOException { if (!_hasNextChecked) { if (!hasNextValue()) { return _throwNoSuchElement(); } } if (_parser == null) { return _throwNoSuchElement(); }"
+      },
+      {
+        "txt": "_hasNextChecked = false; try { T value; if (_updatedValue == null) { value = _deserializer.deserialize(_parser, _context); } else{ _deserializer.deserialize(_parser, _context, _updatedValue); value = _updatedValue; } return value;"
+      },
+      {
+        "txt": "} finally { _parser.clearCurrentToken(); } } public List<T> readAll() throws IOException { return readAll(new ArrayList<T>()); } public <L extends List<? super T>> L readAll(L resultList) throws IOException { while (hasNextValue()) {"
+      },
+      {
+        "txt": "resultList.add(nextValue()); } return resultList; } public <C extends Collection<? super T>> C readAll(C results) throws IOException { while (hasNextValue()) { results.add(nextValue()); } return results;"
+      },
+      {
+        "txt": "} public JsonParser getParser() { return _parser; } public FormatSchema getParserSchema() { return _parser.getSchema(); } public JsonLocation getCurrentLocation() { return _parser.getCurrentLocation(); }"
+      },
+      {
+        "txt": "protected <R> R _throwNoSuchElement() { throw new NoSuchElementException(); } protected <R> R _handleMappingException(JsonMappingException e) { throw new RuntimeJsonMappingException(e.getMessage(), e); } protected <R> R _handleIOException(IOException e) { throw new RuntimeException(e.getMessage(), e); }"
+      }
+    ]
+  },
+  {
+    "id": 1375,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/MappingIterator.java",
+    "start-bug-line": 37,
+    "end-bug-line": 37,
+    "bug": "",
+    "fix": "protected final static int STATE_MAY_HAVE_VALUE = 2;",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind; import java.io.Closeable;"
+      },
+      {
+        "txt": "import java.util.*; import com.fasterxml.jackson.core.*; public class MappingIterator<T> implements Iterator<T>, Closeable { protected final static MappingIterator<?> EMPTY_ITERATOR = new MappingIterator<Object>(null, null, null, null, false, null); <extra_id_0> protected final JavaType _type; protected final DeserializationContext _context; protected final JsonDeserializer<T> _deserializer; protected JsonParser _parser; protected final T _updatedValue; protected final boolean _closeParser;"
+      },
+      {
+        "txt": "protected final T _updatedValue; protected final boolean _closeParser; protected boolean _hasNextChecked; @SuppressWarnings(\"unchecked\") protected MappingIterator(JavaType type, JsonParser p, DeserializationContext ctxt, JsonDeserializer<?> deser, boolean managedParser, Object valueToUpdate) { _type = type; _parser = p;"
+      },
+      {
+        "txt": "_context = ctxt; _deserializer = (JsonDeserializer<T>) deser; _closeParser = managedParser; if (valueToUpdate == null) { _updatedValue = null; } else { _updatedValue = (T) valueToUpdate; } if (managedParser && (p != null) && p.isExpectedStartArrayToken()) { p.clearCurrentToken();"
+      },
+      {
+        "txt": "} } @SuppressWarnings(\"unchecked\") protected static <T> MappingIterator<T> emptyIterator() { return (MappingIterator<T>) EMPTY_ITERATOR; } @Override public boolean hasNext() { try {"
+      },
+      {
+        "txt": "return hasNextValue(); } catch (JsonMappingException e) { return (Boolean) _handleMappingException(e); } catch (IOException e) { return (Boolean) _handleIOException(e); } } @Override public T next() {"
+      },
+      {
+        "txt": "try { return nextValue(); } catch (JsonMappingException e) { throw new RuntimeJsonMappingException(e.getMessage(), e); } catch (IOException e) { throw new RuntimeException(e.getMessage(), e); } } @Override public void remove() {"
+      },
+      {
+        "txt": "throw new UnsupportedOperationException(); } @Override public void close() throws IOException { if (_parser != null) { _parser.close(); } } public boolean hasNextValue() throws IOException {"
+      },
+      {
+        "txt": "if (_parser == null) { return false; } if (!_hasNextChecked) { JsonToken t = _parser.getCurrentToken(); _hasNextChecked = true; if (t == null) { // un-initialized or cleared; find next t = _parser.nextToken(); if (t == null || t == JsonToken.END_ARRAY) { JsonParser jp = _parser;"
+      },
+      {
+        "txt": "_parser = null; if (_closeParser) { jp.close(); } return false; } } } return true; }"
+      },
+      {
+        "txt": "public T nextValue() throws IOException { if (!_hasNextChecked) { if (!hasNextValue()) { return _throwNoSuchElement(); } } if (_parser == null) { return _throwNoSuchElement(); }"
+      },
+      {
+        "txt": "_hasNextChecked = false; try { T value; if (_updatedValue == null) { value = _deserializer.deserialize(_parser, _context); } else{ _deserializer.deserialize(_parser, _context, _updatedValue); value = _updatedValue; } return value;"
+      },
+      {
+        "txt": "} finally { _parser.clearCurrentToken(); } } public List<T> readAll() throws IOException { return readAll(new ArrayList<T>()); } public <L extends List<? super T>> L readAll(L resultList) throws IOException { while (hasNextValue()) {"
+      },
+      {
+        "txt": "resultList.add(nextValue()); } return resultList; } public <C extends Collection<? super T>> C readAll(C results) throws IOException { while (hasNextValue()) { results.add(nextValue()); } return results;"
+      },
+      {
+        "txt": "} public JsonParser getParser() { return _parser; } public FormatSchema getParserSchema() { return _parser.getSchema(); } public JsonLocation getCurrentLocation() { return _parser.getCurrentLocation(); }"
+      },
+      {
+        "txt": "protected <R> R _throwNoSuchElement() { throw new NoSuchElementException(); } protected <R> R _handleMappingException(JsonMappingException e) { throw new RuntimeJsonMappingException(e.getMessage(), e); } protected <R> R _handleIOException(IOException e) { throw new RuntimeException(e.getMessage(), e); }"
+      }
+    ]
+  },
+  {
+    "id": 1376,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/MappingIterator.java",
+    "start-bug-line": 42,
+    "end-bug-line": 42,
+    "bug": "",
+    "fix": "protected final static int STATE_HAS_VALUE = 3;",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind; import java.io.Closeable;"
+      },
+      {
+        "txt": "import java.util.*; import com.fasterxml.jackson.core.*; public class MappingIterator<T> implements Iterator<T>, Closeable { protected final static MappingIterator<?> EMPTY_ITERATOR = new MappingIterator<Object>(null, null, null, null, false, null); <extra_id_0> protected final JavaType _type; protected final DeserializationContext _context; protected final JsonDeserializer<T> _deserializer; protected JsonParser _parser; protected final T _updatedValue; protected final boolean _closeParser;"
+      },
+      {
+        "txt": "protected final T _updatedValue; protected final boolean _closeParser; protected boolean _hasNextChecked; @SuppressWarnings(\"unchecked\") protected MappingIterator(JavaType type, JsonParser p, DeserializationContext ctxt, JsonDeserializer<?> deser, boolean managedParser, Object valueToUpdate) { _type = type; _parser = p;"
+      },
+      {
+        "txt": "_context = ctxt; _deserializer = (JsonDeserializer<T>) deser; _closeParser = managedParser; if (valueToUpdate == null) { _updatedValue = null; } else { _updatedValue = (T) valueToUpdate; } if (managedParser && (p != null) && p.isExpectedStartArrayToken()) { p.clearCurrentToken();"
+      },
+      {
+        "txt": "} } @SuppressWarnings(\"unchecked\") protected static <T> MappingIterator<T> emptyIterator() { return (MappingIterator<T>) EMPTY_ITERATOR; } @Override public boolean hasNext() { try {"
+      },
+      {
+        "txt": "return hasNextValue(); } catch (JsonMappingException e) { return (Boolean) _handleMappingException(e); } catch (IOException e) { return (Boolean) _handleIOException(e); } } @Override public T next() {"
+      },
+      {
+        "txt": "try { return nextValue(); } catch (JsonMappingException e) { throw new RuntimeJsonMappingException(e.getMessage(), e); } catch (IOException e) { throw new RuntimeException(e.getMessage(), e); } } @Override public void remove() {"
+      },
+      {
+        "txt": "throw new UnsupportedOperationException(); } @Override public void close() throws IOException { if (_parser != null) { _parser.close(); } } public boolean hasNextValue() throws IOException {"
+      },
+      {
+        "txt": "if (_parser == null) { return false; } if (!_hasNextChecked) { JsonToken t = _parser.getCurrentToken(); _hasNextChecked = true; if (t == null) { // un-initialized or cleared; find next t = _parser.nextToken(); if (t == null || t == JsonToken.END_ARRAY) { JsonParser jp = _parser;"
+      },
+      {
+        "txt": "_parser = null; if (_closeParser) { jp.close(); } return false; } } } return true; }"
+      },
+      {
+        "txt": "public T nextValue() throws IOException { if (!_hasNextChecked) { if (!hasNextValue()) { return _throwNoSuchElement(); } } if (_parser == null) { return _throwNoSuchElement(); }"
+      },
+      {
+        "txt": "_hasNextChecked = false; try { T value; if (_updatedValue == null) { value = _deserializer.deserialize(_parser, _context); } else{ _deserializer.deserialize(_parser, _context, _updatedValue); value = _updatedValue; } return value;"
+      },
+      {
+        "txt": "} finally { _parser.clearCurrentToken(); } } public List<T> readAll() throws IOException { return readAll(new ArrayList<T>()); } public <L extends List<? super T>> L readAll(L resultList) throws IOException { while (hasNextValue()) {"
+      },
+      {
+        "txt": "resultList.add(nextValue()); } return resultList; } public <C extends Collection<? super T>> C readAll(C results) throws IOException { while (hasNextValue()) { results.add(nextValue()); } return results;"
+      },
+      {
+        "txt": "} public JsonParser getParser() { return _parser; } public FormatSchema getParserSchema() { return _parser.getSchema(); } public JsonLocation getCurrentLocation() { return _parser.getCurrentLocation(); }"
+      },
+      {
+        "txt": "protected <R> R _throwNoSuchElement() { throw new NoSuchElementException(); } protected <R> R _handleMappingException(JsonMappingException e) { throw new RuntimeJsonMappingException(e.getMessage(), e); } protected <R> R _handleIOException(IOException e) { throw new RuntimeException(e.getMessage(), e); }"
+      }
+    ]
+  },
+  {
+    "id": 1377,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/MappingIterator.java",
+    "start-bug-line": 69,
+    "end-bug-line": 69,
+    "bug": "protected JsonParser _parser;",
+    "fix": "protected final JsonParser _parser;",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind; import java.io.Closeable; import java.io.IOException; import java.util.*; import com.fasterxml.jackson.core.*;"
+      },
+      {
+        "txt": "{ protected final static MappingIterator<?> EMPTY_ITERATOR = new MappingIterator<Object>(null, null, null, null, false, null); protected final JavaType _type; protected final DeserializationContext _context; protected final JsonDeserializer<T> _deserializer; <extra_id_0> protected final T _updatedValue; protected final boolean _closeParser; protected boolean _hasNextChecked; @SuppressWarnings(\"unchecked\") protected MappingIterator(JavaType type, JsonParser p, DeserializationContext ctxt, JsonDeserializer<?> deser,"
+      },
+      {
+        "txt": "protected MappingIterator(JavaType type, JsonParser p, DeserializationContext ctxt, JsonDeserializer<?> deser, boolean managedParser, Object valueToUpdate) { _type = type; _parser = p; _context = ctxt; _deserializer = (JsonDeserializer<T>) deser; _closeParser = managedParser; if (valueToUpdate == null) {"
+      },
+      {
+        "txt": "_updatedValue = null; } else { _updatedValue = (T) valueToUpdate; } if (managedParser && (p != null) && p.isExpectedStartArrayToken()) { p.clearCurrentToken(); } } @SuppressWarnings(\"unchecked\") protected static <T> MappingIterator<T> emptyIterator() {"
+      },
+      {
+        "txt": "return (MappingIterator<T>) EMPTY_ITERATOR; } @Override public boolean hasNext() { try { return hasNextValue(); } catch (JsonMappingException e) { return (Boolean) _handleMappingException(e); } catch (IOException e) {"
+      },
+      {
+        "txt": "return (Boolean) _handleIOException(e); } } @Override public T next() { try { return nextValue(); } catch (JsonMappingException e) { throw new RuntimeJsonMappingException(e.getMessage(), e);"
+      },
+      {
+        "txt": "} catch (IOException e) { throw new RuntimeException(e.getMessage(), e); } } @Override public void remove() { throw new UnsupportedOperationException(); } @Override public void close() throws IOException {"
+      },
+      {
+        "txt": "if (_parser != null) { _parser.close(); } } public boolean hasNextValue() throws IOException { if (_parser == null) { return false; } if (!_hasNextChecked) {"
+      },
+      {
+        "txt": "JsonToken t = _parser.getCurrentToken(); _hasNextChecked = true; if (t == null) { // un-initialized or cleared; find next t = _parser.nextToken(); if (t == null || t == JsonToken.END_ARRAY) { JsonParser jp = _parser; _parser = null; if (_closeParser) { jp.close(); }"
+      },
+      {
+        "txt": "return false; } } } return true; } public T nextValue() throws IOException { if (!_hasNextChecked) { if (!hasNextValue()) {"
+      },
+      {
+        "txt": "return _throwNoSuchElement(); } } if (_parser == null) { return _throwNoSuchElement(); } _hasNextChecked = false; try { T value; if (_updatedValue == null) {"
+      },
+      {
+        "txt": "value = _deserializer.deserialize(_parser, _context); } else{ _deserializer.deserialize(_parser, _context, _updatedValue); value = _updatedValue; } return value; } finally { _parser.clearCurrentToken(); } }"
+      },
+      {
+        "txt": "public List<T> readAll() throws IOException { return readAll(new ArrayList<T>()); } public <L extends List<? super T>> L readAll(L resultList) throws IOException { while (hasNextValue()) { resultList.add(nextValue()); } return resultList; }"
+      },
+      {
+        "txt": "public <C extends Collection<? super T>> C readAll(C results) throws IOException { while (hasNextValue()) { results.add(nextValue()); } return results; } public JsonParser getParser() { return _parser; }"
+      },
+      {
+        "txt": "public FormatSchema getParserSchema() { return _parser.getSchema(); } public JsonLocation getCurrentLocation() { return _parser.getCurrentLocation(); } protected <R> R _throwNoSuchElement() { throw new NoSuchElementException(); } protected <R> R _handleMappingException(JsonMappingException e) {"
+      },
+      {
+        "txt": "throw new RuntimeJsonMappingException(e.getMessage(), e); } protected <R> R _handleIOException(IOException e) { throw new RuntimeException(e.getMessage(), e); }"
+      }
+    ]
+  },
+  {
+    "id": 1378,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/MappingIterator.java",
+    "start-bug-line": 75,
+    "end-bug-line": 75,
+    "bug": "",
+    "fix": "protected final JsonStreamContext _seqContext;",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind; import java.io.Closeable; import java.io.IOException; import java.util.*; import com.fasterxml.jackson.core.*; public class MappingIterator<T> implements Iterator<T>, Closeable"
+      },
+      {
+        "txt": "protected final static MappingIterator<?> EMPTY_ITERATOR = new MappingIterator<Object>(null, null, null, null, false, null); protected final JavaType _type; protected final DeserializationContext _context; protected final JsonDeserializer<T> _deserializer; protected JsonParser _parser; <extra_id_0> protected final T _updatedValue; protected final boolean _closeParser; protected boolean _hasNextChecked; @SuppressWarnings(\"unchecked\") protected MappingIterator(JavaType type, JsonParser p, DeserializationContext ctxt, JsonDeserializer<?> deser,"
+      },
+      {
+        "txt": "protected MappingIterator(JavaType type, JsonParser p, DeserializationContext ctxt, JsonDeserializer<?> deser, boolean managedParser, Object valueToUpdate) { _type = type; _parser = p; _context = ctxt; _deserializer = (JsonDeserializer<T>) deser; _closeParser = managedParser; if (valueToUpdate == null) {"
+      },
+      {
+        "txt": "_updatedValue = null; } else { _updatedValue = (T) valueToUpdate; } if (managedParser && (p != null) && p.isExpectedStartArrayToken()) { p.clearCurrentToken(); } } @SuppressWarnings(\"unchecked\") protected static <T> MappingIterator<T> emptyIterator() {"
+      },
+      {
+        "txt": "return (MappingIterator<T>) EMPTY_ITERATOR; } @Override public boolean hasNext() { try { return hasNextValue(); } catch (JsonMappingException e) { return (Boolean) _handleMappingException(e); } catch (IOException e) {"
+      },
+      {
+        "txt": "return (Boolean) _handleIOException(e); } } @Override public T next() { try { return nextValue(); } catch (JsonMappingException e) { throw new RuntimeJsonMappingException(e.getMessage(), e);"
+      },
+      {
+        "txt": "} catch (IOException e) { throw new RuntimeException(e.getMessage(), e); } } @Override public void remove() { throw new UnsupportedOperationException(); } @Override public void close() throws IOException {"
+      },
+      {
+        "txt": "if (_parser != null) { _parser.close(); } } public boolean hasNextValue() throws IOException { if (_parser == null) { return false; } if (!_hasNextChecked) {"
+      },
+      {
+        "txt": "JsonToken t = _parser.getCurrentToken(); _hasNextChecked = true; if (t == null) { // un-initialized or cleared; find next t = _parser.nextToken(); if (t == null || t == JsonToken.END_ARRAY) { JsonParser jp = _parser; _parser = null; if (_closeParser) { jp.close(); }"
+      },
+      {
+        "txt": "return false; } } } return true; } public T nextValue() throws IOException { if (!_hasNextChecked) { if (!hasNextValue()) {"
+      },
+      {
+        "txt": "return _throwNoSuchElement(); } } if (_parser == null) { return _throwNoSuchElement(); } _hasNextChecked = false; try { T value; if (_updatedValue == null) {"
+      },
+      {
+        "txt": "value = _deserializer.deserialize(_parser, _context); } else{ _deserializer.deserialize(_parser, _context, _updatedValue); value = _updatedValue; } return value; } finally { _parser.clearCurrentToken(); } }"
+      },
+      {
+        "txt": "public List<T> readAll() throws IOException { return readAll(new ArrayList<T>()); } public <L extends List<? super T>> L readAll(L resultList) throws IOException { while (hasNextValue()) { resultList.add(nextValue()); } return resultList; }"
+      },
+      {
+        "txt": "public <C extends Collection<? super T>> C readAll(C results) throws IOException { while (hasNextValue()) { results.add(nextValue()); } return results; } public JsonParser getParser() { return _parser; }"
+      },
+      {
+        "txt": "public FormatSchema getParserSchema() { return _parser.getSchema(); } public JsonLocation getCurrentLocation() { return _parser.getCurrentLocation(); } protected <R> R _throwNoSuchElement() { throw new NoSuchElementException(); } protected <R> R _handleMappingException(JsonMappingException e) {"
+      },
+      {
+        "txt": "throw new RuntimeJsonMappingException(e.getMessage(), e); } protected <R> R _handleIOException(IOException e) { throw new RuntimeException(e.getMessage(), e); }"
+      }
+    ]
+  },
+  {
+    "id": 1379,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/MappingIterator.java",
+    "start-bug-line": 98,
+    "end-bug-line": 98,
+    "bug": "protected boolean _hasNextChecked;",
+    "fix": "protected int _state;",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind; import java.io.Closeable; import java.io.IOException; import java.util.*; import com.fasterxml.jackson.core.*; public class MappingIterator<T> implements Iterator<T>, Closeable { protected final static MappingIterator<?> EMPTY_ITERATOR ="
+      },
+      {
+        "txt": "protected final JavaType _type; protected final DeserializationContext _context; protected final JsonDeserializer<T> _deserializer; protected JsonParser _parser; protected final T _updatedValue; protected final boolean _closeParser; <extra_id_0> @SuppressWarnings(\"unchecked\") protected MappingIterator(JavaType type, JsonParser p, DeserializationContext ctxt, JsonDeserializer<?> deser, boolean managedParser, Object valueToUpdate) { _type = type;"
+      },
+      {
+        "txt": "{ _type = type; _parser = p; _context = ctxt; _deserializer = (JsonDeserializer<T>) deser; _closeParser = managedParser; if (valueToUpdate == null) { _updatedValue = null; } else { _updatedValue = (T) valueToUpdate;"
+      },
+      {
+        "txt": "} if (managedParser && (p != null) && p.isExpectedStartArrayToken()) { p.clearCurrentToken(); } } @SuppressWarnings(\"unchecked\") protected static <T> MappingIterator<T> emptyIterator() { return (MappingIterator<T>) EMPTY_ITERATOR; } @Override"
+      },
+      {
+        "txt": "public boolean hasNext() { try { return hasNextValue(); } catch (JsonMappingException e) { return (Boolean) _handleMappingException(e); } catch (IOException e) { return (Boolean) _handleIOException(e); } }"
+      },
+      {
+        "txt": "@Override public T next() { try { return nextValue(); } catch (JsonMappingException e) { throw new RuntimeJsonMappingException(e.getMessage(), e); } catch (IOException e) { throw new RuntimeException(e.getMessage(), e); }"
+      },
+      {
+        "txt": "} @Override public void remove() { throw new UnsupportedOperationException(); } @Override public void close() throws IOException { if (_parser != null) { _parser.close(); }"
+      },
+      {
+        "txt": "} public boolean hasNextValue() throws IOException { if (_parser == null) { return false; } if (!_hasNextChecked) { JsonToken t = _parser.getCurrentToken(); _hasNextChecked = true; if (t == null) { // un-initialized or cleared; find next"
+      },
+      {
+        "txt": "t = _parser.nextToken(); if (t == null || t == JsonToken.END_ARRAY) { JsonParser jp = _parser; _parser = null; if (_closeParser) { jp.close(); } return false; } }"
+      },
+      {
+        "txt": "} return true; } public T nextValue() throws IOException { if (!_hasNextChecked) { if (!hasNextValue()) { return _throwNoSuchElement(); } }"
+      },
+      {
+        "txt": "if (_parser == null) { return _throwNoSuchElement(); } _hasNextChecked = false; try { T value; if (_updatedValue == null) { value = _deserializer.deserialize(_parser, _context); } else{ _deserializer.deserialize(_parser, _context, _updatedValue);"
+      },
+      {
+        "txt": "value = _updatedValue; } return value; } finally { _parser.clearCurrentToken(); } } public List<T> readAll() throws IOException { return readAll(new ArrayList<T>()); }"
+      },
+      {
+        "txt": "public <L extends List<? super T>> L readAll(L resultList) throws IOException { while (hasNextValue()) { resultList.add(nextValue()); } return resultList; } public <C extends Collection<? super T>> C readAll(C results) throws IOException { while (hasNextValue()) {"
+      },
+      {
+        "txt": "results.add(nextValue()); } return results; } public JsonParser getParser() { return _parser; } public FormatSchema getParserSchema() { return _parser.getSchema(); }"
+      },
+      {
+        "txt": "public JsonLocation getCurrentLocation() { return _parser.getCurrentLocation(); } protected <R> R _throwNoSuchElement() { throw new NoSuchElementException(); } protected <R> R _handleMappingException(JsonMappingException e) { throw new RuntimeJsonMappingException(e.getMessage(), e); } protected <R> R _handleIOException(IOException e) {"
+      },
+      {
+        "txt": "throw new RuntimeException(e.getMessage(), e); }"
+      }
+    ]
+  },
+  {
+    "id": 1380,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/MappingIterator.java",
+    "start-bug-line": 138,
+    "end-bug-line": 138,
+    "bug": "if (managedParser && (p != null) && p.isExpectedStartArrayToken()) {",
+    "fix": "if (p == null) { // can this occur? _seqContext = null; _state = STATE_CLOSED; } else { JsonStreamContext sctxt = p.getParsingContext(); if (managedParser && p.isExpectedStartArrayToken()) {",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind; import java.io.Closeable; import java.io.IOException; import java.util.*;"
+      },
+      {
+        "txt": "import com.fasterxml.jackson.core.*; public class MappingIterator<T> implements Iterator<T>, Closeable { protected final static MappingIterator<?> EMPTY_ITERATOR = new MappingIterator<Object>(null, null, null, null, false, null); protected final JavaType _type; protected final DeserializationContext _context; protected final JsonDeserializer<T> _deserializer; protected JsonParser _parser; protected final T _updatedValue;"
+      },
+      {
+        "txt": "protected final boolean _closeParser; protected boolean _hasNextChecked; @SuppressWarnings(\"unchecked\") protected MappingIterator(JavaType type, JsonParser p, DeserializationContext ctxt, JsonDeserializer<?> deser, boolean managedParser, Object valueToUpdate) { _type = type; _parser = p; _context = ctxt;"
+      },
+      {
+        "txt": "_closeParser = managedParser; if (valueToUpdate == null) { _updatedValue = null; } else { _updatedValue = (T) valueToUpdate; } <extra_id_0> p.clearCurrentToken(); } } @SuppressWarnings(\"unchecked\") protected static <T> MappingIterator<T> emptyIterator() { return (MappingIterator<T>) EMPTY_ITERATOR;"
+      },
+      {
+        "txt": "protected static <T> MappingIterator<T> emptyIterator() { return (MappingIterator<T>) EMPTY_ITERATOR; } @Override public boolean hasNext() { try { return hasNextValue(); } catch (JsonMappingException e) { return (Boolean) _handleMappingException(e);"
+      },
+      {
+        "txt": "} catch (IOException e) { return (Boolean) _handleIOException(e); } } @Override public T next() { try { return nextValue(); } catch (JsonMappingException e) {"
+      },
+      {
+        "txt": "throw new RuntimeJsonMappingException(e.getMessage(), e); } catch (IOException e) { throw new RuntimeException(e.getMessage(), e); } } @Override public void remove() { throw new UnsupportedOperationException(); } @Override"
+      },
+      {
+        "txt": "public void close() throws IOException { if (_parser != null) { _parser.close(); } } public boolean hasNextValue() throws IOException { if (_parser == null) { return false; }"
+      },
+      {
+        "txt": "if (!_hasNextChecked) { JsonToken t = _parser.getCurrentToken(); _hasNextChecked = true; if (t == null) { // un-initialized or cleared; find next t = _parser.nextToken(); if (t == null || t == JsonToken.END_ARRAY) { JsonParser jp = _parser; _parser = null; if (_closeParser) { jp.close();"
+      },
+      {
+        "txt": "} return false; } } } return true; } public T nextValue() throws IOException { if (!_hasNextChecked) {"
+      },
+      {
+        "txt": "if (!hasNextValue()) { return _throwNoSuchElement(); } } if (_parser == null) { return _throwNoSuchElement(); } _hasNextChecked = false; try { T value;"
+      },
+      {
+        "txt": "if (_updatedValue == null) { value = _deserializer.deserialize(_parser, _context); } else{ _deserializer.deserialize(_parser, _context, _updatedValue); value = _updatedValue; } return value; } finally { _parser.clearCurrentToken(); }"
+      },
+      {
+        "txt": "} public List<T> readAll() throws IOException { return readAll(new ArrayList<T>()); } public <L extends List<? super T>> L readAll(L resultList) throws IOException { while (hasNextValue()) { resultList.add(nextValue()); } return resultList;"
+      },
+      {
+        "txt": "} public <C extends Collection<? super T>> C readAll(C results) throws IOException { while (hasNextValue()) { results.add(nextValue()); } return results; } public JsonParser getParser() { return _parser;"
+      },
+      {
+        "txt": "} public FormatSchema getParserSchema() { return _parser.getSchema(); } public JsonLocation getCurrentLocation() { return _parser.getCurrentLocation(); } protected <R> R _throwNoSuchElement() { throw new NoSuchElementException(); }"
+      },
+      {
+        "txt": "protected <R> R _handleMappingException(JsonMappingException e) { throw new RuntimeJsonMappingException(e.getMessage(), e); } protected <R> R _handleIOException(IOException e) { throw new RuntimeException(e.getMessage(), e); }"
+      }
+    ]
+  },
+  {
+    "id": 1381,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/MappingIterator.java",
+    "start-bug-line": 141,
+    "end-bug-line": 141,
+    "bug": "",
+    "fix": "} else {",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind; import java.io.Closeable; import java.io.IOException; import java.util.*; import com.fasterxml.jackson.core.*; public class MappingIterator<T> implements Iterator<T>, Closeable"
+      },
+      {
+        "txt": "{ protected final static MappingIterator<?> EMPTY_ITERATOR = new MappingIterator<Object>(null, null, null, null, false, null); protected final JavaType _type; protected final DeserializationContext _context; protected final JsonDeserializer<T> _deserializer; protected JsonParser _parser; protected final T _updatedValue; protected final boolean _closeParser; protected boolean _hasNextChecked;"
+      },
+      {
+        "txt": "@SuppressWarnings(\"unchecked\") protected MappingIterator(JavaType type, JsonParser p, DeserializationContext ctxt, JsonDeserializer<?> deser, boolean managedParser, Object valueToUpdate) { _type = type; _parser = p; _context = ctxt; _deserializer = (JsonDeserializer<T>) deser; _closeParser = managedParser;"
+      },
+      {
+        "txt": "_updatedValue = null; } else { _updatedValue = (T) valueToUpdate; } if (managedParser && (p != null) && p.isExpectedStartArrayToken()) { p.clearCurrentToken(); <extra_id_0> } } @SuppressWarnings(\"unchecked\") protected static <T> MappingIterator<T> emptyIterator() { return (MappingIterator<T>) EMPTY_ITERATOR; }"
+      },
+      {
+        "txt": "return (MappingIterator<T>) EMPTY_ITERATOR; } @Override public boolean hasNext() { try { return hasNextValue(); } catch (JsonMappingException e) { return (Boolean) _handleMappingException(e); } catch (IOException e) {"
+      },
+      {
+        "txt": "return (Boolean) _handleIOException(e); } } @Override public T next() { try { return nextValue(); } catch (JsonMappingException e) { throw new RuntimeJsonMappingException(e.getMessage(), e);"
+      },
+      {
+        "txt": "} catch (IOException e) { throw new RuntimeException(e.getMessage(), e); } } @Override public void remove() { throw new UnsupportedOperationException(); } @Override public void close() throws IOException {"
+      },
+      {
+        "txt": "if (_parser != null) { _parser.close(); } } public boolean hasNextValue() throws IOException { if (_parser == null) { return false; } if (!_hasNextChecked) {"
+      },
+      {
+        "txt": "JsonToken t = _parser.getCurrentToken(); _hasNextChecked = true; if (t == null) { // un-initialized or cleared; find next t = _parser.nextToken(); if (t == null || t == JsonToken.END_ARRAY) { JsonParser jp = _parser; _parser = null; if (_closeParser) { jp.close(); }"
+      },
+      {
+        "txt": "return false; } } } return true; } public T nextValue() throws IOException { if (!_hasNextChecked) { if (!hasNextValue()) {"
+      },
+      {
+        "txt": "return _throwNoSuchElement(); } } if (_parser == null) { return _throwNoSuchElement(); } _hasNextChecked = false; try { T value; if (_updatedValue == null) {"
+      },
+      {
+        "txt": "value = _deserializer.deserialize(_parser, _context); } else{ _deserializer.deserialize(_parser, _context, _updatedValue); value = _updatedValue; } return value; } finally { _parser.clearCurrentToken(); } }"
+      },
+      {
+        "txt": "public List<T> readAll() throws IOException { return readAll(new ArrayList<T>()); } public <L extends List<? super T>> L readAll(L resultList) throws IOException { while (hasNextValue()) { resultList.add(nextValue()); } return resultList; }"
+      },
+      {
+        "txt": "public <C extends Collection<? super T>> C readAll(C results) throws IOException { while (hasNextValue()) { results.add(nextValue()); } return results; } public JsonParser getParser() { return _parser; }"
+      },
+      {
+        "txt": "public FormatSchema getParserSchema() { return _parser.getSchema(); } public JsonLocation getCurrentLocation() { return _parser.getCurrentLocation(); } protected <R> R _throwNoSuchElement() { throw new NoSuchElementException(); } protected <R> R _handleMappingException(JsonMappingException e) {"
+      },
+      {
+        "txt": "throw new RuntimeJsonMappingException(e.getMessage(), e); } protected <R> R _handleIOException(IOException e) { throw new RuntimeException(e.getMessage(), e); }"
+      }
+    ]
+  },
+  {
+    "id": 1382,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/MappingIterator.java",
+    "start-bug-line": 144,
+    "end-bug-line": 144,
+    "bug": "",
+    "fix": "JsonToken t = p.getCurrentToken(); if ((t == JsonToken.START_OBJECT) || (t == JsonToken.START_ARRAY)) { sctxt = sctxt.getParent(); } } _seqContext = sctxt; _state = STATE_MAY_HAVE_VALUE;",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind; import java.io.Closeable; import java.io.IOException; import java.util.*; import com.fasterxml.jackson.core.*; public class MappingIterator<T> implements Iterator<T>, Closeable"
+      },
+      {
+        "txt": "{ protected final static MappingIterator<?> EMPTY_ITERATOR = new MappingIterator<Object>(null, null, null, null, false, null); protected final JavaType _type; protected final DeserializationContext _context; protected final JsonDeserializer<T> _deserializer; protected JsonParser _parser; protected final T _updatedValue; protected final boolean _closeParser; protected boolean _hasNextChecked;"
+      },
+      {
+        "txt": "@SuppressWarnings(\"unchecked\") protected MappingIterator(JavaType type, JsonParser p, DeserializationContext ctxt, JsonDeserializer<?> deser, boolean managedParser, Object valueToUpdate) { _type = type; _parser = p; _context = ctxt; _deserializer = (JsonDeserializer<T>) deser; _closeParser = managedParser;"
+      },
+      {
+        "txt": "_updatedValue = null; } else { _updatedValue = (T) valueToUpdate; } if (managedParser && (p != null) && p.isExpectedStartArrayToken()) { p.clearCurrentToken(); <extra_id_0> } @SuppressWarnings(\"unchecked\") protected static <T> MappingIterator<T> emptyIterator() { return (MappingIterator<T>) EMPTY_ITERATOR; } @Override"
+      },
+      {
+        "txt": "} @Override public boolean hasNext() { try { return hasNextValue(); } catch (JsonMappingException e) { return (Boolean) _handleMappingException(e); } catch (IOException e) { return (Boolean) _handleIOException(e);"
+      },
+      {
+        "txt": "} } @Override public T next() { try { return nextValue(); } catch (JsonMappingException e) { throw new RuntimeJsonMappingException(e.getMessage(), e); } catch (IOException e) {"
+      },
+      {
+        "txt": "throw new RuntimeException(e.getMessage(), e); } } @Override public void remove() { throw new UnsupportedOperationException(); } @Override public void close() throws IOException { if (_parser != null) {"
+      },
+      {
+        "txt": "_parser.close(); } } public boolean hasNextValue() throws IOException { if (_parser == null) { return false; } if (!_hasNextChecked) { JsonToken t = _parser.getCurrentToken();"
+      },
+      {
+        "txt": "_hasNextChecked = true; if (t == null) { // un-initialized or cleared; find next t = _parser.nextToken(); if (t == null || t == JsonToken.END_ARRAY) { JsonParser jp = _parser; _parser = null; if (_closeParser) { jp.close(); } return false;"
+      },
+      {
+        "txt": "} } } return true; } public T nextValue() throws IOException { if (!_hasNextChecked) { if (!hasNextValue()) { return _throwNoSuchElement();"
+      },
+      {
+        "txt": "} } if (_parser == null) { return _throwNoSuchElement(); } _hasNextChecked = false; try { T value; if (_updatedValue == null) { value = _deserializer.deserialize(_parser, _context);"
+      },
+      {
+        "txt": "} else{ _deserializer.deserialize(_parser, _context, _updatedValue); value = _updatedValue; } return value; } finally { _parser.clearCurrentToken(); } } public List<T> readAll() throws IOException {"
+      },
+      {
+        "txt": "return readAll(new ArrayList<T>()); } public <L extends List<? super T>> L readAll(L resultList) throws IOException { while (hasNextValue()) { resultList.add(nextValue()); } return resultList; } public <C extends Collection<? super T>> C readAll(C results) throws IOException"
+      },
+      {
+        "txt": "{ while (hasNextValue()) { results.add(nextValue()); } return results; } public JsonParser getParser() { return _parser; } public FormatSchema getParserSchema() {"
+      },
+      {
+        "txt": "return _parser.getSchema(); } public JsonLocation getCurrentLocation() { return _parser.getCurrentLocation(); } protected <R> R _throwNoSuchElement() { throw new NoSuchElementException(); } protected <R> R _handleMappingException(JsonMappingException e) { throw new RuntimeJsonMappingException(e.getMessage(), e);"
+      },
+      {
+        "txt": "} protected <R> R _handleIOException(IOException e) { throw new RuntimeException(e.getMessage(), e); }"
+      }
+    ]
+  },
+  {
+    "id": 1383,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/MappingIterator.java",
+    "start-bug-line": 189,
+    "end-bug-line": 189,
+    "bug": "",
+    "fix": "if (_state != STATE_CLOSED) { _state = STATE_CLOSED;",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind; import java.io.Closeable; import java.io.IOException; import java.util.*; import com.fasterxml.jackson.core.*; public class MappingIterator<T> implements Iterator<T>, Closeable { protected final static MappingIterator<?> EMPTY_ITERATOR = new MappingIterator<Object>(null, null, null, null, false, null); protected final JavaType _type;"
+      },
+      {
+        "txt": "protected final DeserializationContext _context; protected final JsonDeserializer<T> _deserializer; protected JsonParser _parser; protected final T _updatedValue; protected final boolean _closeParser; protected boolean _hasNextChecked; @SuppressWarnings(\"unchecked\") protected MappingIterator(JavaType type, JsonParser p, DeserializationContext ctxt, JsonDeserializer<?> deser, boolean managedParser, Object valueToUpdate)"
+      },
+      {
+        "txt": "{ _type = type; _parser = p; _context = ctxt; _deserializer = (JsonDeserializer<T>) deser; _closeParser = managedParser; if (valueToUpdate == null) { _updatedValue = null; } else { _updatedValue = (T) valueToUpdate;"
+      },
+      {
+        "txt": "} if (managedParser && (p != null) && p.isExpectedStartArrayToken()) { p.clearCurrentToken(); } } @SuppressWarnings(\"unchecked\") protected static <T> MappingIterator<T> emptyIterator() { return (MappingIterator<T>) EMPTY_ITERATOR; } @Override"
+      },
+      {
+        "txt": "public boolean hasNext() { try { return hasNextValue(); } catch (JsonMappingException e) { return (Boolean) _handleMappingException(e); } catch (IOException e) { return (Boolean) _handleIOException(e); } }"
+      },
+      {
+        "txt": "@Override public T next() { try { return nextValue(); } catch (JsonMappingException e) { throw new RuntimeJsonMappingException(e.getMessage(), e); } catch (IOException e) { throw new RuntimeException(e.getMessage(), e); }"
+      },
+      {
+        "txt": "@Override public void remove() { throw new UnsupportedOperationException(); } @Override public void close() throws IOException { <extra_id_0> _parser.close(); } } public boolean hasNextValue() throws IOException { if (_parser == null) {"
+      },
+      {
+        "txt": "{ if (_parser == null) { return false; } if (!_hasNextChecked) { JsonToken t = _parser.getCurrentToken(); _hasNextChecked = true; if (t == null) { // un-initialized or cleared; find next t = _parser.nextToken(); if (t == null || t == JsonToken.END_ARRAY) {"
+      },
+      {
+        "txt": "JsonParser jp = _parser; _parser = null; if (_closeParser) { jp.close(); } return false; } } } return true;"
+      },
+      {
+        "txt": "} public T nextValue() throws IOException { if (!_hasNextChecked) { if (!hasNextValue()) { return _throwNoSuchElement(); } } if (_parser == null) { return _throwNoSuchElement();"
+      },
+      {
+        "txt": "} _hasNextChecked = false; try { T value; if (_updatedValue == null) { value = _deserializer.deserialize(_parser, _context); } else{ _deserializer.deserialize(_parser, _context, _updatedValue); value = _updatedValue; }"
+      },
+      {
+        "txt": "return value; } finally { _parser.clearCurrentToken(); } } public List<T> readAll() throws IOException { return readAll(new ArrayList<T>()); } public <L extends List<? super T>> L readAll(L resultList) throws IOException {"
+      },
+      {
+        "txt": "while (hasNextValue()) { resultList.add(nextValue()); } return resultList; } public <C extends Collection<? super T>> C readAll(C results) throws IOException { while (hasNextValue()) { results.add(nextValue()); }"
+      },
+      {
+        "txt": "return results; } public JsonParser getParser() { return _parser; } public FormatSchema getParserSchema() { return _parser.getSchema(); } public JsonLocation getCurrentLocation() { return _parser.getCurrentLocation();"
+      },
+      {
+        "txt": "} protected <R> R _throwNoSuchElement() { throw new NoSuchElementException(); } protected <R> R _handleMappingException(JsonMappingException e) { throw new RuntimeJsonMappingException(e.getMessage(), e); } protected <R> R _handleIOException(IOException e) { throw new RuntimeException(e.getMessage(), e); }"
+      }
+    ]
+  },
+  {
+    "id": 1384,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/MappingIterator.java",
+    "start-bug-line": 192,
+    "end-bug-line": 192,
+    "bug": "",
+    "fix": "}",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind; import java.io.Closeable; import java.io.IOException;"
+      },
+      {
+        "txt": "import java.util.*; import com.fasterxml.jackson.core.*; public class MappingIterator<T> implements Iterator<T>, Closeable { protected final static MappingIterator<?> EMPTY_ITERATOR = new MappingIterator<Object>(null, null, null, null, false, null); protected final JavaType _type; protected final DeserializationContext _context; protected final JsonDeserializer<T> _deserializer; protected JsonParser _parser;"
+      },
+      {
+        "txt": "protected final T _updatedValue; protected final boolean _closeParser; protected boolean _hasNextChecked; @SuppressWarnings(\"unchecked\") protected MappingIterator(JavaType type, JsonParser p, DeserializationContext ctxt, JsonDeserializer<?> deser, boolean managedParser, Object valueToUpdate) { _type = type; _parser = p;"
+      },
+      {
+        "txt": "_context = ctxt; _deserializer = (JsonDeserializer<T>) deser; _closeParser = managedParser; if (valueToUpdate == null) { _updatedValue = null; } else { _updatedValue = (T) valueToUpdate; } if (managedParser && (p != null) && p.isExpectedStartArrayToken()) { p.clearCurrentToken();"
+      },
+      {
+        "txt": "} } @SuppressWarnings(\"unchecked\") protected static <T> MappingIterator<T> emptyIterator() { return (MappingIterator<T>) EMPTY_ITERATOR; } @Override public boolean hasNext() { try {"
+      },
+      {
+        "txt": "return hasNextValue(); } catch (JsonMappingException e) { return (Boolean) _handleMappingException(e); } catch (IOException e) { return (Boolean) _handleIOException(e); } } @Override public T next() {"
+      },
+      {
+        "txt": "try { return nextValue(); } catch (JsonMappingException e) { throw new RuntimeJsonMappingException(e.getMessage(), e); } catch (IOException e) { throw new RuntimeException(e.getMessage(), e); } } @Override public void remove() {"
+      },
+      {
+        "txt": "} @Override public void close() throws IOException { if (_parser != null) { _parser.close(); } <extra_id_0> public boolean hasNextValue() throws IOException { if (_parser == null) { return false; } if (!_hasNextChecked) {"
+      },
+      {
+        "txt": "} if (!_hasNextChecked) { JsonToken t = _parser.getCurrentToken(); _hasNextChecked = true; if (t == null) { // un-initialized or cleared; find next t = _parser.nextToken(); if (t == null || t == JsonToken.END_ARRAY) { JsonParser jp = _parser; _parser = null; if (_closeParser) {"
+      },
+      {
+        "txt": "jp.close(); } return false; } } } return true; } public T nextValue() throws IOException {"
+      },
+      {
+        "txt": "if (!_hasNextChecked) { if (!hasNextValue()) { return _throwNoSuchElement(); } } if (_parser == null) { return _throwNoSuchElement(); } _hasNextChecked = false; try {"
+      },
+      {
+        "txt": "T value; if (_updatedValue == null) { value = _deserializer.deserialize(_parser, _context); } else{ _deserializer.deserialize(_parser, _context, _updatedValue); value = _updatedValue; } return value; } finally { _parser.clearCurrentToken();"
+      },
+      {
+        "txt": "} } public List<T> readAll() throws IOException { return readAll(new ArrayList<T>()); } public <L extends List<? super T>> L readAll(L resultList) throws IOException { while (hasNextValue()) { resultList.add(nextValue()); }"
+      },
+      {
+        "txt": "return resultList; } public <C extends Collection<? super T>> C readAll(C results) throws IOException { while (hasNextValue()) { results.add(nextValue()); } return results; } public JsonParser getParser() {"
+      },
+      {
+        "txt": "return _parser; } public FormatSchema getParserSchema() { return _parser.getSchema(); } public JsonLocation getCurrentLocation() { return _parser.getCurrentLocation(); } protected <R> R _throwNoSuchElement() { throw new NoSuchElementException();"
+      },
+      {
+        "txt": "} protected <R> R _handleMappingException(JsonMappingException e) { throw new RuntimeJsonMappingException(e.getMessage(), e); } protected <R> R _handleIOException(IOException e) { throw new RuntimeException(e.getMessage(), e); }"
+      }
+    ]
+  },
+  {
+    "id": 1385,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/MappingIterator.java",
+    "start-bug-line": 210,
+    "end-bug-line": 210,
+    "bug": "if (_parser == null) {",
+    "fix": "switch (_state) { case STATE_CLOSED:",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind; import java.io.Closeable; import java.io.IOException; import java.util.*; import com.fasterxml.jackson.core.*; public class MappingIterator<T> implements Iterator<T>, Closeable"
+      },
+      {
+        "txt": "{ protected final static MappingIterator<?> EMPTY_ITERATOR = new MappingIterator<Object>(null, null, null, null, false, null); protected final JavaType _type; protected final DeserializationContext _context; protected final JsonDeserializer<T> _deserializer; protected JsonParser _parser; protected final T _updatedValue; protected final boolean _closeParser; protected boolean _hasNextChecked;"
+      },
+      {
+        "txt": "@SuppressWarnings(\"unchecked\") protected MappingIterator(JavaType type, JsonParser p, DeserializationContext ctxt, JsonDeserializer<?> deser, boolean managedParser, Object valueToUpdate) { _type = type; _parser = p; _context = ctxt; _deserializer = (JsonDeserializer<T>) deser; _closeParser = managedParser;"
+      },
+      {
+        "txt": "if (valueToUpdate == null) { _updatedValue = null; } else { _updatedValue = (T) valueToUpdate; } if (managedParser && (p != null) && p.isExpectedStartArrayToken()) { p.clearCurrentToken(); } } @SuppressWarnings(\"unchecked\")"
+      },
+      {
+        "txt": "protected static <T> MappingIterator<T> emptyIterator() { return (MappingIterator<T>) EMPTY_ITERATOR; } @Override public boolean hasNext() { try { return hasNextValue(); } catch (JsonMappingException e) { return (Boolean) _handleMappingException(e);"
+      },
+      {
+        "txt": "} catch (IOException e) { return (Boolean) _handleIOException(e); } } @Override public T next() { try { return nextValue(); } catch (JsonMappingException e) {"
+      },
+      {
+        "txt": "throw new RuntimeJsonMappingException(e.getMessage(), e); } catch (IOException e) { throw new RuntimeException(e.getMessage(), e); } } @Override public void remove() { throw new UnsupportedOperationException(); } @Override"
+      },
+      {
+        "txt": "if (_parser != null) { _parser.close(); } } public boolean hasNextValue() throws IOException { <extra_id_0> return false; } if (!_hasNextChecked) { JsonToken t = _parser.getCurrentToken(); _hasNextChecked = true; if (t == null) { // un-initialized or cleared; find next"
+      },
+      {
+        "txt": "_hasNextChecked = true; if (t == null) { // un-initialized or cleared; find next t = _parser.nextToken(); if (t == null || t == JsonToken.END_ARRAY) { JsonParser jp = _parser; _parser = null; if (_closeParser) { jp.close(); } return false;"
+      },
+      {
+        "txt": "} } } return true; } public T nextValue() throws IOException { if (!_hasNextChecked) { if (!hasNextValue()) { return _throwNoSuchElement();"
+      },
+      {
+        "txt": "} } if (_parser == null) { return _throwNoSuchElement(); } _hasNextChecked = false; try { T value; if (_updatedValue == null) { value = _deserializer.deserialize(_parser, _context);"
+      },
+      {
+        "txt": "} else{ _deserializer.deserialize(_parser, _context, _updatedValue); value = _updatedValue; } return value; } finally { _parser.clearCurrentToken(); } } public List<T> readAll() throws IOException {"
+      },
+      {
+        "txt": "return readAll(new ArrayList<T>()); } public <L extends List<? super T>> L readAll(L resultList) throws IOException { while (hasNextValue()) { resultList.add(nextValue()); } return resultList; } public <C extends Collection<? super T>> C readAll(C results) throws IOException"
+      },
+      {
+        "txt": "{ while (hasNextValue()) { results.add(nextValue()); } return results; } public JsonParser getParser() { return _parser; } public FormatSchema getParserSchema() {"
+      },
+      {
+        "txt": "return _parser.getSchema(); } public JsonLocation getCurrentLocation() { return _parser.getCurrentLocation(); } protected <R> R _throwNoSuchElement() { throw new NoSuchElementException(); } protected <R> R _handleMappingException(JsonMappingException e) { throw new RuntimeJsonMappingException(e.getMessage(), e);"
+      },
+      {
+        "txt": "} protected <R> R _handleIOException(IOException e) { throw new RuntimeException(e.getMessage(), e); }"
+      }
+    ]
+  },
+  {
+    "id": 1386,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/MappingIterator.java",
+    "start-bug-line": 212,
+    "end-bug-line": 212,
+    "bug": "",
+    "fix": "case STATE_NEED_RESYNC: _resync();",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind; import java.io.Closeable; import java.io.IOException; import java.util.*; import com.fasterxml.jackson.core.*; public class MappingIterator<T> implements Iterator<T>, Closeable { protected final static MappingIterator<?> EMPTY_ITERATOR ="
+      },
+      {
+        "txt": "new MappingIterator<Object>(null, null, null, null, false, null); protected final JavaType _type; protected final DeserializationContext _context; protected final JsonDeserializer<T> _deserializer; protected JsonParser _parser; protected final T _updatedValue; protected final boolean _closeParser; protected boolean _hasNextChecked; @SuppressWarnings(\"unchecked\") protected MappingIterator(JavaType type, JsonParser p, DeserializationContext ctxt,"
+      },
+      {
+        "txt": "JsonDeserializer<?> deser, boolean managedParser, Object valueToUpdate) { _type = type; _parser = p; _context = ctxt; _deserializer = (JsonDeserializer<T>) deser; _closeParser = managedParser; if (valueToUpdate == null) { _updatedValue = null;"
+      },
+      {
+        "txt": "} else { _updatedValue = (T) valueToUpdate; } if (managedParser && (p != null) && p.isExpectedStartArrayToken()) { p.clearCurrentToken(); } } @SuppressWarnings(\"unchecked\") protected static <T> MappingIterator<T> emptyIterator() { return (MappingIterator<T>) EMPTY_ITERATOR;"
+      },
+      {
+        "txt": "} @Override public boolean hasNext() { try { return hasNextValue(); } catch (JsonMappingException e) { return (Boolean) _handleMappingException(e); } catch (IOException e) { return (Boolean) _handleIOException(e);"
+      },
+      {
+        "txt": "} } @Override public T next() { try { return nextValue(); } catch (JsonMappingException e) { throw new RuntimeJsonMappingException(e.getMessage(), e); } catch (IOException e) {"
+      },
+      {
+        "txt": "throw new RuntimeException(e.getMessage(), e); } } @Override public void remove() { throw new UnsupportedOperationException(); } @Override public void close() throws IOException { if (_parser != null) {"
+      },
+      {
+        "txt": "} } public boolean hasNextValue() throws IOException { if (_parser == null) { return false; <extra_id_0> } if (!_hasNextChecked) { JsonToken t = _parser.getCurrentToken(); _hasNextChecked = true; if (t == null) { // un-initialized or cleared; find next t = _parser.nextToken();"
+      },
+      {
+        "txt": "if (t == null) { // un-initialized or cleared; find next t = _parser.nextToken(); if (t == null || t == JsonToken.END_ARRAY) { JsonParser jp = _parser; _parser = null; if (_closeParser) { jp.close(); } return false; }"
+      },
+      {
+        "txt": "} } return true; } public T nextValue() throws IOException { if (!_hasNextChecked) { if (!hasNextValue()) { return _throwNoSuchElement(); }"
+      },
+      {
+        "txt": "} if (_parser == null) { return _throwNoSuchElement(); } _hasNextChecked = false; try { T value; if (_updatedValue == null) { value = _deserializer.deserialize(_parser, _context); } else{"
+      },
+      {
+        "txt": "_deserializer.deserialize(_parser, _context, _updatedValue); value = _updatedValue; } return value; } finally { _parser.clearCurrentToken(); } } public List<T> readAll() throws IOException { return readAll(new ArrayList<T>());"
+      },
+      {
+        "txt": "} public <L extends List<? super T>> L readAll(L resultList) throws IOException { while (hasNextValue()) { resultList.add(nextValue()); } return resultList; } public <C extends Collection<? super T>> C readAll(C results) throws IOException {"
+      },
+      {
+        "txt": "while (hasNextValue()) { results.add(nextValue()); } return results; } public JsonParser getParser() { return _parser; } public FormatSchema getParserSchema() { return _parser.getSchema();"
+      },
+      {
+        "txt": "} public JsonLocation getCurrentLocation() { return _parser.getCurrentLocation(); } protected <R> R _throwNoSuchElement() { throw new NoSuchElementException(); } protected <R> R _handleMappingException(JsonMappingException e) { throw new RuntimeJsonMappingException(e.getMessage(), e); }"
+      },
+      {
+        "txt": "protected <R> R _handleIOException(IOException e) { throw new RuntimeException(e.getMessage(), e); }"
+      }
+    ]
+  },
+  {
+    "id": 1387,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/MappingIterator.java",
+    "start-bug-line": 213,
+    "end-bug-line": 214,
+    "bug": "} if (!_hasNextChecked) {",
+    "fix": "case STATE_MAY_HAVE_VALUE:",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind; import java.io.Closeable; import java.io.IOException; import java.util.*; import com.fasterxml.jackson.core.*; public class MappingIterator<T> implements Iterator<T>, Closeable { protected final static MappingIterator<?> EMPTY_ITERATOR ="
+      },
+      {
+        "txt": "new MappingIterator<Object>(null, null, null, null, false, null); protected final JavaType _type; protected final DeserializationContext _context; protected final JsonDeserializer<T> _deserializer; protected JsonParser _parser; protected final T _updatedValue; protected final boolean _closeParser; protected boolean _hasNextChecked; @SuppressWarnings(\"unchecked\") protected MappingIterator(JavaType type, JsonParser p, DeserializationContext ctxt,"
+      },
+      {
+        "txt": "JsonDeserializer<?> deser, boolean managedParser, Object valueToUpdate) { _type = type; _parser = p; _context = ctxt; _deserializer = (JsonDeserializer<T>) deser; _closeParser = managedParser; if (valueToUpdate == null) { _updatedValue = null;"
+      },
+      {
+        "txt": "} else { _updatedValue = (T) valueToUpdate; } if (managedParser && (p != null) && p.isExpectedStartArrayToken()) { p.clearCurrentToken(); } } @SuppressWarnings(\"unchecked\") protected static <T> MappingIterator<T> emptyIterator() { return (MappingIterator<T>) EMPTY_ITERATOR;"
+      },
+      {
+        "txt": "} @Override public boolean hasNext() { try { return hasNextValue(); } catch (JsonMappingException e) { return (Boolean) _handleMappingException(e); } catch (IOException e) { return (Boolean) _handleIOException(e);"
+      },
+      {
+        "txt": "} } @Override public T next() { try { return nextValue(); } catch (JsonMappingException e) { throw new RuntimeJsonMappingException(e.getMessage(), e); } catch (IOException e) {"
+      },
+      {
+        "txt": "throw new RuntimeException(e.getMessage(), e); } } @Override public void remove() { throw new UnsupportedOperationException(); } @Override public void close() throws IOException { if (_parser != null) {"
+      },
+      {
+        "txt": "} } public boolean hasNextValue() throws IOException { if (_parser == null) { return false; <extra_id_0> JsonToken t = _parser.getCurrentToken(); _hasNextChecked = true; if (t == null) { // un-initialized or cleared; find next t = _parser.nextToken(); if (t == null || t == JsonToken.END_ARRAY) { JsonParser jp = _parser;"
+      },
+      {
+        "txt": "if (t == null || t == JsonToken.END_ARRAY) { JsonParser jp = _parser; _parser = null; if (_closeParser) { jp.close(); } return false; } } }"
+      },
+      {
+        "txt": "return true; } public T nextValue() throws IOException { if (!_hasNextChecked) { if (!hasNextValue()) { return _throwNoSuchElement(); } } if (_parser == null) {"
+      },
+      {
+        "txt": "return _throwNoSuchElement(); } _hasNextChecked = false; try { T value; if (_updatedValue == null) { value = _deserializer.deserialize(_parser, _context); } else{ _deserializer.deserialize(_parser, _context, _updatedValue); value = _updatedValue;"
+      },
+      {
+        "txt": "} return value; } finally { _parser.clearCurrentToken(); } } public List<T> readAll() throws IOException { return readAll(new ArrayList<T>()); } public <L extends List<? super T>> L readAll(L resultList) throws IOException"
+      },
+      {
+        "txt": "{ while (hasNextValue()) { resultList.add(nextValue()); } return resultList; } public <C extends Collection<? super T>> C readAll(C results) throws IOException { while (hasNextValue()) { results.add(nextValue());"
+      },
+      {
+        "txt": "} return results; } public JsonParser getParser() { return _parser; } public FormatSchema getParserSchema() { return _parser.getSchema(); } public JsonLocation getCurrentLocation() {"
+      },
+      {
+        "txt": "return _parser.getCurrentLocation(); } protected <R> R _throwNoSuchElement() { throw new NoSuchElementException(); } protected <R> R _handleMappingException(JsonMappingException e) { throw new RuntimeJsonMappingException(e.getMessage(), e); } protected <R> R _handleIOException(IOException e) { throw new RuntimeException(e.getMessage(), e);"
+      }
+    ]
+  },
+  {
+    "id": 1388,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/MappingIterator.java",
+    "start-bug-line": 216,
+    "end-bug-line": 216,
+    "bug": "_hasNextChecked = true;",
+    "fix": "[Delete]",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "import java.io.Closeable; import java.io.IOException; import java.util.*; import com.fasterxml.jackson.core.*; public class MappingIterator<T> implements Iterator<T>, Closeable { protected final static MappingIterator<?> EMPTY_ITERATOR = new MappingIterator<Object>(null, null, null, null, false, null); protected final JavaType _type; protected final DeserializationContext _context;"
+      },
+      {
+        "txt": "protected final JsonDeserializer<T> _deserializer; protected JsonParser _parser; protected final T _updatedValue; protected final boolean _closeParser; protected boolean _hasNextChecked; @SuppressWarnings(\"unchecked\") protected MappingIterator(JavaType type, JsonParser p, DeserializationContext ctxt, JsonDeserializer<?> deser, boolean managedParser, Object valueToUpdate) {"
+      },
+      {
+        "txt": "_type = type; _parser = p; _context = ctxt; _deserializer = (JsonDeserializer<T>) deser; _closeParser = managedParser; if (valueToUpdate == null) { _updatedValue = null; } else { _updatedValue = (T) valueToUpdate; }"
+      },
+      {
+        "txt": "if (managedParser && (p != null) && p.isExpectedStartArrayToken()) { p.clearCurrentToken(); } } @SuppressWarnings(\"unchecked\") protected static <T> MappingIterator<T> emptyIterator() { return (MappingIterator<T>) EMPTY_ITERATOR; } @Override public boolean hasNext()"
+      },
+      {
+        "txt": "{ try { return hasNextValue(); } catch (JsonMappingException e) { return (Boolean) _handleMappingException(e); } catch (IOException e) { return (Boolean) _handleIOException(e); } } @Override"
+      },
+      {
+        "txt": "public T next() { try { return nextValue(); } catch (JsonMappingException e) { throw new RuntimeJsonMappingException(e.getMessage(), e); } catch (IOException e) { throw new RuntimeException(e.getMessage(), e); } }"
+      },
+      {
+        "txt": "@Override public void remove() { throw new UnsupportedOperationException(); } @Override public void close() throws IOException { if (_parser != null) { _parser.close(); } }"
+      },
+      {
+        "txt": "{ if (_parser == null) { return false; } if (!_hasNextChecked) { JsonToken t = _parser.getCurrentToken(); <extra_id_0> if (t == null) { // un-initialized or cleared; find next t = _parser.nextToken(); if (t == null || t == JsonToken.END_ARRAY) { JsonParser jp = _parser; _parser = null; if (_closeParser) {"
+      },
+      {
+        "txt": "_parser = null; if (_closeParser) { jp.close(); } return false; } } } return true; }"
+      },
+      {
+        "txt": "public T nextValue() throws IOException { if (!_hasNextChecked) { if (!hasNextValue()) { return _throwNoSuchElement(); } } if (_parser == null) { return _throwNoSuchElement(); }"
+      },
+      {
+        "txt": "_hasNextChecked = false; try { T value; if (_updatedValue == null) { value = _deserializer.deserialize(_parser, _context); } else{ _deserializer.deserialize(_parser, _context, _updatedValue); value = _updatedValue; } return value;"
+      },
+      {
+        "txt": "} finally { _parser.clearCurrentToken(); } } public List<T> readAll() throws IOException { return readAll(new ArrayList<T>()); } public <L extends List<? super T>> L readAll(L resultList) throws IOException { while (hasNextValue()) {"
+      },
+      {
+        "txt": "resultList.add(nextValue()); } return resultList; } public <C extends Collection<? super T>> C readAll(C results) throws IOException { while (hasNextValue()) { results.add(nextValue()); } return results;"
+      },
+      {
+        "txt": "} public JsonParser getParser() { return _parser; } public FormatSchema getParserSchema() { return _parser.getSchema(); } public JsonLocation getCurrentLocation() { return _parser.getCurrentLocation(); }"
+      },
+      {
+        "txt": "protected <R> R _throwNoSuchElement() { throw new NoSuchElementException(); } protected <R> R _handleMappingException(JsonMappingException e) { throw new RuntimeJsonMappingException(e.getMessage(), e); } protected <R> R _handleIOException(IOException e) { throw new RuntimeException(e.getMessage(), e); }"
+      }
+    ]
+  },
+  {
+    "id": 1389,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/MappingIterator.java",
+    "start-bug-line": 221,
+    "end-bug-line": 224,
+    "bug": "JsonParser jp = _parser; _parser = null; if (_closeParser) { jp.close();",
+    "fix": "_state = STATE_CLOSED; if (_closeParser && (_parser != null)) { _parser.close();",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind; import java.io.Closeable; import java.io.IOException; import java.util.*; import com.fasterxml.jackson.core.*;"
+      },
+      {
+        "txt": "public class MappingIterator<T> implements Iterator<T>, Closeable { protected final static MappingIterator<?> EMPTY_ITERATOR = new MappingIterator<Object>(null, null, null, null, false, null); protected final JavaType _type; protected final DeserializationContext _context; protected final JsonDeserializer<T> _deserializer; protected JsonParser _parser; protected final T _updatedValue; protected final boolean _closeParser;"
+      },
+      {
+        "txt": "protected boolean _hasNextChecked; @SuppressWarnings(\"unchecked\") protected MappingIterator(JavaType type, JsonParser p, DeserializationContext ctxt, JsonDeserializer<?> deser, boolean managedParser, Object valueToUpdate) { _type = type; _parser = p; _context = ctxt; _deserializer = (JsonDeserializer<T>) deser;"
+      },
+      {
+        "txt": "_closeParser = managedParser; if (valueToUpdate == null) { _updatedValue = null; } else { _updatedValue = (T) valueToUpdate; } if (managedParser && (p != null) && p.isExpectedStartArrayToken()) { p.clearCurrentToken(); } }"
+      },
+      {
+        "txt": "@SuppressWarnings(\"unchecked\") protected static <T> MappingIterator<T> emptyIterator() { return (MappingIterator<T>) EMPTY_ITERATOR; } @Override public boolean hasNext() { try { return hasNextValue(); } catch (JsonMappingException e) {"
+      },
+      {
+        "txt": "return (Boolean) _handleMappingException(e); } catch (IOException e) { return (Boolean) _handleIOException(e); } } @Override public T next() { try { return nextValue();"
+      },
+      {
+        "txt": "} catch (JsonMappingException e) { throw new RuntimeJsonMappingException(e.getMessage(), e); } catch (IOException e) { throw new RuntimeException(e.getMessage(), e); } } @Override public void remove() { throw new UnsupportedOperationException(); }"
+      },
+      {
+        "txt": "@Override public void close() throws IOException { if (_parser != null) { _parser.close(); } } public boolean hasNextValue() throws IOException { if (_parser == null) { return false;"
+      },
+      {
+        "txt": "if (!_hasNextChecked) { JsonToken t = _parser.getCurrentToken(); _hasNextChecked = true; if (t == null) { // un-initialized or cleared; find next t = _parser.nextToken(); if (t == null || t == JsonToken.END_ARRAY) { <extra_id_0> } return false; } } } return true;"
+      },
+      {
+        "txt": "} return true; } public T nextValue() throws IOException { if (!_hasNextChecked) { if (!hasNextValue()) { return _throwNoSuchElement(); } }"
+      },
+      {
+        "txt": "if (_parser == null) { return _throwNoSuchElement(); } _hasNextChecked = false; try { T value; if (_updatedValue == null) { value = _deserializer.deserialize(_parser, _context); } else{ _deserializer.deserialize(_parser, _context, _updatedValue);"
+      },
+      {
+        "txt": "value = _updatedValue; } return value; } finally { _parser.clearCurrentToken(); } } public List<T> readAll() throws IOException { return readAll(new ArrayList<T>()); }"
+      },
+      {
+        "txt": "public <L extends List<? super T>> L readAll(L resultList) throws IOException { while (hasNextValue()) { resultList.add(nextValue()); } return resultList; } public <C extends Collection<? super T>> C readAll(C results) throws IOException { while (hasNextValue()) {"
+      },
+      {
+        "txt": "results.add(nextValue()); } return results; } public JsonParser getParser() { return _parser; } public FormatSchema getParserSchema() { return _parser.getSchema(); }"
+      },
+      {
+        "txt": "public JsonLocation getCurrentLocation() { return _parser.getCurrentLocation(); } protected <R> R _throwNoSuchElement() { throw new NoSuchElementException(); } protected <R> R _handleMappingException(JsonMappingException e) { throw new RuntimeJsonMappingException(e.getMessage(), e); } protected <R> R _handleIOException(IOException e) {"
+      },
+      {
+        "txt": "throw new RuntimeException(e.getMessage(), e); }"
+      }
+    ]
+  },
+  {
+    "id": 1390,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/MappingIterator.java",
+    "start-bug-line": 229,
+    "end-bug-line": 229,
+    "bug": "",
+    "fix": "_state = STATE_HAS_VALUE; return true; case STATE_HAS_VALUE:",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind; import java.io.Closeable; import java.io.IOException;"
+      },
+      {
+        "txt": "import java.util.*; import com.fasterxml.jackson.core.*; public class MappingIterator<T> implements Iterator<T>, Closeable { protected final static MappingIterator<?> EMPTY_ITERATOR = new MappingIterator<Object>(null, null, null, null, false, null); protected final JavaType _type; protected final DeserializationContext _context; protected final JsonDeserializer<T> _deserializer; protected JsonParser _parser;"
+      },
+      {
+        "txt": "protected final T _updatedValue; protected final boolean _closeParser; protected boolean _hasNextChecked; @SuppressWarnings(\"unchecked\") protected MappingIterator(JavaType type, JsonParser p, DeserializationContext ctxt, JsonDeserializer<?> deser, boolean managedParser, Object valueToUpdate) { _type = type; _parser = p;"
+      },
+      {
+        "txt": "_context = ctxt; _deserializer = (JsonDeserializer<T>) deser; _closeParser = managedParser; if (valueToUpdate == null) { _updatedValue = null; } else { _updatedValue = (T) valueToUpdate; } if (managedParser && (p != null) && p.isExpectedStartArrayToken()) { p.clearCurrentToken();"
+      },
+      {
+        "txt": "} } @SuppressWarnings(\"unchecked\") protected static <T> MappingIterator<T> emptyIterator() { return (MappingIterator<T>) EMPTY_ITERATOR; } @Override public boolean hasNext() { try {"
+      },
+      {
+        "txt": "return hasNextValue(); } catch (JsonMappingException e) { return (Boolean) _handleMappingException(e); } catch (IOException e) { return (Boolean) _handleIOException(e); } } @Override public T next() {"
+      },
+      {
+        "txt": "try { return nextValue(); } catch (JsonMappingException e) { throw new RuntimeJsonMappingException(e.getMessage(), e); } catch (IOException e) { throw new RuntimeException(e.getMessage(), e); } } @Override public void remove() {"
+      },
+      {
+        "txt": "throw new UnsupportedOperationException(); } @Override public void close() throws IOException { if (_parser != null) { _parser.close(); } } public boolean hasNextValue() throws IOException {"
+      },
+      {
+        "txt": "if (_parser == null) { return false; } if (!_hasNextChecked) { JsonToken t = _parser.getCurrentToken(); _hasNextChecked = true; if (t == null) { // un-initialized or cleared; find next t = _parser.nextToken(); if (t == null || t == JsonToken.END_ARRAY) { JsonParser jp = _parser;"
+      },
+      {
+        "txt": "if (_closeParser) { jp.close(); } return false; } } <extra_id_0> } return true; } public T nextValue() throws IOException { if (!_hasNextChecked) {"
+      },
+      {
+        "txt": "{ if (!_hasNextChecked) { if (!hasNextValue()) { return _throwNoSuchElement(); } } if (_parser == null) { return _throwNoSuchElement(); } _hasNextChecked = false;"
+      },
+      {
+        "txt": "try { T value; if (_updatedValue == null) { value = _deserializer.deserialize(_parser, _context); } else{ _deserializer.deserialize(_parser, _context, _updatedValue); value = _updatedValue; } return value; } finally {"
+      },
+      {
+        "txt": "_parser.clearCurrentToken(); } } public List<T> readAll() throws IOException { return readAll(new ArrayList<T>()); } public <L extends List<? super T>> L readAll(L resultList) throws IOException { while (hasNextValue()) { resultList.add(nextValue());"
+      },
+      {
+        "txt": "} return resultList; } public <C extends Collection<? super T>> C readAll(C results) throws IOException { while (hasNextValue()) { results.add(nextValue()); } return results; }"
+      },
+      {
+        "txt": "public JsonParser getParser() { return _parser; } public FormatSchema getParserSchema() { return _parser.getSchema(); } public JsonLocation getCurrentLocation() { return _parser.getCurrentLocation(); } protected <R> R _throwNoSuchElement() {"
+      },
+      {
+        "txt": "throw new NoSuchElementException(); } protected <R> R _handleMappingException(JsonMappingException e) { throw new RuntimeJsonMappingException(e.getMessage(), e); } protected <R> R _handleIOException(IOException e) { throw new RuntimeException(e.getMessage(), e); }"
+      }
+    ]
+  },
+  {
+    "id": 1391,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/MappingIterator.java",
+    "start-bug-line": 236,
+    "end-bug-line": 236,
+    "bug": "if (!_hasNextChecked) {",
+    "fix": "switch (_state) { case STATE_CLOSED: return _throwNoSuchElement(); case STATE_NEED_RESYNC: // fall-through, will do re-sync case STATE_MAY_HAVE_VALUE:",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind; import java.io.Closeable; import java.io.IOException; import java.util.*; import com.fasterxml.jackson.core.*; public class MappingIterator<T> implements Iterator<T>, Closeable { protected final static MappingIterator<?> EMPTY_ITERATOR ="
+      },
+      {
+        "txt": "new MappingIterator<Object>(null, null, null, null, false, null); protected final JavaType _type; protected final DeserializationContext _context; protected final JsonDeserializer<T> _deserializer; protected JsonParser _parser; protected final T _updatedValue; protected final boolean _closeParser; protected boolean _hasNextChecked; @SuppressWarnings(\"unchecked\") protected MappingIterator(JavaType type, JsonParser p, DeserializationContext ctxt,"
+      },
+      {
+        "txt": "JsonDeserializer<?> deser, boolean managedParser, Object valueToUpdate) { _type = type; _parser = p; _context = ctxt; _deserializer = (JsonDeserializer<T>) deser; _closeParser = managedParser; if (valueToUpdate == null) { _updatedValue = null;"
+      },
+      {
+        "txt": "} else { _updatedValue = (T) valueToUpdate; } if (managedParser && (p != null) && p.isExpectedStartArrayToken()) { p.clearCurrentToken(); } } @SuppressWarnings(\"unchecked\") protected static <T> MappingIterator<T> emptyIterator() { return (MappingIterator<T>) EMPTY_ITERATOR;"
+      },
+      {
+        "txt": "} @Override public boolean hasNext() { try { return hasNextValue(); } catch (JsonMappingException e) { return (Boolean) _handleMappingException(e); } catch (IOException e) { return (Boolean) _handleIOException(e);"
+      },
+      {
+        "txt": "} } @Override public T next() { try { return nextValue(); } catch (JsonMappingException e) { throw new RuntimeJsonMappingException(e.getMessage(), e); } catch (IOException e) {"
+      },
+      {
+        "txt": "throw new RuntimeException(e.getMessage(), e); } } @Override public void remove() { throw new UnsupportedOperationException(); } @Override public void close() throws IOException { if (_parser != null) {"
+      },
+      {
+        "txt": "_parser.close(); } } public boolean hasNextValue() throws IOException { if (_parser == null) { return false; } if (!_hasNextChecked) { JsonToken t = _parser.getCurrentToken();"
+      },
+      {
+        "txt": "_hasNextChecked = true; if (t == null) { // un-initialized or cleared; find next t = _parser.nextToken(); if (t == null || t == JsonToken.END_ARRAY) { JsonParser jp = _parser; _parser = null; if (_closeParser) { jp.close(); } return false;"
+      },
+      {
+        "txt": "} } return true; } public T nextValue() throws IOException { <extra_id_0> if (!hasNextValue()) { return _throwNoSuchElement(); } } if (_parser == null) { return _throwNoSuchElement();"
+      },
+      {
+        "txt": "if (_parser == null) { return _throwNoSuchElement(); } _hasNextChecked = false; try { T value; if (_updatedValue == null) { value = _deserializer.deserialize(_parser, _context); } else{ _deserializer.deserialize(_parser, _context, _updatedValue);"
+      },
+      {
+        "txt": "value = _updatedValue; } return value; } finally { _parser.clearCurrentToken(); } } public List<T> readAll() throws IOException { return readAll(new ArrayList<T>()); }"
+      },
+      {
+        "txt": "public <L extends List<? super T>> L readAll(L resultList) throws IOException { while (hasNextValue()) { resultList.add(nextValue()); } return resultList; } public <C extends Collection<? super T>> C readAll(C results) throws IOException { while (hasNextValue()) {"
+      },
+      {
+        "txt": "results.add(nextValue()); } return results; } public JsonParser getParser() { return _parser; } public FormatSchema getParserSchema() { return _parser.getSchema(); }"
+      },
+      {
+        "txt": "public JsonLocation getCurrentLocation() { return _parser.getCurrentLocation(); } protected <R> R _throwNoSuchElement() { throw new NoSuchElementException(); } protected <R> R _handleMappingException(JsonMappingException e) { throw new RuntimeJsonMappingException(e.getMessage(), e); } protected <R> R _handleIOException(IOException e) {"
+      },
+      {
+        "txt": "throw new RuntimeException(e.getMessage(), e); }"
+      }
+    ]
+  },
+  {
+    "id": 1392,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/MappingIterator.java",
+    "start-bug-line": 240,
+    "end-bug-line": 240,
+    "bug": "",
+    "fix": "break; case STATE_HAS_VALUE: break;",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind; import java.io.Closeable;"
+      },
+      {
+        "txt": "import java.io.IOException; import java.util.*; import com.fasterxml.jackson.core.*; public class MappingIterator<T> implements Iterator<T>, Closeable { protected final static MappingIterator<?> EMPTY_ITERATOR = new MappingIterator<Object>(null, null, null, null, false, null); protected final JavaType _type; protected final DeserializationContext _context; protected final JsonDeserializer<T> _deserializer;"
+      },
+      {
+        "txt": "protected JsonParser _parser; protected final T _updatedValue; protected final boolean _closeParser; protected boolean _hasNextChecked; @SuppressWarnings(\"unchecked\") protected MappingIterator(JavaType type, JsonParser p, DeserializationContext ctxt, JsonDeserializer<?> deser, boolean managedParser, Object valueToUpdate) { _type = type;"
+      },
+      {
+        "txt": "_parser = p; _context = ctxt; _deserializer = (JsonDeserializer<T>) deser; _closeParser = managedParser; if (valueToUpdate == null) { _updatedValue = null; } else { _updatedValue = (T) valueToUpdate; } if (managedParser && (p != null) && p.isExpectedStartArrayToken()) {"
+      },
+      {
+        "txt": "p.clearCurrentToken(); } } @SuppressWarnings(\"unchecked\") protected static <T> MappingIterator<T> emptyIterator() { return (MappingIterator<T>) EMPTY_ITERATOR; } @Override public boolean hasNext() {"
+      },
+      {
+        "txt": "try { return hasNextValue(); } catch (JsonMappingException e) { return (Boolean) _handleMappingException(e); } catch (IOException e) { return (Boolean) _handleIOException(e); } } @Override public T next()"
+      },
+      {
+        "txt": "{ try { return nextValue(); } catch (JsonMappingException e) { throw new RuntimeJsonMappingException(e.getMessage(), e); } catch (IOException e) { throw new RuntimeException(e.getMessage(), e); } } @Override"
+      },
+      {
+        "txt": "public void remove() { throw new UnsupportedOperationException(); } @Override public void close() throws IOException { if (_parser != null) { _parser.close(); } } public boolean hasNextValue() throws IOException"
+      },
+      {
+        "txt": "{ if (_parser == null) { return false; } if (!_hasNextChecked) { JsonToken t = _parser.getCurrentToken(); _hasNextChecked = true; if (t == null) { // un-initialized or cleared; find next t = _parser.nextToken(); if (t == null || t == JsonToken.END_ARRAY) {"
+      },
+      {
+        "txt": "JsonParser jp = _parser; _parser = null; if (_closeParser) { jp.close(); } return false; } } } return true;"
+      },
+      {
+        "txt": "public T nextValue() throws IOException { if (!_hasNextChecked) { if (!hasNextValue()) { return _throwNoSuchElement(); } <extra_id_0> if (_parser == null) { return _throwNoSuchElement(); } _hasNextChecked = false; try { T value;"
+      },
+      {
+        "txt": "try { T value; if (_updatedValue == null) { value = _deserializer.deserialize(_parser, _context); } else{ _deserializer.deserialize(_parser, _context, _updatedValue); value = _updatedValue; } return value; } finally {"
+      },
+      {
+        "txt": "_parser.clearCurrentToken(); } } public List<T> readAll() throws IOException { return readAll(new ArrayList<T>()); } public <L extends List<? super T>> L readAll(L resultList) throws IOException { while (hasNextValue()) { resultList.add(nextValue());"
+      },
+      {
+        "txt": "} return resultList; } public <C extends Collection<? super T>> C readAll(C results) throws IOException { while (hasNextValue()) { results.add(nextValue()); } return results; }"
+      },
+      {
+        "txt": "public JsonParser getParser() { return _parser; } public FormatSchema getParserSchema() { return _parser.getSchema(); } public JsonLocation getCurrentLocation() { return _parser.getCurrentLocation(); } protected <R> R _throwNoSuchElement() {"
+      },
+      {
+        "txt": "throw new NoSuchElementException(); } protected <R> R _handleMappingException(JsonMappingException e) { throw new RuntimeJsonMappingException(e.getMessage(), e); } protected <R> R _handleIOException(IOException e) { throw new RuntimeException(e.getMessage(), e); }"
+      }
+    ]
+  },
+  {
+    "id": 1393,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/MappingIterator.java",
+    "start-bug-line": 241,
+    "end-bug-line": 244,
+    "bug": "if (_parser == null) { return _throwNoSuchElement(); } _hasNextChecked = false;",
+    "fix": "[Delete]",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind; import java.io.Closeable; import java.io.IOException;"
+      },
+      {
+        "txt": "import java.util.*; import com.fasterxml.jackson.core.*; public class MappingIterator<T> implements Iterator<T>, Closeable { protected final static MappingIterator<?> EMPTY_ITERATOR = new MappingIterator<Object>(null, null, null, null, false, null); protected final JavaType _type; protected final DeserializationContext _context; protected final JsonDeserializer<T> _deserializer; protected JsonParser _parser;"
+      },
+      {
+        "txt": "protected final T _updatedValue; protected final boolean _closeParser; protected boolean _hasNextChecked; @SuppressWarnings(\"unchecked\") protected MappingIterator(JavaType type, JsonParser p, DeserializationContext ctxt, JsonDeserializer<?> deser, boolean managedParser, Object valueToUpdate) { _type = type; _parser = p;"
+      },
+      {
+        "txt": "_context = ctxt; _deserializer = (JsonDeserializer<T>) deser; _closeParser = managedParser; if (valueToUpdate == null) { _updatedValue = null; } else { _updatedValue = (T) valueToUpdate; } if (managedParser && (p != null) && p.isExpectedStartArrayToken()) { p.clearCurrentToken();"
+      },
+      {
+        "txt": "} } @SuppressWarnings(\"unchecked\") protected static <T> MappingIterator<T> emptyIterator() { return (MappingIterator<T>) EMPTY_ITERATOR; } @Override public boolean hasNext() { try {"
+      },
+      {
+        "txt": "return hasNextValue(); } catch (JsonMappingException e) { return (Boolean) _handleMappingException(e); } catch (IOException e) { return (Boolean) _handleIOException(e); } } @Override public T next() {"
+      },
+      {
+        "txt": "try { return nextValue(); } catch (JsonMappingException e) { throw new RuntimeJsonMappingException(e.getMessage(), e); } catch (IOException e) { throw new RuntimeException(e.getMessage(), e); } } @Override public void remove() {"
+      },
+      {
+        "txt": "throw new UnsupportedOperationException(); } @Override public void close() throws IOException { if (_parser != null) { _parser.close(); } } public boolean hasNextValue() throws IOException {"
+      },
+      {
+        "txt": "if (_parser == null) { return false; } if (!_hasNextChecked) { JsonToken t = _parser.getCurrentToken(); _hasNextChecked = true; if (t == null) { // un-initialized or cleared; find next t = _parser.nextToken(); if (t == null || t == JsonToken.END_ARRAY) { JsonParser jp = _parser;"
+      },
+      {
+        "txt": "_parser = null; if (_closeParser) { jp.close(); } return false; } } } return true; }"
+      },
+      {
+        "txt": "{ if (!_hasNextChecked) { if (!hasNextValue()) { return _throwNoSuchElement(); } } <extra_id_0> try { T value; if (_updatedValue == null) { value = _deserializer.deserialize(_parser, _context); } else{ _deserializer.deserialize(_parser, _context, _updatedValue);"
+      },
+      {
+        "txt": "} else{ _deserializer.deserialize(_parser, _context, _updatedValue); value = _updatedValue; } return value; } finally { _parser.clearCurrentToken(); } } public List<T> readAll() throws IOException {"
+      },
+      {
+        "txt": "return readAll(new ArrayList<T>()); } public <L extends List<? super T>> L readAll(L resultList) throws IOException { while (hasNextValue()) { resultList.add(nextValue()); } return resultList; } public <C extends Collection<? super T>> C readAll(C results) throws IOException"
+      },
+      {
+        "txt": "{ while (hasNextValue()) { results.add(nextValue()); } return results; } public JsonParser getParser() { return _parser; } public FormatSchema getParserSchema() {"
+      },
+      {
+        "txt": "return _parser.getSchema(); } public JsonLocation getCurrentLocation() { return _parser.getCurrentLocation(); } protected <R> R _throwNoSuchElement() { throw new NoSuchElementException(); } protected <R> R _handleMappingException(JsonMappingException e) { throw new RuntimeJsonMappingException(e.getMessage(), e);"
+      },
+      {
+        "txt": "} protected <R> R _handleIOException(IOException e) { throw new RuntimeException(e.getMessage(), e); }"
+      }
+    ]
+  },
+  {
+    "id": 1394,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/MappingIterator.java",
+    "start-bug-line": 246,
+    "end-bug-line": 246,
+    "bug": "",
+    "fix": "int nextState = STATE_NEED_RESYNC;",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind; import java.io.Closeable; import java.io.IOException; import java.util.*; import com.fasterxml.jackson.core.*; public class MappingIterator<T> implements Iterator<T>, Closeable {"
+      },
+      {
+        "txt": "protected final static MappingIterator<?> EMPTY_ITERATOR = new MappingIterator<Object>(null, null, null, null, false, null); protected final JavaType _type; protected final DeserializationContext _context; protected final JsonDeserializer<T> _deserializer; protected JsonParser _parser; protected final T _updatedValue; protected final boolean _closeParser; protected boolean _hasNextChecked; @SuppressWarnings(\"unchecked\")"
+      },
+      {
+        "txt": "protected MappingIterator(JavaType type, JsonParser p, DeserializationContext ctxt, JsonDeserializer<?> deser, boolean managedParser, Object valueToUpdate) { _type = type; _parser = p; _context = ctxt; _deserializer = (JsonDeserializer<T>) deser; _closeParser = managedParser; if (valueToUpdate == null) {"
+      },
+      {
+        "txt": "_updatedValue = null; } else { _updatedValue = (T) valueToUpdate; } if (managedParser && (p != null) && p.isExpectedStartArrayToken()) { p.clearCurrentToken(); } } @SuppressWarnings(\"unchecked\") protected static <T> MappingIterator<T> emptyIterator() {"
+      },
+      {
+        "txt": "return (MappingIterator<T>) EMPTY_ITERATOR; } @Override public boolean hasNext() { try { return hasNextValue(); } catch (JsonMappingException e) { return (Boolean) _handleMappingException(e); } catch (IOException e) {"
+      },
+      {
+        "txt": "return (Boolean) _handleIOException(e); } } @Override public T next() { try { return nextValue(); } catch (JsonMappingException e) { throw new RuntimeJsonMappingException(e.getMessage(), e);"
+      },
+      {
+        "txt": "} catch (IOException e) { throw new RuntimeException(e.getMessage(), e); } } @Override public void remove() { throw new UnsupportedOperationException(); } @Override public void close() throws IOException {"
+      },
+      {
+        "txt": "if (_parser != null) { _parser.close(); } } public boolean hasNextValue() throws IOException { if (_parser == null) { return false; } if (!_hasNextChecked) {"
+      },
+      {
+        "txt": "JsonToken t = _parser.getCurrentToken(); _hasNextChecked = true; if (t == null) { // un-initialized or cleared; find next t = _parser.nextToken(); if (t == null || t == JsonToken.END_ARRAY) { JsonParser jp = _parser; _parser = null; if (_closeParser) { jp.close(); }"
+      },
+      {
+        "txt": "return false; } } } return true; } public T nextValue() throws IOException { if (!_hasNextChecked) { if (!hasNextValue()) {"
+      },
+      {
+        "txt": "} } if (_parser == null) { return _throwNoSuchElement(); } _hasNextChecked = false; <extra_id_0> T value; if (_updatedValue == null) { value = _deserializer.deserialize(_parser, _context); } else{ _deserializer.deserialize(_parser, _context, _updatedValue); value = _updatedValue;"
+      },
+      {
+        "txt": "_deserializer.deserialize(_parser, _context, _updatedValue); value = _updatedValue; } return value; } finally { _parser.clearCurrentToken(); } } public List<T> readAll() throws IOException { return readAll(new ArrayList<T>());"
+      },
+      {
+        "txt": "} public <L extends List<? super T>> L readAll(L resultList) throws IOException { while (hasNextValue()) { resultList.add(nextValue()); } return resultList; } public <C extends Collection<? super T>> C readAll(C results) throws IOException {"
+      },
+      {
+        "txt": "while (hasNextValue()) { results.add(nextValue()); } return results; } public JsonParser getParser() { return _parser; } public FormatSchema getParserSchema() { return _parser.getSchema();"
+      },
+      {
+        "txt": "} public JsonLocation getCurrentLocation() { return _parser.getCurrentLocation(); } protected <R> R _throwNoSuchElement() { throw new NoSuchElementException(); } protected <R> R _handleMappingException(JsonMappingException e) { throw new RuntimeJsonMappingException(e.getMessage(), e); }"
+      },
+      {
+        "txt": "protected <R> R _handleIOException(IOException e) { throw new RuntimeException(e.getMessage(), e); }"
+      }
+    ]
+  },
+  {
+    "id": 1395,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/MappingIterator.java",
+    "start-bug-line": 254,
+    "end-bug-line": 254,
+    "bug": "",
+    "fix": "nextState = STATE_MAY_HAVE_VALUE;",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind; import java.io.Closeable; import java.io.IOException; import java.util.*; import com.fasterxml.jackson.core.*;"
+      },
+      {
+        "txt": "public class MappingIterator<T> implements Iterator<T>, Closeable { protected final static MappingIterator<?> EMPTY_ITERATOR = new MappingIterator<Object>(null, null, null, null, false, null); protected final JavaType _type; protected final DeserializationContext _context; protected final JsonDeserializer<T> _deserializer; protected JsonParser _parser; protected final T _updatedValue; protected final boolean _closeParser;"
+      },
+      {
+        "txt": "protected boolean _hasNextChecked; @SuppressWarnings(\"unchecked\") protected MappingIterator(JavaType type, JsonParser p, DeserializationContext ctxt, JsonDeserializer<?> deser, boolean managedParser, Object valueToUpdate) { _type = type; _parser = p; _context = ctxt; _deserializer = (JsonDeserializer<T>) deser;"
+      },
+      {
+        "txt": "_closeParser = managedParser; if (valueToUpdate == null) { _updatedValue = null; } else { _updatedValue = (T) valueToUpdate; } if (managedParser && (p != null) && p.isExpectedStartArrayToken()) { p.clearCurrentToken(); } }"
+      },
+      {
+        "txt": "@SuppressWarnings(\"unchecked\") protected static <T> MappingIterator<T> emptyIterator() { return (MappingIterator<T>) EMPTY_ITERATOR; } @Override public boolean hasNext() { try { return hasNextValue(); } catch (JsonMappingException e) {"
+      },
+      {
+        "txt": "return (Boolean) _handleMappingException(e); } catch (IOException e) { return (Boolean) _handleIOException(e); } } @Override public T next() { try { return nextValue();"
+      },
+      {
+        "txt": "} catch (JsonMappingException e) { throw new RuntimeJsonMappingException(e.getMessage(), e); } catch (IOException e) { throw new RuntimeException(e.getMessage(), e); } } @Override public void remove() { throw new UnsupportedOperationException(); }"
+      },
+      {
+        "txt": "@Override public void close() throws IOException { if (_parser != null) { _parser.close(); } } public boolean hasNextValue() throws IOException { if (_parser == null) { return false;"
+      },
+      {
+        "txt": "} if (!_hasNextChecked) { JsonToken t = _parser.getCurrentToken(); _hasNextChecked = true; if (t == null) { // un-initialized or cleared; find next t = _parser.nextToken(); if (t == null || t == JsonToken.END_ARRAY) { JsonParser jp = _parser; _parser = null; if (_closeParser) {"
+      },
+      {
+        "txt": "jp.close(); } return false; } } } return true; } public T nextValue() throws IOException {"
+      },
+      {
+        "txt": "if (!_hasNextChecked) { if (!hasNextValue()) { return _throwNoSuchElement(); } } if (_parser == null) { return _throwNoSuchElement(); } _hasNextChecked = false; try {"
+      },
+      {
+        "txt": "if (_updatedValue == null) { value = _deserializer.deserialize(_parser, _context); } else{ _deserializer.deserialize(_parser, _context, _updatedValue); value = _updatedValue; } <extra_id_0> } finally { _parser.clearCurrentToken(); } } public List<T> readAll() throws IOException { return readAll(new ArrayList<T>());"
+      },
+      {
+        "txt": "public List<T> readAll() throws IOException { return readAll(new ArrayList<T>()); } public <L extends List<? super T>> L readAll(L resultList) throws IOException { while (hasNextValue()) { resultList.add(nextValue()); } return resultList; }"
+      },
+      {
+        "txt": "public <C extends Collection<? super T>> C readAll(C results) throws IOException { while (hasNextValue()) { results.add(nextValue()); } return results; } public JsonParser getParser() { return _parser; }"
+      },
+      {
+        "txt": "public FormatSchema getParserSchema() { return _parser.getSchema(); } public JsonLocation getCurrentLocation() { return _parser.getCurrentLocation(); } protected <R> R _throwNoSuchElement() { throw new NoSuchElementException(); } protected <R> R _handleMappingException(JsonMappingException e) {"
+      },
+      {
+        "txt": "throw new RuntimeJsonMappingException(e.getMessage(), e); } protected <R> R _handleIOException(IOException e) { throw new RuntimeException(e.getMessage(), e); }"
+      }
+    ]
+  },
+  {
+    "id": 1396,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/MappingIterator.java",
+    "start-bug-line": 256,
+    "end-bug-line": 256,
+    "bug": "",
+    "fix": "_state = nextState;",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind; import java.io.Closeable; import java.io.IOException; import java.util.*; import com.fasterxml.jackson.core.*; public class MappingIterator<T> implements Iterator<T>, Closeable {"
+      },
+      {
+        "txt": "protected final static MappingIterator<?> EMPTY_ITERATOR = new MappingIterator<Object>(null, null, null, null, false, null); protected final JavaType _type; protected final DeserializationContext _context; protected final JsonDeserializer<T> _deserializer; protected JsonParser _parser; protected final T _updatedValue; protected final boolean _closeParser; protected boolean _hasNextChecked; @SuppressWarnings(\"unchecked\")"
+      },
+      {
+        "txt": "protected MappingIterator(JavaType type, JsonParser p, DeserializationContext ctxt, JsonDeserializer<?> deser, boolean managedParser, Object valueToUpdate) { _type = type; _parser = p; _context = ctxt; _deserializer = (JsonDeserializer<T>) deser; _closeParser = managedParser; if (valueToUpdate == null) {"
+      },
+      {
+        "txt": "_updatedValue = null; } else { _updatedValue = (T) valueToUpdate; } if (managedParser && (p != null) && p.isExpectedStartArrayToken()) { p.clearCurrentToken(); } } @SuppressWarnings(\"unchecked\") protected static <T> MappingIterator<T> emptyIterator() {"
+      },
+      {
+        "txt": "return (MappingIterator<T>) EMPTY_ITERATOR; } @Override public boolean hasNext() { try { return hasNextValue(); } catch (JsonMappingException e) { return (Boolean) _handleMappingException(e); } catch (IOException e) {"
+      },
+      {
+        "txt": "return (Boolean) _handleIOException(e); } } @Override public T next() { try { return nextValue(); } catch (JsonMappingException e) { throw new RuntimeJsonMappingException(e.getMessage(), e);"
+      },
+      {
+        "txt": "} catch (IOException e) { throw new RuntimeException(e.getMessage(), e); } } @Override public void remove() { throw new UnsupportedOperationException(); } @Override public void close() throws IOException {"
+      },
+      {
+        "txt": "if (_parser != null) { _parser.close(); } } public boolean hasNextValue() throws IOException { if (_parser == null) { return false; } if (!_hasNextChecked) {"
+      },
+      {
+        "txt": "JsonToken t = _parser.getCurrentToken(); _hasNextChecked = true; if (t == null) { // un-initialized or cleared; find next t = _parser.nextToken(); if (t == null || t == JsonToken.END_ARRAY) { JsonParser jp = _parser; _parser = null; if (_closeParser) { jp.close(); }"
+      },
+      {
+        "txt": "return false; } } } return true; } public T nextValue() throws IOException { if (!_hasNextChecked) { if (!hasNextValue()) {"
+      },
+      {
+        "txt": "return _throwNoSuchElement(); } } if (_parser == null) { return _throwNoSuchElement(); } _hasNextChecked = false; try { T value; if (_updatedValue == null) {"
+      },
+      {
+        "txt": "} else{ _deserializer.deserialize(_parser, _context, _updatedValue); value = _updatedValue; } return value; } finally { <extra_id_0> _parser.clearCurrentToken(); } } public List<T> readAll() throws IOException { return readAll(new ArrayList<T>()); }"
+      },
+      {
+        "txt": "return readAll(new ArrayList<T>()); } public <L extends List<? super T>> L readAll(L resultList) throws IOException { while (hasNextValue()) { resultList.add(nextValue()); } return resultList; } public <C extends Collection<? super T>> C readAll(C results) throws IOException"
+      },
+      {
+        "txt": "{ while (hasNextValue()) { results.add(nextValue()); } return results; } public JsonParser getParser() { return _parser; } public FormatSchema getParserSchema() {"
+      },
+      {
+        "txt": "return _parser.getSchema(); } public JsonLocation getCurrentLocation() { return _parser.getCurrentLocation(); } protected <R> R _throwNoSuchElement() { throw new NoSuchElementException(); } protected <R> R _handleMappingException(JsonMappingException e) { throw new RuntimeJsonMappingException(e.getMessage(), e);"
+      },
+      {
+        "txt": "} protected <R> R _handleIOException(IOException e) { throw new RuntimeException(e.getMessage(), e); }"
+      }
+    ]
+  },
+  {
+    "id": 1397,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/MappingIterator.java",
+    "start-bug-line": 352,
+    "end-bug-line": 352,
+    "bug": "",
+    "fix": "protected void _resync() throws IOException { final JsonParser p = _parser;",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind; import java.io.Closeable; import java.io.IOException; import java.util.*; import com.fasterxml.jackson.core.*; public class MappingIterator<T> implements Iterator<T>, Closeable"
+      },
+      {
+        "txt": "{ protected final static MappingIterator<?> EMPTY_ITERATOR = new MappingIterator<Object>(null, null, null, null, false, null); protected final JavaType _type; protected final DeserializationContext _context; protected final JsonDeserializer<T> _deserializer; protected JsonParser _parser; protected final T _updatedValue; protected final boolean _closeParser; protected boolean _hasNextChecked;"
+      },
+      {
+        "txt": "@SuppressWarnings(\"unchecked\") protected MappingIterator(JavaType type, JsonParser p, DeserializationContext ctxt, JsonDeserializer<?> deser, boolean managedParser, Object valueToUpdate) { _type = type; _parser = p; _context = ctxt; _deserializer = (JsonDeserializer<T>) deser; _closeParser = managedParser;"
+      },
+      {
+        "txt": "if (valueToUpdate == null) { _updatedValue = null; } else { _updatedValue = (T) valueToUpdate; } if (managedParser && (p != null) && p.isExpectedStartArrayToken()) { p.clearCurrentToken(); } } @SuppressWarnings(\"unchecked\")"
+      },
+      {
+        "txt": "protected static <T> MappingIterator<T> emptyIterator() { return (MappingIterator<T>) EMPTY_ITERATOR; } @Override public boolean hasNext() { try { return hasNextValue(); } catch (JsonMappingException e) { return (Boolean) _handleMappingException(e);"
+      },
+      {
+        "txt": "} catch (IOException e) { return (Boolean) _handleIOException(e); } } @Override public T next() { try { return nextValue(); } catch (JsonMappingException e) {"
+      },
+      {
+        "txt": "throw new RuntimeJsonMappingException(e.getMessage(), e); } catch (IOException e) { throw new RuntimeException(e.getMessage(), e); } } @Override public void remove() { throw new UnsupportedOperationException(); } @Override"
+      },
+      {
+        "txt": "public void close() throws IOException { if (_parser != null) { _parser.close(); } } public boolean hasNextValue() throws IOException { if (_parser == null) { return false; }"
+      },
+      {
+        "txt": "if (!_hasNextChecked) { JsonToken t = _parser.getCurrentToken(); _hasNextChecked = true; if (t == null) { // un-initialized or cleared; find next t = _parser.nextToken(); if (t == null || t == JsonToken.END_ARRAY) { JsonParser jp = _parser; _parser = null; if (_closeParser) { jp.close();"
+      },
+      {
+        "txt": "} return false; } } } return true; } public T nextValue() throws IOException { if (!_hasNextChecked) {"
+      },
+      {
+        "txt": "if (!hasNextValue()) { return _throwNoSuchElement(); } } if (_parser == null) { return _throwNoSuchElement(); } _hasNextChecked = false; try { T value;"
+      },
+      {
+        "txt": "if (_updatedValue == null) { value = _deserializer.deserialize(_parser, _context); } else{ _deserializer.deserialize(_parser, _context, _updatedValue); value = _updatedValue; } return value; } finally { _parser.clearCurrentToken(); }"
+      },
+      {
+        "txt": "} public List<T> readAll() throws IOException { return readAll(new ArrayList<T>()); } public <L extends List<? super T>> L readAll(L resultList) throws IOException { while (hasNextValue()) { resultList.add(nextValue()); } return resultList;"
+      },
+      {
+        "txt": "} public <C extends Collection<? super T>> C readAll(C results) throws IOException { while (hasNextValue()) { results.add(nextValue()); } return results; } public JsonParser getParser() { return _parser;"
+      },
+      {
+        "txt": "public FormatSchema getParserSchema() { return _parser.getSchema(); } public JsonLocation getCurrentLocation() { return _parser.getCurrentLocation(); } <extra_id_0> protected <R> R _throwNoSuchElement() { throw new NoSuchElementException(); } protected <R> R _handleMappingException(JsonMappingException e) { throw new RuntimeJsonMappingException(e.getMessage(), e); }"
+      },
+      {
+        "txt": "throw new RuntimeJsonMappingException(e.getMessage(), e); } protected <R> R _handleIOException(IOException e) { throw new RuntimeException(e.getMessage(), e); }"
+      }
+    ]
+  },
+  {
+    "id": 1398,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/MappingIterator.java",
+    "start-bug-line": 353,
+    "end-bug-line": 353,
+    "bug": "",
+    "fix": "if (p.getParsingContext() == _seqContext) { return; }",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind; import java.io.Closeable; import java.io.IOException; import java.util.*; import com.fasterxml.jackson.core.*; public class MappingIterator<T> implements Iterator<T>, Closeable"
+      },
+      {
+        "txt": "{ protected final static MappingIterator<?> EMPTY_ITERATOR = new MappingIterator<Object>(null, null, null, null, false, null); protected final JavaType _type; protected final DeserializationContext _context; protected final JsonDeserializer<T> _deserializer; protected JsonParser _parser; protected final T _updatedValue; protected final boolean _closeParser; protected boolean _hasNextChecked;"
+      },
+      {
+        "txt": "@SuppressWarnings(\"unchecked\") protected MappingIterator(JavaType type, JsonParser p, DeserializationContext ctxt, JsonDeserializer<?> deser, boolean managedParser, Object valueToUpdate) { _type = type; _parser = p; _context = ctxt; _deserializer = (JsonDeserializer<T>) deser; _closeParser = managedParser;"
+      },
+      {
+        "txt": "if (valueToUpdate == null) { _updatedValue = null; } else { _updatedValue = (T) valueToUpdate; } if (managedParser && (p != null) && p.isExpectedStartArrayToken()) { p.clearCurrentToken(); } } @SuppressWarnings(\"unchecked\")"
+      },
+      {
+        "txt": "protected static <T> MappingIterator<T> emptyIterator() { return (MappingIterator<T>) EMPTY_ITERATOR; } @Override public boolean hasNext() { try { return hasNextValue(); } catch (JsonMappingException e) { return (Boolean) _handleMappingException(e);"
+      },
+      {
+        "txt": "} catch (IOException e) { return (Boolean) _handleIOException(e); } } @Override public T next() { try { return nextValue(); } catch (JsonMappingException e) {"
+      },
+      {
+        "txt": "throw new RuntimeJsonMappingException(e.getMessage(), e); } catch (IOException e) { throw new RuntimeException(e.getMessage(), e); } } @Override public void remove() { throw new UnsupportedOperationException(); } @Override"
+      },
+      {
+        "txt": "public void close() throws IOException { if (_parser != null) { _parser.close(); } } public boolean hasNextValue() throws IOException { if (_parser == null) { return false; }"
+      },
+      {
+        "txt": "if (!_hasNextChecked) { JsonToken t = _parser.getCurrentToken(); _hasNextChecked = true; if (t == null) { // un-initialized or cleared; find next t = _parser.nextToken(); if (t == null || t == JsonToken.END_ARRAY) { JsonParser jp = _parser; _parser = null; if (_closeParser) { jp.close();"
+      },
+      {
+        "txt": "} return false; } } } return true; } public T nextValue() throws IOException { if (!_hasNextChecked) {"
+      },
+      {
+        "txt": "if (!hasNextValue()) { return _throwNoSuchElement(); } } if (_parser == null) { return _throwNoSuchElement(); } _hasNextChecked = false; try { T value;"
+      },
+      {
+        "txt": "if (_updatedValue == null) { value = _deserializer.deserialize(_parser, _context); } else{ _deserializer.deserialize(_parser, _context, _updatedValue); value = _updatedValue; } return value; } finally { _parser.clearCurrentToken(); }"
+      },
+      {
+        "txt": "} public List<T> readAll() throws IOException { return readAll(new ArrayList<T>()); } public <L extends List<? super T>> L readAll(L resultList) throws IOException { while (hasNextValue()) { resultList.add(nextValue()); } return resultList;"
+      },
+      {
+        "txt": "} public <C extends Collection<? super T>> C readAll(C results) throws IOException { while (hasNextValue()) { results.add(nextValue()); } return results; } public JsonParser getParser() { return _parser;"
+      },
+      {
+        "txt": "public FormatSchema getParserSchema() { return _parser.getSchema(); } public JsonLocation getCurrentLocation() { return _parser.getCurrentLocation(); } <extra_id_0> protected <R> R _throwNoSuchElement() { throw new NoSuchElementException(); } protected <R> R _handleMappingException(JsonMappingException e) { throw new RuntimeJsonMappingException(e.getMessage(), e); }"
+      },
+      {
+        "txt": "throw new RuntimeJsonMappingException(e.getMessage(), e); } protected <R> R _handleIOException(IOException e) { throw new RuntimeException(e.getMessage(), e); }"
+      }
+    ]
+  },
+  {
+    "id": 1399,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/MappingIterator.java",
+    "start-bug-line": 354,
+    "end-bug-line": 354,
+    "bug": "",
+    "fix": "while (true) { JsonToken t = p.nextToken(); if ((t == JsonToken.END_ARRAY) || (t == JsonToken.END_OBJECT)) { if (p.getParsingContext() == _seqContext) { p.clearCurrentToken(); return; } } else if ((t == JsonToken.START_ARRAY) || (t == JsonToken.START_OBJECT)) { p.skipChildren(); } else if (t == null) { return; } } }",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind; import java.io.Closeable; import java.io.IOException; import java.util.*; import com.fasterxml.jackson.core.*; public class MappingIterator<T> implements Iterator<T>, Closeable"
+      },
+      {
+        "txt": "{ protected final static MappingIterator<?> EMPTY_ITERATOR = new MappingIterator<Object>(null, null, null, null, false, null); protected final JavaType _type; protected final DeserializationContext _context; protected final JsonDeserializer<T> _deserializer; protected JsonParser _parser; protected final T _updatedValue; protected final boolean _closeParser; protected boolean _hasNextChecked;"
+      },
+      {
+        "txt": "@SuppressWarnings(\"unchecked\") protected MappingIterator(JavaType type, JsonParser p, DeserializationContext ctxt, JsonDeserializer<?> deser, boolean managedParser, Object valueToUpdate) { _type = type; _parser = p; _context = ctxt; _deserializer = (JsonDeserializer<T>) deser; _closeParser = managedParser;"
+      },
+      {
+        "txt": "if (valueToUpdate == null) { _updatedValue = null; } else { _updatedValue = (T) valueToUpdate; } if (managedParser && (p != null) && p.isExpectedStartArrayToken()) { p.clearCurrentToken(); } } @SuppressWarnings(\"unchecked\")"
+      },
+      {
+        "txt": "protected static <T> MappingIterator<T> emptyIterator() { return (MappingIterator<T>) EMPTY_ITERATOR; } @Override public boolean hasNext() { try { return hasNextValue(); } catch (JsonMappingException e) { return (Boolean) _handleMappingException(e);"
+      },
+      {
+        "txt": "} catch (IOException e) { return (Boolean) _handleIOException(e); } } @Override public T next() { try { return nextValue(); } catch (JsonMappingException e) {"
+      },
+      {
+        "txt": "throw new RuntimeJsonMappingException(e.getMessage(), e); } catch (IOException e) { throw new RuntimeException(e.getMessage(), e); } } @Override public void remove() { throw new UnsupportedOperationException(); } @Override"
+      },
+      {
+        "txt": "public void close() throws IOException { if (_parser != null) { _parser.close(); } } public boolean hasNextValue() throws IOException { if (_parser == null) { return false; }"
+      },
+      {
+        "txt": "if (!_hasNextChecked) { JsonToken t = _parser.getCurrentToken(); _hasNextChecked = true; if (t == null) { // un-initialized or cleared; find next t = _parser.nextToken(); if (t == null || t == JsonToken.END_ARRAY) { JsonParser jp = _parser; _parser = null; if (_closeParser) { jp.close();"
+      },
+      {
+        "txt": "} return false; } } } return true; } public T nextValue() throws IOException { if (!_hasNextChecked) {"
+      },
+      {
+        "txt": "if (!hasNextValue()) { return _throwNoSuchElement(); } } if (_parser == null) { return _throwNoSuchElement(); } _hasNextChecked = false; try { T value;"
+      },
+      {
+        "txt": "if (_updatedValue == null) { value = _deserializer.deserialize(_parser, _context); } else{ _deserializer.deserialize(_parser, _context, _updatedValue); value = _updatedValue; } return value; } finally { _parser.clearCurrentToken(); }"
+      },
+      {
+        "txt": "} public List<T> readAll() throws IOException { return readAll(new ArrayList<T>()); } public <L extends List<? super T>> L readAll(L resultList) throws IOException { while (hasNextValue()) { resultList.add(nextValue()); } return resultList;"
+      },
+      {
+        "txt": "} public <C extends Collection<? super T>> C readAll(C results) throws IOException { while (hasNextValue()) { results.add(nextValue()); } return results; } public JsonParser getParser() { return _parser;"
+      },
+      {
+        "txt": "public FormatSchema getParserSchema() { return _parser.getSchema(); } public JsonLocation getCurrentLocation() { return _parser.getCurrentLocation(); } <extra_id_0> protected <R> R _throwNoSuchElement() { throw new NoSuchElementException(); } protected <R> R _handleMappingException(JsonMappingException e) { throw new RuntimeJsonMappingException(e.getMessage(), e); }"
+      },
+      {
+        "txt": "throw new RuntimeJsonMappingException(e.getMessage(), e); } protected <R> R _handleIOException(IOException e) { throw new RuntimeException(e.getMessage(), e); }"
+      }
+    ]
+  }
+]

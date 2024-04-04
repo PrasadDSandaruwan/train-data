@@ -1,0 +1,65 @@
+[
+  {
+    "id": 1919,
+    "file_path": "src/main/java/org/jsoup/parser/Tag.java",
+    "start-bug-line": 218,
+    "end-bug-line": 218,
+    "bug": "private static final String[] preserveWhitespaceTags = {\"pre\", \"plaintext\", \"title\"};",
+    "fix": "private static final String[] preserveWhitespaceTags = {\"pre\", \"plaintext\", \"title\", \"textarea\"};",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.jsoup.parser; import org.jsoup.helper.Validate;"
+      },
+      {
+        "txt": "import java.util.HashMap; import java.util.Map; public class Tag { private static final Map<String, Tag> tags = new HashMap<String, Tag>(); // map of known tags private String tagName; private boolean isBlock = true; // block or inline private boolean formatAsBlock = true; // should be formatted as a block private boolean canContainBlock = true; // Can this tag hold block level tags? private boolean canContainInline = true; // only pcdata if not private boolean empty = false; // can hold nothing; e.g. img"
+      },
+      {
+        "txt": "private boolean selfClosing = false; // can self close (<foo />). used for unknown tags that self close, without forcing them as empty. private boolean preserveWhitespace = false; // for pre, textarea, script etc private Tag(String tagName) { this.tagName = tagName.toLowerCase(); } public String getName() { return tagName; } public static Tag valueOf(String tagName) { Validate.notNull(tagName);"
+      },
+      {
+        "txt": "tagName = tagName.trim().toLowerCase(); Validate.notEmpty(tagName); synchronized (tags) { Tag tag = tags.get(tagName); if (tag == null) { tag = new Tag(tagName); tag.isBlock = false; tag.canContainBlock = true; } return tag;"
+      },
+      {
+        "txt": "} } public boolean isBlock() { return isBlock; } public boolean formatAsBlock() { return formatAsBlock; } public boolean canContainBlock() { return canContainBlock;"
+      },
+      {
+        "txt": "} public boolean isInline() { return !isBlock; } public boolean isData() { return !canContainInline && !isEmpty(); } public boolean isEmpty() { return empty; }"
+      },
+      {
+        "txt": "public boolean isSelfClosing() { return empty || selfClosing; } public boolean isKnownTag() { return tags.containsKey(tagName); } public static boolean isKnownTag(String tagName) { return tags.containsKey(tagName); } public boolean preserveWhitespace() {"
+      },
+      {
+        "txt": "return preserveWhitespace; } Tag setSelfClosing() { selfClosing = true; return this; } @Override public boolean equals(Object o) { if (this == o) return true; if (!(o instanceof Tag)) return false;"
+      },
+      {
+        "txt": "Tag tag = (Tag) o; if (canContainBlock != tag.canContainBlock) return false; if (canContainInline != tag.canContainInline) return false; if (empty != tag.empty) return false; if (formatAsBlock != tag.formatAsBlock) return false; if (isBlock != tag.isBlock) return false; if (preserveWhitespace != tag.preserveWhitespace) return false; if (selfClosing != tag.selfClosing) return false; if (!tagName.equals(tag.tagName)) return false; return true;"
+      },
+      {
+        "txt": "} @Override public int hashCode() { int result = tagName.hashCode(); result = 31 * result + (isBlock ? 1 : 0); result = 31 * result + (formatAsBlock ? 1 : 0); result = 31 * result + (canContainBlock ? 1 : 0); result = 31 * result + (canContainInline ? 1 : 0); result = 31 * result + (empty ? 1 : 0); result = 31 * result + (selfClosing ? 1 : 0);"
+      },
+      {
+        "txt": "result = 31 * result + (preserveWhitespace ? 1 : 0); return result; } public String toString() { return tagName; } private static final String[] blockTags = { \"html\", \"head\", \"body\", \"frameset\", \"script\", \"noscript\", \"style\", \"meta\", \"link\", \"title\", \"frame\", \"noframes\", \"section\", \"nav\", \"aside\", \"hgroup\", \"header\", \"footer\", \"p\", \"h1\", \"h2\", \"h3\", \"h4\", \"h5\", \"h6\", \"ul\", \"ol\", \"pre\", \"div\", \"blockquote\", \"hr\", \"address\", \"figure\", \"figcaption\", \"form\", \"fieldset\", \"ins\","
+      },
+      {
+        "txt": "\"del\", \"dl\", \"dt\", \"dd\", \"li\", \"table\", \"caption\", \"thead\", \"tfoot\", \"tbody\", \"colgroup\", \"col\", \"tr\", \"th\", \"td\", \"video\", \"audio\", \"canvas\", \"details\", \"menu\", \"plaintext\" }; private static final String[] inlineTags = { \"object\", \"base\", \"font\", \"tt\", \"i\", \"b\", \"u\", \"big\", \"small\", \"em\", \"strong\", \"dfn\", \"code\", \"samp\", \"kbd\", \"var\", \"cite\", \"abbr\", \"time\", \"acronym\", \"mark\", \"ruby\", \"rt\", \"rp\", \"a\", \"img\", \"br\", \"wbr\", \"map\", \"q\", \"sub\", \"sup\", \"bdo\", \"iframe\", \"embed\", \"span\", \"input\", \"select\", \"textarea\", \"label\", \"button\", \"optgroup\", \"option\", \"legend\", \"datalist\", \"keygen\", \"output\", \"progress\", \"meter\", \"area\", \"param\", \"source\", \"track\", \"summary\", \"command\", \"device\" };"
+      },
+      {
+        "txt": "\"meta\", \"link\", \"base\", \"frame\", \"img\", \"br\", \"wbr\", \"embed\", \"hr\", \"input\", \"keygen\", \"col\", \"command\", \"device\" }; private static final String[] formatAsInlineTags = { \"title\", \"a\", \"p\", \"h1\", \"h2\", \"h3\", \"h4\", \"h5\", \"h6\", \"pre\", \"address\", \"li\", \"th\", \"td\", \"script\", \"style\" }; <extra_id_0> static { for (String tagName : blockTags) { Tag tag = new Tag(tagName); register(tag); } for (String tagName : inlineTags) {"
+      },
+      {
+        "txt": "} for (String tagName : inlineTags) { Tag tag = new Tag(tagName); tag.isBlock = false; tag.canContainBlock = false; tag.formatAsBlock = false; register(tag); } for (String tagName : emptyTags) { Tag tag = tags.get(tagName);"
+      },
+      {
+        "txt": "Validate.notNull(tag); tag.canContainBlock = false; tag.canContainInline = false; tag.empty = true; } for (String tagName : formatAsInlineTags) { Tag tag = tags.get(tagName); Validate.notNull(tag); tag.formatAsBlock = false; }"
+      },
+      {
+        "txt": "for (String tagName : preserveWhitespaceTags) { Tag tag = tags.get(tagName); Validate.notNull(tag); tag.preserveWhitespace = true; } } private static Tag register(Tag tag) { synchronized (tags) { tags.put(tag.tagName, tag); }"
+      },
+      {
+        "txt": "return tag; }"
+      }
+    ]
+  }
+]

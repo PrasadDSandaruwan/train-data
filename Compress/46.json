@@ -1,0 +1,77 @@
+[
+  {
+    "id": 1118,
+    "file_path": "src/main/java/org/apache/commons/compress/archivers/zip/X5455_ExtendedTimestamp.java",
+    "start-bug-line": 529,
+    "end-bug-line": 530,
+    "bug": "final long TWO_TO_32 = 0x100000000L; if (l >= TWO_TO_32) {",
+    "fix": "if (l < Integer.MIN_VALUE || l > Integer.MAX_VALUE) {",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.compress.archivers.zip; import java.io.Serializable;"
+      },
+      {
+        "txt": "import java.util.Date; import java.util.zip.ZipException; public class X5455_ExtendedTimestamp implements ZipExtraField, Cloneable, Serializable { private static final ZipShort HEADER_ID = new ZipShort(0x5455); private static final long serialVersionUID = 1L; public static final byte MODIFY_TIME_BIT = 1; public static final byte ACCESS_TIME_BIT = 2; public static final byte CREATE_TIME_BIT = 4; private byte flags; private boolean bit0_modifyTimePresent;"
+      },
+      {
+        "txt": "private boolean bit1_accessTimePresent; private boolean bit2_createTimePresent; private ZipLong modifyTime; private ZipLong accessTime; private ZipLong createTime; public X5455_ExtendedTimestamp() {} @Override public ZipShort getHeaderId() { return HEADER_ID; }"
+      },
+      {
+        "txt": "@Override public ZipShort getLocalFileDataLength() { return new ZipShort(1 + (bit0_modifyTimePresent ? 4 : 0) + (bit1_accessTimePresent && accessTime != null ? 4 : 0) + (bit2_createTimePresent && createTime != null ? 4 : 0) ); } @Override public ZipShort getCentralDirectoryLength() {"
+      },
+      {
+        "txt": "return new ZipShort(1 + (bit0_modifyTimePresent ? 4 : 0) ); } @Override public byte[] getLocalFileDataData() { final byte[] data = new byte[getLocalFileDataLength().getValue()]; int pos = 0; data[pos++] = 0; if (bit0_modifyTimePresent) {"
+      },
+      {
+        "txt": "data[0] |= MODIFY_TIME_BIT; System.arraycopy(modifyTime.getBytes(), 0, data, pos, 4); pos += 4; } if (bit1_accessTimePresent && accessTime != null) { data[0] |= ACCESS_TIME_BIT; System.arraycopy(accessTime.getBytes(), 0, data, pos, 4); pos += 4; } if (bit2_createTimePresent && createTime != null) {"
+      },
+      {
+        "txt": "data[0] |= CREATE_TIME_BIT; System.arraycopy(createTime.getBytes(), 0, data, pos, 4); pos += 4; // NOSONAR - assignment as documentation } return data; } @Override public byte[] getCentralDirectoryData() { final byte[] centralData = new byte[getCentralDirectoryLength().getValue()]; final byte[] localData = getLocalFileDataData();"
+      },
+      {
+        "txt": "System.arraycopy(localData, 0, centralData, 0, centralData.length); return centralData; } @Override public void parseFromLocalFileData( final byte[] data, int offset, final int length ) throws ZipException { reset(); final int len = offset + length; setFlags(data[offset++]);"
+      },
+      {
+        "txt": "if (bit0_modifyTimePresent) { modifyTime = new ZipLong(data, offset); offset += 4; } if (bit1_accessTimePresent && offset + 4 <= len) { accessTime = new ZipLong(data, offset); offset += 4; } if (bit2_createTimePresent && offset + 4 <= len) { createTime = new ZipLong(data, offset);"
+      },
+      {
+        "txt": "offset += 4; // NOSONAR - assignment as documentation } } @Override public void parseFromCentralDirectoryData( final byte[] buffer, final int offset, final int length ) throws ZipException { reset(); parseFromLocalFileData(buffer, offset, length); }"
+      },
+      {
+        "txt": "private void reset() { setFlags((byte) 0); this.modifyTime = null; this.accessTime = null; this.createTime = null; } public void setFlags(final byte flags) { this.flags = flags; this.bit0_modifyTimePresent = (flags & MODIFY_TIME_BIT) == MODIFY_TIME_BIT; this.bit1_accessTimePresent = (flags & ACCESS_TIME_BIT) == ACCESS_TIME_BIT;"
+      },
+      {
+        "txt": "this.bit2_createTimePresent = (flags & CREATE_TIME_BIT) == CREATE_TIME_BIT; } public byte getFlags() { return flags; } public boolean isBit0_modifyTimePresent() { return bit0_modifyTimePresent; } public boolean isBit1_accessTimePresent() { return bit1_accessTimePresent; } public boolean isBit2_createTimePresent() { return bit2_createTimePresent; } public ZipLong getModifyTime() { return modifyTime; } public ZipLong getAccessTime() { return accessTime; } public ZipLong getCreateTime() { return createTime; } public Date getModifyJavaTime() {"
+      },
+      {
+        "txt": "return zipLongToDate(modifyTime); } public Date getAccessJavaTime() { return zipLongToDate(accessTime); } private static Date zipLongToDate(ZipLong unixTime) { return unixTime != null ? new Date(unixTime.getIntValue() * 1000L) : null; } public Date getCreateJavaTime() { return zipLongToDate(createTime);"
+      },
+      {
+        "txt": "} public void setModifyTime(final ZipLong l) { bit0_modifyTimePresent = l != null; flags = (byte) (l != null ? (flags | MODIFY_TIME_BIT) : (flags & ~MODIFY_TIME_BIT)); this.modifyTime = l; } public void setAccessTime(final ZipLong l) { bit1_accessTimePresent = l != null; flags = (byte) (l != null ? (flags | ACCESS_TIME_BIT)"
+      },
+      {
+        "txt": ": (flags & ~ACCESS_TIME_BIT)); this.accessTime = l; } public void setCreateTime(final ZipLong l) { bit2_createTimePresent = l != null; flags = (byte) (l != null ? (flags | CREATE_TIME_BIT) : (flags & ~CREATE_TIME_BIT)); this.createTime = l; } public void setModifyJavaTime(final Date d) { setModifyTime(dateToZipLong(d)); }"
+      },
+      {
+        "txt": "public void setCreateJavaTime(final Date d) { setCreateTime(dateToZipLong(d)); } private static ZipLong dateToZipLong(final Date d) { if (d == null) { return null; } return unixTimeToZipLong(d.getTime() / 1000); } private static ZipLong unixTimeToZipLong(long l) { <extra_id_0> throw new IllegalArgumentException(\"X5455 timestamps must fit in a signed 32 bit integer: \" + l); } return new ZipLong(l); } @Override public String toString() {"
+      },
+      {
+        "txt": "@Override public String toString() { final StringBuilder buf = new StringBuilder(); buf.append(\"0x5455 Zip Extra Field: Flags=\"); buf.append(Integer.toBinaryString(ZipUtil.unsignedIntToSignedByte(flags))).append(\" \"); if (bit0_modifyTimePresent && modifyTime != null) { final Date m = getModifyJavaTime(); buf.append(\" Modify:[\").append(m).append(\"] \"); } if (bit1_accessTimePresent && accessTime != null) {"
+      },
+      {
+        "txt": "final Date a = getAccessJavaTime(); buf.append(\" Access:[\").append(a).append(\"] \"); } if (bit2_createTimePresent && createTime != null) { final Date c = getCreateJavaTime(); buf.append(\" Create:[\").append(c).append(\"] \"); } return buf.toString(); } @Override"
+      },
+      {
+        "txt": "public Object clone() throws CloneNotSupportedException { return super.clone(); } @Override public boolean equals(final Object o) { if (o instanceof X5455_ExtendedTimestamp) { final X5455_ExtendedTimestamp xf = (X5455_ExtendedTimestamp) o; return ((flags & 0x07) == (xf.flags & 0x07)) && (modifyTime == xf.modifyTime || (modifyTime != null && modifyTime.equals(xf.modifyTime))) && (accessTime == xf.accessTime || (accessTime != null && accessTime.equals(xf.accessTime))) &&"
+      },
+      {
+        "txt": "(createTime == xf.createTime || (createTime != null && createTime.equals(xf.createTime))); } return false; } @Override public int hashCode() { int hc = (-123 * (flags & 0x07)); // only last 3 bits of flags matter if (modifyTime != null) { hc ^= modifyTime.hashCode(); }"
+      },
+      {
+        "txt": "if (accessTime != null) { hc ^= Integer.rotateLeft(accessTime.hashCode(), 11); } if (createTime != null) { hc ^= Integer.rotateLeft(createTime.hashCode(), 22); } return hc; }"
+      }
+    ]
+  }
+]

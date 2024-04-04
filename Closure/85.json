@@ -1,0 +1,224 @@
+[
+  {
+    "id": 391,
+    "file_path": "src/com/google/javascript/jscomp/UnreachableCodeElimination.java",
+    "start-bug-line": 153,
+    "end-bug-line": 158,
+    "bug": "if (n.getParent() == null) { List<DiGraphEdge<Node,Branch>> outEdges = gNode.getOutEdges(); if (outEdges.size() == 1) { return tryRemoveUnconditionalBranching(outEdges.get(0).getDestination().getValue()); } }",
+    "fix": "[Delete]",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.google.javascript.jscomp; import com.google.common.base.Preconditions; import com.google.javascript.jscomp.ControlFlowGraph.Branch; import com.google.javascript.jscomp.NodeTraversal.AbstractPostOrderCallback; import com.google.javascript.jscomp.NodeTraversal.ScopedCallback; import com.google.javascript.jscomp.graph.GraphReachability; import com.google.javascript.jscomp.graph.DiGraph.DiGraphEdge; import com.google.javascript.jscomp.graph.DiGraph.DiGraphNode;"
+      },
+      {
+        "txt": "import com.google.javascript.rhino.Node; import com.google.javascript.rhino.Token; import java.util.Deque; import java.util.LinkedList; import java.util.List; import java.util.logging.Level; import java.util.logging.Logger; class UnreachableCodeElimination extends AbstractPostOrderCallback implements CompilerPass, ScopedCallback { private static final Logger logger ="
+      },
+      {
+        "txt": "Logger.getLogger(UnreachableCodeElimination.class.getName()); private final AbstractCompiler compiler; private final boolean removeNoOpStatements; Deque<ControlFlowGraph<Node>> cfgStack = new LinkedList<ControlFlowGraph<Node>>(); ControlFlowGraph<Node> curCfg = null; UnreachableCodeElimination(AbstractCompiler compiler, boolean removeNoOpStatements) { this.compiler = compiler; this.removeNoOpStatements = removeNoOpStatements;"
+      },
+      {
+        "txt": "} @Override public void enterScope(NodeTraversal t) { Scope scope = t.getScope(); ControlFlowAnalysis cfa = new ControlFlowAnalysis(compiler, false, false); cfa.process(null, scope.getRootNode()); cfgStack.push(curCfg); curCfg = cfa.getCfg(); new GraphReachability<Node, ControlFlowGraph.Branch>(curCfg) .compute(curCfg.getEntry().getValue());"
+      },
+      {
+        "txt": "} @Override public void exitScope(NodeTraversal t) { curCfg = cfgStack.pop(); } @Override public void process(Node externs, Node root) { NodeTraversal.traverse(compiler, root, this); } @Override"
+      },
+      {
+        "txt": "public void visit(NodeTraversal t, Node n, Node parent) { if (parent == null) { return; } if (n.getType() == Token.FUNCTION || n.getType() == Token.SCRIPT) { return; } DiGraphNode<Node, Branch> gNode = curCfg.getDirectedGraphNode(n); if (gNode == null) { // Not in CFG. return;"
+      },
+      {
+        "txt": "} if (gNode.getAnnotation() != GraphReachability.REACHABLE || (removeNoOpStatements && !NodeUtil.mayHaveSideEffects(n))) { removeDeadExprStatementSafely(n); return; } tryRemoveUnconditionalBranching(n); } @SuppressWarnings(\"fallthrough\") private Node tryRemoveUnconditionalBranching(Node n) {"
+      },
+      {
+        "txt": "return n; } DiGraphNode<Node, Branch> gNode = curCfg.getDirectedGraphNode(n); if (gNode == null) { return n; } <extra_id_0> switch (n.getType()) { case Token.BLOCK: if (n.hasChildren()) { Node first = n.getFirstChild(); return tryRemoveUnconditionalBranching(first); } else {"
+      },
+      {
+        "txt": "return tryRemoveUnconditionalBranching(first); } else { return tryRemoveUnconditionalBranching(ControlFlowAnalysis.computeFollowNode(n)); } case Token.RETURN: if (n.hasChildren()) { break; } case Token.BREAK: case Token.CONTINUE:"
+      },
+      {
+        "txt": "List<DiGraphEdge<Node,Branch>> outEdges = gNode.getOutEdges(); if (outEdges.size() == 1 && (n.getNext() == null || n.getNext().getType() == Token.FUNCTION)) { Preconditions.checkState(outEdges.get(0).getValue() == Branch.UNCOND); Node fallThrough = tryRemoveUnconditionalBranching(computeFollowing(n)); Node nextCfgNode = outEdges.get(0).getDestination().getValue(); if (nextCfgNode == fallThrough) { removeDeadExprStatementSafely(n); return fallThrough; }"
+      },
+      {
+        "txt": "} } return n; } private Node computeFollowing(Node n) { Node next = ControlFlowAnalysis.computeFollowNode(n); return next; } private void removeDeadExprStatementSafely(Node n) { Node parent = n.getParent();"
+      },
+      {
+        "txt": "if (n.getType() == Token.EMPTY || (n.getType() == Token.BLOCK && !n.hasChildren())) { return; } switch (n.getType()) { case Token.DO: return; case Token.BLOCK: if (parent.getType() == Token.TRY) { if (NodeUtil.isTryCatchNodeContainer(n)) {"
+      },
+      {
+        "txt": "return; } } break; case Token.CATCH: Node tryNode = parent.getParent(); NodeUtil.maybeAddFinally(tryNode); break; } NodeUtil.redeclareVarsInsideBranch(n);"
+      },
+      {
+        "txt": "compiler.reportCodeChange(); if (logger.isLoggable(Level.FINE)) { logger.fine(\"Removing \" + n.toString()); } NodeUtil.removeChild(n.getParent(), n); }"
+      }
+    ]
+  },
+  {
+    "id": 392,
+    "file_path": "src/com/google/javascript/jscomp/UnreachableCodeElimination.java",
+    "start-bug-line": 160,
+    "end-bug-line": 166,
+    "bug": "case Token.BLOCK: if (n.hasChildren()) { Node first = n.getFirstChild(); return tryRemoveUnconditionalBranching(first); } else { return tryRemoveUnconditionalBranching(ControlFlowAnalysis.computeFollowNode(n)); }",
+    "fix": "[Delete]",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.google.javascript.jscomp; import com.google.common.base.Preconditions; import com.google.javascript.jscomp.ControlFlowGraph.Branch; import com.google.javascript.jscomp.NodeTraversal.AbstractPostOrderCallback; import com.google.javascript.jscomp.NodeTraversal.ScopedCallback;"
+      },
+      {
+        "txt": "import com.google.javascript.jscomp.graph.GraphReachability; import com.google.javascript.jscomp.graph.DiGraph.DiGraphEdge; import com.google.javascript.jscomp.graph.DiGraph.DiGraphNode; import com.google.javascript.rhino.Node; import com.google.javascript.rhino.Token; import java.util.Deque; import java.util.LinkedList; import java.util.List; import java.util.logging.Level; import java.util.logging.Logger;"
+      },
+      {
+        "txt": "class UnreachableCodeElimination extends AbstractPostOrderCallback implements CompilerPass, ScopedCallback { private static final Logger logger = Logger.getLogger(UnreachableCodeElimination.class.getName()); private final AbstractCompiler compiler; private final boolean removeNoOpStatements; Deque<ControlFlowGraph<Node>> cfgStack = new LinkedList<ControlFlowGraph<Node>>(); ControlFlowGraph<Node> curCfg = null; UnreachableCodeElimination(AbstractCompiler compiler,"
+      },
+      {
+        "txt": "boolean removeNoOpStatements) { this.compiler = compiler; this.removeNoOpStatements = removeNoOpStatements; } @Override public void enterScope(NodeTraversal t) { Scope scope = t.getScope(); ControlFlowAnalysis cfa = new ControlFlowAnalysis(compiler, false, false); cfa.process(null, scope.getRootNode()); cfgStack.push(curCfg);"
+      },
+      {
+        "txt": "curCfg = cfa.getCfg(); new GraphReachability<Node, ControlFlowGraph.Branch>(curCfg) .compute(curCfg.getEntry().getValue()); } @Override public void exitScope(NodeTraversal t) { curCfg = cfgStack.pop(); } @Override public void process(Node externs, Node root) {"
+      },
+      {
+        "txt": "NodeTraversal.traverse(compiler, root, this); } @Override public void visit(NodeTraversal t, Node n, Node parent) { if (parent == null) { return; } if (n.getType() == Token.FUNCTION || n.getType() == Token.SCRIPT) { return; }"
+      },
+      {
+        "txt": "DiGraphNode<Node, Branch> gNode = curCfg.getDirectedGraphNode(n); if (gNode == null) { // Not in CFG. return; } if (gNode.getAnnotation() != GraphReachability.REACHABLE || (removeNoOpStatements && !NodeUtil.mayHaveSideEffects(n))) { removeDeadExprStatementSafely(n); return; } tryRemoveUnconditionalBranching(n);"
+      },
+      {
+        "txt": "} @SuppressWarnings(\"fallthrough\") private Node tryRemoveUnconditionalBranching(Node n) { if (n == null) { return n; } DiGraphNode<Node, Branch> gNode = curCfg.getDirectedGraphNode(n); if (gNode == null) { return n; }"
+      },
+      {
+        "txt": "List<DiGraphEdge<Node,Branch>> outEdges = gNode.getOutEdges(); if (outEdges.size() == 1) { return tryRemoveUnconditionalBranching(outEdges.get(0).getDestination().getValue()); } } switch (n.getType()) { <extra_id_0> case Token.RETURN: if (n.hasChildren()) { break; } case Token.BREAK: case Token.CONTINUE:"
+      },
+      {
+        "txt": "case Token.BREAK: case Token.CONTINUE: List<DiGraphEdge<Node,Branch>> outEdges = gNode.getOutEdges(); if (outEdges.size() == 1 && (n.getNext() == null || n.getNext().getType() == Token.FUNCTION)) { Preconditions.checkState(outEdges.get(0).getValue() == Branch.UNCOND); Node fallThrough = tryRemoveUnconditionalBranching(computeFollowing(n)); Node nextCfgNode = outEdges.get(0).getDestination().getValue(); if (nextCfgNode == fallThrough) { removeDeadExprStatementSafely(n);"
+      },
+      {
+        "txt": "return fallThrough; } } } return n; } private Node computeFollowing(Node n) { Node next = ControlFlowAnalysis.computeFollowNode(n); return next; }"
+      },
+      {
+        "txt": "private void removeDeadExprStatementSafely(Node n) { Node parent = n.getParent(); if (n.getType() == Token.EMPTY || (n.getType() == Token.BLOCK && !n.hasChildren())) { return; } switch (n.getType()) { case Token.DO: return; case Token.BLOCK:"
+      },
+      {
+        "txt": "if (parent.getType() == Token.TRY) { if (NodeUtil.isTryCatchNodeContainer(n)) { return; } } break; case Token.CATCH: Node tryNode = parent.getParent(); NodeUtil.maybeAddFinally(tryNode); break;"
+      },
+      {
+        "txt": "} NodeUtil.redeclareVarsInsideBranch(n); compiler.reportCodeChange(); if (logger.isLoggable(Level.FINE)) { logger.fine(\"Removing \" + n.toString()); } NodeUtil.removeChild(n.getParent(), n); }"
+      }
+    ]
+  },
+  {
+    "id": 393,
+    "file_path": "src/com/google/javascript/jscomp/UnreachableCodeElimination.java",
+    "start-bug-line": 183,
+    "end-bug-line": 183,
+    "bug": "Node fallThrough = tryRemoveUnconditionalBranching(computeFollowing(n));",
+    "fix": "Node fallThrough = computeFollowing(n);",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.google.javascript.jscomp; import com.google.common.base.Preconditions;"
+      },
+      {
+        "txt": "import com.google.javascript.jscomp.ControlFlowGraph.Branch; import com.google.javascript.jscomp.NodeTraversal.AbstractPostOrderCallback; import com.google.javascript.jscomp.NodeTraversal.ScopedCallback; import com.google.javascript.jscomp.graph.GraphReachability; import com.google.javascript.jscomp.graph.DiGraph.DiGraphEdge; import com.google.javascript.jscomp.graph.DiGraph.DiGraphNode; import com.google.javascript.rhino.Node; import com.google.javascript.rhino.Token; import java.util.Deque; import java.util.LinkedList;"
+      },
+      {
+        "txt": "import java.util.List; import java.util.logging.Level; import java.util.logging.Logger; class UnreachableCodeElimination extends AbstractPostOrderCallback implements CompilerPass, ScopedCallback { private static final Logger logger = Logger.getLogger(UnreachableCodeElimination.class.getName()); private final AbstractCompiler compiler; private final boolean removeNoOpStatements; Deque<ControlFlowGraph<Node>> cfgStack ="
+      },
+      {
+        "txt": "new LinkedList<ControlFlowGraph<Node>>(); ControlFlowGraph<Node> curCfg = null; UnreachableCodeElimination(AbstractCompiler compiler, boolean removeNoOpStatements) { this.compiler = compiler; this.removeNoOpStatements = removeNoOpStatements; } @Override public void enterScope(NodeTraversal t) { Scope scope = t.getScope();"
+      },
+      {
+        "txt": "ControlFlowAnalysis cfa = new ControlFlowAnalysis(compiler, false, false); cfa.process(null, scope.getRootNode()); cfgStack.push(curCfg); curCfg = cfa.getCfg(); new GraphReachability<Node, ControlFlowGraph.Branch>(curCfg) .compute(curCfg.getEntry().getValue()); } @Override public void exitScope(NodeTraversal t) { curCfg = cfgStack.pop();"
+      },
+      {
+        "txt": "} @Override public void process(Node externs, Node root) { NodeTraversal.traverse(compiler, root, this); } @Override public void visit(NodeTraversal t, Node n, Node parent) { if (parent == null) { return; }"
+      },
+      {
+        "txt": "if (n.getType() == Token.FUNCTION || n.getType() == Token.SCRIPT) { return; } DiGraphNode<Node, Branch> gNode = curCfg.getDirectedGraphNode(n); if (gNode == null) { // Not in CFG. return; } if (gNode.getAnnotation() != GraphReachability.REACHABLE || (removeNoOpStatements && !NodeUtil.mayHaveSideEffects(n))) { removeDeadExprStatementSafely(n);"
+      },
+      {
+        "txt": "return; } tryRemoveUnconditionalBranching(n); } @SuppressWarnings(\"fallthrough\") private Node tryRemoveUnconditionalBranching(Node n) { if (n == null) { return n; } DiGraphNode<Node, Branch> gNode = curCfg.getDirectedGraphNode(n);"
+      },
+      {
+        "txt": "if (gNode == null) { return n; } if (n.getParent() == null) { List<DiGraphEdge<Node,Branch>> outEdges = gNode.getOutEdges(); if (outEdges.size() == 1) { return tryRemoveUnconditionalBranching(outEdges.get(0).getDestination().getValue()); } } switch (n.getType()) {"
+      },
+      {
+        "txt": "case Token.BLOCK: if (n.hasChildren()) { Node first = n.getFirstChild(); return tryRemoveUnconditionalBranching(first); } else { return tryRemoveUnconditionalBranching(ControlFlowAnalysis.computeFollowNode(n)); } case Token.RETURN: if (n.hasChildren()) { break;"
+      },
+      {
+        "txt": "case Token.BREAK: case Token.CONTINUE: List<DiGraphEdge<Node,Branch>> outEdges = gNode.getOutEdges(); if (outEdges.size() == 1 && (n.getNext() == null || n.getNext().getType() == Token.FUNCTION)) { Preconditions.checkState(outEdges.get(0).getValue() == Branch.UNCOND); <extra_id_0> Node nextCfgNode = outEdges.get(0).getDestination().getValue(); if (nextCfgNode == fallThrough) { removeDeadExprStatementSafely(n); return fallThrough; } }"
+      },
+      {
+        "txt": "} } } return n; } private Node computeFollowing(Node n) { Node next = ControlFlowAnalysis.computeFollowNode(n); return next; } private void removeDeadExprStatementSafely(Node n) {"
+      },
+      {
+        "txt": "Node parent = n.getParent(); if (n.getType() == Token.EMPTY || (n.getType() == Token.BLOCK && !n.hasChildren())) { return; } switch (n.getType()) { case Token.DO: return; case Token.BLOCK: if (parent.getType() == Token.TRY) {"
+      },
+      {
+        "txt": "if (NodeUtil.isTryCatchNodeContainer(n)) { return; } } break; case Token.CATCH: Node tryNode = parent.getParent(); NodeUtil.maybeAddFinally(tryNode); break; }"
+      },
+      {
+        "txt": "NodeUtil.redeclareVarsInsideBranch(n); compiler.reportCodeChange(); if (logger.isLoggable(Level.FINE)) { logger.fine(\"Removing \" + n.toString()); } NodeUtil.removeChild(n.getParent(), n); }"
+      }
+    ]
+  },
+  {
+    "id": 394,
+    "file_path": "src/com/google/javascript/jscomp/UnreachableCodeElimination.java",
+    "start-bug-line": 196,
+    "end-bug-line": 196,
+    "bug": "",
+    "fix": "while (next != null && next.getType() == Token.BLOCK) { if (next.hasChildren()) { next = next.getFirstChild(); } else { next = computeFollowing(next); } }",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.google.javascript.jscomp; import com.google.common.base.Preconditions; import com.google.javascript.jscomp.ControlFlowGraph.Branch; import com.google.javascript.jscomp.NodeTraversal.AbstractPostOrderCallback;"
+      },
+      {
+        "txt": "import com.google.javascript.jscomp.NodeTraversal.ScopedCallback; import com.google.javascript.jscomp.graph.GraphReachability; import com.google.javascript.jscomp.graph.DiGraph.DiGraphEdge; import com.google.javascript.jscomp.graph.DiGraph.DiGraphNode; import com.google.javascript.rhino.Node; import com.google.javascript.rhino.Token; import java.util.Deque; import java.util.LinkedList; import java.util.List; import java.util.logging.Level;"
+      },
+      {
+        "txt": "import java.util.logging.Logger; class UnreachableCodeElimination extends AbstractPostOrderCallback implements CompilerPass, ScopedCallback { private static final Logger logger = Logger.getLogger(UnreachableCodeElimination.class.getName()); private final AbstractCompiler compiler; private final boolean removeNoOpStatements; Deque<ControlFlowGraph<Node>> cfgStack = new LinkedList<ControlFlowGraph<Node>>(); ControlFlowGraph<Node> curCfg = null;"
+      },
+      {
+        "txt": "UnreachableCodeElimination(AbstractCompiler compiler, boolean removeNoOpStatements) { this.compiler = compiler; this.removeNoOpStatements = removeNoOpStatements; } @Override public void enterScope(NodeTraversal t) { Scope scope = t.getScope(); ControlFlowAnalysis cfa = new ControlFlowAnalysis(compiler, false, false); cfa.process(null, scope.getRootNode());"
+      },
+      {
+        "txt": "cfgStack.push(curCfg); curCfg = cfa.getCfg(); new GraphReachability<Node, ControlFlowGraph.Branch>(curCfg) .compute(curCfg.getEntry().getValue()); } @Override public void exitScope(NodeTraversal t) { curCfg = cfgStack.pop(); } @Override"
+      },
+      {
+        "txt": "public void process(Node externs, Node root) { NodeTraversal.traverse(compiler, root, this); } @Override public void visit(NodeTraversal t, Node n, Node parent) { if (parent == null) { return; } if (n.getType() == Token.FUNCTION || n.getType() == Token.SCRIPT) { return;"
+      },
+      {
+        "txt": "} DiGraphNode<Node, Branch> gNode = curCfg.getDirectedGraphNode(n); if (gNode == null) { // Not in CFG. return; } if (gNode.getAnnotation() != GraphReachability.REACHABLE || (removeNoOpStatements && !NodeUtil.mayHaveSideEffects(n))) { removeDeadExprStatementSafely(n); return; }"
+      },
+      {
+        "txt": "tryRemoveUnconditionalBranching(n); } @SuppressWarnings(\"fallthrough\") private Node tryRemoveUnconditionalBranching(Node n) { if (n == null) { return n; } DiGraphNode<Node, Branch> gNode = curCfg.getDirectedGraphNode(n); if (gNode == null) { return n;"
+      },
+      {
+        "txt": "} if (n.getParent() == null) { List<DiGraphEdge<Node,Branch>> outEdges = gNode.getOutEdges(); if (outEdges.size() == 1) { return tryRemoveUnconditionalBranching(outEdges.get(0).getDestination().getValue()); } } switch (n.getType()) { case Token.BLOCK: if (n.hasChildren()) {"
+      },
+      {
+        "txt": "Node first = n.getFirstChild(); return tryRemoveUnconditionalBranching(first); } else { return tryRemoveUnconditionalBranching(ControlFlowAnalysis.computeFollowNode(n)); } case Token.RETURN: if (n.hasChildren()) { break; } case Token.BREAK:"
+      },
+      {
+        "txt": "case Token.CONTINUE: List<DiGraphEdge<Node,Branch>> outEdges = gNode.getOutEdges(); if (outEdges.size() == 1 && (n.getNext() == null || n.getNext().getType() == Token.FUNCTION)) { Preconditions.checkState(outEdges.get(0).getValue() == Branch.UNCOND); Node fallThrough = tryRemoveUnconditionalBranching(computeFollowing(n)); Node nextCfgNode = outEdges.get(0).getDestination().getValue(); if (nextCfgNode == fallThrough) { removeDeadExprStatementSafely(n); return fallThrough;"
+      },
+      {
+        "txt": "} } return n; } private Node computeFollowing(Node n) { Node next = ControlFlowAnalysis.computeFollowNode(n); <extra_id_0> } private void removeDeadExprStatementSafely(Node n) { Node parent = n.getParent(); if (n.getType() == Token.EMPTY || (n.getType() == Token.BLOCK && !n.hasChildren())) { return;"
+      },
+      {
+        "txt": "(n.getType() == Token.BLOCK && !n.hasChildren())) { return; } switch (n.getType()) { case Token.DO: return; case Token.BLOCK: if (parent.getType() == Token.TRY) { if (NodeUtil.isTryCatchNodeContainer(n)) { return;"
+      },
+      {
+        "txt": "} } break; case Token.CATCH: Node tryNode = parent.getParent(); NodeUtil.maybeAddFinally(tryNode); break; } NodeUtil.redeclareVarsInsideBranch(n); compiler.reportCodeChange();"
+      },
+      {
+        "txt": "if (logger.isLoggable(Level.FINE)) { logger.fine(\"Removing \" + n.toString()); } NodeUtil.removeChild(n.getParent(), n); }"
+      }
+    ]
+  }
+]

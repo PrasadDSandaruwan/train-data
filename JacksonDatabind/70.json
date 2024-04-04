@@ -1,0 +1,131 @@
+[
+  {
+    "id": 1653,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/deser/impl/BeanPropertyMap.java",
+    "start-bug-line": 440,
+    "end-bug-line": 440,
+    "bug": "found = key.equals(prop.getName());",
+    "fix": "found = key.equals(_hashArea[i-1]);",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind.deser.impl; import java.io.IOException; import java.lang.reflect.InvocationTargetException; import java.util.*; import com.fasterxml.jackson.core.JsonParser; import com.fasterxml.jackson.core.JsonProcessingException; import com.fasterxml.jackson.databind.DeserializationContext; import com.fasterxml.jackson.databind.DeserializationFeature; import com.fasterxml.jackson.databind.JsonDeserializer; import com.fasterxml.jackson.databind.JsonMappingException;"
+      },
+      {
+        "txt": "import com.fasterxml.jackson.databind.deser.SettableBeanProperty; import com.fasterxml.jackson.databind.util.NameTransformer; public class BeanPropertyMap implements Iterable<SettableBeanProperty>, java.io.Serializable { private static final long serialVersionUID = 2L; protected final boolean _caseInsensitive; private int _hashMask; private int _size;"
+      },
+      {
+        "txt": "private int _spillCount; private Object[] _hashArea; private SettableBeanProperty[] _propsInOrder; public BeanPropertyMap(boolean caseInsensitive, Collection<SettableBeanProperty> props) { _caseInsensitive = caseInsensitive; _propsInOrder = props.toArray(new SettableBeanProperty[props.size()]); init(props); } protected BeanPropertyMap(BeanPropertyMap base, boolean caseInsensitive)"
+      },
+      {
+        "txt": "{ _caseInsensitive = caseInsensitive; _propsInOrder = Arrays.copyOf(base._propsInOrder, base._propsInOrder.length); init(Arrays.asList(_propsInOrder)); } public BeanPropertyMap withCaseInsensitivity(boolean state) { if (_caseInsensitive == state) { return this; } return new BeanPropertyMap(this, state);"
+      },
+      {
+        "txt": "} protected void init(Collection<SettableBeanProperty> props) { _size = props.size(); final int hashSize = findSize(_size); _hashMask = hashSize-1; int alloc = (hashSize + (hashSize>>1)) * 2; Object[] hashed = new Object[alloc]; int spillCount = 0; for (SettableBeanProperty prop : props) {"
+      },
+      {
+        "txt": "if (prop == null) { continue; } String key = getPropertyName(prop); int slot = _hashCode(key); int ix = (slot<<1); if (hashed[ix] != null) { ix = (hashSize + (slot >> 1)) << 1; if (hashed[ix] != null) { ix = ((hashSize + (hashSize >> 1) ) << 1) + spillCount;"
+      },
+      {
+        "txt": "spillCount += 2; if (ix >= hashed.length) { hashed = Arrays.copyOf(hashed, hashed.length + 4); } } } hashed[ix] = key; hashed[ix+1] = prop; } for (int i = 0; i < hashed.length; i += 2) {"
+      },
+      {
+        "txt": "System.err.printf(\"#%02d: %s\\n\", i>>1, (hashed[i] == null) ? \"-\" : hashed[i]); } _hashArea = hashed; _spillCount = spillCount; } private final static int findSize(int size) { if (size <= 5) { return 8; }"
+      },
+      {
+        "txt": "if (size <= 12) { return 16; } int needed = size + (size >> 2); // at most 80% full int result = 32; while (result < needed) { result += result; } return result; }"
+      },
+      {
+        "txt": "public static BeanPropertyMap construct(Collection<SettableBeanProperty> props, boolean caseInsensitive) { return new BeanPropertyMap(caseInsensitive, props); } public BeanPropertyMap withProperty(SettableBeanProperty newProp) { String key = getPropertyName(newProp); for (int i = 1, end = _hashArea.length; i < end; i += 2) { SettableBeanProperty prop = (SettableBeanProperty) _hashArea[i]; if ((prop != null) && prop.getName().equals(key)) { _hashArea[i] = newProp;"
+      },
+      {
+        "txt": "_propsInOrder[_findFromOrdered(prop)] = newProp; return this; } } final int slot = _hashCode(key); final int hashSize = _hashMask+1; int ix = (slot<<1); if (_hashArea[ix] != null) { ix = (hashSize + (slot >> 1)) << 1; if (_hashArea[ix] != null) {"
+      },
+      {
+        "txt": "ix = ((hashSize + (hashSize >> 1) ) << 1) + _spillCount; _spillCount += 2; if (ix >= _hashArea.length) { _hashArea = Arrays.copyOf(_hashArea, _hashArea.length + 4); for (int i = 0; i < _hashArea.length; i += 2) { if (_hashArea[i] != null) { System.err.println(\"Property #\"+(i/2)+\" '\"+_hashArea[i]+\"'...\"); } } System.err.println(\"And new propr #\"+slot+\" '\"+key+\"'\");"
+      },
+      {
+        "txt": "} } } _hashArea[ix] = key; _hashArea[ix+1] = newProp; int last = _propsInOrder.length; _propsInOrder = Arrays.copyOf(_propsInOrder, last+1); _propsInOrder[last] = newProp; return this; }"
+      },
+      {
+        "txt": "public BeanPropertyMap assignIndexes() { int index = 0; for (int i = 1, end = _hashArea.length; i < end; i += 2) { SettableBeanProperty prop = (SettableBeanProperty) _hashArea[i]; if (prop != null) { prop.assignIndex(index++); } } return this;"
+      },
+      {
+        "txt": "} public BeanPropertyMap renameAll(NameTransformer transformer) { if (transformer == null || (transformer == NameTransformer.NOP)) { return this; } final int len = _propsInOrder.length; ArrayList<SettableBeanProperty> newProps = new ArrayList<SettableBeanProperty>(len); for (int i = 0; i < len; ++i) { SettableBeanProperty prop = _propsInOrder[i];"
+      },
+      {
+        "txt": "if (prop == null) { newProps.add(prop); continue; } newProps.add(_rename(prop, transformer)); } return new BeanPropertyMap(_caseInsensitive, newProps); } public BeanPropertyMap withoutProperties(Collection<String> toExclude) {"
+      },
+      {
+        "txt": "if (toExclude.isEmpty()) { return this; } final int len = _propsInOrder.length; ArrayList<SettableBeanProperty> newProps = new ArrayList<SettableBeanProperty>(len); for (int i = 0; i < len; ++i) { SettableBeanProperty prop = _propsInOrder[i]; if (prop != null) { // may contain holes, too, check. if (!toExclude.contains(prop.getName())) { newProps.add(prop);"
+      },
+      {
+        "txt": "} } } return new BeanPropertyMap(_caseInsensitive, newProps); } public void replace(SettableBeanProperty newProp) { String key = getPropertyName(newProp); int ix = _findIndexInHash(key); if (ix >= 0) {"
+      },
+      {
+        "txt": "SettableBeanProperty prop = (SettableBeanProperty) _hashArea[ix]; _hashArea[ix] = newProp; _propsInOrder[_findFromOrdered(prop)] = newProp; return; } throw new NoSuchElementException(\"No entry '\"+key+\"' found, can't replace\"); } private List<SettableBeanProperty> properties() { ArrayList<SettableBeanProperty> p = new ArrayList<SettableBeanProperty>(_size); for (int i = 1, end = _hashArea.length; i < end; i += 2) {"
+      },
+      {
+        "txt": "SettableBeanProperty prop = (SettableBeanProperty) _hashArea[i]; if (prop != null) { p.add(prop); } } return p; } @Override public Iterator<SettableBeanProperty> iterator() { return properties().iterator();"
+      },
+      {
+        "txt": "} public SettableBeanProperty[] getPropertiesInInsertionOrder() { return _propsInOrder; } protected final String getPropertyName(SettableBeanProperty prop) { return _caseInsensitive ? prop.getName().toLowerCase() : prop.getName(); } public SettableBeanProperty find(int index) { for (int i = 1, end = _hashArea.length; i < end; i += 2) {"
+      },
+      {
+        "txt": "SettableBeanProperty prop = (SettableBeanProperty) _hashArea[i]; if ((prop != null) && (index == prop.getPropertyIndex())) { return prop; } } return null; } public SettableBeanProperty find(String key) { if (key == null) {"
+      },
+      {
+        "txt": "throw new IllegalArgumentException(\"Can not pass null property name\"); } if (_caseInsensitive) { key = key.toLowerCase(); } int slot = key.hashCode() & _hashMask; int ix = (slot<<1); Object match = _hashArea[ix]; if ((match == key) || key.equals(match)) { return (SettableBeanProperty) _hashArea[ix+1];"
+      },
+      {
+        "txt": "} return _find2(key, slot, match); } private final SettableBeanProperty _find2(String key, int slot, Object match) { if (match == null) { return null; } int hashSize = _hashMask+1; int ix = hashSize + (slot>>1) << 1;"
+      },
+      {
+        "txt": "match = _hashArea[ix]; if (key.equals(match)) { return (SettableBeanProperty) _hashArea[ix+1]; } if (match != null) { // _findFromSpill(...) int i = (hashSize + (hashSize>>1)) << 1; for (int end = i + _spillCount; i < end; i += 2) { match = _hashArea[i]; if ((match == key) || key.equals(match)) { return (SettableBeanProperty) _hashArea[i+1];"
+      },
+      {
+        "txt": "} } } return null; } public int size() { return _size; } public void remove(SettableBeanProperty propToRm) { ArrayList<SettableBeanProperty> props = new ArrayList<SettableBeanProperty>(_size); String key = getPropertyName(propToRm);"
+      },
+      {
+        "txt": "for (int i = 1, end = _hashArea.length; i < end; i += 2) { SettableBeanProperty prop = (SettableBeanProperty) _hashArea[i]; if (prop == null) { continue; } if (!found) { <extra_id_0> if (found) { _propsInOrder[_findFromOrdered(prop)] = null; continue; } } props.add(prop);"
+      },
+      {
+        "txt": "} props.add(prop); } if (!found) { throw new NoSuchElementException(\"No entry '\"+propToRm.getName()+\"' found, can't remove\"); } init(props); } public boolean findDeserializeAndSet(JsonParser p, DeserializationContext ctxt, Object bean, String key) throws IOException"
+      },
+      {
+        "txt": "{ final SettableBeanProperty prop = find(key); if (prop == null) { return false; } try { prop.deserializeAndSet(p, ctxt, bean); } catch (Exception e) { wrapAndThrow(e, bean, key, ctxt); }"
+      },
+      {
+        "txt": "return true; } @Override public String toString() { StringBuilder sb = new StringBuilder(); sb.append(\"Properties=[\"); int count = 0; Iterator<SettableBeanProperty> it = iterator(); while (it.hasNext()) {"
+      },
+      {
+        "txt": "SettableBeanProperty prop = it.next(); if (count++ > 0) { sb.append(\", \"); } sb.append(prop.getName()); sb.append('('); sb.append(prop.getType()); sb.append(')'); } sb.append(']');"
+      },
+      {
+        "txt": "return sb.toString(); } protected SettableBeanProperty _rename(SettableBeanProperty prop, NameTransformer xf) { if (prop == null) { return prop; } String newName = xf.transform(prop.getName()); prop = prop.withSimpleName(newName); JsonDeserializer<?> deser = prop.getValueDeserializer();"
+      },
+      {
+        "txt": "if (deser != null) { @SuppressWarnings(\"unchecked\") JsonDeserializer<Object> newDeser = (JsonDeserializer<Object>) deser.unwrappingDeserializer(xf); if (newDeser != deser) { prop = prop.withValueDeserializer(newDeser); } } return prop; }"
+      },
+      {
+        "txt": "protected void wrapAndThrow(Throwable t, Object bean, String fieldName, DeserializationContext ctxt) throws IOException { while (t instanceof InvocationTargetException && t.getCause() != null) { t = t.getCause(); } if (t instanceof Error) { throw (Error) t; } boolean wrap = (ctxt == null) || ctxt.isEnabled(DeserializationFeature.WRAP_EXCEPTIONS);"
+      },
+      {
+        "txt": "if (t instanceof IOException) { if (!wrap || !(t instanceof JsonProcessingException)) { throw (IOException) t; } } else if (!wrap) { // allow disabling wrapping for unchecked exceptions if (t instanceof RuntimeException) { throw (RuntimeException) t; } } throw JsonMappingException.wrapWithPath(t, bean, fieldName);"
+      },
+      {
+        "txt": "} private final int _findIndexInHash(String key) { final int slot = _hashCode(key); int ix = (slot<<1); if (key.equals(_hashArea[ix])) { return ix+1; } int hashSize = _hashMask+1; ix = hashSize + (slot>>1) << 1;"
+      },
+      {
+        "txt": "if (key.equals(_hashArea[ix])) { return ix+1; } int i = (hashSize + (hashSize>>1)) << 1; for (int end = i + _spillCount; i < end; i += 2) { if (key.equals(_hashArea[i])) { return i+1; } } return -1;"
+      },
+      {
+        "txt": "} private final int _findFromOrdered(SettableBeanProperty prop) { for (int i = 0, end = _propsInOrder.length; i < end; ++i) { if (_propsInOrder[i] == prop) { return i; } } throw new IllegalStateException(\"Illegal state: property '\"+prop.getName()+\"' missing from _propsInOrder\"); } private final int _hashCode(String key) {"
+      },
+      {
+        "txt": "int h = key.hashCode(); return (h + (h >> 13)) & _hashMask; return key.hashCode() & _hashMask; }"
+      }
+    ]
+  }
+]

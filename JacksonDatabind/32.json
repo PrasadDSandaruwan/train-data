@@ -1,0 +1,461 @@
+[
+  {
+    "id": 1484,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/deser/std/UntypedObjectDeserializer.java",
+    "start-bug-line": 221,
+    "end-bug-line": 221,
+    "bug": "",
+    "fix": "case JsonTokenId.ID_END_OBJECT:",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind.deser.std; import java.io.IOException; import java.util.*; import com.fasterxml.jackson.core.*; import com.fasterxml.jackson.databind.BeanProperty; import com.fasterxml.jackson.databind.DeserializationContext; import com.fasterxml.jackson.databind.DeserializationFeature;"
+      },
+      {
+        "txt": "import com.fasterxml.jackson.databind.JavaType; import com.fasterxml.jackson.databind.JsonDeserializer; import com.fasterxml.jackson.databind.JsonMappingException; import com.fasterxml.jackson.databind.annotation.JacksonStdImpl; import com.fasterxml.jackson.databind.deser.ContextualDeserializer; import com.fasterxml.jackson.databind.deser.ResolvableDeserializer; import com.fasterxml.jackson.databind.jsontype.TypeDeserializer; import com.fasterxml.jackson.databind.type.TypeFactory; import com.fasterxml.jackson.databind.util.ClassUtil; import com.fasterxml.jackson.databind.util.ObjectBuffer;"
+      },
+      {
+        "txt": "@JacksonStdImpl public class UntypedObjectDeserializer extends StdDeserializer<Object> implements ResolvableDeserializer, ContextualDeserializer { private static final long serialVersionUID = 1L; protected final static Object[] NO_OBJECTS = new Object[0]; @Deprecated public final static UntypedObjectDeserializer instance = new UntypedObjectDeserializer(null, null); protected JsonDeserializer<Object> _mapDeserializer;"
+      },
+      {
+        "txt": "protected JsonDeserializer<Object> _listDeserializer; protected JsonDeserializer<Object> _stringDeserializer; protected JsonDeserializer<Object> _numberDeserializer; protected JavaType _listType; protected JavaType _mapType; @Deprecated public UntypedObjectDeserializer() { this(null, null); } public UntypedObjectDeserializer(JavaType listType, JavaType mapType) {"
+      },
+      {
+        "txt": "super(Object.class); _listType = listType; _mapType = mapType; } @SuppressWarnings(\"unchecked\") public UntypedObjectDeserializer(UntypedObjectDeserializer base, JsonDeserializer<?> mapDeser, JsonDeserializer<?> listDeser, JsonDeserializer<?> stringDeser, JsonDeserializer<?> numberDeser) { super(Object.class);"
+      },
+      {
+        "txt": "_mapDeserializer = (JsonDeserializer<Object>) mapDeser; _listDeserializer = (JsonDeserializer<Object>) listDeser; _stringDeserializer = (JsonDeserializer<Object>) stringDeser; _numberDeserializer = (JsonDeserializer<Object>) numberDeser; _listType = base._listType; _mapType = base._mapType; } @SuppressWarnings(\"unchecked\") @Override public void resolve(DeserializationContext ctxt) throws JsonMappingException"
+      },
+      {
+        "txt": "{ JavaType obType = ctxt.constructType(Object.class); JavaType stringType = ctxt.constructType(String.class); TypeFactory tf = ctxt.getTypeFactory(); if (_listType == null) { _listDeserializer = _clearIfStdImpl(_findCustomDeser(ctxt, tf.constructCollectionType(List.class, obType))); } else { _listDeserializer = _findCustomDeser(ctxt, _listType); } if (_mapType == null) {"
+      },
+      {
+        "txt": "_mapDeserializer = _clearIfStdImpl(_findCustomDeser(ctxt, tf.constructMapType(Map.class, stringType, obType))); } else { _mapDeserializer = _findCustomDeser(ctxt, _mapType); } _stringDeserializer = _clearIfStdImpl(_findCustomDeser(ctxt, stringType)); _numberDeserializer = _clearIfStdImpl(_findCustomDeser(ctxt, tf.constructType(Number.class))); JavaType unknown = TypeFactory.unknownType(); _mapDeserializer = (JsonDeserializer<Object>) ctxt.handleSecondaryContextualization(_mapDeserializer, null, unknown); _listDeserializer = (JsonDeserializer<Object>) ctxt.handleSecondaryContextualization(_listDeserializer, null, unknown); _stringDeserializer = (JsonDeserializer<Object>) ctxt.handleSecondaryContextualization(_stringDeserializer, null, unknown);"
+      },
+      {
+        "txt": "_numberDeserializer = (JsonDeserializer<Object>) ctxt.handleSecondaryContextualization(_numberDeserializer, null, unknown); } protected JsonDeserializer<Object> _findCustomDeser(DeserializationContext ctxt, JavaType type) throws JsonMappingException { return ctxt.findNonContextualValueDeserializer(type); } protected JsonDeserializer<Object> _clearIfStdImpl(JsonDeserializer<Object> deser) { return ClassUtil.isJacksonStdImpl(deser) ? null : deser; }"
+      },
+      {
+        "txt": "@Override public JsonDeserializer<?> createContextual(DeserializationContext ctxt, BeanProperty property) throws JsonMappingException { if ((_stringDeserializer == null) && (_numberDeserializer == null) && (_mapDeserializer == null) && (_listDeserializer == null) && getClass() == UntypedObjectDeserializer.class) { return Vanilla.std; } return this;"
+      },
+      {
+        "txt": "} protected JsonDeserializer<?> _withResolved(JsonDeserializer<?> mapDeser, JsonDeserializer<?> listDeser, JsonDeserializer<?> stringDeser, JsonDeserializer<?> numberDeser) { return new UntypedObjectDeserializer(this, mapDeser, listDeser, stringDeser, numberDeser); } @Override public boolean isCachable() { return true;"
+      },
+      {
+        "txt": "@Override public Object deserialize(JsonParser p, DeserializationContext ctxt) throws IOException { switch (p.getCurrentTokenId()) { case JsonTokenId.ID_START_OBJECT: case JsonTokenId.ID_FIELD_NAME: <extra_id_0> return _mapDeserializer.deserialize(p, ctxt); } return mapObject(p, ctxt); case JsonTokenId.ID_START_ARRAY: if (ctxt.isEnabled(DeserializationFeature.USE_JAVA_ARRAY_FOR_JSON_ARRAY)) { return mapArrayToArray(p, ctxt);"
+      },
+      {
+        "txt": "if (ctxt.isEnabled(DeserializationFeature.USE_JAVA_ARRAY_FOR_JSON_ARRAY)) { return mapArrayToArray(p, ctxt); } if (_listDeserializer != null) { return _listDeserializer.deserialize(p, ctxt); } return mapArray(p, ctxt); case JsonTokenId.ID_EMBEDDED_OBJECT: return p.getEmbeddedObject(); case JsonTokenId.ID_STRING:"
+      },
+      {
+        "txt": "if (_stringDeserializer != null) { return _stringDeserializer.deserialize(p, ctxt); } return p.getText(); case JsonTokenId.ID_NUMBER_INT: if (_numberDeserializer != null) { return _numberDeserializer.deserialize(p, ctxt); } if (ctxt.hasSomeOfFeatures(F_MASK_INT_COERCIONS)) { return _coerceIntegral(p, ctxt);"
+      },
+      {
+        "txt": "} return p.getNumberValue(); // should be optimal, whatever it is case JsonTokenId.ID_NUMBER_FLOAT: if (_numberDeserializer != null) { return _numberDeserializer.deserialize(p, ctxt); } if (ctxt.isEnabled(DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS)) { return p.getDecimalValue(); } return p.getDoubleValue();"
+      },
+      {
+        "txt": "case JsonTokenId.ID_TRUE: return Boolean.TRUE; case JsonTokenId.ID_FALSE: return Boolean.FALSE; case JsonTokenId.ID_NULL: // should not get this but... return null; default: } throw ctxt.mappingException(Object.class); }"
+      },
+      {
+        "txt": "@Override public Object deserializeWithType(JsonParser p, DeserializationContext ctxt, TypeDeserializer typeDeserializer) throws IOException { switch (p.getCurrentTokenId()) { case JsonTokenId.ID_START_ARRAY: case JsonTokenId.ID_START_OBJECT: case JsonTokenId.ID_FIELD_NAME: return typeDeserializer.deserializeTypedFromAny(p, ctxt); case JsonTokenId.ID_EMBEDDED_OBJECT: return p.getEmbeddedObject();"
+      },
+      {
+        "txt": "case JsonTokenId.ID_STRING: if (_stringDeserializer != null) { return _stringDeserializer.deserialize(p, ctxt); } return p.getText(); case JsonTokenId.ID_NUMBER_INT: if (_numberDeserializer != null) { return _numberDeserializer.deserialize(p, ctxt); } if (ctxt.hasSomeOfFeatures(F_MASK_INT_COERCIONS)) {"
+      },
+      {
+        "txt": "return _coerceIntegral(p, ctxt); } return p.getNumberValue(); // should be optimal, whatever it is case JsonTokenId.ID_NUMBER_FLOAT: if (_numberDeserializer != null) { return _numberDeserializer.deserialize(p, ctxt); } if (ctxt.isEnabled(DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS)) { return p.getDecimalValue(); }"
+      },
+      {
+        "txt": "return Double.valueOf(p.getDoubleValue()); case JsonTokenId.ID_TRUE: return Boolean.TRUE; case JsonTokenId.ID_FALSE: return Boolean.FALSE; case JsonTokenId.ID_NULL: // should not get this far really but... return null; default: } throw ctxt.mappingException(Object.class);"
+      },
+      {
+        "txt": "} protected Object mapArray(JsonParser jp, DeserializationContext ctxt) throws IOException { if (jp.nextToken() == JsonToken.END_ARRAY) { return new ArrayList<Object>(2); } Object value = deserialize(jp, ctxt); if (jp.nextToken() == JsonToken.END_ARRAY) { ArrayList<Object> l = new ArrayList<Object>(2); l.add(value);"
+      },
+      {
+        "txt": "return l; } Object value2 = deserialize(jp, ctxt); if (jp.nextToken() == JsonToken.END_ARRAY) { ArrayList<Object> l = new ArrayList<Object>(2); l.add(value); l.add(value2); return l; } ObjectBuffer buffer = ctxt.leaseObjectBuffer();"
+      },
+      {
+        "txt": "Object[] values = buffer.resetAndStart(); int ptr = 0; values[ptr++] = value; values[ptr++] = value2; int totalSize = ptr; do { value = deserialize(jp, ctxt); ++totalSize; if (ptr >= values.length) { values = buffer.appendCompletedChunk(values);"
+      },
+      {
+        "txt": "ptr = 0; } values[ptr++] = value; } while (jp.nextToken() != JsonToken.END_ARRAY); ArrayList<Object> result = new ArrayList<Object>(totalSize); buffer.completeAndClearBuffer(values, ptr, result); return result; } protected Object mapObject(JsonParser p, DeserializationContext ctxt) throws IOException {"
+      },
+      {
+        "txt": "String key1; JsonToken t = p.getCurrentToken(); if (t == JsonToken.START_OBJECT) { key1 = p.nextFieldName(); } else if (t == JsonToken.FIELD_NAME) { key1 = p.getCurrentName(); } else { if (t != JsonToken.END_OBJECT) { throw ctxt.mappingException(handledType(), p.getCurrentToken()); }"
+      },
+      {
+        "txt": "key1 = null; } if (key1 == null) { return new LinkedHashMap<String,Object>(2); } p.nextToken(); Object value1 = deserialize(p, ctxt); String key2 = p.nextFieldName(); if (key2 == null) { // has to be END_OBJECT, then LinkedHashMap<String, Object> result = new LinkedHashMap<String, Object>(2);"
+      },
+      {
+        "txt": "result.put(key1, value1); return result; } p.nextToken(); Object value2 = deserialize(p, ctxt); String key = p.nextFieldName(); if (key == null) { LinkedHashMap<String, Object> result = new LinkedHashMap<String, Object>(4); result.put(key1, value1); result.put(key2, value2);"
+      },
+      {
+        "txt": "return result; } LinkedHashMap<String, Object> result = new LinkedHashMap<String, Object>(); result.put(key1, value1); result.put(key2, value2); do { p.nextToken(); result.put(key, deserialize(p, ctxt)); } while ((key = p.nextFieldName()) != null); return result;"
+      },
+      {
+        "txt": "} protected Object[] mapArrayToArray(JsonParser jp, DeserializationContext ctxt) throws IOException { if (jp.nextToken() == JsonToken.END_ARRAY) { return NO_OBJECTS; } ObjectBuffer buffer = ctxt.leaseObjectBuffer(); Object[] values = buffer.resetAndStart(); int ptr = 0; do {"
+      },
+      {
+        "txt": "Object value = deserialize(jp, ctxt); if (ptr >= values.length) { values = buffer.appendCompletedChunk(values); ptr = 0; } values[ptr++] = value; } while (jp.nextToken() != JsonToken.END_ARRAY); return buffer.completeAndClearBuffer(values, ptr); } @JacksonStdImpl"
+      },
+      {
+        "txt": "public static class Vanilla extends StdDeserializer<Object> { private static final long serialVersionUID = 1L; public final static Vanilla std = new Vanilla(); public Vanilla() { super(Object.class); } @Override public Object deserialize(JsonParser p, DeserializationContext ctxt) throws IOException { switch (p.getCurrentTokenId()) {"
+      },
+      {
+        "txt": "case JsonTokenId.ID_START_OBJECT: { JsonToken t = p.nextToken(); if (t == JsonToken.END_OBJECT) { return new LinkedHashMap<String,Object>(2); } } case JsonTokenId.ID_FIELD_NAME: return mapObject(p, ctxt); case JsonTokenId.ID_START_ARRAY:"
+      },
+      {
+        "txt": "{ JsonToken t = p.nextToken(); if (t == JsonToken.END_ARRAY) { // and empty one too if (ctxt.isEnabled(DeserializationFeature.USE_JAVA_ARRAY_FOR_JSON_ARRAY)) { return NO_OBJECTS; } return new ArrayList<Object>(2); } } if (ctxt.isEnabled(DeserializationFeature.USE_JAVA_ARRAY_FOR_JSON_ARRAY)) {"
+      },
+      {
+        "txt": "return mapArrayToArray(p, ctxt); } return mapArray(p, ctxt); case JsonTokenId.ID_EMBEDDED_OBJECT: return p.getEmbeddedObject(); case JsonTokenId.ID_STRING: return p.getText(); case JsonTokenId.ID_NUMBER_INT: if (ctxt.hasSomeOfFeatures(F_MASK_INT_COERCIONS)) { return _coerceIntegral(p, ctxt);"
+      },
+      {
+        "txt": "} return p.getNumberValue(); // should be optimal, whatever it is case JsonTokenId.ID_NUMBER_FLOAT: if (ctxt.isEnabled(DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS)) { return p.getDecimalValue(); } return Double.valueOf(p.getDoubleValue()); case JsonTokenId.ID_TRUE: return Boolean.TRUE; case JsonTokenId.ID_FALSE:"
+      },
+      {
+        "txt": "return Boolean.FALSE; case JsonTokenId.ID_NULL: // should not get this but... return null; default: throw ctxt.mappingException(Object.class); } } @Override public Object deserializeWithType(JsonParser jp, DeserializationContext ctxt, TypeDeserializer typeDeserializer) throws IOException {"
+      },
+      {
+        "txt": "switch (jp.getCurrentTokenId()) { case JsonTokenId.ID_START_ARRAY: case JsonTokenId.ID_START_OBJECT: case JsonTokenId.ID_FIELD_NAME: return typeDeserializer.deserializeTypedFromAny(jp, ctxt); case JsonTokenId.ID_STRING: return jp.getText(); case JsonTokenId.ID_NUMBER_INT: if (ctxt.isEnabled(DeserializationFeature.USE_BIG_INTEGER_FOR_INTS)) { return jp.getBigIntegerValue();"
+      },
+      {
+        "txt": "} return jp.getNumberValue(); case JsonTokenId.ID_NUMBER_FLOAT: if (ctxt.isEnabled(DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS)) { return jp.getDecimalValue(); } return Double.valueOf(jp.getDoubleValue()); case JsonTokenId.ID_TRUE: return Boolean.TRUE; case JsonTokenId.ID_FALSE:"
+      },
+      {
+        "txt": "return Boolean.FALSE; case JsonTokenId.ID_EMBEDDED_OBJECT: return jp.getEmbeddedObject(); case JsonTokenId.ID_NULL: // should not get this far really but... return null; default: throw ctxt.mappingException(Object.class); } } protected Object mapArray(JsonParser jp, DeserializationContext ctxt) throws IOException"
+      },
+      {
+        "txt": "{ Object value = deserialize(jp, ctxt); if (jp.nextToken() == JsonToken.END_ARRAY) { ArrayList<Object> l = new ArrayList<Object>(2); l.add(value); return l; } Object value2 = deserialize(jp, ctxt); if (jp.nextToken() == JsonToken.END_ARRAY) { ArrayList<Object> l = new ArrayList<Object>(2);"
+      },
+      {
+        "txt": "l.add(value); l.add(value2); return l; } ObjectBuffer buffer = ctxt.leaseObjectBuffer(); Object[] values = buffer.resetAndStart(); int ptr = 0; values[ptr++] = value; values[ptr++] = value2; int totalSize = ptr;"
+      },
+      {
+        "txt": "do { value = deserialize(jp, ctxt); ++totalSize; if (ptr >= values.length) { values = buffer.appendCompletedChunk(values); ptr = 0; } values[ptr++] = value; } while (jp.nextToken() != JsonToken.END_ARRAY); ArrayList<Object> result = new ArrayList<Object>(totalSize);"
+      },
+      {
+        "txt": "buffer.completeAndClearBuffer(values, ptr, result); return result; } protected Object mapObject(JsonParser p, DeserializationContext ctxt) throws IOException { String key1 = p.getText(); p.nextToken(); Object value1 = deserialize(p, ctxt); String key2 = p.nextFieldName(); if (key2 == null) { // single entry; but we want modifiable"
+      },
+      {
+        "txt": "LinkedHashMap<String, Object> result = new LinkedHashMap<String, Object>(2); result.put(key1, value1); return result; } p.nextToken(); Object value2 = deserialize(p, ctxt); String key = p.nextFieldName(); if (key == null) { LinkedHashMap<String, Object> result = new LinkedHashMap<String, Object>(4); result.put(key1, value1);"
+      },
+      {
+        "txt": "result.put(key2, value2); return result; } LinkedHashMap<String, Object> result = new LinkedHashMap<String, Object>(); result.put(key1, value1); result.put(key2, value2); do { p.nextToken(); result.put(key, deserialize(p, ctxt)); } while ((key = p.nextFieldName()) != null);"
+      },
+      {
+        "txt": "return result; } protected Object[] mapArrayToArray(JsonParser jp, DeserializationContext ctxt) throws IOException { ObjectBuffer buffer = ctxt.leaseObjectBuffer(); Object[] values = buffer.resetAndStart(); int ptr = 0; do { Object value = deserialize(jp, ctxt); if (ptr >= values.length) { values = buffer.appendCompletedChunk(values);"
+      },
+      {
+        "txt": "ptr = 0; } values[ptr++] = value; } while (jp.nextToken() != JsonToken.END_ARRAY); return buffer.completeAndClearBuffer(values, ptr); } }"
+      }
+    ]
+  },
+  {
+    "id": 1485,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/deser/std/UntypedObjectDeserializer.java",
+    "start-bug-line": 535,
+    "end-bug-line": 535,
+    "bug": "",
+    "fix": "case JsonTokenId.ID_END_OBJECT:",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind.deser.std; import java.io.IOException; import java.util.*; import com.fasterxml.jackson.core.*; import com.fasterxml.jackson.databind.BeanProperty;"
+      },
+      {
+        "txt": "import com.fasterxml.jackson.databind.DeserializationContext; import com.fasterxml.jackson.databind.DeserializationFeature; import com.fasterxml.jackson.databind.JavaType; import com.fasterxml.jackson.databind.JsonDeserializer; import com.fasterxml.jackson.databind.JsonMappingException; import com.fasterxml.jackson.databind.annotation.JacksonStdImpl; import com.fasterxml.jackson.databind.deser.ContextualDeserializer; import com.fasterxml.jackson.databind.deser.ResolvableDeserializer; import com.fasterxml.jackson.databind.jsontype.TypeDeserializer; import com.fasterxml.jackson.databind.type.TypeFactory;"
+      },
+      {
+        "txt": "import com.fasterxml.jackson.databind.util.ClassUtil; import com.fasterxml.jackson.databind.util.ObjectBuffer; @JacksonStdImpl public class UntypedObjectDeserializer extends StdDeserializer<Object> implements ResolvableDeserializer, ContextualDeserializer { private static final long serialVersionUID = 1L; protected final static Object[] NO_OBJECTS = new Object[0]; @Deprecated"
+      },
+      {
+        "txt": "public final static UntypedObjectDeserializer instance = new UntypedObjectDeserializer(null, null); protected JsonDeserializer<Object> _mapDeserializer; protected JsonDeserializer<Object> _listDeserializer; protected JsonDeserializer<Object> _stringDeserializer; protected JsonDeserializer<Object> _numberDeserializer; protected JavaType _listType; protected JavaType _mapType; @Deprecated public UntypedObjectDeserializer() { this(null, null);"
+      },
+      {
+        "txt": "} public UntypedObjectDeserializer(JavaType listType, JavaType mapType) { super(Object.class); _listType = listType; _mapType = mapType; } @SuppressWarnings(\"unchecked\") public UntypedObjectDeserializer(UntypedObjectDeserializer base, JsonDeserializer<?> mapDeser, JsonDeserializer<?> listDeser, JsonDeserializer<?> stringDeser, JsonDeserializer<?> numberDeser)"
+      },
+      {
+        "txt": "{ super(Object.class); _mapDeserializer = (JsonDeserializer<Object>) mapDeser; _listDeserializer = (JsonDeserializer<Object>) listDeser; _stringDeserializer = (JsonDeserializer<Object>) stringDeser; _numberDeserializer = (JsonDeserializer<Object>) numberDeser; _listType = base._listType; _mapType = base._mapType; } @SuppressWarnings(\"unchecked\")"
+      },
+      {
+        "txt": "@Override public void resolve(DeserializationContext ctxt) throws JsonMappingException { JavaType obType = ctxt.constructType(Object.class); JavaType stringType = ctxt.constructType(String.class); TypeFactory tf = ctxt.getTypeFactory(); if (_listType == null) { _listDeserializer = _clearIfStdImpl(_findCustomDeser(ctxt, tf.constructCollectionType(List.class, obType))); } else { _listDeserializer = _findCustomDeser(ctxt, _listType);"
+      },
+      {
+        "txt": "} if (_mapType == null) { _mapDeserializer = _clearIfStdImpl(_findCustomDeser(ctxt, tf.constructMapType(Map.class, stringType, obType))); } else { _mapDeserializer = _findCustomDeser(ctxt, _mapType); } _stringDeserializer = _clearIfStdImpl(_findCustomDeser(ctxt, stringType)); _numberDeserializer = _clearIfStdImpl(_findCustomDeser(ctxt, tf.constructType(Number.class))); JavaType unknown = TypeFactory.unknownType(); _mapDeserializer = (JsonDeserializer<Object>) ctxt.handleSecondaryContextualization(_mapDeserializer, null, unknown);"
+      },
+      {
+        "txt": "_listDeserializer = (JsonDeserializer<Object>) ctxt.handleSecondaryContextualization(_listDeserializer, null, unknown); _stringDeserializer = (JsonDeserializer<Object>) ctxt.handleSecondaryContextualization(_stringDeserializer, null, unknown); _numberDeserializer = (JsonDeserializer<Object>) ctxt.handleSecondaryContextualization(_numberDeserializer, null, unknown); } protected JsonDeserializer<Object> _findCustomDeser(DeserializationContext ctxt, JavaType type) throws JsonMappingException { return ctxt.findNonContextualValueDeserializer(type); } protected JsonDeserializer<Object> _clearIfStdImpl(JsonDeserializer<Object> deser) {"
+      },
+      {
+        "txt": "return ClassUtil.isJacksonStdImpl(deser) ? null : deser; } @Override public JsonDeserializer<?> createContextual(DeserializationContext ctxt, BeanProperty property) throws JsonMappingException { if ((_stringDeserializer == null) && (_numberDeserializer == null) && (_mapDeserializer == null) && (_listDeserializer == null) && getClass() == UntypedObjectDeserializer.class) { return Vanilla.std;"
+      },
+      {
+        "txt": "} return this; } protected JsonDeserializer<?> _withResolved(JsonDeserializer<?> mapDeser, JsonDeserializer<?> listDeser, JsonDeserializer<?> stringDeser, JsonDeserializer<?> numberDeser) { return new UntypedObjectDeserializer(this, mapDeser, listDeser, stringDeser, numberDeser); } @Override"
+      },
+      {
+        "txt": "public boolean isCachable() { return true; } @Override public Object deserialize(JsonParser p, DeserializationContext ctxt) throws IOException { switch (p.getCurrentTokenId()) { case JsonTokenId.ID_START_OBJECT: case JsonTokenId.ID_FIELD_NAME: if (_mapDeserializer != null) {"
+      },
+      {
+        "txt": "return _mapDeserializer.deserialize(p, ctxt); } return mapObject(p, ctxt); case JsonTokenId.ID_START_ARRAY: if (ctxt.isEnabled(DeserializationFeature.USE_JAVA_ARRAY_FOR_JSON_ARRAY)) { return mapArrayToArray(p, ctxt); } if (_listDeserializer != null) { return _listDeserializer.deserialize(p, ctxt); }"
+      },
+      {
+        "txt": "return mapArray(p, ctxt); case JsonTokenId.ID_EMBEDDED_OBJECT: return p.getEmbeddedObject(); case JsonTokenId.ID_STRING: if (_stringDeserializer != null) { return _stringDeserializer.deserialize(p, ctxt); } return p.getText(); case JsonTokenId.ID_NUMBER_INT: if (_numberDeserializer != null) {"
+      },
+      {
+        "txt": "return _numberDeserializer.deserialize(p, ctxt); } if (ctxt.hasSomeOfFeatures(F_MASK_INT_COERCIONS)) { return _coerceIntegral(p, ctxt); } return p.getNumberValue(); // should be optimal, whatever it is case JsonTokenId.ID_NUMBER_FLOAT: if (_numberDeserializer != null) { return _numberDeserializer.deserialize(p, ctxt); }"
+      },
+      {
+        "txt": "if (ctxt.isEnabled(DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS)) { return p.getDecimalValue(); } return p.getDoubleValue(); case JsonTokenId.ID_TRUE: return Boolean.TRUE; case JsonTokenId.ID_FALSE: return Boolean.FALSE; case JsonTokenId.ID_NULL: // should not get this but... return null;"
+      },
+      {
+        "txt": "default: } throw ctxt.mappingException(Object.class); } @Override public Object deserializeWithType(JsonParser p, DeserializationContext ctxt, TypeDeserializer typeDeserializer) throws IOException { switch (p.getCurrentTokenId()) { case JsonTokenId.ID_START_ARRAY: case JsonTokenId.ID_START_OBJECT:"
+      },
+      {
+        "txt": "case JsonTokenId.ID_FIELD_NAME: return typeDeserializer.deserializeTypedFromAny(p, ctxt); case JsonTokenId.ID_EMBEDDED_OBJECT: return p.getEmbeddedObject(); case JsonTokenId.ID_STRING: if (_stringDeserializer != null) { return _stringDeserializer.deserialize(p, ctxt); } return p.getText(); case JsonTokenId.ID_NUMBER_INT:"
+      },
+      {
+        "txt": "if (_numberDeserializer != null) { return _numberDeserializer.deserialize(p, ctxt); } if (ctxt.hasSomeOfFeatures(F_MASK_INT_COERCIONS)) { return _coerceIntegral(p, ctxt); } return p.getNumberValue(); // should be optimal, whatever it is case JsonTokenId.ID_NUMBER_FLOAT: if (_numberDeserializer != null) { return _numberDeserializer.deserialize(p, ctxt);"
+      },
+      {
+        "txt": "} if (ctxt.isEnabled(DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS)) { return p.getDecimalValue(); } return Double.valueOf(p.getDoubleValue()); case JsonTokenId.ID_TRUE: return Boolean.TRUE; case JsonTokenId.ID_FALSE: return Boolean.FALSE; case JsonTokenId.ID_NULL: // should not get this far really but..."
+      },
+      {
+        "txt": "return null; default: } throw ctxt.mappingException(Object.class); } protected Object mapArray(JsonParser jp, DeserializationContext ctxt) throws IOException { if (jp.nextToken() == JsonToken.END_ARRAY) { return new ArrayList<Object>(2); }"
+      },
+      {
+        "txt": "Object value = deserialize(jp, ctxt); if (jp.nextToken() == JsonToken.END_ARRAY) { ArrayList<Object> l = new ArrayList<Object>(2); l.add(value); return l; } Object value2 = deserialize(jp, ctxt); if (jp.nextToken() == JsonToken.END_ARRAY) { ArrayList<Object> l = new ArrayList<Object>(2); l.add(value);"
+      },
+      {
+        "txt": "l.add(value2); return l; } ObjectBuffer buffer = ctxt.leaseObjectBuffer(); Object[] values = buffer.resetAndStart(); int ptr = 0; values[ptr++] = value; values[ptr++] = value2; int totalSize = ptr; do {"
+      },
+      {
+        "txt": "value = deserialize(jp, ctxt); ++totalSize; if (ptr >= values.length) { values = buffer.appendCompletedChunk(values); ptr = 0; } values[ptr++] = value; } while (jp.nextToken() != JsonToken.END_ARRAY); ArrayList<Object> result = new ArrayList<Object>(totalSize); buffer.completeAndClearBuffer(values, ptr, result);"
+      },
+      {
+        "txt": "return result; } protected Object mapObject(JsonParser p, DeserializationContext ctxt) throws IOException { String key1; JsonToken t = p.getCurrentToken(); if (t == JsonToken.START_OBJECT) { key1 = p.nextFieldName(); } else if (t == JsonToken.FIELD_NAME) { key1 = p.getCurrentName();"
+      },
+      {
+        "txt": "} else { if (t != JsonToken.END_OBJECT) { throw ctxt.mappingException(handledType(), p.getCurrentToken()); } key1 = null; } if (key1 == null) { return new LinkedHashMap<String,Object>(2); } p.nextToken();"
+      },
+      {
+        "txt": "Object value1 = deserialize(p, ctxt); String key2 = p.nextFieldName(); if (key2 == null) { // has to be END_OBJECT, then LinkedHashMap<String, Object> result = new LinkedHashMap<String, Object>(2); result.put(key1, value1); return result; } p.nextToken(); Object value2 = deserialize(p, ctxt); String key = p.nextFieldName();"
+      },
+      {
+        "txt": "if (key == null) { LinkedHashMap<String, Object> result = new LinkedHashMap<String, Object>(4); result.put(key1, value1); result.put(key2, value2); return result; } LinkedHashMap<String, Object> result = new LinkedHashMap<String, Object>(); result.put(key1, value1); result.put(key2, value2); do {"
+      },
+      {
+        "txt": "p.nextToken(); result.put(key, deserialize(p, ctxt)); } while ((key = p.nextFieldName()) != null); return result; } protected Object[] mapArrayToArray(JsonParser jp, DeserializationContext ctxt) throws IOException { if (jp.nextToken() == JsonToken.END_ARRAY) { return NO_OBJECTS; }"
+      },
+      {
+        "txt": "ObjectBuffer buffer = ctxt.leaseObjectBuffer(); Object[] values = buffer.resetAndStart(); int ptr = 0; do { Object value = deserialize(jp, ctxt); if (ptr >= values.length) { values = buffer.appendCompletedChunk(values); ptr = 0; } values[ptr++] = value;"
+      },
+      {
+        "txt": "} while (jp.nextToken() != JsonToken.END_ARRAY); return buffer.completeAndClearBuffer(values, ptr); } @JacksonStdImpl public static class Vanilla extends StdDeserializer<Object> { private static final long serialVersionUID = 1L; public final static Vanilla std = new Vanilla(); public Vanilla() { super(Object.class); }"
+      },
+      {
+        "txt": "@Override public Object deserialize(JsonParser p, DeserializationContext ctxt) throws IOException { switch (p.getCurrentTokenId()) { case JsonTokenId.ID_START_OBJECT: { JsonToken t = p.nextToken(); if (t == JsonToken.END_OBJECT) { return new LinkedHashMap<String,Object>(2); }"
+      },
+      {
+        "txt": "} case JsonTokenId.ID_FIELD_NAME: return mapObject(p, ctxt); case JsonTokenId.ID_START_ARRAY: { JsonToken t = p.nextToken(); if (t == JsonToken.END_ARRAY) { // and empty one too if (ctxt.isEnabled(DeserializationFeature.USE_JAVA_ARRAY_FOR_JSON_ARRAY)) { return NO_OBJECTS; }"
+      },
+      {
+        "txt": "return new ArrayList<Object>(2); } } if (ctxt.isEnabled(DeserializationFeature.USE_JAVA_ARRAY_FOR_JSON_ARRAY)) { return mapArrayToArray(p, ctxt); } return mapArray(p, ctxt); case JsonTokenId.ID_EMBEDDED_OBJECT: return p.getEmbeddedObject(); case JsonTokenId.ID_STRING:"
+      },
+      {
+        "txt": "return p.getText(); case JsonTokenId.ID_NUMBER_INT: if (ctxt.hasSomeOfFeatures(F_MASK_INT_COERCIONS)) { return _coerceIntegral(p, ctxt); } return p.getNumberValue(); // should be optimal, whatever it is case JsonTokenId.ID_NUMBER_FLOAT: if (ctxt.isEnabled(DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS)) { return p.getDecimalValue(); }"
+      },
+      {
+        "txt": "case JsonTokenId.ID_TRUE: return Boolean.TRUE; case JsonTokenId.ID_FALSE: return Boolean.FALSE; case JsonTokenId.ID_NULL: // should not get this but... return null; <extra_id_0> default: throw ctxt.mappingException(Object.class); } } @Override public Object deserializeWithType(JsonParser jp, DeserializationContext ctxt, TypeDeserializer typeDeserializer) throws IOException"
+      },
+      {
+        "txt": "@Override public Object deserializeWithType(JsonParser jp, DeserializationContext ctxt, TypeDeserializer typeDeserializer) throws IOException { switch (jp.getCurrentTokenId()) { case JsonTokenId.ID_START_ARRAY: case JsonTokenId.ID_START_OBJECT: case JsonTokenId.ID_FIELD_NAME: return typeDeserializer.deserializeTypedFromAny(jp, ctxt); case JsonTokenId.ID_STRING: return jp.getText();"
+      },
+      {
+        "txt": "case JsonTokenId.ID_NUMBER_INT: if (ctxt.isEnabled(DeserializationFeature.USE_BIG_INTEGER_FOR_INTS)) { return jp.getBigIntegerValue(); } return jp.getNumberValue(); case JsonTokenId.ID_NUMBER_FLOAT: if (ctxt.isEnabled(DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS)) { return jp.getDecimalValue(); } return Double.valueOf(jp.getDoubleValue());"
+      },
+      {
+        "txt": "case JsonTokenId.ID_TRUE: return Boolean.TRUE; case JsonTokenId.ID_FALSE: return Boolean.FALSE; case JsonTokenId.ID_EMBEDDED_OBJECT: return jp.getEmbeddedObject(); case JsonTokenId.ID_NULL: // should not get this far really but... return null; default: throw ctxt.mappingException(Object.class);"
+      },
+      {
+        "txt": "} } protected Object mapArray(JsonParser jp, DeserializationContext ctxt) throws IOException { Object value = deserialize(jp, ctxt); if (jp.nextToken() == JsonToken.END_ARRAY) { ArrayList<Object> l = new ArrayList<Object>(2); l.add(value); return l; }"
+      },
+      {
+        "txt": "Object value2 = deserialize(jp, ctxt); if (jp.nextToken() == JsonToken.END_ARRAY) { ArrayList<Object> l = new ArrayList<Object>(2); l.add(value); l.add(value2); return l; } ObjectBuffer buffer = ctxt.leaseObjectBuffer(); Object[] values = buffer.resetAndStart(); int ptr = 0;"
+      },
+      {
+        "txt": "values[ptr++] = value; values[ptr++] = value2; int totalSize = ptr; do { value = deserialize(jp, ctxt); ++totalSize; if (ptr >= values.length) { values = buffer.appendCompletedChunk(values); ptr = 0; }"
+      },
+      {
+        "txt": "values[ptr++] = value; } while (jp.nextToken() != JsonToken.END_ARRAY); ArrayList<Object> result = new ArrayList<Object>(totalSize); buffer.completeAndClearBuffer(values, ptr, result); return result; } protected Object mapObject(JsonParser p, DeserializationContext ctxt) throws IOException { String key1 = p.getText(); p.nextToken();"
+      },
+      {
+        "txt": "Object value1 = deserialize(p, ctxt); String key2 = p.nextFieldName(); if (key2 == null) { // single entry; but we want modifiable LinkedHashMap<String, Object> result = new LinkedHashMap<String, Object>(2); result.put(key1, value1); return result; } p.nextToken(); Object value2 = deserialize(p, ctxt); String key = p.nextFieldName();"
+      },
+      {
+        "txt": "if (key == null) { LinkedHashMap<String, Object> result = new LinkedHashMap<String, Object>(4); result.put(key1, value1); result.put(key2, value2); return result; } LinkedHashMap<String, Object> result = new LinkedHashMap<String, Object>(); result.put(key1, value1); result.put(key2, value2); do {"
+      },
+      {
+        "txt": "p.nextToken(); result.put(key, deserialize(p, ctxt)); } while ((key = p.nextFieldName()) != null); return result; } protected Object[] mapArrayToArray(JsonParser jp, DeserializationContext ctxt) throws IOException { ObjectBuffer buffer = ctxt.leaseObjectBuffer(); Object[] values = buffer.resetAndStart(); int ptr = 0; do {"
+      },
+      {
+        "txt": "Object value = deserialize(jp, ctxt); if (ptr >= values.length) { values = buffer.appendCompletedChunk(values); ptr = 0; } values[ptr++] = value; } while (jp.nextToken() != JsonToken.END_ARRAY); return buffer.completeAndClearBuffer(values, ptr); } }"
+      }
+    ]
+  },
+  {
+    "id": 1486,
+    "file_path": "src/main/java/com/fasterxml/jackson/databind/deser/std/UntypedObjectDeserializer.java",
+    "start-bug-line": 537,
+    "end-bug-line": 537,
+    "bug": "",
+    "fix": "return new LinkedHashMap<String,Object>(2);",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package com.fasterxml.jackson.databind.deser.std; import java.io.IOException; import java.util.*; import com.fasterxml.jackson.core.*; import com.fasterxml.jackson.databind.BeanProperty;"
+      },
+      {
+        "txt": "import com.fasterxml.jackson.databind.DeserializationContext; import com.fasterxml.jackson.databind.DeserializationFeature; import com.fasterxml.jackson.databind.JavaType; import com.fasterxml.jackson.databind.JsonDeserializer; import com.fasterxml.jackson.databind.JsonMappingException; import com.fasterxml.jackson.databind.annotation.JacksonStdImpl; import com.fasterxml.jackson.databind.deser.ContextualDeserializer; import com.fasterxml.jackson.databind.deser.ResolvableDeserializer; import com.fasterxml.jackson.databind.jsontype.TypeDeserializer; import com.fasterxml.jackson.databind.type.TypeFactory;"
+      },
+      {
+        "txt": "import com.fasterxml.jackson.databind.util.ClassUtil; import com.fasterxml.jackson.databind.util.ObjectBuffer; @JacksonStdImpl public class UntypedObjectDeserializer extends StdDeserializer<Object> implements ResolvableDeserializer, ContextualDeserializer { private static final long serialVersionUID = 1L; protected final static Object[] NO_OBJECTS = new Object[0]; @Deprecated"
+      },
+      {
+        "txt": "public final static UntypedObjectDeserializer instance = new UntypedObjectDeserializer(null, null); protected JsonDeserializer<Object> _mapDeserializer; protected JsonDeserializer<Object> _listDeserializer; protected JsonDeserializer<Object> _stringDeserializer; protected JsonDeserializer<Object> _numberDeserializer; protected JavaType _listType; protected JavaType _mapType; @Deprecated public UntypedObjectDeserializer() { this(null, null);"
+      },
+      {
+        "txt": "} public UntypedObjectDeserializer(JavaType listType, JavaType mapType) { super(Object.class); _listType = listType; _mapType = mapType; } @SuppressWarnings(\"unchecked\") public UntypedObjectDeserializer(UntypedObjectDeserializer base, JsonDeserializer<?> mapDeser, JsonDeserializer<?> listDeser, JsonDeserializer<?> stringDeser, JsonDeserializer<?> numberDeser)"
+      },
+      {
+        "txt": "{ super(Object.class); _mapDeserializer = (JsonDeserializer<Object>) mapDeser; _listDeserializer = (JsonDeserializer<Object>) listDeser; _stringDeserializer = (JsonDeserializer<Object>) stringDeser; _numberDeserializer = (JsonDeserializer<Object>) numberDeser; _listType = base._listType; _mapType = base._mapType; } @SuppressWarnings(\"unchecked\")"
+      },
+      {
+        "txt": "@Override public void resolve(DeserializationContext ctxt) throws JsonMappingException { JavaType obType = ctxt.constructType(Object.class); JavaType stringType = ctxt.constructType(String.class); TypeFactory tf = ctxt.getTypeFactory(); if (_listType == null) { _listDeserializer = _clearIfStdImpl(_findCustomDeser(ctxt, tf.constructCollectionType(List.class, obType))); } else { _listDeserializer = _findCustomDeser(ctxt, _listType);"
+      },
+      {
+        "txt": "} if (_mapType == null) { _mapDeserializer = _clearIfStdImpl(_findCustomDeser(ctxt, tf.constructMapType(Map.class, stringType, obType))); } else { _mapDeserializer = _findCustomDeser(ctxt, _mapType); } _stringDeserializer = _clearIfStdImpl(_findCustomDeser(ctxt, stringType)); _numberDeserializer = _clearIfStdImpl(_findCustomDeser(ctxt, tf.constructType(Number.class))); JavaType unknown = TypeFactory.unknownType(); _mapDeserializer = (JsonDeserializer<Object>) ctxt.handleSecondaryContextualization(_mapDeserializer, null, unknown);"
+      },
+      {
+        "txt": "_listDeserializer = (JsonDeserializer<Object>) ctxt.handleSecondaryContextualization(_listDeserializer, null, unknown); _stringDeserializer = (JsonDeserializer<Object>) ctxt.handleSecondaryContextualization(_stringDeserializer, null, unknown); _numberDeserializer = (JsonDeserializer<Object>) ctxt.handleSecondaryContextualization(_numberDeserializer, null, unknown); } protected JsonDeserializer<Object> _findCustomDeser(DeserializationContext ctxt, JavaType type) throws JsonMappingException { return ctxt.findNonContextualValueDeserializer(type); } protected JsonDeserializer<Object> _clearIfStdImpl(JsonDeserializer<Object> deser) {"
+      },
+      {
+        "txt": "return ClassUtil.isJacksonStdImpl(deser) ? null : deser; } @Override public JsonDeserializer<?> createContextual(DeserializationContext ctxt, BeanProperty property) throws JsonMappingException { if ((_stringDeserializer == null) && (_numberDeserializer == null) && (_mapDeserializer == null) && (_listDeserializer == null) && getClass() == UntypedObjectDeserializer.class) { return Vanilla.std;"
+      },
+      {
+        "txt": "} return this; } protected JsonDeserializer<?> _withResolved(JsonDeserializer<?> mapDeser, JsonDeserializer<?> listDeser, JsonDeserializer<?> stringDeser, JsonDeserializer<?> numberDeser) { return new UntypedObjectDeserializer(this, mapDeser, listDeser, stringDeser, numberDeser); } @Override"
+      },
+      {
+        "txt": "public boolean isCachable() { return true; } @Override public Object deserialize(JsonParser p, DeserializationContext ctxt) throws IOException { switch (p.getCurrentTokenId()) { case JsonTokenId.ID_START_OBJECT: case JsonTokenId.ID_FIELD_NAME: if (_mapDeserializer != null) {"
+      },
+      {
+        "txt": "return _mapDeserializer.deserialize(p, ctxt); } return mapObject(p, ctxt); case JsonTokenId.ID_START_ARRAY: if (ctxt.isEnabled(DeserializationFeature.USE_JAVA_ARRAY_FOR_JSON_ARRAY)) { return mapArrayToArray(p, ctxt); } if (_listDeserializer != null) { return _listDeserializer.deserialize(p, ctxt); }"
+      },
+      {
+        "txt": "return mapArray(p, ctxt); case JsonTokenId.ID_EMBEDDED_OBJECT: return p.getEmbeddedObject(); case JsonTokenId.ID_STRING: if (_stringDeserializer != null) { return _stringDeserializer.deserialize(p, ctxt); } return p.getText(); case JsonTokenId.ID_NUMBER_INT: if (_numberDeserializer != null) {"
+      },
+      {
+        "txt": "return _numberDeserializer.deserialize(p, ctxt); } if (ctxt.hasSomeOfFeatures(F_MASK_INT_COERCIONS)) { return _coerceIntegral(p, ctxt); } return p.getNumberValue(); // should be optimal, whatever it is case JsonTokenId.ID_NUMBER_FLOAT: if (_numberDeserializer != null) { return _numberDeserializer.deserialize(p, ctxt); }"
+      },
+      {
+        "txt": "if (ctxt.isEnabled(DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS)) { return p.getDecimalValue(); } return p.getDoubleValue(); case JsonTokenId.ID_TRUE: return Boolean.TRUE; case JsonTokenId.ID_FALSE: return Boolean.FALSE; case JsonTokenId.ID_NULL: // should not get this but... return null;"
+      },
+      {
+        "txt": "default: } throw ctxt.mappingException(Object.class); } @Override public Object deserializeWithType(JsonParser p, DeserializationContext ctxt, TypeDeserializer typeDeserializer) throws IOException { switch (p.getCurrentTokenId()) { case JsonTokenId.ID_START_ARRAY: case JsonTokenId.ID_START_OBJECT:"
+      },
+      {
+        "txt": "case JsonTokenId.ID_FIELD_NAME: return typeDeserializer.deserializeTypedFromAny(p, ctxt); case JsonTokenId.ID_EMBEDDED_OBJECT: return p.getEmbeddedObject(); case JsonTokenId.ID_STRING: if (_stringDeserializer != null) { return _stringDeserializer.deserialize(p, ctxt); } return p.getText(); case JsonTokenId.ID_NUMBER_INT:"
+      },
+      {
+        "txt": "if (_numberDeserializer != null) { return _numberDeserializer.deserialize(p, ctxt); } if (ctxt.hasSomeOfFeatures(F_MASK_INT_COERCIONS)) { return _coerceIntegral(p, ctxt); } return p.getNumberValue(); // should be optimal, whatever it is case JsonTokenId.ID_NUMBER_FLOAT: if (_numberDeserializer != null) { return _numberDeserializer.deserialize(p, ctxt);"
+      },
+      {
+        "txt": "} if (ctxt.isEnabled(DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS)) { return p.getDecimalValue(); } return Double.valueOf(p.getDoubleValue()); case JsonTokenId.ID_TRUE: return Boolean.TRUE; case JsonTokenId.ID_FALSE: return Boolean.FALSE; case JsonTokenId.ID_NULL: // should not get this far really but..."
+      },
+      {
+        "txt": "return null; default: } throw ctxt.mappingException(Object.class); } protected Object mapArray(JsonParser jp, DeserializationContext ctxt) throws IOException { if (jp.nextToken() == JsonToken.END_ARRAY) { return new ArrayList<Object>(2); }"
+      },
+      {
+        "txt": "Object value = deserialize(jp, ctxt); if (jp.nextToken() == JsonToken.END_ARRAY) { ArrayList<Object> l = new ArrayList<Object>(2); l.add(value); return l; } Object value2 = deserialize(jp, ctxt); if (jp.nextToken() == JsonToken.END_ARRAY) { ArrayList<Object> l = new ArrayList<Object>(2); l.add(value);"
+      },
+      {
+        "txt": "l.add(value2); return l; } ObjectBuffer buffer = ctxt.leaseObjectBuffer(); Object[] values = buffer.resetAndStart(); int ptr = 0; values[ptr++] = value; values[ptr++] = value2; int totalSize = ptr; do {"
+      },
+      {
+        "txt": "value = deserialize(jp, ctxt); ++totalSize; if (ptr >= values.length) { values = buffer.appendCompletedChunk(values); ptr = 0; } values[ptr++] = value; } while (jp.nextToken() != JsonToken.END_ARRAY); ArrayList<Object> result = new ArrayList<Object>(totalSize); buffer.completeAndClearBuffer(values, ptr, result);"
+      },
+      {
+        "txt": "return result; } protected Object mapObject(JsonParser p, DeserializationContext ctxt) throws IOException { String key1; JsonToken t = p.getCurrentToken(); if (t == JsonToken.START_OBJECT) { key1 = p.nextFieldName(); } else if (t == JsonToken.FIELD_NAME) { key1 = p.getCurrentName();"
+      },
+      {
+        "txt": "} else { if (t != JsonToken.END_OBJECT) { throw ctxt.mappingException(handledType(), p.getCurrentToken()); } key1 = null; } if (key1 == null) { return new LinkedHashMap<String,Object>(2); } p.nextToken();"
+      },
+      {
+        "txt": "Object value1 = deserialize(p, ctxt); String key2 = p.nextFieldName(); if (key2 == null) { // has to be END_OBJECT, then LinkedHashMap<String, Object> result = new LinkedHashMap<String, Object>(2); result.put(key1, value1); return result; } p.nextToken(); Object value2 = deserialize(p, ctxt); String key = p.nextFieldName();"
+      },
+      {
+        "txt": "if (key == null) { LinkedHashMap<String, Object> result = new LinkedHashMap<String, Object>(4); result.put(key1, value1); result.put(key2, value2); return result; } LinkedHashMap<String, Object> result = new LinkedHashMap<String, Object>(); result.put(key1, value1); result.put(key2, value2); do {"
+      },
+      {
+        "txt": "p.nextToken(); result.put(key, deserialize(p, ctxt)); } while ((key = p.nextFieldName()) != null); return result; } protected Object[] mapArrayToArray(JsonParser jp, DeserializationContext ctxt) throws IOException { if (jp.nextToken() == JsonToken.END_ARRAY) { return NO_OBJECTS; }"
+      },
+      {
+        "txt": "ObjectBuffer buffer = ctxt.leaseObjectBuffer(); Object[] values = buffer.resetAndStart(); int ptr = 0; do { Object value = deserialize(jp, ctxt); if (ptr >= values.length) { values = buffer.appendCompletedChunk(values); ptr = 0; } values[ptr++] = value;"
+      },
+      {
+        "txt": "} while (jp.nextToken() != JsonToken.END_ARRAY); return buffer.completeAndClearBuffer(values, ptr); } @JacksonStdImpl public static class Vanilla extends StdDeserializer<Object> { private static final long serialVersionUID = 1L; public final static Vanilla std = new Vanilla(); public Vanilla() { super(Object.class); }"
+      },
+      {
+        "txt": "@Override public Object deserialize(JsonParser p, DeserializationContext ctxt) throws IOException { switch (p.getCurrentTokenId()) { case JsonTokenId.ID_START_OBJECT: { JsonToken t = p.nextToken(); if (t == JsonToken.END_OBJECT) { return new LinkedHashMap<String,Object>(2); }"
+      },
+      {
+        "txt": "} case JsonTokenId.ID_FIELD_NAME: return mapObject(p, ctxt); case JsonTokenId.ID_START_ARRAY: { JsonToken t = p.nextToken(); if (t == JsonToken.END_ARRAY) { // and empty one too if (ctxt.isEnabled(DeserializationFeature.USE_JAVA_ARRAY_FOR_JSON_ARRAY)) { return NO_OBJECTS; }"
+      },
+      {
+        "txt": "return new ArrayList<Object>(2); } } if (ctxt.isEnabled(DeserializationFeature.USE_JAVA_ARRAY_FOR_JSON_ARRAY)) { return mapArrayToArray(p, ctxt); } return mapArray(p, ctxt); case JsonTokenId.ID_EMBEDDED_OBJECT: return p.getEmbeddedObject(); case JsonTokenId.ID_STRING:"
+      },
+      {
+        "txt": "return p.getText(); case JsonTokenId.ID_NUMBER_INT: if (ctxt.hasSomeOfFeatures(F_MASK_INT_COERCIONS)) { return _coerceIntegral(p, ctxt); } return p.getNumberValue(); // should be optimal, whatever it is case JsonTokenId.ID_NUMBER_FLOAT: if (ctxt.isEnabled(DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS)) { return p.getDecimalValue(); }"
+      },
+      {
+        "txt": "case JsonTokenId.ID_TRUE: return Boolean.TRUE; case JsonTokenId.ID_FALSE: return Boolean.FALSE; case JsonTokenId.ID_NULL: // should not get this but... return null; <extra_id_0> default: throw ctxt.mappingException(Object.class); } } @Override public Object deserializeWithType(JsonParser jp, DeserializationContext ctxt, TypeDeserializer typeDeserializer) throws IOException"
+      },
+      {
+        "txt": "@Override public Object deserializeWithType(JsonParser jp, DeserializationContext ctxt, TypeDeserializer typeDeserializer) throws IOException { switch (jp.getCurrentTokenId()) { case JsonTokenId.ID_START_ARRAY: case JsonTokenId.ID_START_OBJECT: case JsonTokenId.ID_FIELD_NAME: return typeDeserializer.deserializeTypedFromAny(jp, ctxt); case JsonTokenId.ID_STRING: return jp.getText();"
+      },
+      {
+        "txt": "case JsonTokenId.ID_NUMBER_INT: if (ctxt.isEnabled(DeserializationFeature.USE_BIG_INTEGER_FOR_INTS)) { return jp.getBigIntegerValue(); } return jp.getNumberValue(); case JsonTokenId.ID_NUMBER_FLOAT: if (ctxt.isEnabled(DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS)) { return jp.getDecimalValue(); } return Double.valueOf(jp.getDoubleValue());"
+      },
+      {
+        "txt": "case JsonTokenId.ID_TRUE: return Boolean.TRUE; case JsonTokenId.ID_FALSE: return Boolean.FALSE; case JsonTokenId.ID_EMBEDDED_OBJECT: return jp.getEmbeddedObject(); case JsonTokenId.ID_NULL: // should not get this far really but... return null; default: throw ctxt.mappingException(Object.class);"
+      },
+      {
+        "txt": "} } protected Object mapArray(JsonParser jp, DeserializationContext ctxt) throws IOException { Object value = deserialize(jp, ctxt); if (jp.nextToken() == JsonToken.END_ARRAY) { ArrayList<Object> l = new ArrayList<Object>(2); l.add(value); return l; }"
+      },
+      {
+        "txt": "Object value2 = deserialize(jp, ctxt); if (jp.nextToken() == JsonToken.END_ARRAY) { ArrayList<Object> l = new ArrayList<Object>(2); l.add(value); l.add(value2); return l; } ObjectBuffer buffer = ctxt.leaseObjectBuffer(); Object[] values = buffer.resetAndStart(); int ptr = 0;"
+      },
+      {
+        "txt": "values[ptr++] = value; values[ptr++] = value2; int totalSize = ptr; do { value = deserialize(jp, ctxt); ++totalSize; if (ptr >= values.length) { values = buffer.appendCompletedChunk(values); ptr = 0; }"
+      },
+      {
+        "txt": "values[ptr++] = value; } while (jp.nextToken() != JsonToken.END_ARRAY); ArrayList<Object> result = new ArrayList<Object>(totalSize); buffer.completeAndClearBuffer(values, ptr, result); return result; } protected Object mapObject(JsonParser p, DeserializationContext ctxt) throws IOException { String key1 = p.getText(); p.nextToken();"
+      },
+      {
+        "txt": "Object value1 = deserialize(p, ctxt); String key2 = p.nextFieldName(); if (key2 == null) { // single entry; but we want modifiable LinkedHashMap<String, Object> result = new LinkedHashMap<String, Object>(2); result.put(key1, value1); return result; } p.nextToken(); Object value2 = deserialize(p, ctxt); String key = p.nextFieldName();"
+      },
+      {
+        "txt": "if (key == null) { LinkedHashMap<String, Object> result = new LinkedHashMap<String, Object>(4); result.put(key1, value1); result.put(key2, value2); return result; } LinkedHashMap<String, Object> result = new LinkedHashMap<String, Object>(); result.put(key1, value1); result.put(key2, value2); do {"
+      },
+      {
+        "txt": "p.nextToken(); result.put(key, deserialize(p, ctxt)); } while ((key = p.nextFieldName()) != null); return result; } protected Object[] mapArrayToArray(JsonParser jp, DeserializationContext ctxt) throws IOException { ObjectBuffer buffer = ctxt.leaseObjectBuffer(); Object[] values = buffer.resetAndStart(); int ptr = 0; do {"
+      },
+      {
+        "txt": "Object value = deserialize(jp, ctxt); if (ptr >= values.length) { values = buffer.appendCompletedChunk(values); ptr = 0; } values[ptr++] = value; } while (jp.nextToken() != JsonToken.END_ARRAY); return buffer.completeAndClearBuffer(values, ptr); } }"
+      }
+    ]
+  }
+]

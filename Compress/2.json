@@ -1,0 +1,584 @@
+[
+  {
+    "id": 983,
+    "file_path": "src/main/java/org/apache/commons/compress/archivers/ar/ArArchiveInputStream.java",
+    "start-bug-line": 42,
+    "end-bug-line": 42,
+    "bug": "",
+    "fix": "private ArArchiveEntry currentEntry = null;",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.compress.archivers.ar; import java.io.IOException;"
+      },
+      {
+        "txt": "import org.apache.commons.compress.archivers.ArchiveEntry; import org.apache.commons.compress.archivers.ArchiveInputStream; public class ArArchiveInputStream extends ArchiveInputStream { private final InputStream input; private long offset = 0; private boolean closed; <extra_id_0> public ArArchiveInputStream( final InputStream pInput ) { input = pInput; closed = false; } public ArArchiveEntry getNextArEntry() throws IOException { if (offset == 0) {"
+      },
+      {
+        "txt": "public ArArchiveEntry getNextArEntry() throws IOException { if (offset == 0) { final byte[] expected = ArArchiveEntry.HEADER.getBytes(); final byte[] realized = new byte[expected.length]; final int read = read(realized); if (read != expected.length) { throw new IOException(\"failed to read header\"); } for (int i = 0; i < expected.length; i++) { if (expected[i] != realized[i]) {"
+      },
+      {
+        "txt": "throw new IOException(\"invalid header \" + new String(realized)); } } } if (input.available() == 0) { return null; } if (offset % 2 != 0) { read(); }"
+      },
+      {
+        "txt": "final byte[] name = new byte[16]; final byte[] lastmodified = new byte[12]; final byte[] userid = new byte[6]; final byte[] groupid = new byte[6]; final byte[] filemode = new byte[8]; final byte[] length = new byte[10]; read(name); read(lastmodified); read(userid); read(groupid);"
+      },
+      {
+        "txt": "read(filemode); read(length); { final byte[] expected = ArArchiveEntry.TRAILER.getBytes(); final byte[] realized = new byte[expected.length]; final int read = read(realized); if (read != expected.length) { throw new IOException(\"failed to read entry header\"); } for (int i = 0; i < expected.length; i++) {"
+      },
+      {
+        "txt": "if (expected[i] != realized[i]) { throw new IOException(\"invalid entry header. not read the content?\"); } } } return new ArArchiveEntry(new String(name).trim(), Long.parseLong(new String(length) .trim())); } public ArchiveEntry getNextEntry() throws IOException {"
+      },
+      {
+        "txt": "return getNextArEntry(); } public void close() throws IOException { if (!closed) { closed = true; input.close(); } } public int read() throws IOException { final int ret = input.read();"
+      },
+      {
+        "txt": "offset += (ret > 0 ? 1 : 0); return ret; } public int read(byte[] b) throws IOException { return read(b, 0, b.length); } public int read(byte[] b, final int off, final int len) throws IOException { int toRead = len; final int ret = this.input.read(b, off, toRead); offset += (ret > 0 ? ret : 0);"
+      },
+      {
+        "txt": "return ret; } public static boolean matches(byte[] signature, int length) { if (length < 8) { return false; } if (signature[0] != 0x21) { return false; } if (signature[1] != 0x3c) {"
+      },
+      {
+        "txt": "return false; } if (signature[2] != 0x61) { return false; } if (signature[3] != 0x72) { return false; } if (signature[4] != 0x63) { return false;"
+      },
+      {
+        "txt": "} if (signature[5] != 0x68) { return false; } if (signature[6] != 0x3e) { return false; } if (signature[7] != 0x0a) { return false; }"
+      },
+      {
+        "txt": "return true; }"
+      }
+    ]
+  },
+  {
+    "id": 984,
+    "file_path": "src/main/java/org/apache/commons/compress/archivers/ar/ArArchiveInputStream.java",
+    "start-bug-line": 46,
+    "end-bug-line": 46,
+    "bug": "",
+    "fix": "private long entryOffset = -1;",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.compress.archivers.ar; import java.io.IOException;"
+      },
+      {
+        "txt": "import org.apache.commons.compress.archivers.ArchiveEntry; import org.apache.commons.compress.archivers.ArchiveInputStream; public class ArArchiveInputStream extends ArchiveInputStream { private final InputStream input; private long offset = 0; private boolean closed; <extra_id_0> public ArArchiveInputStream( final InputStream pInput ) { input = pInput; closed = false; } public ArArchiveEntry getNextArEntry() throws IOException { if (offset == 0) {"
+      },
+      {
+        "txt": "public ArArchiveEntry getNextArEntry() throws IOException { if (offset == 0) { final byte[] expected = ArArchiveEntry.HEADER.getBytes(); final byte[] realized = new byte[expected.length]; final int read = read(realized); if (read != expected.length) { throw new IOException(\"failed to read header\"); } for (int i = 0; i < expected.length; i++) { if (expected[i] != realized[i]) {"
+      },
+      {
+        "txt": "throw new IOException(\"invalid header \" + new String(realized)); } } } if (input.available() == 0) { return null; } if (offset % 2 != 0) { read(); }"
+      },
+      {
+        "txt": "final byte[] name = new byte[16]; final byte[] lastmodified = new byte[12]; final byte[] userid = new byte[6]; final byte[] groupid = new byte[6]; final byte[] filemode = new byte[8]; final byte[] length = new byte[10]; read(name); read(lastmodified); read(userid); read(groupid);"
+      },
+      {
+        "txt": "read(filemode); read(length); { final byte[] expected = ArArchiveEntry.TRAILER.getBytes(); final byte[] realized = new byte[expected.length]; final int read = read(realized); if (read != expected.length) { throw new IOException(\"failed to read entry header\"); } for (int i = 0; i < expected.length; i++) {"
+      },
+      {
+        "txt": "if (expected[i] != realized[i]) { throw new IOException(\"invalid entry header. not read the content?\"); } } } return new ArArchiveEntry(new String(name).trim(), Long.parseLong(new String(length) .trim())); } public ArchiveEntry getNextEntry() throws IOException {"
+      },
+      {
+        "txt": "return getNextArEntry(); } public void close() throws IOException { if (!closed) { closed = true; input.close(); } } public int read() throws IOException { final int ret = input.read();"
+      },
+      {
+        "txt": "offset += (ret > 0 ? 1 : 0); return ret; } public int read(byte[] b) throws IOException { return read(b, 0, b.length); } public int read(byte[] b, final int off, final int len) throws IOException { int toRead = len; final int ret = this.input.read(b, off, toRead); offset += (ret > 0 ? ret : 0);"
+      },
+      {
+        "txt": "return ret; } public static boolean matches(byte[] signature, int length) { if (length < 8) { return false; } if (signature[0] != 0x21) { return false; } if (signature[1] != 0x3c) {"
+      },
+      {
+        "txt": "return false; } if (signature[2] != 0x61) { return false; } if (signature[3] != 0x72) { return false; } if (signature[4] != 0x63) { return false;"
+      },
+      {
+        "txt": "} if (signature[5] != 0x68) { return false; } if (signature[6] != 0x3e) { return false; } if (signature[7] != 0x0a) { return false; }"
+      },
+      {
+        "txt": "return true; }"
+      }
+    ]
+  },
+  {
+    "id": 985,
+    "file_path": "src/main/java/org/apache/commons/compress/archivers/ar/ArArchiveInputStream.java",
+    "start-bug-line": 60,
+    "end-bug-line": 60,
+    "bug": "",
+    "fix": "if (currentEntry != null) { final long entryEnd = entryOffset + currentEntry.getLength(); while (offset < entryEnd) { int x = read(); if (x == -1) {",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.compress.archivers.ar; import java.io.IOException; import java.io.InputStream; import org.apache.commons.compress.archivers.ArchiveEntry; import org.apache.commons.compress.archivers.ArchiveInputStream; public class ArArchiveInputStream extends ArchiveInputStream { private final InputStream input;"
+      },
+      {
+        "txt": "private boolean closed; public ArArchiveInputStream( final InputStream pInput ) { input = pInput; closed = false; } public ArArchiveEntry getNextArEntry() throws IOException { <extra_id_0> if (offset == 0) { final byte[] expected = ArArchiveEntry.HEADER.getBytes(); final byte[] realized = new byte[expected.length]; final int read = read(realized); if (read != expected.length) { throw new IOException(\"failed to read header\");"
+      },
+      {
+        "txt": "if (read != expected.length) { throw new IOException(\"failed to read header\"); } for (int i = 0; i < expected.length; i++) { if (expected[i] != realized[i]) { throw new IOException(\"invalid header \" + new String(realized)); } } } if (input.available() == 0) {"
+      },
+      {
+        "txt": "return null; } if (offset % 2 != 0) { read(); } final byte[] name = new byte[16]; final byte[] lastmodified = new byte[12]; final byte[] userid = new byte[6]; final byte[] groupid = new byte[6]; final byte[] filemode = new byte[8];"
+      },
+      {
+        "txt": "final byte[] length = new byte[10]; read(name); read(lastmodified); read(userid); read(groupid); read(filemode); read(length); { final byte[] expected = ArArchiveEntry.TRAILER.getBytes(); final byte[] realized = new byte[expected.length];"
+      },
+      {
+        "txt": "final int read = read(realized); if (read != expected.length) { throw new IOException(\"failed to read entry header\"); } for (int i = 0; i < expected.length; i++) { if (expected[i] != realized[i]) { throw new IOException(\"invalid entry header. not read the content?\"); } } }"
+      },
+      {
+        "txt": "return new ArArchiveEntry(new String(name).trim(), Long.parseLong(new String(length) .trim())); } public ArchiveEntry getNextEntry() throws IOException { return getNextArEntry(); } public void close() throws IOException { if (!closed) { closed = true;"
+      },
+      {
+        "txt": "input.close(); } } public int read() throws IOException { final int ret = input.read(); offset += (ret > 0 ? 1 : 0); return ret; } public int read(byte[] b) throws IOException { return read(b, 0, b.length);"
+      },
+      {
+        "txt": "} public int read(byte[] b, final int off, final int len) throws IOException { int toRead = len; final int ret = this.input.read(b, off, toRead); offset += (ret > 0 ? ret : 0); return ret; } public static boolean matches(byte[] signature, int length) { if (length < 8) { return false;"
+      },
+      {
+        "txt": "} if (signature[0] != 0x21) { return false; } if (signature[1] != 0x3c) { return false; } if (signature[2] != 0x61) { return false; }"
+      },
+      {
+        "txt": "if (signature[3] != 0x72) { return false; } if (signature[4] != 0x63) { return false; } if (signature[5] != 0x68) { return false; } if (signature[6] != 0x3e) {"
+      },
+      {
+        "txt": "return false; } if (signature[7] != 0x0a) { return false; } return true; }"
+      }
+    ]
+  },
+  {
+    "id": 986,
+    "file_path": "src/main/java/org/apache/commons/compress/archivers/ar/ArArchiveInputStream.java",
+    "start-bug-line": 62,
+    "end-bug-line": 62,
+    "bug": "",
+    "fix": "return null; } } currentEntry = null; }",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.compress.archivers.ar; import java.io.IOException; import java.io.InputStream; import org.apache.commons.compress.archivers.ArchiveEntry; import org.apache.commons.compress.archivers.ArchiveInputStream; public class ArArchiveInputStream extends ArchiveInputStream { private final InputStream input;"
+      },
+      {
+        "txt": "private boolean closed; public ArArchiveInputStream( final InputStream pInput ) { input = pInput; closed = false; } public ArArchiveEntry getNextArEntry() throws IOException { <extra_id_0> if (offset == 0) { final byte[] expected = ArArchiveEntry.HEADER.getBytes(); final byte[] realized = new byte[expected.length]; final int read = read(realized); if (read != expected.length) { throw new IOException(\"failed to read header\");"
+      },
+      {
+        "txt": "if (read != expected.length) { throw new IOException(\"failed to read header\"); } for (int i = 0; i < expected.length; i++) { if (expected[i] != realized[i]) { throw new IOException(\"invalid header \" + new String(realized)); } } } if (input.available() == 0) {"
+      },
+      {
+        "txt": "return null; } if (offset % 2 != 0) { read(); } final byte[] name = new byte[16]; final byte[] lastmodified = new byte[12]; final byte[] userid = new byte[6]; final byte[] groupid = new byte[6]; final byte[] filemode = new byte[8];"
+      },
+      {
+        "txt": "final byte[] length = new byte[10]; read(name); read(lastmodified); read(userid); read(groupid); read(filemode); read(length); { final byte[] expected = ArArchiveEntry.TRAILER.getBytes(); final byte[] realized = new byte[expected.length];"
+      },
+      {
+        "txt": "final int read = read(realized); if (read != expected.length) { throw new IOException(\"failed to read entry header\"); } for (int i = 0; i < expected.length; i++) { if (expected[i] != realized[i]) { throw new IOException(\"invalid entry header. not read the content?\"); } } }"
+      },
+      {
+        "txt": "return new ArArchiveEntry(new String(name).trim(), Long.parseLong(new String(length) .trim())); } public ArchiveEntry getNextEntry() throws IOException { return getNextArEntry(); } public void close() throws IOException { if (!closed) { closed = true;"
+      },
+      {
+        "txt": "input.close(); } } public int read() throws IOException { final int ret = input.read(); offset += (ret > 0 ? 1 : 0); return ret; } public int read(byte[] b) throws IOException { return read(b, 0, b.length);"
+      },
+      {
+        "txt": "} public int read(byte[] b, final int off, final int len) throws IOException { int toRead = len; final int ret = this.input.read(b, off, toRead); offset += (ret > 0 ? ret : 0); return ret; } public static boolean matches(byte[] signature, int length) { if (length < 8) { return false;"
+      },
+      {
+        "txt": "} if (signature[0] != 0x21) { return false; } if (signature[1] != 0x3c) { return false; } if (signature[2] != 0x61) { return false; }"
+      },
+      {
+        "txt": "if (signature[3] != 0x72) { return false; } if (signature[4] != 0x63) { return false; } if (signature[5] != 0x68) { return false; } if (signature[6] != 0x3e) {"
+      },
+      {
+        "txt": "return false; } if (signature[7] != 0x0a) { return false; } return true; }"
+      }
+    ]
+  },
+  {
+    "id": 987,
+    "file_path": "src/main/java/org/apache/commons/compress/archivers/ar/ArArchiveInputStream.java",
+    "start-bug-line": 77,
+    "end-bug-line": 77,
+    "bug": "",
+    "fix": "if (offset % 2 != 0) { if (read() < 0) {",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.compress.archivers.ar; import java.io.IOException; import java.io.InputStream; import org.apache.commons.compress.archivers.ArchiveEntry; import org.apache.commons.compress.archivers.ArchiveInputStream; public class ArArchiveInputStream extends ArchiveInputStream { private final InputStream input; private long offset = 0; private boolean closed; public ArArchiveInputStream( final InputStream pInput ) {"
+      },
+      {
+        "txt": "input = pInput; closed = false; } public ArArchiveEntry getNextArEntry() throws IOException { if (offset == 0) { final byte[] expected = ArArchiveEntry.HEADER.getBytes(); final byte[] realized = new byte[expected.length]; final int read = read(realized); if (read != expected.length) { throw new IOException(\"failed to read header\");"
+      },
+      {
+        "txt": "for (int i = 0; i < expected.length; i++) { if (expected[i] != realized[i]) { throw new IOException(\"invalid header \" + new String(realized)); } } } <extra_id_0> if (input.available() == 0) { return null; } if (offset % 2 != 0) { read(); }"
+      },
+      {
+        "txt": "read(); } final byte[] name = new byte[16]; final byte[] lastmodified = new byte[12]; final byte[] userid = new byte[6]; final byte[] groupid = new byte[6]; final byte[] filemode = new byte[8]; final byte[] length = new byte[10]; read(name); read(lastmodified);"
+      },
+      {
+        "txt": "read(userid); read(groupid); read(filemode); read(length); { final byte[] expected = ArArchiveEntry.TRAILER.getBytes(); final byte[] realized = new byte[expected.length]; final int read = read(realized); if (read != expected.length) { throw new IOException(\"failed to read entry header\");"
+      },
+      {
+        "txt": "} for (int i = 0; i < expected.length; i++) { if (expected[i] != realized[i]) { throw new IOException(\"invalid entry header. not read the content?\"); } } } return new ArArchiveEntry(new String(name).trim(), Long.parseLong(new String(length) .trim()));"
+      },
+      {
+        "txt": "} public ArchiveEntry getNextEntry() throws IOException { return getNextArEntry(); } public void close() throws IOException { if (!closed) { closed = true; input.close(); } }"
+      },
+      {
+        "txt": "public int read() throws IOException { final int ret = input.read(); offset += (ret > 0 ? 1 : 0); return ret; } public int read(byte[] b) throws IOException { return read(b, 0, b.length); } public int read(byte[] b, final int off, final int len) throws IOException { int toRead = len;"
+      },
+      {
+        "txt": "final int ret = this.input.read(b, off, toRead); offset += (ret > 0 ? ret : 0); return ret; } public static boolean matches(byte[] signature, int length) { if (length < 8) { return false; } if (signature[0] != 0x21) { return false;"
+      },
+      {
+        "txt": "} if (signature[1] != 0x3c) { return false; } if (signature[2] != 0x61) { return false; } if (signature[3] != 0x72) { return false; }"
+      },
+      {
+        "txt": "if (signature[4] != 0x63) { return false; } if (signature[5] != 0x68) { return false; } if (signature[6] != 0x3e) { return false; } if (signature[7] != 0x0a) {"
+      },
+      {
+        "txt": "return false; } return true; }"
+      }
+    ]
+  },
+  {
+    "id": 988,
+    "file_path": "src/main/java/org/apache/commons/compress/archivers/ar/ArArchiveInputStream.java",
+    "start-bug-line": 78,
+    "end-bug-line": 78,
+    "bug": "",
+    "fix": "return null; } }",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.compress.archivers.ar; import java.io.IOException; import java.io.InputStream; import org.apache.commons.compress.archivers.ArchiveEntry; import org.apache.commons.compress.archivers.ArchiveInputStream; public class ArArchiveInputStream extends ArchiveInputStream { private final InputStream input; private long offset = 0; private boolean closed; public ArArchiveInputStream( final InputStream pInput ) {"
+      },
+      {
+        "txt": "input = pInput; closed = false; } public ArArchiveEntry getNextArEntry() throws IOException { if (offset == 0) { final byte[] expected = ArArchiveEntry.HEADER.getBytes(); final byte[] realized = new byte[expected.length]; final int read = read(realized); if (read != expected.length) { throw new IOException(\"failed to read header\");"
+      },
+      {
+        "txt": "for (int i = 0; i < expected.length; i++) { if (expected[i] != realized[i]) { throw new IOException(\"invalid header \" + new String(realized)); } } } <extra_id_0> if (input.available() == 0) { return null; } if (offset % 2 != 0) { read(); }"
+      },
+      {
+        "txt": "read(); } final byte[] name = new byte[16]; final byte[] lastmodified = new byte[12]; final byte[] userid = new byte[6]; final byte[] groupid = new byte[6]; final byte[] filemode = new byte[8]; final byte[] length = new byte[10]; read(name); read(lastmodified);"
+      },
+      {
+        "txt": "read(userid); read(groupid); read(filemode); read(length); { final byte[] expected = ArArchiveEntry.TRAILER.getBytes(); final byte[] realized = new byte[expected.length]; final int read = read(realized); if (read != expected.length) { throw new IOException(\"failed to read entry header\");"
+      },
+      {
+        "txt": "} for (int i = 0; i < expected.length; i++) { if (expected[i] != realized[i]) { throw new IOException(\"invalid entry header. not read the content?\"); } } } return new ArArchiveEntry(new String(name).trim(), Long.parseLong(new String(length) .trim()));"
+      },
+      {
+        "txt": "} public ArchiveEntry getNextEntry() throws IOException { return getNextArEntry(); } public void close() throws IOException { if (!closed) { closed = true; input.close(); } }"
+      },
+      {
+        "txt": "public int read() throws IOException { final int ret = input.read(); offset += (ret > 0 ? 1 : 0); return ret; } public int read(byte[] b) throws IOException { return read(b, 0, b.length); } public int read(byte[] b, final int off, final int len) throws IOException { int toRead = len;"
+      },
+      {
+        "txt": "final int ret = this.input.read(b, off, toRead); offset += (ret > 0 ? ret : 0); return ret; } public static boolean matches(byte[] signature, int length) { if (length < 8) { return false; } if (signature[0] != 0x21) { return false;"
+      },
+      {
+        "txt": "} if (signature[1] != 0x3c) { return false; } if (signature[2] != 0x61) { return false; } if (signature[3] != 0x72) { return false; }"
+      },
+      {
+        "txt": "if (signature[4] != 0x63) { return false; } if (signature[5] != 0x68) { return false; } if (signature[6] != 0x3e) { return false; } if (signature[7] != 0x0a) {"
+      },
+      {
+        "txt": "return false; } return true; }"
+      }
+    ]
+  },
+  {
+    "id": 989,
+    "file_path": "src/main/java/org/apache/commons/compress/archivers/ar/ArArchiveInputStream.java",
+    "start-bug-line": 83,
+    "end-bug-line": 85,
+    "bug": "if (offset % 2 != 0) { read(); }",
+    "fix": "[Delete]",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.compress.archivers.ar; import java.io.IOException; import java.io.InputStream;"
+      },
+      {
+        "txt": "import org.apache.commons.compress.archivers.ArchiveEntry; import org.apache.commons.compress.archivers.ArchiveInputStream; public class ArArchiveInputStream extends ArchiveInputStream { private final InputStream input; private long offset = 0; private boolean closed; public ArArchiveInputStream( final InputStream pInput ) { input = pInput; closed = false; }"
+      },
+      {
+        "txt": "public ArArchiveEntry getNextArEntry() throws IOException { if (offset == 0) { final byte[] expected = ArArchiveEntry.HEADER.getBytes(); final byte[] realized = new byte[expected.length]; final int read = read(realized); if (read != expected.length) { throw new IOException(\"failed to read header\"); } for (int i = 0; i < expected.length; i++) { if (expected[i] != realized[i]) {"
+      },
+      {
+        "txt": "} } } if (input.available() == 0) { return null; } <extra_id_0> final byte[] name = new byte[16]; final byte[] lastmodified = new byte[12]; final byte[] userid = new byte[6]; final byte[] groupid = new byte[6]; final byte[] filemode = new byte[8]; final byte[] length = new byte[10];"
+      },
+      {
+        "txt": "final byte[] filemode = new byte[8]; final byte[] length = new byte[10]; read(name); read(lastmodified); read(userid); read(groupid); read(filemode); read(length); { final byte[] expected = ArArchiveEntry.TRAILER.getBytes();"
+      },
+      {
+        "txt": "final byte[] realized = new byte[expected.length]; final int read = read(realized); if (read != expected.length) { throw new IOException(\"failed to read entry header\"); } for (int i = 0; i < expected.length; i++) { if (expected[i] != realized[i]) { throw new IOException(\"invalid entry header. not read the content?\"); } }"
+      },
+      {
+        "txt": "} return new ArArchiveEntry(new String(name).trim(), Long.parseLong(new String(length) .trim())); } public ArchiveEntry getNextEntry() throws IOException { return getNextArEntry(); } public void close() throws IOException { if (!closed) {"
+      },
+      {
+        "txt": "closed = true; input.close(); } } public int read() throws IOException { final int ret = input.read(); offset += (ret > 0 ? 1 : 0); return ret; } public int read(byte[] b) throws IOException {"
+      },
+      {
+        "txt": "return read(b, 0, b.length); } public int read(byte[] b, final int off, final int len) throws IOException { int toRead = len; final int ret = this.input.read(b, off, toRead); offset += (ret > 0 ? ret : 0); return ret; } public static boolean matches(byte[] signature, int length) { if (length < 8) {"
+      },
+      {
+        "txt": "return false; } if (signature[0] != 0x21) { return false; } if (signature[1] != 0x3c) { return false; } if (signature[2] != 0x61) { return false;"
+      },
+      {
+        "txt": "} if (signature[3] != 0x72) { return false; } if (signature[4] != 0x63) { return false; } if (signature[5] != 0x68) { return false; }"
+      },
+      {
+        "txt": "if (signature[6] != 0x3e) { return false; } if (signature[7] != 0x0a) { return false; } return true; }"
+      }
+    ]
+  },
+  {
+    "id": 990,
+    "file_path": "src/main/java/org/apache/commons/compress/archivers/ar/ArArchiveInputStream.java",
+    "start-bug-line": 114,
+    "end-bug-line": 114,
+    "bug": "return new ArArchiveEntry(new String(name).trim(),",
+    "fix": "entryOffset = offset; currentEntry = new ArArchiveEntry(new String(name).trim(),",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "import java.io.IOException; import java.io.InputStream; import org.apache.commons.compress.archivers.ArchiveEntry; import org.apache.commons.compress.archivers.ArchiveInputStream; public class ArArchiveInputStream extends ArchiveInputStream { private final InputStream input; private long offset = 0; private boolean closed; public ArArchiveInputStream( final InputStream pInput ) { input = pInput;"
+      },
+      {
+        "txt": "closed = false; } public ArArchiveEntry getNextArEntry() throws IOException { if (offset == 0) { final byte[] expected = ArArchiveEntry.HEADER.getBytes(); final byte[] realized = new byte[expected.length]; final int read = read(realized); if (read != expected.length) { throw new IOException(\"failed to read header\"); }"
+      },
+      {
+        "txt": "for (int i = 0; i < expected.length; i++) { if (expected[i] != realized[i]) { throw new IOException(\"invalid header \" + new String(realized)); } } } if (input.available() == 0) { return null; } if (offset % 2 != 0) {"
+      },
+      {
+        "txt": "read(); } final byte[] name = new byte[16]; final byte[] lastmodified = new byte[12]; final byte[] userid = new byte[6]; final byte[] groupid = new byte[6]; final byte[] filemode = new byte[8]; final byte[] length = new byte[10]; read(name); read(lastmodified);"
+      },
+      {
+        "txt": "read(userid); read(groupid); read(filemode); read(length); { final byte[] expected = ArArchiveEntry.TRAILER.getBytes(); final byte[] realized = new byte[expected.length]; final int read = read(realized); if (read != expected.length) { throw new IOException(\"failed to read entry header\");"
+      },
+      {
+        "txt": "for (int i = 0; i < expected.length; i++) { if (expected[i] != realized[i]) { throw new IOException(\"invalid entry header. not read the content?\"); } } } <extra_id_0> Long.parseLong(new String(length) .trim())); } public ArchiveEntry getNextEntry() throws IOException { return getNextArEntry(); }"
+      },
+      {
+        "txt": "return getNextArEntry(); } public void close() throws IOException { if (!closed) { closed = true; input.close(); } } public int read() throws IOException { final int ret = input.read();"
+      },
+      {
+        "txt": "offset += (ret > 0 ? 1 : 0); return ret; } public int read(byte[] b) throws IOException { return read(b, 0, b.length); } public int read(byte[] b, final int off, final int len) throws IOException { int toRead = len; final int ret = this.input.read(b, off, toRead); offset += (ret > 0 ? ret : 0);"
+      },
+      {
+        "txt": "return ret; } public static boolean matches(byte[] signature, int length) { if (length < 8) { return false; } if (signature[0] != 0x21) { return false; } if (signature[1] != 0x3c) {"
+      },
+      {
+        "txt": "return false; } if (signature[2] != 0x61) { return false; } if (signature[3] != 0x72) { return false; } if (signature[4] != 0x63) { return false;"
+      },
+      {
+        "txt": "} if (signature[5] != 0x68) { return false; } if (signature[6] != 0x3e) { return false; } if (signature[7] != 0x0a) { return false; }"
+      },
+      {
+        "txt": "return true; }"
+      }
+    ]
+  },
+  {
+    "id": 991,
+    "file_path": "src/main/java/org/apache/commons/compress/archivers/ar/ArArchiveInputStream.java",
+    "start-bug-line": 117,
+    "end-bug-line": 117,
+    "bug": "",
+    "fix": "return currentEntry;",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.compress.archivers.ar; import java.io.IOException; import java.io.InputStream; import org.apache.commons.compress.archivers.ArchiveEntry;"
+      },
+      {
+        "txt": "import org.apache.commons.compress.archivers.ArchiveInputStream; public class ArArchiveInputStream extends ArchiveInputStream { private final InputStream input; private long offset = 0; private boolean closed; public ArArchiveInputStream( final InputStream pInput ) { input = pInput; closed = false; } public ArArchiveEntry getNextArEntry() throws IOException {"
+      },
+      {
+        "txt": "if (offset == 0) { final byte[] expected = ArArchiveEntry.HEADER.getBytes(); final byte[] realized = new byte[expected.length]; final int read = read(realized); if (read != expected.length) { throw new IOException(\"failed to read header\"); } for (int i = 0; i < expected.length; i++) { if (expected[i] != realized[i]) { throw new IOException(\"invalid header \" + new String(realized));"
+      },
+      {
+        "txt": "} } } if (input.available() == 0) { return null; } if (offset % 2 != 0) { read(); } final byte[] name = new byte[16];"
+      },
+      {
+        "txt": "final byte[] lastmodified = new byte[12]; final byte[] userid = new byte[6]; final byte[] groupid = new byte[6]; final byte[] filemode = new byte[8]; final byte[] length = new byte[10]; read(name); read(lastmodified); read(userid); read(groupid); read(filemode);"
+      },
+      {
+        "txt": "read(length); { final byte[] expected = ArArchiveEntry.TRAILER.getBytes(); final byte[] realized = new byte[expected.length]; final int read = read(realized); if (read != expected.length) { throw new IOException(\"failed to read entry header\"); } for (int i = 0; i < expected.length; i++) { if (expected[i] != realized[i]) {"
+      },
+      {
+        "txt": "} } } return new ArArchiveEntry(new String(name).trim(), Long.parseLong(new String(length) .trim())); <extra_id_0> public ArchiveEntry getNextEntry() throws IOException { return getNextArEntry(); } public void close() throws IOException { if (!closed) { closed = true;"
+      },
+      {
+        "txt": "if (!closed) { closed = true; input.close(); } } public int read() throws IOException { final int ret = input.read(); offset += (ret > 0 ? 1 : 0); return ret; }"
+      },
+      {
+        "txt": "public int read(byte[] b) throws IOException { return read(b, 0, b.length); } public int read(byte[] b, final int off, final int len) throws IOException { int toRead = len; final int ret = this.input.read(b, off, toRead); offset += (ret > 0 ? ret : 0); return ret; } public static boolean matches(byte[] signature, int length) {"
+      },
+      {
+        "txt": "if (length < 8) { return false; } if (signature[0] != 0x21) { return false; } if (signature[1] != 0x3c) { return false; } if (signature[2] != 0x61) {"
+      },
+      {
+        "txt": "return false; } if (signature[3] != 0x72) { return false; } if (signature[4] != 0x63) { return false; } if (signature[5] != 0x68) { return false;"
+      },
+      {
+        "txt": "} if (signature[6] != 0x3e) { return false; } if (signature[7] != 0x0a) { return false; } return true; }"
+      }
+    ]
+  },
+  {
+    "id": 992,
+    "file_path": "src/main/java/org/apache/commons/compress/archivers/ar/ArArchiveInputStream.java",
+    "start-bug-line": 129,
+    "end-bug-line": 129,
+    "bug": "",
+    "fix": "currentEntry = null;",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.compress.archivers.ar; import java.io.IOException; import java.io.InputStream;"
+      },
+      {
+        "txt": "import org.apache.commons.compress.archivers.ArchiveEntry; import org.apache.commons.compress.archivers.ArchiveInputStream; public class ArArchiveInputStream extends ArchiveInputStream { private final InputStream input; private long offset = 0; private boolean closed; public ArArchiveInputStream( final InputStream pInput ) { input = pInput; closed = false; }"
+      },
+      {
+        "txt": "public ArArchiveEntry getNextArEntry() throws IOException { if (offset == 0) { final byte[] expected = ArArchiveEntry.HEADER.getBytes(); final byte[] realized = new byte[expected.length]; final int read = read(realized); if (read != expected.length) { throw new IOException(\"failed to read header\"); } for (int i = 0; i < expected.length; i++) { if (expected[i] != realized[i]) {"
+      },
+      {
+        "txt": "throw new IOException(\"invalid header \" + new String(realized)); } } } if (input.available() == 0) { return null; } if (offset % 2 != 0) { read(); }"
+      },
+      {
+        "txt": "final byte[] name = new byte[16]; final byte[] lastmodified = new byte[12]; final byte[] userid = new byte[6]; final byte[] groupid = new byte[6]; final byte[] filemode = new byte[8]; final byte[] length = new byte[10]; read(name); read(lastmodified); read(userid); read(groupid);"
+      },
+      {
+        "txt": "read(filemode); read(length); { final byte[] expected = ArArchiveEntry.TRAILER.getBytes(); final byte[] realized = new byte[expected.length]; final int read = read(realized); if (read != expected.length) { throw new IOException(\"failed to read entry header\"); } for (int i = 0; i < expected.length; i++) {"
+      },
+      {
+        "txt": "if (expected[i] != realized[i]) { throw new IOException(\"invalid entry header. not read the content?\"); } } } return new ArArchiveEntry(new String(name).trim(), Long.parseLong(new String(length) .trim())); } public ArchiveEntry getNextEntry() throws IOException {"
+      },
+      {
+        "txt": "} public void close() throws IOException { if (!closed) { closed = true; input.close(); } <extra_id_0> public int read() throws IOException { final int ret = input.read(); offset += (ret > 0 ? 1 : 0); return ret; } public int read(byte[] b) throws IOException {"
+      },
+      {
+        "txt": "} public int read(byte[] b) throws IOException { return read(b, 0, b.length); } public int read(byte[] b, final int off, final int len) throws IOException { int toRead = len; final int ret = this.input.read(b, off, toRead); offset += (ret > 0 ? ret : 0); return ret; }"
+      },
+      {
+        "txt": "public static boolean matches(byte[] signature, int length) { if (length < 8) { return false; } if (signature[0] != 0x21) { return false; } if (signature[1] != 0x3c) { return false; }"
+      },
+      {
+        "txt": "if (signature[2] != 0x61) { return false; } if (signature[3] != 0x72) { return false; } if (signature[4] != 0x63) { return false; } if (signature[5] != 0x68) {"
+      },
+      {
+        "txt": "return false; } if (signature[6] != 0x3e) { return false; } if (signature[7] != 0x0a) { return false; } return true; }"
+      }
+    ]
+  },
+  {
+    "id": 993,
+    "file_path": "src/main/java/org/apache/commons/compress/archivers/ar/ArArchiveInputStream.java",
+    "start-bug-line": 132,
+    "end-bug-line": 134,
+    "bug": "final int ret = input.read(); offset += (ret > 0 ? 1 : 0); return ret;",
+    "fix": "byte[] single = new byte[1]; int num = read(single, 0, 1); return num == -1 ? -1 : single[0] & 0xff;",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.compress.archivers.ar; import java.io.IOException; import java.io.InputStream; import org.apache.commons.compress.archivers.ArchiveEntry; import org.apache.commons.compress.archivers.ArchiveInputStream;"
+      },
+      {
+        "txt": "public class ArArchiveInputStream extends ArchiveInputStream { private final InputStream input; private long offset = 0; private boolean closed; public ArArchiveInputStream( final InputStream pInput ) { input = pInput; closed = false; } public ArArchiveEntry getNextArEntry() throws IOException { if (offset == 0) {"
+      },
+      {
+        "txt": "final byte[] expected = ArArchiveEntry.HEADER.getBytes(); final byte[] realized = new byte[expected.length]; final int read = read(realized); if (read != expected.length) { throw new IOException(\"failed to read header\"); } for (int i = 0; i < expected.length; i++) { if (expected[i] != realized[i]) { throw new IOException(\"invalid header \" + new String(realized)); }"
+      },
+      {
+        "txt": "} } if (input.available() == 0) { return null; } if (offset % 2 != 0) { read(); } final byte[] name = new byte[16]; final byte[] lastmodified = new byte[12];"
+      },
+      {
+        "txt": "final byte[] userid = new byte[6]; final byte[] groupid = new byte[6]; final byte[] filemode = new byte[8]; final byte[] length = new byte[10]; read(name); read(lastmodified); read(userid); read(groupid); read(filemode); read(length);"
+      },
+      {
+        "txt": "{ final byte[] expected = ArArchiveEntry.TRAILER.getBytes(); final byte[] realized = new byte[expected.length]; final int read = read(realized); if (read != expected.length) { throw new IOException(\"failed to read entry header\"); } for (int i = 0; i < expected.length; i++) { if (expected[i] != realized[i]) { throw new IOException(\"invalid entry header. not read the content?\");"
+      },
+      {
+        "txt": "} } } return new ArArchiveEntry(new String(name).trim(), Long.parseLong(new String(length) .trim())); } public ArchiveEntry getNextEntry() throws IOException { return getNextArEntry(); }"
+      },
+      {
+        "txt": "if (!closed) { closed = true; input.close(); } } public int read() throws IOException { <extra_id_0> } public int read(byte[] b) throws IOException { return read(b, 0, b.length); } public int read(byte[] b, final int off, final int len) throws IOException { int toRead = len;"
+      },
+      {
+        "txt": "public int read(byte[] b, final int off, final int len) throws IOException { int toRead = len; final int ret = this.input.read(b, off, toRead); offset += (ret > 0 ? ret : 0); return ret; } public static boolean matches(byte[] signature, int length) { if (length < 8) { return false; }"
+      },
+      {
+        "txt": "if (signature[0] != 0x21) { return false; } if (signature[1] != 0x3c) { return false; } if (signature[2] != 0x61) { return false; } if (signature[3] != 0x72) {"
+      },
+      {
+        "txt": "return false; } if (signature[4] != 0x63) { return false; } if (signature[5] != 0x68) { return false; } if (signature[6] != 0x3e) { return false;"
+      },
+      {
+        "txt": "} if (signature[7] != 0x0a) { return false; } return true; }"
+      }
+    ]
+  },
+  {
+    "id": 994,
+    "file_path": "src/main/java/org/apache/commons/compress/archivers/ar/ArArchiveInputStream.java",
+    "start-bug-line": 143,
+    "end-bug-line": 143,
+    "bug": "",
+    "fix": "if (currentEntry != null) { final long entryEnd = entryOffset + currentEntry.getLength(); if (len > 0 && entryEnd > offset) { toRead = (int) Math.min(len, entryEnd - offset); } else { return -1; } }",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.compress.archivers.ar; import java.io.IOException; import java.io.InputStream; import org.apache.commons.compress.archivers.ArchiveEntry;"
+      },
+      {
+        "txt": "import org.apache.commons.compress.archivers.ArchiveInputStream; public class ArArchiveInputStream extends ArchiveInputStream { private final InputStream input; private long offset = 0; private boolean closed; public ArArchiveInputStream( final InputStream pInput ) { input = pInput; closed = false; } public ArArchiveEntry getNextArEntry() throws IOException {"
+      },
+      {
+        "txt": "if (offset == 0) { final byte[] expected = ArArchiveEntry.HEADER.getBytes(); final byte[] realized = new byte[expected.length]; final int read = read(realized); if (read != expected.length) { throw new IOException(\"failed to read header\"); } for (int i = 0; i < expected.length; i++) { if (expected[i] != realized[i]) { throw new IOException(\"invalid header \" + new String(realized));"
+      },
+      {
+        "txt": "} } } if (input.available() == 0) { return null; } if (offset % 2 != 0) { read(); } final byte[] name = new byte[16];"
+      },
+      {
+        "txt": "final byte[] lastmodified = new byte[12]; final byte[] userid = new byte[6]; final byte[] groupid = new byte[6]; final byte[] filemode = new byte[8]; final byte[] length = new byte[10]; read(name); read(lastmodified); read(userid); read(groupid); read(filemode);"
+      },
+      {
+        "txt": "read(length); { final byte[] expected = ArArchiveEntry.TRAILER.getBytes(); final byte[] realized = new byte[expected.length]; final int read = read(realized); if (read != expected.length) { throw new IOException(\"failed to read entry header\"); } for (int i = 0; i < expected.length; i++) { if (expected[i] != realized[i]) {"
+      },
+      {
+        "txt": "throw new IOException(\"invalid entry header. not read the content?\"); } } } return new ArArchiveEntry(new String(name).trim(), Long.parseLong(new String(length) .trim())); } public ArchiveEntry getNextEntry() throws IOException { return getNextArEntry();"
+      },
+      {
+        "txt": "} public void close() throws IOException { if (!closed) { closed = true; input.close(); } } public int read() throws IOException { final int ret = input.read(); offset += (ret > 0 ? 1 : 0);"
+      },
+      {
+        "txt": "} public int read(byte[] b) throws IOException { return read(b, 0, b.length); } public int read(byte[] b, final int off, final int len) throws IOException { int toRead = len; <extra_id_0> offset += (ret > 0 ? ret : 0); return ret; } public static boolean matches(byte[] signature, int length) { if (length < 8) { return false;"
+      },
+      {
+        "txt": "if (length < 8) { return false; } if (signature[0] != 0x21) { return false; } if (signature[1] != 0x3c) { return false; } if (signature[2] != 0x61) {"
+      },
+      {
+        "txt": "return false; } if (signature[3] != 0x72) { return false; } if (signature[4] != 0x63) { return false; } if (signature[5] != 0x68) { return false;"
+      },
+      {
+        "txt": "} if (signature[6] != 0x3e) { return false; } if (signature[7] != 0x0a) { return false; } return true; }"
+      }
+    ]
+  }
+]

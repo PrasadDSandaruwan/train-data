@@ -1,0 +1,128 @@
+[
+  {
+    "id": 2186,
+    "file_path": "src/java/org/apache/commons/jxpath/ri/model/NodePointer.java",
+    "start-bug-line": 665,
+    "end-bug-line": 667,
+    "bug": "throw new JXPathException( \"Cannot compare pointers that do not belong to the same tree: '\" + p1 + \"' and '\" + p2 + \"'\");",
+    "fix": "return 0;",
+    "fixes": [],
+    "err": "",
+    "ctxs": [
+      {
+        "txt": "package org.apache.commons.jxpath.ri.model; import java.util.Locale; import org.apache.commons.jxpath.JXPathContext; import org.apache.commons.jxpath.JXPathException; import org.apache.commons.jxpath.Pointer; import org.apache.commons.jxpath.ri.Compiler; import org.apache.commons.jxpath.ri.JXPathContextReferenceImpl; import org.apache.commons.jxpath.ri.NamespaceResolver; import org.apache.commons.jxpath.ri.QName; import org.apache.commons.jxpath.ri.compiler.NodeNameTest;"
+      },
+      {
+        "txt": "import org.apache.commons.jxpath.ri.compiler.NodeTest; import org.apache.commons.jxpath.ri.compiler.NodeTypeTest; import org.apache.commons.jxpath.ri.model.beans.NullPointer; public abstract class NodePointer implements Pointer { public static final int WHOLE_COLLECTION = Integer.MIN_VALUE; protected int index = WHOLE_COLLECTION; public static final String UNKNOWN_NAMESPACE = \"<<unknown namespace>>\"; private boolean attribute = false; private transient Object rootNode; private NamespaceResolver namespaceResolver;"
+      },
+      {
+        "txt": "public static NodePointer newNodePointer( QName name, Object bean, Locale locale) { NodePointer pointer = null; if (bean == null) { pointer = new NullPointer(name, locale); return pointer; }"
+      },
+      {
+        "txt": "NodePointerFactory[] factories = JXPathContextReferenceImpl.getNodePointerFactories(); for (int i = 0; i < factories.length; i++) { pointer = factories[i].createNodePointer(name, bean, locale); if (pointer != null) { return pointer; } } throw new JXPathException( \"Could not allocate a NodePointer for object of \""
+      },
+      {
+        "txt": "+ bean.getClass()); } public static NodePointer newChildNodePointer( NodePointer parent, QName name, Object bean) { NodePointerFactory[] factories = JXPathContextReferenceImpl.getNodePointerFactories(); for (int i = 0; i < factories.length; i++) {"
+      },
+      {
+        "txt": "NodePointer pointer = factories[i].createNodePointer(parent, name, bean); if (pointer != null) { return pointer; } } throw new JXPathException( \"Could not allocate a NodePointer for object of \" + bean.getClass()); }"
+      },
+      {
+        "txt": "protected NodePointer parent; protected Locale locale; protected NodePointer(NodePointer parent) { this.parent = parent; } protected NodePointer(NodePointer parent, Locale locale) { this.parent = parent; this.locale = locale; } public NamespaceResolver getNamespaceResolver() {"
+      },
+      {
+        "txt": "if (namespaceResolver == null && parent != null) { namespaceResolver = parent.getNamespaceResolver(); } return namespaceResolver; } public void setNamespaceResolver(NamespaceResolver namespaceResolver) { this.namespaceResolver = namespaceResolver; } public NodePointer getParent() { NodePointer pointer = parent;"
+      },
+      {
+        "txt": "while (pointer != null && pointer.isContainer()) { pointer = pointer.getImmediateParentPointer(); } return pointer; } public NodePointer getImmediateParentPointer() { return parent; } public void setAttribute(boolean attribute) { this.attribute = attribute;"
+      },
+      {
+        "txt": "} public boolean isAttribute() { return attribute; } public boolean isRoot() { return parent == null; } public abstract boolean isLeaf(); public boolean isNode() { return !isContainer();"
+      },
+      {
+        "txt": "} public boolean isContainer() { return false; } public int getIndex() { return index; } public void setIndex(int index) { this.index = index; }"
+      },
+      {
+        "txt": "public abstract boolean isCollection(); public abstract int getLength(); public Object getValue() { NodePointer valuePointer = getValuePointer(); if (valuePointer != this) { return valuePointer.getValue(); } return getNode(); } public NodePointer getValuePointer() {"
+      },
+      {
+        "txt": "NodePointer ivp = getImmediateValuePointer(); return ivp == this ? this : ivp.getValuePointer(); } public NodePointer getImmediateValuePointer() { return this; } public boolean isActual() { return index == WHOLE_COLLECTION || index >= 0 && index < getLength(); } public abstract QName getName();"
+      },
+      {
+        "txt": "public abstract Object getBaseValue(); public Object getNodeValue() { return getNode(); } public Object getNode() { return getValuePointer().getImmediateNode(); } public Object getRootNode() { if (rootNode == null) { rootNode = parent == null ? getImmediateNode() : parent.getRootNode();"
+      },
+      {
+        "txt": "} return rootNode; } public abstract Object getImmediateNode(); public abstract void setValue(Object value); public abstract int compareChildNodePointers( NodePointer pointer1, NodePointer pointer2); public boolean testNode(NodeTest test) { if (test == null) { return true;"
+      },
+      {
+        "txt": "} if (test instanceof NodeNameTest) { if (isContainer()) { return false; } NodeNameTest nodeNameTest = (NodeNameTest) test; QName testName = nodeNameTest.getNodeName(); QName nodeName = getName(); if (nodeName == null) { return false;"
+      },
+      {
+        "txt": "} String testPrefix = testName.getPrefix(); String nodePrefix = nodeName.getPrefix(); if (!equalStrings(testPrefix, nodePrefix)) { String testNS = getNamespaceURI(testPrefix); String nodeNS = getNamespaceURI(nodePrefix); if (!equalStrings(testNS, nodeNS)) { return false; } }"
+      },
+      {
+        "txt": "if (nodeNameTest.isWildcard()) { return true; } return testName.getName().equals(nodeName.getName()); } return test instanceof NodeTypeTest && ((NodeTypeTest) test).getNodeType() == Compiler.NODE_TYPE_NODE && isNode(); } private static boolean equalStrings(String s1, String s2) { return s1 == s2 || s1 != null && s1.equals(s2);"
+      },
+      {
+        "txt": "} public NodePointer createPath(JXPathContext context, Object value) { setValue(value); return this; } public void remove() { } public NodePointer createPath(JXPathContext context) { return this; }"
+      },
+      {
+        "txt": "public NodePointer createChild( JXPathContext context, QName name, int index, Object value) { throw new JXPathException(\"Cannot create an object for path \" + asPath() + \"/\" + name + \"[\" + (index + 1) + \"]\" + \", operation is not allowed for this type of node\"); }"
+      },
+      {
+        "txt": "public NodePointer createChild(JXPathContext context, QName name, int index) { throw new JXPathException(\"Cannot create an object for path \" + asPath() + \"/\" + name + \"[\" + (index + 1) + \"]\" + \", operation is not allowed for this type of node\"); } public NodePointer createAttribute(JXPathContext context, QName name) { throw new JXPathException(\"Cannot create an attribute for path \" + asPath() + \"/@\" + name + \", operation is not allowed for this type of node\");"
+      },
+      {
+        "txt": "} public Locale getLocale() { if (locale == null) { if (parent != null) { locale = parent.getLocale(); } } return locale; } public boolean isLanguage(String lang) {"
+      },
+      {
+        "txt": "Locale loc = getLocale(); String name = loc.toString().replace('_', '-'); return name.toUpperCase().startsWith(lang.toUpperCase()); } public NodeIterator childIterator( NodeTest test, boolean reverse, NodePointer startWith) { NodePointer valuePointer = getValuePointer();"
+      },
+      {
+        "txt": "return valuePointer == null || valuePointer == this ? null : valuePointer.childIterator(test, reverse, startWith); } public NodeIterator attributeIterator(QName qname) { NodePointer valuePointer = getValuePointer(); return valuePointer == null || valuePointer == this ? null : valuePointer.attributeIterator(qname); } public NodeIterator namespaceIterator() { return null;"
+      },
+      {
+        "txt": "} public NodePointer namespacePointer(String namespace) { return null; } public String getNamespaceURI(String prefix) { return null; } public String getNamespaceURI() { return null; }"
+      },
+      {
+        "txt": "protected boolean isDefaultNamespace(String prefix) { if (prefix == null) { return true; } String namespace = getNamespaceURI(prefix); return namespace != null && namespace.equals(getDefaultNamespaceURI()); } protected String getDefaultNamespaceURI() { return null; }"
+      },
+      {
+        "txt": "public Pointer getPointerByID(JXPathContext context, String id) { return context.getPointerByID(id); } public Pointer getPointerByKey( JXPathContext context, String key, String value) { return context.getPointerByKey(key, value); }"
+      },
+      {
+        "txt": "public String asPath() { if (parent != null && parent.isContainer()) { return parent.asPath(); } StringBuffer buffer = new StringBuffer(); if (parent != null) { buffer.append(parent.asPath()); } if (buffer.length() == 0 || buffer.charAt(buffer.length() - 1) != '/') {"
+      },
+      {
+        "txt": "buffer.append('/'); } if (attribute) { buffer.append('@'); } buffer.append(getName()); if (index != WHOLE_COLLECTION && isCollection()) { buffer.append('[').append(index + 1).append(']'); } return buffer.toString();"
+      },
+      {
+        "txt": "} public Object clone() { try { NodePointer ptr = (NodePointer) super.clone(); if (parent != null) { ptr.parent = (NodePointer) parent.clone(); } return ptr; } catch (CloneNotSupportedException ex) {"
+      },
+      {
+        "txt": "ex.printStackTrace(); } return null; } public String toString() { return asPath(); } public int compareTo(Object object) { NodePointer pointer = (NodePointer) object; if (parent == pointer.parent) {"
+      },
+      {
+        "txt": "return parent == null ? 0 : parent.compareChildNodePointers(this, pointer); } int depth1 = 0; NodePointer p1 = this; while (p1 != null) { depth1++; p1 = p1.parent; } int depth2 = 0; NodePointer p2 = pointer;"
+      },
+      {
+        "txt": "while (p2 != null) { depth2++; p2 = p2.parent; } return compareNodePointers(this, depth1, pointer, depth2); } private int compareNodePointers( NodePointer p1, int depth1, NodePointer p2,"
+      },
+      {
+        "txt": "int depth2) { if (depth1 < depth2) { int r = compareNodePointers(p1, depth1, p2.parent, depth2 - 1); return r == 0 ? -1 : r; } if (depth1 > depth2) { int r = compareNodePointers(p1.parent, depth1 - 1, p2, depth2); return r == 0 ? 1 : r; }"
+      },
+      {
+        "txt": "return 0; } if (p1 != null && p1.equals(p2)) { return 0; } if (depth1 == 1) { <extra_id_0> } int r = compareNodePointers(p1.parent, depth1 - 1, p2.parent, depth2 - 1); if (r != 0) { return r; } return p1.parent.compareChildNodePointers(p1, p2);"
+      },
+      {
+        "txt": "} return p1.parent.compareChildNodePointers(p1, p2); } public void printPointerChain() { printDeep(this, \"\"); } private static void printDeep(NodePointer pointer, String indent) { if (indent.length() == 0) { System.err.println( \"POINTER: \""
+      },
+      {
+        "txt": "+ pointer + \"(\" + pointer.getClass().getName() + \")\"); } else { System.err.println( indent + \" of \" + pointer"
+      },
+      {
+        "txt": "+ \"(\" + pointer.getClass().getName() + \")\"); } if (pointer.getImmediateParentPointer() != null) { printDeep(pointer.getImmediateParentPointer(), indent + \" \"); } }"
+      }
+    ]
+  }
+]
